@@ -1,0 +1,1 @@
+ALTER TABLE `accessRequests` ADD `email` varchar(320);
