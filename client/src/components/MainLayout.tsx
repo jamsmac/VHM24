@@ -1,98 +1,138 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'wouter';
-import { Menu, X, LogOut, Settings } from 'lucide-react';
+import { Menu, X, LogOut, Settings, HelpCircle, Search } from 'lucide-react';
 import { NotificationCenter } from './NotificationCenter';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-
-interface NavItem {
-  label: string;
-  href: string;
-  icon: React.ReactNode;
-  adminOnly?: boolean;
-}
+import { NavigationGroup, type NavGroup } from './NavigationGroup';
+import { FavoritesSection } from './FavoritesSection';
+import { UserMenu } from './UserMenu';
+import { CommandPalette } from './CommandPalette';
 
 interface MainLayoutProps {
   children: React.ReactNode;
   userRole?: string;
 }
 
-const navItems: NavItem[] = [
+const navigationGroups: NavGroup[] = [
   {
-    label: 'Dashboard',
-    href: '/',
-    icon: '📊',
+    id: 'home',
+    label: 'Home',
+    icon: '🏠',
+    href: '/dashboard',
   },
   {
-    label: 'Access Requests',
-    href: '/access-requests',
-    icon: '📋',
-    adminOnly: true,
+    id: 'operations',
+    label: 'Operations',
+    icon: '🏭',
+    collapsed: false,
+    items: [
+      { label: 'Machines', icon: '📦', href: '/dashboard/machines' },
+      { label: 'Tasks', icon: '📋', href: '/dashboard/tasks', badge: 5 },
+      { label: 'Equipment', icon: '🔧', href: '/dashboard/equipment' },
+      { label: 'Locations', icon: '📍', href: '/dashboard/locations' },
+      { label: 'QR Scanner', icon: '📷', href: '/dashboard/scan' },
+    ],
   },
   {
-    label: 'Users',
-    href: '/users',
-    icon: '👥',
-    adminOnly: true,
-  },
-  {
-    label: 'Machines',
-    href: '/machines',
-    icon: '🎰',
-  },
-  {
-    label: 'Inventory',
-    href: '/inventory',
+    id: 'inventory',
+    label: 'Inventory & Accounting',
     icon: '📦',
+    collapsed: true,
+    items: [
+      { label: 'Overview', icon: '📊', href: '/dashboard/inventory' },
+      { label: 'Warehouse', icon: '🏭', href: '/dashboard/inventory/warehouse' },
+      { label: 'Operators', icon: '👤', href: '/dashboard/inventory/operators' },
+      { label: 'Machines', icon: '🎰', href: '/dashboard/inventory/machines' },
+      { label: 'Transfers', icon: '🔄', href: '/dashboard/inventory/transfer' },
+      { label: 'Products', icon: '🧃', href: '/dashboard/products' },
+      { label: 'Recipes', icon: '📝', href: '/dashboard/recipes' },
+      { label: 'Purchases', icon: '🛒', href: '/dashboard/purchases' },
+    ],
   },
   {
-    label: 'Tasks',
-    href: '/tasks',
-    icon: '✓',
+    id: 'finance',
+    label: 'Finance',
+    icon: '💰',
+    collapsed: true,
+    adminOnly: true,
+    items: [
+      { label: 'Transactions', icon: '💳', href: '/dashboard/transactions' },
+      { label: 'Counterparties', icon: '🏢', href: '/dashboard/counterparties' },
+      { label: 'Contracts', icon: '📄', href: '/dashboard/contracts' },
+      { label: 'Commissions', icon: '💵', href: '/dashboard/commissions' },
+    ],
   },
   {
-    label: 'Reports',
-    href: '/reports',
-    icon: '📈',
+    id: 'analytics',
+    label: 'Analytics',
+    icon: '📊',
+    collapsed: true,
+    items: [
+      { label: 'Dashboard', icon: '📈', href: '/dashboard/analytics' },
+      { label: 'Reports', icon: '📋', href: '/dashboard/reports' },
+      { label: 'Incidents', icon: '⚠️', href: '/dashboard/incidents' },
+    ],
   },
   {
-    label: 'Master Data',
-    href: '/master-data',
+    id: 'team',
+    label: 'Team',
+    icon: '👥',
+    collapsed: true,
+    badge: 2,
+    items: [
+      { label: 'Users', icon: '👤', href: '/dashboard/users' },
+      { label: 'Access Requests', icon: '📋', href: '/dashboard/access-requests', badge: 2 },
+      { label: 'Complaints', icon: '📢', href: '/dashboard/complaints' },
+    ],
+  },
+  {
+    id: 'system',
+    label: 'System',
     icon: '⚙️',
+    collapsed: true,
     adminOnly: true,
-  },
-];
-
-const settingsItems: NavItem[] = [
-  {
-    label: 'Digest Settings',
-    href: '/digest-settings',
-    icon: '📧',
-    adminOnly: true,
-  },
-  {
-    label: 'Notification Preferences',
-    href: '/notification-preferences',
-    icon: '🔔',
+    items: [
+      { label: 'Settings', icon: '⚙️', href: '/dashboard/settings' },
+      { label: 'AI Agents', icon: '🤖', href: '/dashboard/ai-agents' },
+      { label: 'Audit Logs', icon: '📜', href: '/dashboard/audit-logs' },
+      { label: 'Webhooks', icon: '🔗', href: '/dashboard/webhooks' },
+      { label: 'API Keys', icon: '🔑', href: '/dashboard/api-keys' },
+    ],
   },
 ];
 
 export function MainLayout({ children, userRole = 'user' }: MainLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [location] = useLocation();
 
   const isAdmin = userRole === 'admin' || userRole === 'manager';
 
-  const visibleNavItems = navItems.filter(
-    (item) => !item.adminOnly || isAdmin
-  );
+  // Keyboard shortcut for Command Palette
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setCommandPaletteOpen(true);
+      }
+    };
 
-  const visibleSettingsItems = settingsItems.filter(
-    (item) => !item.adminOnly || isAdmin
-  );
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   return (
     <div className="flex h-screen bg-background">
+      {/* Command Palette */}
+      <CommandPalette
+        open={commandPaletteOpen}
+        onOpenChange={setCommandPaletteOpen}
+        navigationGroups={navigationGroups}
+        isAdmin={isAdmin}
+      />
+
       {/* Sidebar */}
       <aside
         className={cn(
@@ -101,93 +141,141 @@ export function MainLayout({ children, userRole = 'user' }: MainLayoutProps) {
         )}
       >
         {/* Logo */}
-        <div className="flex items-center justify-between p-4 border-b border-slate-700">
+        <div className="flex items-center justify-between p-4 border-b border-slate-700 h-16">
           {sidebarOpen && (
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center font-bold">
+              <div className="w-8 h-8 bg-purple-500 rounded-lg flex items-center justify-center font-bold text-lg">
                 V
               </div>
-              <span className="font-bold text-lg">VendHub</span>
+              <span className="font-bold text-lg">VendHub Manager</span>
+            </div>
+          )}
+          {!sidebarOpen && (
+            <div className="w-8 h-8 bg-purple-500 rounded-lg flex items-center justify-center font-bold text-lg mx-auto">
+              V
             </div>
           )}
           <Button
             variant="ghost"
             size="sm"
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="text-white hover:bg-slate-800"
+            className={cn(
+              'text-white hover:bg-slate-800',
+              !sidebarOpen && 'hidden'
+            )}
           >
-            {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
+            <X size={20} />
           </Button>
         </div>
+
+        {/* Favorites Section */}
+        <FavoritesSection isCollapsed={!sidebarOpen} />
+
+        {/* Divider */}
+        {sidebarOpen && <div className="border-t border-slate-700 mx-4 my-2" />}
 
         {/* Navigation Items */}
         <nav className="flex-1 overflow-y-auto py-4 px-2">
           <div className="space-y-1">
-            {visibleNavItems.map((item) => (
-              <Link key={item.href} href={item.href} className={cn(
-                'flex items-center gap-3 px-4 py-3 rounded-lg transition-colors',
-                location === item.href
-                  ? 'bg-blue-600 text-white'
-                  : 'text-slate-300 hover:bg-slate-800'
-              )}
-              title={!sidebarOpen ? item.label : undefined}>
-                <span className="text-xl">{item.icon}</span>
-                {sidebarOpen && <span className="text-sm font-medium">{item.label}</span>}
-              </Link>
+            {navigationGroups.map((group) => (
+              <NavigationGroup
+                key={group.id}
+                group={group}
+                isCollapsed={!sidebarOpen}
+                isAdmin={isAdmin}
+              />
             ))}
           </div>
-
-          {/* Settings Section */}
-          {visibleSettingsItems.length > 0 && (
-            <>
-              <div className="my-4 border-t border-slate-700" />
-              <div className="px-4 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                {sidebarOpen ? 'Settings' : '⚙️'}
-              </div>
-              <div className="space-y-1">
-                {visibleSettingsItems.map((item) => (
-                  <Link key={item.href} href={item.href} className={cn(
-                    'flex items-center gap-3 px-4 py-3 rounded-lg transition-colors',
-                    location === item.href
-                      ? 'bg-blue-600 text-white'
-                      : 'text-slate-300 hover:bg-slate-800'
-                  )}
-                  title={!sidebarOpen ? item.label : undefined}>
-                    <span className="text-xl">{item.icon}</span>
-                    {sidebarOpen && <span className="text-sm font-medium">{item.label}</span>}
-                  </Link>
-                ))}
-              </div>
-            </>
-          )}
         </nav>
 
         {/* Footer */}
         <div className="border-t border-slate-700 p-4">
-          <Link href="/login" className="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 transition-colors">
-            <LogOut size={20} />
-            {sidebarOpen && <span className="text-sm font-medium">Logout</span>}
-          </Link>
+          {sidebarOpen ? (
+            <div className="space-y-2">
+              <Link href="/dashboard/settings">
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start gap-3 text-slate-300 hover:bg-slate-800"
+                >
+                  <Settings size={20} />
+                  <span className="text-sm">Settings</span>
+                </Button>
+              </Link>
+              <Button
+                variant="ghost"
+                className="w-full justify-start gap-3 text-slate-300 hover:bg-slate-800"
+                onClick={() => setCommandPaletteOpen(true)}
+              >
+                <HelpCircle size={20} />
+                <span className="text-sm">Help</span>
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="w-full text-slate-300 hover:bg-slate-800"
+              >
+                <Settings size={20} />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="w-full text-slate-300 hover:bg-slate-800"
+                onClick={() => setCommandPaletteOpen(true)}
+              >
+                <HelpCircle size={20} />
+              </Button>
+            </div>
+          )}
         </div>
       </aside>
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <header className="bg-white border-b border-slate-200 px-8 py-5 flex items-center justify-between sticky top-0 z-10">
-          <h1 className="text-2xl font-bold text-slate-900">VendHub Manager</h1>
-          <div className="flex items-center gap-6">
-            <NotificationCenter />
-            <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center font-bold text-white text-sm">
-              U
+        <header className="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between sticky top-0 z-10">
+          <div className="flex items-center gap-4">
+            {!sidebarOpen && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSidebarOpen(true)}
+                className="text-slate-600 hover:bg-slate-100"
+              >
+                <Menu size={20} />
+              </Button>
+            )}
+            <div className="relative w-96">
+              <Search
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                size={18}
+              />
+              <Input
+                placeholder="Search... (⌘K)"
+                className="pl-10 bg-slate-50 border-slate-200"
+                onClick={() => setCommandPaletteOpen(true)}
+                readOnly
+              />
             </div>
+          </div>
+          <div className="flex items-center gap-4">
+            <NotificationCenter />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-slate-600 hover:bg-slate-100"
+              onClick={() => setCommandPaletteOpen(true)}
+            >
+              <HelpCircle size={20} />
+            </Button>
+            <UserMenu userRole={userRole} />
           </div>
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-auto bg-slate-50 p-8">
-          {children}
-        </main>
+        <main className="flex-1 overflow-auto bg-slate-50 p-8">{children}</main>
       </div>
     </div>
   );

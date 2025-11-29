@@ -22,5 +22,8 @@
     "husky": "^9.1.7",
     "lint-staged": "^15.2.10",
     "prettier": "^3.0.0"
+  },
+  "dependencies": {
+    "cmdk": "^1.1.1"
   }
 }
