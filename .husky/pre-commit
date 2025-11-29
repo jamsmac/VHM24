@@ -1,0 +1,29 @@
+#!/bin/sh
+
+# VendHub Pre-commit Hook
+# Ensures code quality before each commit
+
+echo "🔍 Running pre-commit checks..."
+
+# Run lint-staged (ESLint + Prettier on staged files)
+echo "📝 Checking staged files with ESLint and Prettier..."
+npx lint-staged
+
+if [ $? -ne 0 ]; then
+  echo "❌ Lint-staged checks failed. Please fix the issues and try again."
+  exit 1
+fi
+
+# Check if any TypeScript files in backend were staged
+if git diff --cached --name-only | grep -q "backend/src/.*\.ts$"; then
+  echo "🔧 Running TypeScript type check on backend..."
+  cd backend && npm run type-check
+
+  if [ $? -ne 0 ]; then
+    echo "❌ TypeScript type check failed. Please fix type errors and try again."
+    exit 1
+  fi
+  cd ..
+fi
+
+echo "✅ Pre-commit checks passed!"

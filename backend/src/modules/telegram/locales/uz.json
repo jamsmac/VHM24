@@ -1,0 +1,199 @@
+{
+  "common": {
+    "yes": "Ha",
+    "no": "Yo'q",
+    "cancel": "Bekor qilish",
+    "back": "Orqaga",
+    "continue": "Davom etish",
+    "save": "Saqlash",
+    "close": "Yopish",
+    "loading": "Yuklanmoqda...",
+    "error": "Xato",
+    "success": "Muvaffaqiyatli!"
+  },
+  "welcome": {
+    "title": "🏠 VendHub Manager ga xush kelibsiz!",
+    "description": "Men sizga vazifalarni boshqarish, mashinalarni nazorat qilish va bildirishnomalarni olishda yordam beraman.",
+    "not_verified": "❌ Hisobingiz tasdiqlanmagan.\n\n💡 Boshlash uchun:\n1️⃣ VendHub veb-ilovasini oching\n2️⃣ Sozlamalar → Telegram ga o'ting\n3️⃣ \"Kod olish\" tugmasini bosing\n4️⃣ Menga kodni yuboring:\n   <code>/link KOD</code>\n\nMisol: <code>/link A1B2C3</code>",
+    "verified": "✅ Siz muvaffaqiyatli autentifikatsiya qildingiz!\n\nMavjud buyruqlar:\n📋 /tasks - Mening vazifalarim\n🖥 /machines - Mashinalar\n📊 /stats - Statistika\n🔔 /alerts - Bildirishnomalar\n🌐 /language - Tilni o'zgartirish\n❓ /help - Yordam"
+  },
+  "menu": {
+    "main": "Asosiy menyu",
+    "tasks": "Vazifalar",
+    "machines": "Mashinalar",
+    "stats": "Statistika",
+    "alerts": "Bildirishnomalar",
+    "settings": "Sozlamalar",
+    "help": "Yordam",
+    "language": "Til"
+  },
+  "tasks": {
+    "title": "📋 Sizning vazifalaringiz",
+    "no_tasks": "Sizda hozircha vazifalar yo'q.\n\n✨ Ajoyib! Dam olishingiz mumkin.",
+    "task_started": "🎉 Vazifa boshlandi!",
+    "task_completed": "🎉🎊 Ajoyib ish! 🎊🎉",
+    "send_photo_before": "📸 <b>Endi ish boshlanishidan OLDIN foto yuboring</b>\n<i>(izoh kerak emas, men vazifangizni eslayman)</i>",
+    "send_photo_after": "📸 Endi ishni bajaring va KEYIN foto yuboring\n<i>(faqat foto yuboring, izoh kerak emas)</i>",
+    "photo_before_uploaded": "✅ <b>OLDIN fotosi muvaffaqiyatli yuklandi!</b>\n\n📸 Endi ishni bajaring va KEYIN foto yuboring\n<i>(faqat foto yuboring, izoh kerak emas)</i>",
+    "photo_after_uploaded": "🎉 <b>Ikkala foto ham yuklandi!</b>\n\n✅ OLDIN fotosi: ✓\n✅ KEYIN fotosi: ✓\n\n💡 Endi vazifani yakunlashingiz mumkin: /complete_task",
+    "photo_not_expected": "🤔 Hozir foto kutilmayapti.\n\n💡 Avval vazifani boshlang: /tasks",
+    "session_not_found": "❌ Sessiya topilmadi. Vazifani qaytadan boshlang.",
+    "task_not_found": "❌ Sessiyada vazifa topilmadi. Qaytadan boshlang.",
+    "photo_not_found": "❌ Foto topilmadi",
+    "start_button": "▶️ Boshlash",
+    "continue_button": "▶️ Davom etish",
+    "complete_button": "✅ Yakunlash",
+    "types": {
+      "refill": "To'ldirish",
+      "collection": "Inkassatsiya",
+      "maintenance": "Xizmat ko'rsatish",
+      "inspection": "Tekshirish",
+      "repair": "Ta'mirlash",
+      "cleaning": "Tozalash"
+    }
+  },
+  "machines": {
+    "title": "🖥 Sizning mashinalaringiz",
+    "no_machines": "Sizga tayinlangan mashinalar yo'q.",
+    "status": {
+      "active": "Faol",
+      "low_stock": "Kam mahsulot",
+      "error": "Xato",
+      "maintenance": "Xizmat ko'rsatish",
+      "offline": "Oflayn",
+      "disabled": "O'chirilgan"
+    }
+  },
+  "stats": {
+    "title": "📊 Sizning statistikangiz",
+    "tasks_completed_today": "Bugun bajarilgan vazifalar",
+    "tasks_in_progress": "Jarayondagi vazifalar",
+    "machines_active": "Faol mashinalar",
+    "no_stats": "Statistika hali mavjud emas."
+  },
+  "voice": {
+    "listening": "🎤 Tinglamoqda... Nutqni aniqlash...",
+    "you_said": "🎧 Siz aytdingiz: <i>\"{{text}}\"</i>",
+    "command_recognized": "✅ {{command}} ko'rsatilmoqda...",
+    "command_tasks": "sizning vazifalaringiz",
+    "command_machines": "mashinalar",
+    "command_stats": "statistika",
+    "command_help": "yordam",
+    "command_unknown": "🤔 Buyruq aniqlanmadi. Sinab ko'ring:\n\n• \"Mening vazifalarimni ko'rsat\"\n• \"Mashinalarni ko'rsat\"\n• \"Statistika\"\n• \"Yordam\"",
+    "not_available": "🎤 Ovozli buyruqlar vaqtincha mavjud emas.\n\n💡 Matnli buyruqlar yoki menyu tugmalaridan foydalaning.",
+    "error": "😕 Ovozli xabarni qayta ishlab bo'lmadi\n\n<b>Nima noto'g'ri bo'lgan bo'lishi mumkin:</b>\n• Yomon yozuv sifati\n• Fon shovqini\n• Juda qisqa yozuv\n\n<b>💡 Sinab ko'ring:</b>\n1️⃣ Tinch joyda yozing\n2️⃣ Aniq va baland gapiring\n3️⃣ Matnli buyruqlardan foydalaning: /help"
+  },
+  "language": {
+    "title": "🌐 Tilni tanlang",
+    "changed": "Til o'zbek tiliga o'zgartirildi 🇺🇿",
+    "russian": "🇷🇺 Русский",
+    "english": "🇬🇧 English",
+    "uzbek": "🇺🇿 O'zbek"
+  },
+  "help": {
+    "title": "❓ Yordam",
+    "description": "<b>📋 Mavjud buyruqlar:</b>\n\n/tasks - Mening vazifalarimni ko'rsat\n/machines - Mashinalarni ko'rsat\n/stats - Statistikani ko'rsat\n/alerts - Bildirishnoma sozlamalari\n/language - Tilni o'zgartirish\n/help - Ushbu yordam\n\n<b>🎤 Ovozli buyruqlar:</b>\nSiz ovozli xabarlar yuborishingiz mumkin:\n• \"Mening vazifalarimni ko'rsat\"\n• \"Mashinalarni ko'rsat\"\n• \"Statistika\"\n\n<b>📸 Fotolar bilan ishlash:</b>\n1. \"Boshlash\" tugmasi bilan vazifani boshlang\n2. OLDIN fotosini yuboring (izohsiz)\n3. Ishni bajaring\n4. KEYIN fotosini yuboring (izohsiz)\n5. Vazifani yakunlang\n\n<b>💡 Foydali maslahatlar:</b>\n• Fotolarni darhol yuboring, izohsiz\n• Bot sizning joriy vazifangizni eslab qoladi\n• Tez ishlash uchun ovozli buyruqlardan foydalaning"
+  },
+  "alerts": {
+    "title": "🔔 Bildirishnoma sozlamalari",
+    "description": "Qabul qilmoqchi bo'lgan bildirishnoma turlarini tanlang:",
+    "saved": "✅ Bildirishnoma sozlamalari saqlandi"
+  },
+  "verification": {
+    "code_sent": "✅ Tasdiqlash kodi yuborildi.\n\nMenga buyruqni yuboring:\n<code>/link {{code}}</code>",
+    "link_success": "✅ Telegram muvaffaqiyatli hisobingizga bog'landi!\n\nEndi barcha bot funksiyalaridan foydalanishingiz mumkin.",
+    "link_failed": "❌ Hisobni bog'lab bo'lmadi",
+    "invalid_code": "❌ Noto'g'ri yoki muddati o'tgan tasdiqlash kodi",
+    "code_expired": "⏰ Tasdiqlash kodining muddati tugadi.\n\nVeb-ilovada yangi kod oling.",
+    "too_many_attempts": "🚫 Juda ko'p muvaffaqiyatsiz urinishlar.\n\n{{minutes}} daqiqadan keyin qayta urinib ko'ring.",
+    "already_linked": "✅ Ushbu Telegram allaqachon hisobga bog'langan"
+  },
+  "errors": {
+    "generic": "😕 Xatolik yuz berdi\n\n<b>Nima qilish kerak:</b>\n1️⃣ Qaytadan urinib ko'ring\n2️⃣ Yordam bermasa, /help yozing\n3️⃣ Ma'murga murojaat qiling\n\n<i>Xato: {{error}}</i>",
+    "not_verified": "❌ Siz avtorizatsiya qilmagansiz.\n\n💡 Hisobingizni bog'lash uchun /start buyrug'idan foydalaning.",
+    "no_access": "🚫 Sizda ushbu funksiyaga kirish huquqi yo'q.",
+    "network_error": "🌐 Tarmoq muammolari.\n\n💡 Aloqa tiklanganida xabar avtomatik ravishda yuboriladi.",
+    "task_not_started": "❌ Vazifa boshlanmagan.\n\n💡 Avval \"Boshlash\" tugmasi bilan vazifani boshlang.",
+    "photos_required": "❌ OLDIN va KEYIN fotolari talab qilinadi.\n\n💡 Vazifani yakunlashdan oldin barcha kerakli fotolarni yuklang."
+  },
+  "quickActions": {
+    "startRefill": "📦 To'ldirish",
+    "startCollection": "💰 Inkassatsiya",
+    "completeTask": "✅ Vazifani yakunlash",
+    "todayProgress": "📊 Progress",
+    "myRoute": "🗺️ Marshrut",
+    "taskList": "📋 Vazifalar",
+    "reportIncident": "🚨 Hodisa",
+    "requestRepair": "🔧 Ta'mirlash",
+    "uploadPhotoBefore": "📸 Foto OLDIN",
+    "uploadPhotoAfter": "📸 Foto KEYIN",
+    "taskInfo": "ℹ️ Ma'lumot",
+    "reportProblem": "⚠️ Muammo",
+    "pauseTask": "⏸ Pauza",
+    "cancelTask": "❌ Bekor qilish",
+    "teamStatus": "👥 Jamoa holati",
+    "activeOperators": "🏃 Faol operatorlar",
+    "assignTasks": "📝 Vazifalarni belgilash",
+    "pendingApprovals": "⏳ Tasdiq kutilmoqda",
+    "alerts": "🔔 Bildirishnomalar",
+    "incidents": "🚨 Hodisalar"
+  },
+  "qr": {
+    "detected": "🔍 QR kod aniqlandi: {{machineNumber}}",
+    "machine_info": "🖥 Apparat: {{name}}\n📍 Manzil: {{location}}",
+    "tasks_available": "📋 Mavjud vazifalar ({{count}}):",
+    "show_tasks": "Vazifalarni ko'rsat",
+    "start_refill": "To'ldirishni boshlash",
+    "start_collection": "Inkassatsiyani boshlash",
+    "machine_not_found": "❌ Apparat ma'lumotlar bazasida topilmadi",
+    "invalid_qr": "🤔 QR kodni apparat raqami sifatida tanib bo'lmadi",
+    "scan_help": "💡 Kamerani apparatdagi QR kodga qarating"
+  },
+  "location": {
+    "received": "📍 Joylashuv qabul qilindi",
+    "nearby_tasks": "🎯 Yaqin vazifalar:",
+    "distance": "{{distance}}m",
+    "no_nearby_tasks": "📍 Yaqin atrofda vazifalar yo'q ({{radius}}m radius ichida)",
+    "start_nearest": "▶️ Eng yaqinidan boshlash",
+    "show_route": "🗺️ Marshrutni ko'rsat",
+    "too_far": "⚠️ Siz apparatdan juda uzoqdasiz\n\nTalab qilinadi: {{threshold}}m radius ichida\nHozir: {{distance}}m",
+    "verified": "✅ Joylashuv tasdiqlandi"
+  },
+  "manager": {
+    "access_denied": "🚫 Bu funksiya faqat menejerlar va ma'murlar uchun mavjud",
+    "analytics_title": "Jamoa analitikasi",
+    "tasks_completed": "Bajarilgan vazifalar",
+    "tasks_in_progress": "Jarayondagi vazifalar",
+    "active_operators": "Faol operatorlar",
+    "avg_completion_time": "O'rtacha bajarilish vaqti",
+    "top_performers": "Eng yaxshi operatorlar",
+    "tasks_by_type": "Vazifalar turi bo'yicha",
+    "tasks": "vazifalar",
+    "minutes": "daq",
+    "task_assigned": "📋 <b>Sizga yangi vazifa tayinlandi!</b>\n\n📌 Turi: {{taskType}}\n🖥 Apparat: {{machineNumber}}\n\n💡 Boshlash uchun /tasks dan foydalaning",
+    "assign_task_title": "📝 Vazifani tayinlash",
+    "select_operator": "Operatorni tanlang:",
+    "select_task": "Tayinlash uchun vazifani tanlang:",
+    "task_assigned_success": "✅ Vazifa muvaffaqiyatli tayinlandi!\n\nOperator xabardor qilindi.",
+    "task_assigned_failed": "❌ Vazifani tayinlab bo'lmadi\n\n{{error}}",
+    "broadcast_title": "📢 Xabar yuborish",
+    "broadcast_prompt": "Yuborish uchun xabarni kiriting:",
+    "broadcast_confirm": "{{count}} operatorga xabar yuborilsinmi?",
+    "broadcast_success": "✅ Xabar yuborildi!\n\n📤 Yuborildi: {{sent}}\n❌ Xatolar: {{failed}}\n👥 Jami: {{total}}",
+    "broadcast_failed": "❌ Xabar yuborib bo'lmadi",
+    "team_status_title": "👥 Jamoa holati",
+    "operator_idle": "💤 Bo'sh",
+    "operator_working": "🏃 Ishlayapti",
+    "operator_offline": "⚫ Oflayn",
+    "no_active_operators": "Faol operatorlar yo'q",
+    "pending_approvals_title": "⏳ Tasdiq kutilmoqda",
+    "no_pending_approvals": "✅ Tasdiqlash kutayotgan vazifalar yo'q",
+    "approve_task": "✅ Tasdiqlash",
+    "reject_task": "❌ Rad etish",
+    "approval_comment_prompt": "Izoh qo'shing (ixtiyoriy):",
+    "task_approved": "✅ Vazifangiz menejer tomonidan tasdiqlandi!\n\n{{comment}}",
+    "task_rejected": "❌ Vazifangiz qayta ko'rib chiqish talab qiladi\n\n📝 Izoh: {{comment}}\n\n💡 Iltimos, tuzating va qaytadan yakunlang.",
+    "approval_success": "✅ Vazifa tasdiqlandi. Operator xabardor qilindi.",
+    "rejection_success": "❌ Vazifa rad etildi. Operator xabardor qilindi."
+  }
+}

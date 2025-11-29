@@ -1,0 +1,271 @@
+{
+  "dashboard": {
+    "title": "VendHub Manager - Overview",
+    "tags": ["vendhub", "overview"],
+    "timezone": "Asia/Tashkent",
+    "schemaVersion": 27,
+    "version": 1,
+    "refresh": "30s",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Service Status",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "up{job=\"vendhub-backend\"}",
+            "legendFormat": "Backend API"
+          },
+          {
+            "expr": "up{component=\"worker\"}",
+            "legendFormat": "{{ job }}"
+          },
+          {
+            "expr": "up{job=\"postgres\"}",
+            "legendFormat": "PostgreSQL"
+          },
+          {
+            "expr": "up{job=\"redis\"}",
+            "legendFormat": "Redis"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 6,
+          "x": 0,
+          "y": 0
+        },
+        "options": {
+          "colorMode": "background",
+          "graphMode": "none",
+          "justifyMode": "auto",
+          "orientation": "auto"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "red",
+                  "value": null
+                },
+                {
+                  "color": "green",
+                  "value": 1
+                }
+              ]
+            },
+            "mappings": [
+              {
+                "type": "value",
+                "options": {
+                  "0": {
+                    "text": "DOWN"
+                  },
+                  "1": {
+                    "text": "UP"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "HTTP Request Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(http_requests_total{job=\"vendhub-backend\"}[5m])",
+            "legendFormat": "{{ method }} {{ path }}"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 9,
+          "x": 6,
+          "y": 0
+        }
+      },
+      {
+        "id": 3,
+        "title": "Response Time (95th percentile)",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job=\"vendhub-backend\"}[5m]))",
+            "legendFormat": "{{ method }} {{ path }}"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 9,
+          "x": 15,
+          "y": 0
+        },
+        "yaxes": [
+          {
+            "format": "s"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Error Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(http_requests_total{job=\"vendhub-backend\",status=~\"5..\"}[5m])",
+            "legendFormat": "{{ status }}"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 8
+        },
+        "alert": {
+          "name": "High Error Rate",
+          "conditions": [
+            {
+              "evaluator": {
+                "params": [0.05],
+                "type": "gt"
+              },
+              "operator": {
+                "type": "and"
+              },
+              "query": {
+                "params": ["A", "5m", "now"]
+              },
+              "reducer": {
+                "params": [],
+                "type": "avg"
+              },
+              "type": "query"
+            }
+          ]
+        }
+      },
+      {
+        "id": 5,
+        "title": "Active Database Connections",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "pg_stat_database_numbackends{datname=\"vendhub\"}",
+            "legendFormat": "Connections"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 8
+        }
+      },
+      {
+        "id": 6,
+        "title": "BullMQ Queue Length",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "bullmq_queue_waiting",
+            "legendFormat": "Waiting"
+          },
+          {
+            "expr": "bullmq_queue_active",
+            "legendFormat": "Active"
+          },
+          {
+            "expr": "bullmq_queue_delayed",
+            "legendFormat": "Delayed"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 16
+        }
+      },
+      {
+        "id": 7,
+        "title": "Job Processing Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(bullmq_job_completed_total[5m])",
+            "legendFormat": "Completed"
+          },
+          {
+            "expr": "rate(bullmq_job_failed_total[5m])",
+            "legendFormat": "Failed"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 16
+        }
+      },
+      {
+        "id": 8,
+        "title": "Memory Usage",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "process_resident_memory_bytes{job=\"vendhub-backend\"} / 1024 / 1024",
+            "legendFormat": "Backend API"
+          },
+          {
+            "expr": "process_resident_memory_bytes{component=\"worker\"} / 1024 / 1024",
+            "legendFormat": "{{ job }}"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 24
+        },
+        "yaxes": [
+          {
+            "format": "decmbytes"
+          }
+        ]
+      },
+      {
+        "id": 9,
+        "title": "CPU Usage",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(process_cpu_seconds_total{job=\"vendhub-backend\"}[5m]) * 100",
+            "legendFormat": "Backend API"
+          },
+          {
+            "expr": "rate(process_cpu_seconds_total{component=\"worker\"}[5m]) * 100",
+            "legendFormat": "{{ job }}"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 24
+        },
+        "yaxes": [
+          {
+            "format": "percent",
+            "max": 100
+          }
+        ]
+      }
+    ]
+  }
+}

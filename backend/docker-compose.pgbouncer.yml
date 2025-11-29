@@ -1,0 +1,196 @@
+version: '3.8'
+
+#===============================================================================
+# VendHub PgBouncer Docker Compose
+#===============================================================================
+#
+# This compose file adds PgBouncer connection pooling to your PostgreSQL setup.
+#
+# Usage:
+#   1. Start with main compose: docker-compose up -d
+#   2. Add PgBouncer: docker-compose -f docker-compose.yml -f docker-compose.pgbouncer.yml up -d
+#   3. Update DATABASE_URL in .env to use port 6432
+#
+# Connection:
+#   - PostgreSQL: localhost:5432 (direct)
+#   - PgBouncer:  localhost:6432 (pooled)
+#
+#===============================================================================
+
+services:
+  pgbouncer:
+    image: pgbouncer/pgbouncer:latest
+    container_name: vendhub-pgbouncer
+    restart: unless-stopped
+
+    # Port mapping
+    ports:
+      - "6432:6432"
+
+    # Environment variables
+    environment:
+      # Database connection
+      - DATABASES_HOST=postgres
+      - DATABASES_PORT=5432
+      - DATABASES_DBNAME=vendhub
+      - DATABASES_USER=postgres
+
+      # PgBouncer settings
+      - POOL_MODE=transaction
+      - MAX_CLIENT_CONN=1000
+      - DEFAULT_POOL_SIZE=25
+      - MIN_POOL_SIZE=10
+      - RESERVE_POOL_SIZE=5
+      - RESERVE_POOL_TIMEOUT=3
+
+      # Server settings
+      - SERVER_LIFETIME=3600
+      - SERVER_IDLE_TIMEOUT=600
+      - SERVER_CONNECT_TIMEOUT=15
+
+      # Authentication
+      - AUTH_TYPE=md5
+      - AUTH_FILE=/etc/pgbouncer/userlist.txt
+
+      # Logging
+      - LOG_CONNECTIONS=1
+      - LOG_DISCONNECTIONS=1
+      - LOG_POOLER_ERRORS=1
+      - VERBOSE=0
+
+      # Admin users
+      - ADMIN_USERS=postgres
+      - STATS_USERS=postgres
+
+    # Volume mounts
+    volumes:
+      # Custom configuration (optional)
+      # - ./config/pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini:ro
+
+      # User list for authentication
+      - ./config/pgbouncer-userlist.txt:/etc/pgbouncer/userlist.txt:ro
+
+      # Logs
+      - pgbouncer-logs:/var/log/pgbouncer
+
+    # Network
+    networks:
+      - vendhub-network
+
+    # Dependencies
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    # Health check
+    healthcheck:
+      test: ["CMD", "psql", "-h", "localhost", "-p", "6432", "-U", "postgres", "-c", "SELECT 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+  # PgBouncer admin interface (optional)
+  # Provides a web UI to monitor PgBouncer
+  pgbouncer-exporter:
+    image: spreaker/prometheus-pgbouncer-exporter:latest
+    container_name: vendhub-pgbouncer-exporter
+    restart: unless-stopped
+
+    ports:
+      - "9127:9127"
+
+    environment:
+      - PGBOUNCER_HOST=pgbouncer
+      - PGBOUNCER_PORT=6432
+      - PGBOUNCER_USER=postgres
+      - PGBOUNCER_PASS=changeme  # Change this!
+
+    networks:
+      - vendhub-network
+
+    depends_on:
+      - pgbouncer
+
+volumes:
+  pgbouncer-logs:
+    driver: local
+
+networks:
+  vendhub-network:
+    external: true
+
+#===============================================================================
+# Usage Examples
+#===============================================================================
+#
+# 1. START SERVICES:
+#    docker-compose -f docker-compose.yml -f docker-compose.pgbouncer.yml up -d
+#
+# 2. VIEW LOGS:
+#    docker-compose logs -f pgbouncer
+#
+# 3. CONNECT TO PGBOUNCER ADMIN:
+#    docker exec -it vendhub-pgbouncer psql -p 6432 -U postgres pgbouncer
+#
+# 4. PGBOUNCER ADMIN COMMANDS:
+#    SHOW POOLS;           # Show connection pools
+#    SHOW STATS;           # Show statistics
+#    SHOW CLIENTS;         # Show client connections
+#    SHOW SERVERS;         # Show server connections
+#    SHOW DATABASES;       # Show database configurations
+#    RELOAD;               # Reload configuration
+#    PAUSE;                # Pause all database traffic
+#    RESUME;               # Resume database traffic
+#    SHUTDOWN;             # Shutdown PgBouncer
+#
+# 5. UPDATE APPLICATION:
+#    In .env file:
+#      Before: DATABASE_URL=postgresql://postgres:changeme@localhost:5432/vendhub
+#      After:  DATABASE_URL=postgresql://postgres:changeme@localhost:6432/vendhub
+#
+# 6. MONITOR METRICS (if using exporter):
+#    http://localhost:9127/metrics
+#
+# 7. STOP SERVICES:
+#    docker-compose -f docker-compose.yml -f docker-compose.pgbouncer.yml down
+#
+#===============================================================================
+# Performance Benefits
+#===============================================================================
+#
+# Without PgBouncer:
+# - 1000 connections × 10MB = 10GB memory
+# - Connection overhead on every request
+# - Risk of "too many connections" errors
+#
+# With PgBouncer:
+# - 1000 client connections → 25 PostgreSQL connections
+# - 25 connections × 10MB = 250MB memory (40x reduction!)
+# - Instant connection reuse (no TCP handshake)
+# - Graceful handling of connection spikes
+#
+#===============================================================================
+# Monitoring Queries
+#===============================================================================
+#
+# Check PgBouncer pool status:
+#   docker exec vendhub-pgbouncer psql -p 6432 -U postgres pgbouncer -c "SHOW POOLS"
+#
+# Check active clients:
+#   docker exec vendhub-pgbouncer psql -p 6432 -U postgres pgbouncer -c "SHOW CLIENTS"
+#
+# Check PostgreSQL connections (should be low):
+#   docker exec vendhub-postgres psql -U postgres -c "SELECT count(*) FROM pg_stat_activity"
+#
+#===============================================================================

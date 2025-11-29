@@ -1,0 +1,46 @@
+;; VendHub PgBouncer User List Template
+;; ============================================================================
+;;
+;; Format: "username" "password"
+;;
+;; Password formats:
+;; 1. Plaintext:  "postgres" "mypassword"
+;; 2. MD5:        "postgres" "md5<md5(password+username)>"
+;; 3. SCRAM:      "postgres" "SCRAM-SHA-256$..."
+;;
+;; IMPORTANT: Use MD5 or SCRAM for security in production!
+;;
+;; ============================================================================
+
+;; Generate MD5 hash:
+;; echo "\"$USER\" \"md5$(echo -n "${PASS}${USER}" | md5sum | cut -d' ' -f1)\""
+;;
+;; Example for user 'postgres' with password 'secret':
+;; echo -n "secretpostgres" | md5sum
+;; Result: "postgres" "md5abcd1234..."
+
+;; ============================================================================
+;; Users
+;; ============================================================================
+
+;; PostgreSQL superuser (for administration)
+"postgres" "md5d8578edf8458ce06fbc5bb76a58c5ca4"  ; password: changeme
+
+;; Application user (for VendHub app)
+"vendhub" "md5abcd1234efgh5678ijkl9012mnop3456"   ; Replace with actual hash
+
+;; Read-only user (for reporting/analytics)
+;; "vendhub_readonly" "md5xyz..."
+
+;; ============================================================================
+;; Security Notes
+;; ============================================================================
+;;
+;; 1. NEVER commit real passwords to git
+;; 2. Use environment-specific passwords
+;; 3. Rotate passwords regularly
+;; 4. Use different passwords for dev/staging/prod
+;; 5. Set file permissions: chmod 600 userlist.txt
+;; 6. Owner should be postgres: chown postgres:postgres userlist.txt
+;;
+;; ============================================================================

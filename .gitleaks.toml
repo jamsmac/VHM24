@@ -1,0 +1,123 @@
+# ============================================================================
+# GitLeaks Configuration for VendHub Manager
+# ============================================================================
+# This file configures GitLeaks secret scanning to reduce false positives
+# while catching actual secrets.
+
+title = "VendHub GitLeaks Configuration"
+
+[extend]
+# Use the default GitLeaks rules as a baseline
+useDefault = true
+
+# ============================================================================
+# Allowlist - Patterns to ignore (false positives)
+# ============================================================================
+[allowlist]
+description = "Allowlist for VendHub project"
+
+# Ignore test files with fake/mock secrets
+paths = [
+  '''\.spec\.ts$''',
+  '''\.test\.ts$''',
+  '''\.e2e-spec\.ts$''',
+  '''test/.*\.ts$''',
+  '''__tests__/.*''',
+  '''__mocks__/.*''',
+  '''\.md$''',
+  '''package-lock\.json$''',
+  '''yarn\.lock$''',
+]
+
+# Ignore specific known false positives
+commits = []
+
+# Regex patterns to ignore
+regexes = [
+  # Test JWT secrets (clearly marked as test)
+  '''test-jwt-secret.*''',
+  '''test-refresh-secret.*''',
+  '''test-.*-key-for-ci.*''',
+  # Example values
+  '''example\.com''',
+  '''localhost''',
+  # Development defaults (clearly marked)
+  '''dev_jwt_secret_change_in_production''',
+  '''vendhub_password_dev''',
+  '''vendhub_minio_password_dev''',
+  # CI test encryption key (clearly fake placeholder value)
+  '''0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef''',
+]
+
+# ============================================================================
+# Custom Rules
+# ============================================================================
+
+# Detect Telegram Bot Tokens
+[[rules]]
+id = "telegram-bot-token"
+description = "Telegram Bot Token"
+regex = '''[0-9]{8,10}:[A-Za-z0-9_-]{35}'''
+tags = ["telegram", "api-key"]
+
+# Detect Supabase URLs with keys
+[[rules]]
+id = "supabase-key"
+description = "Supabase API Key"
+regex = '''eyJ[A-Za-z0-9_-]*\.eyJ[A-Za-z0-9_-]*\.[A-Za-z0-9_-]*'''
+tags = ["supabase", "jwt"]
+
+# Detect PostgreSQL connection strings with passwords
+[[rules]]
+id = "postgres-connection-string"
+description = "PostgreSQL Connection String with Password"
+regex = '''postgres(ql)?://[^:]+:[^@]+@[^/]+'''
+tags = ["database", "postgres"]
+[rules.allowlist]
+regexes = [
+  '''postgres://.*:test@''',
+  '''postgres://.*:password@localhost''',
+  '''postgresql://vendhub:vendhub_password_dev@''',
+]
+
+# Detect Redis connection strings with passwords
+[[rules]]
+id = "redis-connection-string"
+description = "Redis Connection String with Password"
+regex = '''redis://[^:]+:[^@]+@[^/]+'''
+tags = ["database", "redis"]
+[rules.allowlist]
+regexes = [
+  '''redis://.*:test@''',
+]
+
+# ============================================================================
+# File path rules - Check specific files more strictly
+# ============================================================================
+
+# Environment files should never be committed (except .env.example)
+[[rules]]
+id = "env-file"
+description = "Environment File"
+path = '''\.env$'''
+regex = '''.*=.+'''
+tags = ["env"]
+[rules.allowlist]
+paths = [
+  '''\.env\.example$''',
+  '''\.env\.test$''',
+  '''\.env\.local\.example$''',
+]
+
+# Docker Compose production files
+[[rules]]
+id = "docker-compose-secrets"
+description = "Hardcoded secrets in docker-compose"
+path = '''docker-compose.*\.yml'''
+regex = '''(?i)(password|secret|key|token)\s*[:=]\s*['""]?[^$\s{][^'""\s]+['""]?'''
+tags = ["docker", "config"]
+[rules.allowlist]
+regexes = [
+  '''password_dev''',
+  '''\$\{.*\}''',
+]

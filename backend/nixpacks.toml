@@ -1,0 +1,17 @@
+# Railway Nixpacks Configuration for VendHub Manager
+
+[phases.setup]
+nixPkgs = ["nodejs-18_x", "npm-9_x"]
+
+[phases.install]
+cmds = ["npm install --legacy-peer-deps"]
+
+[phases.build]
+cmds = ["npm run build"]
+
+[start]
+cmd = "sh ./start-production.sh"
+
+[deploy]
+healthcheckPath = "/health/live"
+healthcheckTimeout = 60

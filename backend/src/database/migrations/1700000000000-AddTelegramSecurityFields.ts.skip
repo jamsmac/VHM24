@@ -1,0 +1,52 @@
+import { MigrationInterface, QueryRunner, TableColumn } from 'typeorm';
+
+export class AddTelegramSecurityFields1700000000000 implements MigrationInterface {
+  public async up(queryRunner: QueryRunner): Promise<void> {
+    // Add verification_code_expires_at column
+    await queryRunner.addColumn(
+      'telegram_users',
+      new TableColumn({
+        name: 'verification_code_expires_at',
+        type: 'timestamp',
+        isNullable: true,
+      }),
+    );
+
+    // Add verification_attempts column
+    await queryRunner.addColumn(
+      'telegram_users',
+      new TableColumn({
+        name: 'verification_attempts',
+        type: 'integer',
+        default: 0,
+      }),
+    );
+
+    // Add last_verification_attempt_at column
+    await queryRunner.addColumn(
+      'telegram_users',
+      new TableColumn({
+        name: 'last_verification_attempt_at',
+        type: 'timestamp',
+        isNullable: true,
+      }),
+    );
+
+    // Add blocked_until column
+    await queryRunner.addColumn(
+      'telegram_users',
+      new TableColumn({
+        name: 'blocked_until',
+        type: 'timestamp',
+        isNullable: true,
+      }),
+    );
+  }
+
+  public async down(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.dropColumn('telegram_users', 'blocked_until');
+    await queryRunner.dropColumn('telegram_users', 'last_verification_attempt_at');
+    await queryRunner.dropColumn('telegram_users', 'verification_attempts');
+    await queryRunner.dropColumn('telegram_users', 'verification_code_expires_at');
+  }
+}

@@ -1,0 +1,199 @@
+{
+  "common": {
+    "yes": "Yes",
+    "no": "No",
+    "cancel": "Cancel",
+    "back": "Back",
+    "continue": "Continue",
+    "save": "Save",
+    "close": "Close",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success!"
+  },
+  "welcome": {
+    "title": "🏠 Welcome to VendHub Manager!",
+    "description": "I'll help you manage tasks, machines, and receive notifications.",
+    "not_verified": "❌ Your account is not verified.\n\n💡 To get started:\n1️⃣ Open VendHub web app\n2️⃣ Go to Settings → Telegram\n3️⃣ Click \"Get Code\"\n4️⃣ Send me the code:\n   <code>/link CODE</code>\n\nExample: <code>/link A1B2C3</code>",
+    "verified": "✅ You are successfully authenticated!\n\nAvailable commands:\n📋 /tasks - My tasks\n🖥 /machines - Machines\n📊 /stats - Statistics\n🔔 /alerts - Alerts\n🌐 /language - Change language\n❓ /help - Help"
+  },
+  "menu": {
+    "main": "Main menu",
+    "tasks": "Tasks",
+    "machines": "Machines",
+    "stats": "Statistics",
+    "alerts": "Alerts",
+    "settings": "Settings",
+    "help": "Help",
+    "language": "Language"
+  },
+  "tasks": {
+    "title": "📋 Your tasks",
+    "no_tasks": "You don't have any tasks yet.\n\n✨ Great! You can relax.",
+    "task_started": "🎉 Task started!",
+    "task_completed": "🎉🎊 Great work! 🎊🎉",
+    "send_photo_before": "📸 <b>Now just send a photo BEFORE starting work</b>\n<i>(no caption needed, I remember your task)</i>",
+    "send_photo_after": "📸 Now complete the work and send photo AFTER\n<i>(just send photo, no caption needed)</i>",
+    "photo_before_uploaded": "✅ <b>BEFORE photo uploaded successfully!</b>\n\n📸 Now complete the work and send AFTER photo\n<i>(just send photo, no caption needed)</i>",
+    "photo_after_uploaded": "🎉 <b>Both photos uploaded!</b>\n\n✅ BEFORE photo: ✓\n✅ AFTER photo: ✓\n\n💡 You can now complete the task: /complete_task",
+    "photo_not_expected": "🤔 Not expecting a photo right now.\n\n💡 Start a task first: /tasks",
+    "session_not_found": "❌ Session not found. Start task again.",
+    "task_not_found": "❌ Task not found in session. Start again.",
+    "photo_not_found": "❌ Photo not found",
+    "start_button": "▶️ Start",
+    "continue_button": "▶️ Continue",
+    "complete_button": "✅ Complete",
+    "types": {
+      "refill": "Refill",
+      "collection": "Collection",
+      "maintenance": "Maintenance",
+      "inspection": "Inspection",
+      "repair": "Repair",
+      "cleaning": "Cleaning"
+    }
+  },
+  "machines": {
+    "title": "🖥 Your machines",
+    "no_machines": "You don't have any assigned machines.",
+    "status": {
+      "active": "Active",
+      "low_stock": "Low Stock",
+      "error": "Error",
+      "maintenance": "Maintenance",
+      "offline": "Offline",
+      "disabled": "Disabled"
+    }
+  },
+  "stats": {
+    "title": "📊 Your statistics",
+    "tasks_completed_today": "Tasks completed today",
+    "tasks_in_progress": "Tasks in progress",
+    "machines_active": "Active machines",
+    "no_stats": "Statistics not available yet."
+  },
+  "voice": {
+    "listening": "🎤 Listening... Transcribing...",
+    "you_said": "🎧 You said: <i>\"{{text}}\"</i>",
+    "command_recognized": "✅ Showing {{command}}...",
+    "command_tasks": "your tasks",
+    "command_machines": "machines",
+    "command_stats": "statistics",
+    "command_help": "help",
+    "command_unknown": "🤔 Command not recognized. Try:\n\n• \"Show my tasks\"\n• \"Show machines\"\n• \"Statistics\"\n• \"Help\"",
+    "not_available": "🎤 Voice commands temporarily unavailable.\n\n💡 Please use text commands or menu buttons.",
+    "error": "😕 Failed to process voice message\n\n<b>What could go wrong:</b>\n• Poor recording quality\n• Background noise\n• Recording too short\n\n<b>💡 Try:</b>\n1️⃣ Record in quiet place\n2️⃣ Speak clearly and loudly\n3️⃣ Use text commands: /help"
+  },
+  "language": {
+    "title": "🌐 Choose language",
+    "changed": "Language changed to English 🇬🇧",
+    "russian": "🇷🇺 Русский",
+    "english": "🇬🇧 English",
+    "uzbek": "🇺🇿 O'zbek"
+  },
+  "help": {
+    "title": "❓ Help",
+    "description": "<b>📋 Available commands:</b>\n\n/tasks - Show my tasks\n/machines - Show machines\n/stats - Show statistics\n/alerts - Alert settings\n/language - Change language\n/help - This help\n\n<b>🎤 Voice commands:</b>\nYou can send voice messages:\n• \"Show my tasks\"\n• \"Show machines\"\n• \"Statistics\"\n\n<b>📸 Working with photos:</b>\n1. Start task with \"Start\" button\n2. Send BEFORE photo (no caption)\n3. Complete the work\n4. Send AFTER photo (no caption)\n5. Complete task\n\n<b>💡 Useful tips:</b>\n• Send photos immediately, no captions\n• Bot remembers your current task\n• Use voice commands for quick work"
+  },
+  "alerts": {
+    "title": "🔔 Alert settings",
+    "description": "Choose notification types you want to receive:",
+    "saved": "✅ Alert settings saved"
+  },
+  "verification": {
+    "code_sent": "✅ Verification code sent.\n\nSend me the command:\n<code>/link {{code}}</code>",
+    "link_success": "✅ Telegram successfully linked to your account!\n\nYou can now use all bot features.",
+    "link_failed": "❌ Failed to link account",
+    "invalid_code": "❌ Invalid or expired verification code",
+    "code_expired": "⏰ Verification code expired.\n\nGet a new code in the web app.",
+    "too_many_attempts": "🚫 Too many failed attempts.\n\nTry again in {{minutes}} minutes.",
+    "already_linked": "✅ This Telegram is already linked to an account"
+  },
+  "errors": {
+    "generic": "😕 An error occurred\n\n<b>What to do:</b>\n1️⃣ Try again\n2️⃣ If it doesn't help, type /help\n3️⃣ Contact administrator\n\n<i>Error: {{error}}</i>",
+    "not_verified": "❌ You are not authorized.\n\n💡 Use /start command to link your account.",
+    "no_access": "🚫 You don't have access to this feature.",
+    "network_error": "🌐 Network issues.\n\n💡 Message will be sent automatically when connection is restored.",
+    "task_not_started": "❌ Task not started.\n\n💡 Start task first with \"Start\" button.",
+    "photos_required": "❌ BEFORE and AFTER photos required.\n\n💡 Upload all required photos before completing task."
+  },
+  "quickActions": {
+    "startRefill": "📦 Refill",
+    "startCollection": "💰 Collection",
+    "completeTask": "✅ Complete Task",
+    "todayProgress": "📊 Progress",
+    "myRoute": "🗺️ Route",
+    "taskList": "📋 Tasks",
+    "reportIncident": "🚨 Incident",
+    "requestRepair": "🔧 Repair",
+    "uploadPhotoBefore": "📸 Photo BEFORE",
+    "uploadPhotoAfter": "📸 Photo AFTER",
+    "taskInfo": "ℹ️ Info",
+    "reportProblem": "⚠️ Problem",
+    "pauseTask": "⏸ Pause",
+    "cancelTask": "❌ Cancel",
+    "teamStatus": "👥 Team Status",
+    "activeOperators": "🏃 Active Operators",
+    "assignTasks": "📝 Assign Tasks",
+    "pendingApprovals": "⏳ Pending Approvals",
+    "alerts": "🔔 Alerts",
+    "incidents": "🚨 Incidents"
+  },
+  "qr": {
+    "detected": "🔍 QR code detected: {{machineNumber}}",
+    "machine_info": "🖥 Machine: {{name}}\n📍 Location: {{location}}",
+    "tasks_available": "📋 Available tasks ({{count}}):",
+    "show_tasks": "Show Tasks",
+    "start_refill": "Start Refill",
+    "start_collection": "Start Collection",
+    "machine_not_found": "❌ Machine not found in database",
+    "invalid_qr": "🤔 Could not recognize QR code as machine number",
+    "scan_help": "💡 Point camera at QR code on machine"
+  },
+  "location": {
+    "received": "📍 Location received",
+    "nearby_tasks": "🎯 Nearby tasks:",
+    "distance": "{{distance}}m",
+    "no_nearby_tasks": "📍 No tasks nearby (within {{radius}}m)",
+    "start_nearest": "▶️ Start from nearest",
+    "show_route": "🗺️ Show route",
+    "too_far": "⚠️ You are too far from the machine\n\nRequired: within {{threshold}}m\nCurrent: {{distance}}m",
+    "verified": "✅ Location verified"
+  },
+  "manager": {
+    "access_denied": "🚫 This feature is only available to managers and admins",
+    "analytics_title": "Team Analytics",
+    "tasks_completed": "Tasks completed",
+    "tasks_in_progress": "Tasks in progress",
+    "active_operators": "Active operators",
+    "avg_completion_time": "Average completion time",
+    "top_performers": "Top performers",
+    "tasks_by_type": "Tasks by type",
+    "tasks": "tasks",
+    "minutes": "min",
+    "task_assigned": "📋 <b>New task assigned to you!</b>\n\n📌 Type: {{taskType}}\n🖥 Machine: {{machineNumber}}\n\n💡 Use /tasks to start",
+    "assign_task_title": "📝 Task Assignment",
+    "select_operator": "Select operator:",
+    "select_task": "Select task to assign:",
+    "task_assigned_success": "✅ Task assigned successfully!\n\nOperator has been notified.",
+    "task_assigned_failed": "❌ Failed to assign task\n\n{{error}}",
+    "broadcast_title": "📢 Broadcast Message",
+    "broadcast_prompt": "Enter message to broadcast:",
+    "broadcast_confirm": "Send message to {{count}} operators?",
+    "broadcast_success": "✅ Message sent!\n\n📤 Sent: {{sent}}\n❌ Failed: {{failed}}\n👥 Total: {{total}}",
+    "broadcast_failed": "❌ Failed to send broadcast",
+    "team_status_title": "👥 Team Status",
+    "operator_idle": "💤 Idle",
+    "operator_working": "🏃 Working",
+    "operator_offline": "⚫ Offline",
+    "no_active_operators": "No active operators",
+    "pending_approvals_title": "⏳ Pending Approvals",
+    "no_pending_approvals": "✅ No pending approvals",
+    "approve_task": "✅ Approve",
+    "reject_task": "❌ Reject",
+    "approval_comment_prompt": "Add comment (optional):",
+    "task_approved": "✅ Your task has been approved by manager!\n\n{{comment}}",
+    "task_rejected": "❌ Your task needs revision\n\n📝 Comment: {{comment}}\n\n💡 Please fix and complete again.",
+    "approval_success": "✅ Task approved. Operator notified.",
+    "rejection_success": "❌ Task rejected. Operator notified."
+  }
+}

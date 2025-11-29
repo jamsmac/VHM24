@@ -1,0 +1,68 @@
+{{ define "slack.default.title" -}}
+[{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ end }}] {{ .CommonLabels.alertname }}
+{{- end }}
+
+{{ define "slack.default.text" -}}
+{{ range .Alerts }}
+*Alert:* {{ .Labels.alertname }}
+*Severity:* {{ .Labels.severity }}
+*Component:* {{ .Labels.component }}
+{{ if .Annotations.summary }}*Summary:* {{ .Annotations.summary }}{{ end }}
+{{ if .Annotations.description }}*Description:* {{ .Annotations.description }}{{ end }}
+*Started:* {{ .StartsAt.Format "2006-01-02 15:04:05 UTC" }}
+{{ if .EndsAt }}*Ended:* {{ .EndsAt.Format "2006-01-02 15:04:05 UTC" }}{{ end }}
+---
+{{ end }}
+{{- end }}
+
+{{ define "telegram.default.message" -}}
+{{ if eq .Status "firing" }}🔴{{ else }}✅{{ end }} *{{ .Status | toUpper }}*
+
+{{ range .Alerts }}
+*Alert:* {{ .Labels.alertname }}
+*Severity:* `{{ .Labels.severity }}`
+*Component:* `{{ .Labels.component }}`
+{{ if .Annotations.summary }}*Summary:* {{ .Annotations.summary }}{{ end }}
+{{ if .Annotations.description }}*Description:* {{ .Annotations.description }}{{ end }}
+*Time:* {{ .StartsAt.Format "15:04:05" }}
+{{ end }}
+{{- end }}
+
+{{ define "email.default.subject" -}}
+[{{ .Status | toUpper }}] VendHub Alert: {{ .CommonLabels.alertname }}
+{{- end }}
+
+{{ define "email.default.html" -}}
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { font-family: Arial, sans-serif; }
+    .alert { padding: 10px; margin: 10px 0; border-radius: 4px; }
+    .critical { background-color: #f8d7da; border: 1px solid #f5c6cb; }
+    .warning { background-color: #fff3cd; border: 1px solid #ffc107; }
+    .resolved { background-color: #d4edda; border: 1px solid #c3e6cb; }
+  </style>
+</head>
+<body>
+  <h2>VendHub Alert Notification</h2>
+  <p>Status: <strong>{{ .Status | toUpper }}</strong></p>
+
+  {{ range .Alerts }}
+  <div class="alert {{ if eq .Status "resolved" }}resolved{{ else if eq .Labels.severity "critical" }}critical{{ else }}warning{{ end }}">
+    <h3>{{ .Labels.alertname }}</h3>
+    <p><strong>Severity:</strong> {{ .Labels.severity }}</p>
+    <p><strong>Component:</strong> {{ .Labels.component }}</p>
+    {{ if .Annotations.summary }}<p><strong>Summary:</strong> {{ .Annotations.summary }}</p>{{ end }}
+    {{ if .Annotations.description }}<p><strong>Description:</strong> {{ .Annotations.description }}</p>{{ end }}
+    <p><strong>Started:</strong> {{ .StartsAt.Format "2006-01-02 15:04:05 UTC" }}</p>
+  </div>
+  {{ end }}
+
+  <hr>
+  <p style="color: #666; font-size: 12px;">
+    This is an automated alert from VendHub monitoring system.
+  </p>
+</body>
+</html>
+{{- end }}

@@ -1,0 +1,96 @@
+import { MigrationInterface, QueryRunner, Table, TableForeignKey, TableIndex } from 'typeorm';
+
+/**
+ * Migration: Add user_roles join table for RBAC
+ *
+ * Creates many-to-many relationship between users and roles
+ */
+export class AddUserRolesRelationship1700000000000 implements MigrationInterface {
+  public async up(queryRunner: QueryRunner): Promise<void> {
+    // Create user_roles join table
+    await queryRunner.createTable(
+      new Table({
+        name: 'user_roles',
+        columns: [
+          {
+            name: 'user_id',
+            type: 'uuid',
+            isNullable: false,
+          },
+          {
+            name: 'role_id',
+            type: 'uuid',
+            isNullable: false,
+          },
+          {
+            name: 'created_at',
+            type: 'timestamp with time zone',
+            default: 'CURRENT_TIMESTAMP',
+          },
+        ],
+      }),
+      true,
+    );
+
+    // Add primary key constraint (composite)
+    await queryRunner.query(`
+      ALTER TABLE "user_roles"
+      ADD CONSTRAINT "PK_user_roles"
+      PRIMARY KEY ("user_id", "role_id")
+    `);
+
+    // Add foreign key to users table
+    await queryRunner.createForeignKey(
+      'user_roles',
+      new TableForeignKey({
+        name: 'FK_user_roles_user',
+        columnNames: ['user_id'],
+        referencedColumnNames: ['id'],
+        referencedTableName: 'users',
+        onDelete: 'CASCADE',
+      }),
+    );
+
+    // Add foreign key to roles table
+    await queryRunner.createForeignKey(
+      'user_roles',
+      new TableForeignKey({
+        name: 'FK_user_roles_role',
+        columnNames: ['role_id'],
+        referencedColumnNames: ['id'],
+        referencedTableName: 'roles',
+        onDelete: 'CASCADE',
+      }),
+    );
+
+    // Add indexes for better query performance
+    await queryRunner.createIndex(
+      'user_roles',
+      new TableIndex({
+        name: 'IDX_user_roles_user_id',
+        columnNames: ['user_id'],
+      }),
+    );
+
+    await queryRunner.createIndex(
+      'user_roles',
+      new TableIndex({
+        name: 'IDX_user_roles_role_id',
+        columnNames: ['role_id'],
+      }),
+    );
+  }
+
+  public async down(queryRunner: QueryRunner): Promise<void> {
+    // Drop indexes
+    await queryRunner.dropIndex('user_roles', 'IDX_user_roles_role_id');
+    await queryRunner.dropIndex('user_roles', 'IDX_user_roles_user_id');
+
+    // Drop foreign keys
+    await queryRunner.dropForeignKey('user_roles', 'FK_user_roles_role');
+    await queryRunner.dropForeignKey('user_roles', 'FK_user_roles_user');
+
+    // Drop table
+    await queryRunner.dropTable('user_roles');
+  }
+}
