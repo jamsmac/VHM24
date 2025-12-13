@@ -261,7 +261,7 @@ export class InventoryCountService {
 
     // Базовая информация о сессии
     const firstCount = counts[0];
-    const lastCount = counts[counts.length - 1];
+    // lastCount available for future use: counts[counts.length - 1]
 
     // Группировка по местоположениям, товарам, операторам
     const byLocation = new Map<string, typeof counts>();

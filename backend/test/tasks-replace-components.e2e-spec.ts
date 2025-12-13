@@ -3,20 +3,13 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { DataSource } from 'typeorm';
+import { TaskStatus, TaskType, TaskPriority } from '../src/modules/tasks/entities/task.entity';
 import {
-  Task,
-  TaskStatus,
-  TaskType,
-  TaskPriority,
-} from '../src/modules/tasks/entities/task.entity';
-import {
-  EquipmentComponent,
   ComponentType,
   ComponentStatus,
   ComponentLocationType,
 } from '../src/modules/equipment/entities/equipment-component.entity';
-import { Machine } from '../src/modules/machines/entities/machine.entity';
-import { User, UserRole } from '../src/modules/users/entities/user.entity';
+import { UserRole } from '../src/modules/users/entities/user.entity';
 import { ComponentRole } from '../src/modules/tasks/entities/task-component.entity';
 
 /**

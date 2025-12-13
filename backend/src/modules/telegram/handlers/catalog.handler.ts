@@ -4,7 +4,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Material, MaterialCategory } from '../../requests/entities/material.entity';
 import { TelegramSessionService } from '../services/telegram-session.service';
-import { CatalogState, UserSessionData, defaultSessionData } from './fsm-states';
+import { CatalogState, defaultSessionData } from './fsm-states';
 import {
   getCategoryKeyboard,
   getMaterialsKeyboard,

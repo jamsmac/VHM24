@@ -30,11 +30,11 @@ describe('CommissionWorker', () => {
   let mockSchedulerService: any;
   let mockRealtimeGateway: any;
   let mockCommissionQueue: any;
-  let processHandlers: Map<string, (...args: unknown[]) => unknown>;
+  let _processHandlers: Map<string, (...args: unknown[]) => unknown>;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    processHandlers = new Map();
+    _processHandlers = new Map();
 
     // Mock CommissionSchedulerService
     mockSchedulerService = {
@@ -58,7 +58,7 @@ describe('CommissionWorker', () => {
         .fn()
         .mockImplementation(
           (name: string, concurrency: number, handler: (...args: unknown[]) => unknown) => {
-            processHandlers.set(name, handler);
+            _processHandlers.set(name, handler);
           },
         ),
       close: jest.fn().mockResolvedValue(undefined),

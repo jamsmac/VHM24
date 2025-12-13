@@ -7,7 +7,6 @@ import {
   IsNumber,
   IsBoolean,
   IsArray,
-  IsObject,
   Min,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';

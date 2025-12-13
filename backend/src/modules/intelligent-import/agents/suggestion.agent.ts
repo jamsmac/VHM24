@@ -20,7 +20,7 @@ export class SuggestionAgent implements IAgent<SuggestionInput, ActionPlan> {
   readonly name = 'SuggestionAgent';
   private status: AgentStatus = AgentStatus.IDLE;
 
-  async execute(input: SuggestionInput, context: AgentContext): Promise<ActionPlan> {
+  async execute(input: SuggestionInput, _context: AgentContext): Promise<ActionPlan> {
     this.status = AgentStatus.RUNNING;
 
     try {

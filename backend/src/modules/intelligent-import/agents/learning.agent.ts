@@ -33,7 +33,7 @@ export class LearningAgent implements IAgent<LearningInput, LearningOutput> {
     private readonly sessionRepo: Repository<ImportSession>,
   ) {}
 
-  async execute(input: LearningInput, context: AgentContext): Promise<LearningOutput> {
+  async execute(input: LearningInput, _context: AgentContext): Promise<LearningOutput> {
     this.status = AgentStatus.RUNNING;
 
     try {

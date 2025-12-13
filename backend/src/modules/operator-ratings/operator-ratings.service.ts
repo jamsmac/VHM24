@@ -4,11 +4,10 @@ import { Repository, In } from 'typeorm';
 import { OperatorRating } from './entities/operator-rating.entity';
 import { Task } from '@modules/tasks/entities/task.entity';
 import { File } from '@modules/files/entities/file.entity';
-// import { TaskChecklistItem } from '@modules/tasks/entities/task-checklist-item.entity'; // Entity doesn't exist - checklist stored as JSONB in Task
 import { TaskComment } from '@modules/tasks/entities/task-comment.entity';
 import { Complaint } from '@modules/complaints/entities/complaint.entity';
 import { User } from '@modules/users/entities/user.entity';
-import { startOfDay, endOfDay, differenceInHours } from 'date-fns';
+import { differenceInHours } from 'date-fns';
 
 interface OperatorMetrics {
   timeliness: {

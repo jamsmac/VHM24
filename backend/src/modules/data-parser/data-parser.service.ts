@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { UniversalParser } from './parsers/universal.parser';
 import { DataValidationService, ValidationSchema } from './services/data-validation.service';
 import {
@@ -15,8 +15,6 @@ import {
  */
 @Injectable()
 export class DataParserService {
-  private readonly logger = new Logger(DataParserService.name);
-
   constructor(
     private readonly universalParser: UniversalParser,
     private readonly validationService: DataValidationService,
@@ -111,7 +109,7 @@ export class DataParserService {
     failed: any[];
     warnings: string[];
   }> {
-    const { parsed, validated } = await this.parseAndValidate(file, {
+    const { validated } = await this.parseAndValidate(file, {
       date: {
         required: true,
         type: 'date',
@@ -162,7 +160,7 @@ export class DataParserService {
     failed: any[];
     warnings: string[];
   }> {
-    const { parsed, validated } = await this.parseAndValidate(file, {
+    const { validated } = await this.parseAndValidate(file, {
       name: {
         required: true,
         type: 'string',
@@ -217,7 +215,7 @@ export class DataParserService {
     failed: any[];
     warnings: string[];
   }> {
-    const { parsed, validated } = await this.parseAndValidate(file, {
+    const { validated } = await this.parseAndValidate(file, {
       product_code: {
         required: true,
         type: 'string',

@@ -211,7 +211,7 @@ export class InventoryAdjustmentService {
   /**
    * Применить корректировку к остаткам
    */
-  async applyAdjustment(id: string, userId: string): Promise<InventoryAdjustment> {
+  async applyAdjustment(id: string, _userId: string): Promise<InventoryAdjustment> {
     const adjustment = await this.findOne(id);
 
     // Проверить статус

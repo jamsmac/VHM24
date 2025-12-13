@@ -3,7 +3,6 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
 import { AppModule } from '@/app.module';
 import { DataSource } from 'typeorm';
-import * as bcrypt from 'bcrypt';
 
 /**
  * Integration tests for authentication flow

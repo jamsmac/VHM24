@@ -62,7 +62,7 @@ export class SalesImportProcessor {
   async handleProcessFile(
     job: Job<ProcessFileJob>,
   ): Promise<{ success: boolean; processedRows: number }> {
-    const { importId, buffer, fileType, userId } = job.data;
+    const { importId, buffer, fileType } = job.data;
 
     this.logger.log(`🔄 Начало обработки файла импорта ${importId}, тип: ${fileType}`);
 

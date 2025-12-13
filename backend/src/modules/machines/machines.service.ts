@@ -19,11 +19,10 @@ import {
   WriteoffJobStatus,
   WriteoffJobStatusDto,
 } from './dto/writeoff-job-status.dto';
-import { WriteoffJobData, WriteoffJobResult } from './interfaces/writeoff-job.interface';
+import { WriteoffJobData } from './interfaces/writeoff-job.interface';
 import { BulkWriteoffResponseDto } from './dto/bulk-writeoff-response.dto';
 import { QrCodeService } from './qr-code.service';
 import { TransactionsService } from '../transactions/transactions.service';
-import { TransactionType, ExpenseCategory } from '../transactions/entities/transaction.entity';
 
 @Injectable()
 export class MachinesService {

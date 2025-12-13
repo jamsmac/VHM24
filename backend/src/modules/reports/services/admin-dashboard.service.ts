@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, MoreThanOrEqual, LessThan } from 'typeorm';
+import { Repository, MoreThanOrEqual } from 'typeorm';
 import { Machine, MachineStatus } from '@modules/machines/entities/machine.entity';
 import { Transaction } from '@modules/transactions/entities/transaction.entity';
 import { Task, TaskStatus } from '@modules/tasks/entities/task.entity';
@@ -132,7 +132,7 @@ export class AdminDashboardService {
   async generateDashboard(): Promise<AdminDashboard> {
     const now = new Date();
     const todayStart = startOfDay(now);
-    const weekStart = startOfWeek(now, { weekStartsOn: 1 }); // Monday
+    // weekStart available for future use: startOfWeek(now, { weekStartsOn: 1 })
     const monthStart = startOfMonth(now);
     const yesterday = subDays(todayStart, 1);
 
@@ -475,7 +475,7 @@ export class AdminDashboardService {
   /**
    * Get critical alerts
    */
-  private async getCriticalAlerts(todayStart: Date): Promise<AdminDashboard['critical_alerts']> {
+  private async getCriticalAlerts(_todayStart: Date): Promise<AdminDashboard['critical_alerts']> {
     const [incidents, complaints, lowStockMachines, tasks] = await Promise.all([
       this.incidentRepository.find({
         where: [{ status: IncidentStatus.OPEN }, { status: IncidentStatus.IN_PROGRESS }],

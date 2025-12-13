@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import { DataSource, LessThan } from 'typeorm';
+import { DataSource } from 'typeorm';
 import { InventoryService } from './inventory.service';
 import { WarehouseInventory } from './entities/warehouse-inventory.entity';
 import { OperatorInventory } from './entities/operator-inventory.entity';

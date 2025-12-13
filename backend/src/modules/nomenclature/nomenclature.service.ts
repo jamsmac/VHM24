@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Like } from 'typeorm';
+import { Repository } from 'typeorm';
 import { Nomenclature } from './entities/nomenclature.entity';
 import { CreateNomenclatureDto } from './dto/create-nomenclature.dto';
 import { UpdateNomenclatureDto } from './dto/update-nomenclature.dto';

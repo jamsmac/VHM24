@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { BadRequestException } from '@nestjs/common';
-import { PasswordPolicyService, PasswordValidationResult } from './password-policy.service';
+import { PasswordPolicyService } from './password-policy.service';
 
 describe('PasswordPolicyService', () => {
   let service: PasswordPolicyService;

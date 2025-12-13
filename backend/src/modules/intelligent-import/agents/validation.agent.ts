@@ -28,7 +28,7 @@ export class ValidationAgent implements IAgent<ClassifiedData, ValidationReport>
   /**
    * Execute validation
    */
-  async execute(input: ClassifiedData, context: AgentContext): Promise<ValidationReport> {
+  async execute(input: ClassifiedData, _context: AgentContext): Promise<ValidationReport> {
     this.status = AgentStatus.RUNNING;
 
     try {

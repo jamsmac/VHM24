@@ -1,6 +1,6 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { InjectRepository, InjectDataSource } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { Telegraf, Context, Markup } from 'telegraf';
 import { TelegramUser, TelegramLanguage } from '../entities/telegram-user.entity';
 import { TelegramSettings } from '../entities/telegram-settings.entity';
@@ -741,7 +741,7 @@ export class TelegramBotService implements OnModuleInit {
       }
     }
 
-    for (const [_, value] of machineMap) {
+    for (const value of machineMap.values()) {
       alerts.push({
         id: alertId++,
         type: 'low_stock',

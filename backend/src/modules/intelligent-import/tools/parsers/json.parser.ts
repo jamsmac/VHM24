@@ -113,7 +113,7 @@ export class JsonParser {
   /**
    * Detect encoding (JSON is always UTF-8)
    */
-  detectEncoding(buffer: Buffer): string {
+  detectEncoding(_buffer: Buffer): string {
     return 'utf-8';
   }
 

@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { DataValidationService, ValidationSchema, ValidationRule } from './data-validation.service';
+import { DataValidationService, ValidationSchema } from './data-validation.service';
 
 describe('DataValidationService', () => {
   let service: DataValidationService;

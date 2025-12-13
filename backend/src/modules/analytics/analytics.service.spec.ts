@@ -1,11 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository, DataSource, Between } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import { AnalyticsService } from './analytics.service';
 import { DailyStats } from './entities/daily-stats.entity';
 import { Transaction, TransactionType } from '../transactions/entities/transaction.entity';
 import { Task, TaskStatus, TaskType } from '../tasks/entities/task.entity';
-import { format, subDays, startOfDay, endOfDay } from 'date-fns';
+import { subDays } from 'date-fns';
 
 describe('AnalyticsService', () => {
   let service: AnalyticsService;

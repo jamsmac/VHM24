@@ -1,12 +1,4 @@
-import {
-  IsString,
-  IsBoolean,
-  IsOptional,
-  IsInt,
-  IsObject,
-  MinLength,
-  IsUUID,
-} from 'class-validator';
+import { IsString, IsBoolean, IsOptional, IsInt, IsObject, MinLength } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateDictionaryItemDto {

@@ -276,7 +276,7 @@ export class OperatorDashboardService {
   private async getMyPerformance(
     operatorId: string,
     monthStart: Date,
-    monthEnd: Date,
+    _monthEnd: Date,
   ): Promise<OperatorDashboard['my_performance']> {
     const latestRating = await this.operatorRatingRepository.findOne({
       where: { operator_id: operatorId },
@@ -457,7 +457,7 @@ export class OperatorDashboardService {
     }));
 
     const estimatedTotalDuration = todayTasks.reduce(
-      (sum, t) => sum + 60, // Default estimate as field doesn't exist in entity
+      (sum, _t) => sum + 60, // Default estimate as field doesn't exist in entity
       0,
     );
 
@@ -476,7 +476,7 @@ export class OperatorDashboardService {
    */
   private async getAlerts(
     operatorId: string,
-    monthStart: Date,
+    _monthStart: Date,
   ): Promise<OperatorDashboard['alerts']> {
     const now = new Date();
 

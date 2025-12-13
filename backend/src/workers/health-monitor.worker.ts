@@ -14,9 +14,7 @@ import { NestFactory } from '@nestjs/core';
 import { Logger } from '@nestjs/common';
 import { AppModule } from '../app.module';
 import { Queue } from 'bull';
-import { InjectQueue } from '@nestjs/bull';
 import { Connection } from 'typeorm';
-import { InjectConnection } from '@nestjs/typeorm';
 import Redis from 'ioredis';
 
 const logger = new Logger('HealthMonitorWorker');

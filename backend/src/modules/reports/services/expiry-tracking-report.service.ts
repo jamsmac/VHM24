@@ -122,7 +122,7 @@ export class ExpiryTrackingReportService {
    * Get warehouse inventory batches approaching expiry
    */
   private async getWarehouseExpiryBatches(
-    futureDate: Date,
+    _futureDate: Date,
   ): Promise<ExpiryTrackingReport['warehouse_batches']> {
     // Note: WarehouseInventory doesn't have expiry_date tracking
     // This feature would require InventoryBatch entity from warehouse module
@@ -137,7 +137,7 @@ export class ExpiryTrackingReportService {
    * so we estimate based on FIFO and warehouse batch tracking
    */
   private async getMachineExpiryBatches(
-    futureDate: Date,
+    _futureDate: Date,
   ): Promise<ExpiryTrackingReport['machine_batches']> {
     const inventory = await this.machineInventoryRepository
       .createQueryBuilder('mi')
@@ -146,8 +146,6 @@ export class ExpiryTrackingReportService {
       .leftJoinAndSelect('machine.location', 'location')
       .where('mi.current_quantity > 0')
       .getMany();
-
-    const now = new Date();
 
     return inventory.map((item) => {
       // For machine inventory, we don't have direct expiry tracking

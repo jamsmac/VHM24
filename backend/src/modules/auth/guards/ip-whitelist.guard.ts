@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { Request } from 'express';
 import { UsersService } from '@modules/users/users.service';
-import { UserRole, User } from '@modules/users/entities/user.entity';
+import { User } from '@modules/users/entities/user.entity';
 
 /**
  * IP Whitelist Guard

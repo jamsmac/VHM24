@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { TelegramTaskInfo, TelegramMachineInfo, NearbyTaskResult } from '../types/telegram.types';
+import { NearbyTaskResult } from '../types/telegram.types';
 
 /**
  * Location Service for Telegram Bot

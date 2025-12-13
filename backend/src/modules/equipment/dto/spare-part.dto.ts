@@ -1,13 +1,4 @@
-import {
-  IsEnum,
-  IsString,
-  IsOptional,
-  IsInt,
-  IsNumber,
-  IsBoolean,
-  IsArray,
-  Min,
-} from 'class-validator';
+import { IsEnum, IsString, IsOptional, IsInt, IsNumber, IsBoolean, Min } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { ComponentType } from '../entities/equipment-component.entity';
 

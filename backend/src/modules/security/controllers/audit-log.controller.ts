@@ -8,9 +8,9 @@ import {
   UseGuards,
   ParseUUIDPipe,
 } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { AuditLogService } from '../services/audit-log.service';
-import { CreateAuditLogDto, AuditLogQueryDto } from '../dto/audit-log.dto';
+import { CreateAuditLogDto } from '../dto/audit-log.dto';
 import { JwtAuthGuard } from '@modules/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '@modules/auth/guards/roles.guard';
 import { Roles } from '@modules/auth/decorators/roles.decorator';

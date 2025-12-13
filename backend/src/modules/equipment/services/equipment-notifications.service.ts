@@ -5,7 +5,6 @@ import { UserRole, UserStatus } from '../../users/entities/user.entity';
 import {
   NotificationType,
   NotificationChannel,
-  NotificationPriority,
 } from '../../notifications/entities/notification.entity';
 import { EquipmentComponent } from '../entities/equipment-component.entity';
 import { SparePart } from '../entities/spare-part.entity';

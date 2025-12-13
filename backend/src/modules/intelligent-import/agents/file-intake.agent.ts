@@ -28,7 +28,7 @@ export class FileIntakeAgent implements IAgent<FileUpload, ParsedFile> {
   /**
    * Execute file parsing
    */
-  async execute(input: FileUpload, context: AgentContext): Promise<ParsedFile> {
+  async execute(input: FileUpload, _context: AgentContext): Promise<ParsedFile> {
     this.status = AgentStatus.RUNNING;
 
     try {

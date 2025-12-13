@@ -10,12 +10,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { StockMovementService } from '../services/stock-movement.service';
-import {
-  CreateReceiptDto,
-  CreateShipmentDto,
-  CreateTransferDto,
-  CreateAdjustmentDto,
-} from '../dto/create-movement.dto';
+import { CreateReceiptDto, CreateShipmentDto, CreateTransferDto } from '../dto/create-movement.dto';
 import { MovementType } from '../entities/stock-movement.entity';
 import { JwtAuthGuard } from '@modules/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '@modules/auth/guards/roles.guard';

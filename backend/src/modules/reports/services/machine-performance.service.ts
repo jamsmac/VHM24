@@ -320,9 +320,9 @@ export class MachinePerformanceService {
    * Get expenses data for machine
    */
   private async getExpensesData(
-    machineId: string,
-    startDate: Date,
-    endDate: Date,
+    _machineId: string,
+    _startDate: Date,
+    _endDate: Date,
   ): Promise<MachinePerformanceReport['expenses']> {
     // TODO: Re-enable when financial-operations module is implemented
     // const expensesRaw = await this.financialOperationRepository

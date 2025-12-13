@@ -1,13 +1,4 @@
-import {
-  IsString,
-  IsUUID,
-  IsNumber,
-  IsOptional,
-  IsEnum,
-  IsDateString,
-  IsObject,
-} from 'class-validator';
-import { MovementType } from '../entities/stock-movement.entity';
+import { IsString, IsUUID, IsNumber, IsOptional, IsDateString } from 'class-validator';
 
 export class CreateReceiptDto {
   @IsUUID()

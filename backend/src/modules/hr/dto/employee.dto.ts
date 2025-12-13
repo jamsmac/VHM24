@@ -8,7 +8,7 @@ import {
   IsOptional,
   IsObject,
 } from 'class-validator';
-import { EmploymentType, EmploymentStatus } from '../entities/employee.entity';
+import { EmploymentType } from '../entities/employee.entity';
 
 export class CreateEmployeeDto {
   @IsUUID()

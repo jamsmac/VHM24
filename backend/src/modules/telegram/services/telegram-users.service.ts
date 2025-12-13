@@ -117,8 +117,6 @@ export class TelegramUsersService {
     // Using 6 bytes (48 bits) provides sufficient entropy for a temporary code
     const code = randomBytes(6).toString('hex').toUpperCase();
 
-    const now = new Date();
-
     // Set expiration time (15 minutes from now)
     const expiresAt = new Date();
     expiresAt.setMinutes(expiresAt.getMinutes() + this.VERIFICATION_CODE_EXPIRY_MINUTES);

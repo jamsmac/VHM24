@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { MaintenanceController } from './maintenance.controller';
 import { MaintenanceService } from '../services/maintenance.service';
 import { ComponentMaintenance, MaintenanceType } from '../entities/component-maintenance.entity';
-import { CreateMaintenanceDto, MaintenanceFiltersDto } from '../dto/maintenance.dto';
+import { CreateMaintenanceDto } from '../dto/maintenance.dto';
 
 describe('MaintenanceController', () => {
   let controller: MaintenanceController;

@@ -1,6 +1,6 @@
 import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, LessThan, DataSource } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import { InventoryBatch } from '../entities/inventory-batch.entity';
 import { addDays, isBefore } from 'date-fns';
 
@@ -123,7 +123,7 @@ export class InventoryBatchService {
     warehouseId: string,
     productId: string,
     quantityToWriteOff: number,
-    notes?: string,
+    _notes?: string,
   ): Promise<
     Array<{
       batch: InventoryBatch;

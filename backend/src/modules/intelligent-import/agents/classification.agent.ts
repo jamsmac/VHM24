@@ -31,7 +31,7 @@ export class ClassificationAgent implements IAgent<ParsedFile, ClassificationRes
   /**
    * Execute classification
    */
-  async execute(input: ParsedFile, context: AgentContext): Promise<ClassificationResult> {
+  async execute(input: ParsedFile, _context: AgentContext): Promise<ClassificationResult> {
     this.status = AgentStatus.RUNNING;
 
     try {
@@ -101,7 +101,7 @@ export class ClassificationAgent implements IAgent<ParsedFile, ClassificationRes
   /**
    * Detect domain using rule-based approach
    */
-  private async detectDomain(headers: string[], sampleRows: unknown[][]): Promise<DomainType> {
+  private async detectDomain(headers: string[], _sampleRows: unknown[][]): Promise<DomainType> {
     const headerLower = headers.map((h) => h.toLowerCase());
 
     // SALES domain indicators

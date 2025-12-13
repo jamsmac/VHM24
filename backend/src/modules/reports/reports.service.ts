@@ -6,7 +6,6 @@ import { Task, TaskStatus } from '../tasks/entities/task.entity';
 import { Incident, IncidentStatus, IncidentPriority } from '../incidents/entities/incident.entity';
 import { Complaint, ComplaintStatus } from '../complaints/entities/complaint.entity';
 import { Machine, MachineStatus } from '../machines/entities/machine.entity';
-import { UserRole } from '../users/entities/user.entity';
 import { ReportFiltersDto } from './dto/report-filters.dto';
 
 @Injectable()

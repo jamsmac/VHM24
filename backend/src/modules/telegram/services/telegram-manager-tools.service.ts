@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { TelegramUser } from '../entities/telegram-user.entity';
@@ -481,7 +481,7 @@ export class TelegramManagerToolsService {
     managerId: string,
     taskId: string,
     approved: boolean,
-    comment?: string,
+    _comment?: string,
   ): Promise<{
     success: boolean;
     notifiedOperator: boolean;

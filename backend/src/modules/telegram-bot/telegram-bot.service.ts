@@ -2,7 +2,7 @@ import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/commo
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { InjectQueue } from '@nestjs/bull';
-import { Repository, MoreThan, LessThan } from 'typeorm';
+import { Repository } from 'typeorm';
 import { Queue } from 'bull';
 import { Telegraf, Context, Markup } from 'telegraf';
 import { User } from '../users/entities/user.entity';

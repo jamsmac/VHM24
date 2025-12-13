@@ -25,7 +25,7 @@ export class ReconciliationAgent implements IAgent<ReconciliationInput, Reconcil
   readonly name = 'ReconciliationAgent';
   private status: AgentStatus = AgentStatus.IDLE;
 
-  async execute(input: ReconciliationInput, context: AgentContext): Promise<ReconciliationReport> {
+  async execute(input: ReconciliationInput, _context: AgentContext): Promise<ReconciliationReport> {
     this.status = AgentStatus.RUNNING;
 
     try {

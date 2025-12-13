@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between } from 'typeorm';
+import { Repository } from 'typeorm';
 import { ComponentMaintenance, MaintenanceType } from '../entities/component-maintenance.entity';
 import { CreateMaintenanceDto, MaintenanceFiltersDto } from '../dto/maintenance.dto';
 

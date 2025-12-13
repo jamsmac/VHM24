@@ -11,7 +11,7 @@ import { Repository, LessThan, IsNull } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
-import { v4 as uuidv4 } from 'uuid';
+// Note: uuidv4 can be imported from 'uuid' when JWT ID (jti) tracking is implemented
 import { UsersService } from '../users/users.service';
 import { User, UserRole, UserStatus } from '../users/entities/user.entity';
 import { RegisterDto } from './dto/register.dto';
@@ -453,10 +453,8 @@ export class AuthService {
    * REQ-AUTH-11: Refresh token uses JWT_REFRESH_SECRET (falls back to JWT_SECRET if not set)
    */
   private async generateTokens(user: User): Promise<AuthTokens> {
-    // Generate unique JWT IDs for blacklist support
-    // TODO: Use these JTIs when implementing token blacklisting
-    const _accessJti = uuidv4();
-    const _refreshJti = uuidv4();
+    // TODO: Generate and use unique JWT IDs (JTIs) when implementing token blacklisting
+    // Example: const accessJti = uuidv4(); const refreshJti = uuidv4();
 
     const basePayload: Partial<JwtPayload> = {
       sub: user.id,

@@ -226,11 +226,9 @@ describe('SalesImportWorker', () => {
 
   describe('process event handlers', () => {
     let processListeners: Map<string, (...args: unknown[]) => unknown>;
-    let originalProcessOn: typeof process.on;
 
     beforeEach(() => {
       processListeners = new Map();
-      originalProcessOn = process.on;
 
       // Capture event listeners
       jest.spyOn(process, 'on').mockImplementation((event: string, listener: any) => {

@@ -1,8 +1,6 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import * as i18next from 'i18next';
 import { TFunction } from 'i18next';
-import * as Backend from 'i18next-fs-backend';
-import { join } from 'path';
 import { format } from 'date-fns';
 import { TelegramLanguage } from '../entities/telegram-user.entity';
 

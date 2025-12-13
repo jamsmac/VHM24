@@ -1,5 +1,5 @@
 import { IsOptional, IsUUID, IsDateString, IsEnum } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import { PaymentStatus } from '../entities/commission-calculation.entity';
 
 /**

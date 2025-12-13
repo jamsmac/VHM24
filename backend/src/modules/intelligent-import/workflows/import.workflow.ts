@@ -188,7 +188,7 @@ export class ImportWorkflow {
       await this.updateSessionStatus(session.id, ImportSessionStatus.RECONCILING);
       onProgress?.(ImportSessionStatus.RECONCILING, 95, 'Reconciling data...');
 
-      const reconciliationReport = await this.reconciliationAgent.execute(
+      await this.reconciliationAgent.execute(
         {
           domain: classificationResult.domain,
           executionResult,

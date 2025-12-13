@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between } from 'typeorm';
+import { Repository } from 'typeorm';
 import { LeaveRequest, LeaveStatus, LeaveType } from '../entities/leave-request.entity';
 import { differenceInDays } from 'date-fns';
 

@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository, SelectQueryBuilder, DataSource } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import { InventoryService } from './inventory.service';
 import { WarehouseInventory } from './entities/warehouse-inventory.entity';
 import { OperatorInventory } from './entities/operator-inventory.entity';

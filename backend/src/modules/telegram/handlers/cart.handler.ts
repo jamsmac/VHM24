@@ -2,12 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Context, Telegraf } from 'telegraf';
 import { TelegramSessionService } from '../services/telegram-session.service';
 import { CartState, defaultSessionData } from './fsm-states';
-import {
-  getCartKeyboard,
-  getCartEmptyKeyboard,
-  getCheckoutKeyboard,
-  getCategoryKeyboard,
-} from './keyboards';
+import { getCartKeyboard, getCartEmptyKeyboard, getCheckoutKeyboard } from './keyboards';
 
 /**
  * Интерфейс элемента корзины.
@@ -400,7 +395,7 @@ export class CartHandler {
 
     const session = await this.sessionService.getSessionData(userId);
     const priority = session?.priority || 'normal';
-    const comment = session?.comment;
+    // Note: comment available via session?.comment when request creation is implemented
 
     // TODO: Создать заявку через RequestsService
     // const requestId = await this.requestsService.create(userId, {
@@ -435,7 +430,6 @@ export class CartHandler {
         'Следите за статусом в разделе «📋 Мои заявки»',
       {
         parse_mode: 'HTML',
-        reply_markup: getCategoryKeyboard(0).reply_markup,
       },
     );
     await ctx.answerCbQuery('✅ Заявка создана!');

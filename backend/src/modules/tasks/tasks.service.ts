@@ -8,7 +8,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In, Between, DataSource } from 'typeorm';
+import { Repository, In, DataSource } from 'typeorm';
 import { Task, TaskStatus, TaskType, TaskPriority } from './entities/task.entity';
 import { TaskItem } from './entities/task-item.entity';
 import { TaskComment } from './entities/task-comment.entity';
@@ -560,7 +560,7 @@ export class TasksService {
         throw new BadRequestException('Задача должна быть назначена оператору для завершения');
       }
 
-      await this.dataSource.transaction(async (transactionalEntityManager) => {
+      await this.dataSource.transaction(async (_transactionalEntityManager) => {
         for (const taskItem of task.items) {
           const actualQty = taskItem.actual_quantity || taskItem.planned_quantity;
 

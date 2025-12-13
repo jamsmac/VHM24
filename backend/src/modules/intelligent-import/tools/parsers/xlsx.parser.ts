@@ -77,7 +77,7 @@ export class XlsxParser {
   /**
    * Detect encoding (Excel files are binary, so this always returns 'binary')
    */
-  detectEncoding(buffer: Buffer): string {
+  detectEncoding(_buffer: Buffer): string {
     return 'binary';
   }
 

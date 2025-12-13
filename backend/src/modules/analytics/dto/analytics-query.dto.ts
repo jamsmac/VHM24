@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsDateString, IsArray, IsEnum } from 'class-validator';
+import { IsOptional, IsDateString, IsArray, IsEnum } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export enum MetricType {

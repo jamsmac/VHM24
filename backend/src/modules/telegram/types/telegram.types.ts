@@ -10,9 +10,8 @@
  * - Keyboard option types
  */
 
-import { Task, TaskStatus, TaskType } from '../../tasks/entities/task.entity';
-import { Machine, MachineStatus } from '../../machines/entities/machine.entity';
-import { Location } from '../../locations/entities/location.entity';
+import { TaskStatus, TaskType } from '../../tasks/entities/task.entity';
+import { MachineStatus } from '../../machines/entities/machine.entity';
 import { Markup } from 'telegraf';
 
 /**

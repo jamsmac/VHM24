@@ -38,7 +38,7 @@ export class UxApprovalAgent implements IAgent<UxInput, ApprovalRequest> {
     private readonly summaryFormatter: SummaryFormatter,
   ) {}
 
-  async execute(input: UxInput, context: AgentContext): Promise<ApprovalRequest> {
+  async execute(input: UxInput, _context: AgentContext): Promise<ApprovalRequest> {
     this.status = AgentStatus.RUNNING;
 
     try {
@@ -85,7 +85,7 @@ export class UxApprovalAgent implements IAgent<UxInput, ApprovalRequest> {
     return this.status;
   }
 
-  private requiresUserApproval(input: UxInput): boolean {
+  private requiresUserApproval(_input: UxInput): boolean {
     // Always require approval for now
     // In future: auto-approve small, safe imports
     return true;

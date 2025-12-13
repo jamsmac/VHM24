@@ -169,7 +169,7 @@ export class InventoryDifferenceService {
     const limit = filters.limit || 100;
     const offset = filters.offset || 0;
 
-    const [actualCounts, total] = await query.take(limit).skip(offset).getManyAndCount();
+    const [actualCounts] = await query.take(limit).skip(offset).getManyAndCount();
 
     // Для каждого замера рассчитать расхождение
     const reportItems: DifferenceReportItem[] = [];

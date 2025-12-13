@@ -32,9 +32,9 @@ jest.mock('ioredis', () => {
 });
 
 // Mock Logger to prevent console output
-const mockLoggerLog = jest.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
-const mockLoggerError = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
-const mockLoggerWarn = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+jest.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
+jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
 
 // Interfaces from the worker
 interface QueueHealth {

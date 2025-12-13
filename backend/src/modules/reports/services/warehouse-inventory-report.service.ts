@@ -115,7 +115,7 @@ export class WarehouseInventoryReportService {
    * Get current stock levels
    */
   private async getCurrentStock(
-    warehouseId: string,
+    _warehouseId: string,
   ): Promise<WarehouseInventoryReport['current_stock']> {
     // Note: WarehouseInventory doesn't have warehouse_id - it's global inventory
     // For warehouse-specific inventory, use InventoryBatch entity

@@ -81,7 +81,7 @@ export class TelegramQuickActionsService {
    * ```
    */
   getQuickActionKeyboard(userState: UserState, language: TelegramLanguage | string = 'ru') {
-    const t = this.i18nService.getFixedT(language);
+    // i18n translation function available via: this.i18nService.getFixedT(language)
 
     // Context-aware keyboard based on state
     if (userState.hasActiveTask) {

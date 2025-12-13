@@ -12,7 +12,6 @@ import {
   MaxLength,
   ValidateNested,
   IsArray,
-  IsObject,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { CommissionType, ContractStatus, TieredCommissionTier } from '../entities/contract.entity';

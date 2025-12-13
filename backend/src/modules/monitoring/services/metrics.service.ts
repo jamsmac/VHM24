@@ -1,9 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import {
-  makeCounterProvider,
-  makeHistogramProvider,
-  makeGaugeProvider,
-} from '@willsoto/nestjs-prometheus';
 import { Counter, Histogram, Gauge } from 'prom-client';
 
 /**

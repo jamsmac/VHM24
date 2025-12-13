@@ -1,6 +1,6 @@
 import { IsString, IsOptional, IsEnum, IsDateString } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { RequestPriority, RequestStatus } from '../entities/request.entity';
+import { RequestPriority } from '../entities/request.entity';
 
 /**
  * DTO для обновления заявки.
