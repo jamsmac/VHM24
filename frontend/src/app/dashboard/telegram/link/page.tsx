@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import { telegramApi } from '@/lib/telegram-api'
 import type { MyTelegramAccount, VerificationCodeResponse, NotificationPreferences } from '@/types/telegram'
 import { QrCode, Copy, CheckCircle, RefreshCw, Send, Bell, BellOff, Link as LinkIcon, Unlink } from 'lucide-react'
@@ -15,11 +15,28 @@ export default function TelegramLinkPage() {
   const [copied, setCopied] = useState(false)
   const [botUsername, setBotUsername] = useState<string>('')
 
-  useEffect(() => {
-    fetchData()
-  }, [])
+  const generateCode = useCallback(async () => {
+    try {
+      const data = await telegramApi.generateVerificationCode()
+      setVerificationData(data)
 
-  const fetchData = async () => {
+      // Generate QR code for bot link
+      const botUrl = `https://t.me/${botUsername}?start=${data.verification_code}`
+      const qr = await QRCode.toDataURL(botUrl, {
+        width: 300,
+        margin: 2,
+        color: {
+          dark: '#000000',
+          light: '#ffffff',
+        },
+      })
+      setQrCodeUrl(qr)
+    } catch (error) {
+      console.error('Failed to generate code:', error)
+    }
+  }, [botUsername])
+
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true)
       const [accountData, botInfo] = await Promise.all([
@@ -42,28 +59,11 @@ export default function TelegramLinkPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [generateCode])
 
-  const generateCode = async () => {
-    try {
-      const data = await telegramApi.generateVerificationCode()
-      setVerificationData(data)
-
-      // Generate QR code for bot link
-      const botUrl = `https://t.me/${botUsername}?start=${data.verification_code}`
-      const qr = await QRCode.toDataURL(botUrl, {
-        width: 300,
-        margin: 2,
-        color: {
-          dark: '#000000',
-          light: '#ffffff',
-        },
-      })
-      setQrCodeUrl(qr)
-    } catch (error) {
-      console.error('Failed to generate code:', error)
-    }
-  }
+  useEffect(() => {
+    fetchData()
+  }, [fetchData])
 
   const copyCode = () => {
     if (verificationData) {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { Button } from '@/components/ui/button';
@@ -43,11 +43,25 @@ export default function PurchaseDetailPage({ params }: { params: { id: string } 
   const [wac, setWac] = useState<WeightedAverageCost | null>(null);
   const [loadingWac, setLoadingWac] = useState(false);
 
-  useEffect(() => {
-    fetchPurchase();
+  const fetchWeightedAverageCost = useCallback(async (nomenclatureId: string) => {
+    try {
+      setLoadingWac(true);
+      const token = localStorage.getItem('access_token');
+      const response = await axios.get(
+        `http://localhost:3000/purchase-history/weighted-average-cost/${nomenclatureId}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      setWac(response.data);
+    } catch (error) {
+      console.error('Failed to fetch WAC:', error);
+    } finally {
+      setLoadingWac(false);
+    }
   }, []);
 
-  const fetchPurchase = async () => {
+  const fetchPurchase = useCallback(async () => {
     try {
       const token = localStorage.getItem('access_token');
       const response = await axios.get(
@@ -68,25 +82,11 @@ export default function PurchaseDetailPage({ params }: { params: { id: string } 
     } finally {
       setFetching(false);
     }
-  };
+  }, [params.id, fetchWeightedAverageCost]);
 
-  const fetchWeightedAverageCost = async (nomenclatureId: string) => {
-    try {
-      setLoadingWac(true);
-      const token = localStorage.getItem('access_token');
-      const response = await axios.get(
-        `http://localhost:3000/purchase-history/weighted-average-cost/${nomenclatureId}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-      setWac(response.data);
-    } catch (error) {
-      console.error('Failed to fetch WAC:', error);
-    } finally {
-      setLoadingWac(false);
-    }
-  };
+  useEffect(() => {
+    fetchPurchase();
+  }, [fetchPurchase]);
 
   const handleStatusChange = async (newStatus: 'ordered' | 'received' | 'cancelled') => {
     if (!purchase) {return;}

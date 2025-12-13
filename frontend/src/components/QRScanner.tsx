@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { Camera, X, Zap, CheckCircle, AlertCircle } from 'lucide-react'
 
 interface QRScannerProps {
@@ -19,14 +19,77 @@ export function QRScanner({ onScan, onClose, continuous = false }: QRScannerProp
   const [hasPermission, setHasPermission] = useState<boolean | null>(null)
   const scanIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
-  useEffect(() => {
-    startCamera()
-    return () => {
-      stopCamera()
-    }
+  const scanWithCanvas = useCallback(() => {
+    // Simplified canvas-based QR detection
+    // In production, you'd use a library like jsQR here
+    scanIntervalRef.current = setInterval(() => {
+      if (!videoRef.current || !canvasRef.current) {return}
+
+      const video = videoRef.current
+      const canvas = canvasRef.current
+      const ctx = canvas.getContext('2d')
+
+      if (!ctx || video.readyState !== video.HAVE_ENOUGH_DATA) {return}
+
+      canvas.width = video.videoWidth
+      canvas.height = video.videoHeight
+
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+
+      // Note: This is a placeholder. In production, use jsQR or similar library
+      // to decode QR codes from canvas imageData
+      // const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+      // const code = jsQR(imageData.data, imageData.width, imageData.height)
+    }, 300)
   }, [])
 
-  const startCamera = async () => {
+  const startScanning = useCallback(() => {
+    // Check if BarcodeDetector is supported
+    if ('BarcodeDetector' in window) {
+      // Use BarcodeDetector API
+      try {
+        // @ts-expect-error - BarcodeDetector is experimental
+        const barcodeDetector = new BarcodeDetector({ formats: ['qr_code'] })
+
+        scanIntervalRef.current = setInterval(async () => {
+          if (!videoRef.current) {return}
+
+          try {
+            const barcodes = await barcodeDetector.detect(videoRef.current)
+
+            if (barcodes.length > 0) {
+              const qrCode = barcodes[0].rawValue
+              console.log('QR Code scanned:', qrCode)
+            }
+          } catch (err) {
+            console.error('Barcode detection error:', err)
+          }
+        }, 300)
+      } catch (err) {
+        console.error('BarcodeDetector error:', err)
+        scanWithCanvas()
+      }
+    } else {
+      // Fallback to canvas-based scanning (simplified)
+      scanWithCanvas()
+    }
+  }, [scanWithCanvas])
+
+  const stopCamera = useCallback(() => {
+    if (scanIntervalRef.current) {
+      clearInterval(scanIntervalRef.current)
+      scanIntervalRef.current = null
+    }
+
+    if (stream) {
+      stream.getTracks().forEach((track) => track.stop())
+      setStream(null)
+    }
+
+    setIsScanning(false)
+  }, [stream])
+
+  const startCamera = useCallback(async () => {
     try {
       setError(null)
       setHasPermission(null)
@@ -64,81 +127,14 @@ export function QRScanner({ onScan, onClose, continuous = false }: QRScannerProp
           : 'Не удалось получить доступ к камере'
       )
     }
-  }
+  }, [startScanning])
 
-  const stopCamera = () => {
-    if (scanIntervalRef.current) {
-      clearInterval(scanIntervalRef.current)
-      scanIntervalRef.current = null
+  useEffect(() => {
+    startCamera()
+    return () => {
+      stopCamera()
     }
-
-    if (stream) {
-      stream.getTracks().forEach((track) => track.stop())
-      setStream(null)
-    }
-
-    setIsScanning(false)
-  }
-
-  const startScanning = () => {
-    // Check if BarcodeDetector is supported
-    if ('BarcodeDetector' in window) {
-      scanWithBarcodeDetector()
-    } else {
-      // Fallback to canvas-based scanning (simplified)
-      scanWithCanvas()
-    }
-  }
-
-  const scanWithBarcodeDetector = async () => {
-    try {
-      // @ts-ignore - BarcodeDetector is experimental
-      const barcodeDetector = new BarcodeDetector({ formats: ['qr_code'] })
-
-      scanIntervalRef.current = setInterval(async () => {
-        if (!videoRef.current || !isScanning) {return}
-
-        try {
-          // @ts-ignore
-          const barcodes = await barcodeDetector.detect(videoRef.current)
-
-          if (barcodes.length > 0) {
-            const qrCode = barcodes[0].rawValue
-            handleScan(qrCode)
-          }
-        } catch (err) {
-          console.error('Barcode detection error:', err)
-        }
-      }, 300) // Scan every 300ms
-    } catch (err) {
-      console.error('BarcodeDetector error:', err)
-      scanWithCanvas() // Fallback
-    }
-  }
-
-  const scanWithCanvas = () => {
-    // Simplified canvas-based QR detection
-    // In production, you'd use a library like jsQR here
-    scanIntervalRef.current = setInterval(() => {
-      if (!videoRef.current || !canvasRef.current || !isScanning) {return}
-
-      const video = videoRef.current
-      const canvas = canvasRef.current
-      const ctx = canvas.getContext('2d')
-
-      if (!ctx || video.readyState !== video.HAVE_ENOUGH_DATA) {return}
-
-      canvas.width = video.videoWidth
-      canvas.height = video.videoHeight
-
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
-
-      // Note: This is a placeholder. In production, use jsQR or similar library
-      // to decode QR codes from canvas imageData
-      // const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
-      // const code = jsQR(imageData.data, imageData.width, imageData.height)
-    }, 300)
-  }
+  }, [startCamera, stopCamera])
 
   const handleScan = (data: string) => {
     console.log('QR Code scanned:', data)

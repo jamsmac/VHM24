@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Plus, Trash2, Package } from 'lucide-react'
 import { componentsApi } from '@/lib/equipment-api'
 import type { EquipmentComponent, ComponentType } from '@/types/equipment'
@@ -39,21 +39,15 @@ export function TaskComponentsSelector({
   ].includes(taskType)
 
   // Определяем тип компонента на основе типа задачи
-  const getComponentTypeForTask = (): ComponentType | undefined => {
+  const getComponentTypeForTask = useCallback((): ComponentType | undefined => {
     if (taskType === 'replace_hopper') {return 'hopper' as ComponentType}
     if (taskType === 'replace_grinder') {return 'grinder' as ComponentType}
     if (taskType === 'replace_brewer') {return 'brewer' as ComponentType}
     if (taskType === 'replace_mixer') {return 'mixer' as ComponentType}
     return undefined
-  }
+  }, [taskType])
 
-  useEffect(() => {
-    if (requiresComponents) {
-      fetchComponents()
-    }
-  }, [requiresComponents, machineId, taskType])
-
-  const fetchComponents = async () => {
+  const fetchComponents = useCallback(async () => {
     try {
       setLoading(true)
       const componentType = getComponentTypeForTask()
@@ -73,7 +67,13 @@ export function TaskComponentsSelector({
     } finally {
       setLoading(false)
     }
-  }
+  }, [getComponentTypeForTask, machineId, taskType])
+
+  useEffect(() => {
+    if (requiresComponents) {
+      fetchComponents()
+    }
+  }, [requiresComponents, fetchComponents])
 
   const addComponent = (role: 'old' | 'new' | 'target') => {
     onChange([...components, { component_id: '', role, notes: '' }])

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { authStorage, type UserData } from '@/lib/auth-storage'
 
@@ -9,13 +9,13 @@ export function useAuth() {
   const [loading, setLoading] = useState(true)
   const router = useRouter()
 
-  useEffect(() => {
-    checkAuth()
-    // Migrate old localStorage data on first load
-    authStorage.migrateFromOldStorage()
-  }, [])
+  const logout = useCallback(() => {
+    authStorage.clearStorage()
+    setUser(null)
+    router.push('/login')
+  }, [router])
 
-  const checkAuth = () => {
+  const checkAuth = useCallback(() => {
     const token = authStorage.getAccessToken()
     const userData = authStorage.getUser()
 
@@ -27,19 +27,19 @@ export function useAuth() {
     }
 
     setLoading(false)
-  }
+  }, [logout])
+
+  useEffect(() => {
+    checkAuth()
+    // Migrate old localStorage data on first load
+    authStorage.migrateFromOldStorage()
+  }, [checkAuth])
 
   const login = (token: string, userData: UserData, refreshToken?: string, expiresIn?: number) => {
     // Save tokens and user data to secure storage
     authStorage.setTokens(token, refreshToken, expiresIn)
     authStorage.setUser(userData)
     setUser(userData)
-  }
-
-  const logout = () => {
-    authStorage.clearStorage()
-    setUser(null)
-    router.push('/login')
   }
 
   const isAuthenticated = !!user && !!authStorage.getAccessToken()

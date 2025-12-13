@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { Button } from '@/components/ui/button';
@@ -40,12 +40,7 @@ export default function EditRecipePage({ params }: { params: { id: string } }) {
   });
   const [recipeIngredients, setRecipeIngredients] = useState<RecipeIngredient[]>([]);
 
-  useEffect(() => {
-    fetchNomenclature();
-    fetchRecipe();
-  }, []);
-
-  const fetchNomenclature = async () => {
+  const fetchNomenclature = useCallback(async () => {
     try {
       const token = localStorage.getItem('access_token');
       const response = await axios.get('http://localhost:3000/nomenclature', {
@@ -57,9 +52,9 @@ export default function EditRecipePage({ params }: { params: { id: string } }) {
     } catch (error) {
       console.error('Failed to fetch nomenclature:', error);
     }
-  };
+  }, []);
 
-  const fetchRecipe = async () => {
+  const fetchRecipe = useCallback(async () => {
     try {
       const token = localStorage.getItem('access_token');
       const response = await axios.get(`http://localhost:3000/recipes/${params.id}`, {
@@ -96,7 +91,12 @@ export default function EditRecipePage({ params }: { params: { id: string } }) {
     } finally {
       setFetching(false);
     }
-  };
+  }, [params.id]);
+
+  useEffect(() => {
+    fetchNomenclature();
+    fetchRecipe();
+  }, [fetchNomenclature, fetchRecipe]);
 
   const addIngredient = () => {
     setRecipeIngredients([

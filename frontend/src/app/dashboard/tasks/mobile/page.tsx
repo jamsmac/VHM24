@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { tasksApi } from '@/lib/tasks-api'
 import { MobileTaskCard } from '@/components/tasks/MobileTaskCard'
@@ -26,13 +26,13 @@ export default function MobileTasksPage() {
   })
 
   // Pull to refresh
-  const handleTouchStart = (e: TouchEvent) => {
+  const handleTouchStart = useCallback((e: TouchEvent) => {
     if (window.scrollY === 0) {
       startY.current = e.touches[0].clientY
     }
-  }
+  }, [])
 
-  const handleTouchMove = (e: TouchEvent) => {
+  const handleTouchMove = useCallback((e: TouchEvent) => {
     if (startY.current === 0 || window.scrollY > 0) {return}
 
     const currentY = e.touches[0].clientY
@@ -41,9 +41,9 @@ export default function MobileTasksPage() {
     if (distance > 0 && distance < 150) {
       setPullDistance(distance)
     }
-  }
+  }, [])
 
-  const handleTouchEnd = async () => {
+  const handleTouchEnd = useCallback(async () => {
     if (pullDistance > 80) {
       setIsRefreshing(true)
       await refetch()
@@ -55,7 +55,7 @@ export default function MobileTasksPage() {
       setPullDistance(0)
     }
     startY.current = 0
-  }
+  }, [pullDistance, refetch])
 
   useEffect(() => {
     const container = document.getElementById('tasks-container')
@@ -70,7 +70,7 @@ export default function MobileTasksPage() {
       container.removeEventListener('touchmove', handleTouchMove as any)
       container.removeEventListener('touchend', handleTouchEnd)
     }
-  }, [pullDistance])
+  }, [handleTouchStart, handleTouchMove, handleTouchEnd])
 
   const myTasks = tasks?.filter((t) => t.status === 'assigned' || t.status === 'in_progress') || []
   const completedTasks = tasks?.filter((t) => t.status === 'completed') || []
