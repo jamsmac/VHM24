@@ -1,0 +1,536 @@
+import { Injectable, Logger } from '@nestjs/common';
+import { Context, Telegraf } from 'telegraf';
+import { TelegramSessionService } from '../services/telegram-session.service';
+import { CartState, defaultSessionData } from './fsm-states';
+import {
+  getCartKeyboard,
+  getCartEmptyKeyboard,
+  getCheckoutKeyboard,
+  getCategoryKeyboard,
+} from './keyboards';
+
+/**
+ * Интерфейс элемента корзины.
+ */
+interface CartItem {
+  id: string;
+  materialId: string;
+  name: string;
+  quantity: number;
+  unit: string;
+}
+
+/**
+ * Обработчик корзины и оформления заказа.
+ * Портировано из Python vendhub-bot/handlers/cart.py
+ */
+@Injectable()
+export class CartHandler {
+  private readonly logger = new Logger(CartHandler.name);
+
+  // Временное хранилище корзин (TODO: перенести в Redis или БД)
+  private carts: Map<string, CartItem[]> = new Map();
+
+  constructor(private readonly sessionService: TelegramSessionService) {}
+
+  /**
+   * Регистрирует все обработчики корзины.
+   */
+  registerHandlers(bot: Telegraf<Context>) {
+    // Просмотр корзины
+    bot.hears('🛒 Корзина', (ctx) => this.handleViewCart(ctx));
+    bot.action('cart:view', (ctx) => this.handleViewCartCallback(ctx));
+
+    // Управление позициями
+    bot.action(/^cart_inc:(.+)$/, (ctx) => this.handleCartIncrease(ctx));
+    bot.action(/^cart_dec:(.+)$/, (ctx) => this.handleCartDecrease(ctx));
+    bot.action(/^cart_del:(.+)$/, (ctx) => this.handleCartDelete(ctx));
+    bot.action('cart:clear', (ctx) => this.handleCartClear(ctx));
+
+    // Оформление заказа
+    bot.action('cart:checkout', (ctx) => this.handleStartCheckout(ctx));
+    bot.action(/^priority:(.+)$/, (ctx) => this.handleSetPriority(ctx));
+    bot.action('checkout:comment', (ctx) => this.handleAddCommentStart(ctx));
+    bot.action('checkout:cancel', (ctx) => this.handleCancelCheckout(ctx));
+    bot.action('checkout:confirm', (ctx) => this.handleConfirmCheckout(ctx));
+
+    // Мои заявки
+    bot.hears('📋 Мои заявки', (ctx) => this.handleMyRequests(ctx));
+
+    // Обработка текстовых сообщений
+    bot.on('text', (ctx, next) => this.handleTextInput(ctx, next));
+
+    this.logger.log('Cart handlers registered');
+  }
+
+  /**
+   * Получить корзину пользователя.
+   */
+  private getCart(userId: string): CartItem[] {
+    return this.carts.get(userId) || [];
+  }
+
+  /**
+   * Добавить в корзину (вызывается из CatalogHandler).
+   */
+  addToCart(userId: string, item: CartItem) {
+    const cart = this.getCart(userId);
+    const existing = cart.find((i) => i.materialId === item.materialId);
+
+    if (existing) {
+      existing.quantity += item.quantity;
+    } else {
+      cart.push(item);
+    }
+
+    this.carts.set(userId, cart);
+  }
+
+  /**
+   * Просмотр корзины (текстовое сообщение).
+   */
+  private async handleViewCart(ctx: Context) {
+    await this.showCart(ctx, false);
+  }
+
+  /**
+   * Просмотр корзины (callback).
+   */
+  private async handleViewCartCallback(ctx: Context) {
+    await this.showCart(ctx, true);
+    await ctx.answerCbQuery();
+  }
+
+  /**
+   * Показать содержимое корзины.
+   */
+  private async showCart(ctx: Context, isCallback: boolean) {
+    const userId = ctx.from?.id?.toString();
+    if (!userId) return;
+
+    const cart = this.getCart(userId);
+
+    // Сбрасываем состояние
+    await this.sessionService.setSessionData(userId, defaultSessionData);
+
+    if (cart.length === 0) {
+      const text = '🛒 <b>Корзина пуста</b>\n\n' + 'Добавьте материалы из каталога.';
+
+      if (isCallback) {
+        await ctx.editMessageText(text, {
+          parse_mode: 'HTML',
+          reply_markup: getCartEmptyKeyboard().reply_markup,
+        });
+      } else {
+        await ctx.reply(text, {
+          parse_mode: 'HTML',
+          reply_markup: getCartEmptyKeyboard().reply_markup,
+        });
+      }
+      return;
+    }
+
+    // Формируем текст корзины
+    const lines = ['🛒 <b>Ваша корзина</b>\n'];
+    let totalItems = 0;
+
+    cart.forEach((item, i) => {
+      lines.push(`${i + 1}. ${item.name}`);
+      lines.push(`   📦 ${item.quantity} ${item.unit}`);
+      totalItems += item.quantity;
+    });
+
+    lines.push(`\n📊 <b>Всего позиций:</b> ${cart.length}`);
+    lines.push(`📦 <b>Всего единиц:</b> ${totalItems}`);
+
+    const text = lines.join('\n');
+    const keyboard = getCartKeyboard(cart);
+
+    if (isCallback) {
+      await ctx.editMessageText(text, {
+        parse_mode: 'HTML',
+        reply_markup: keyboard.reply_markup,
+      });
+    } else {
+      await ctx.reply(text, {
+        parse_mode: 'HTML',
+        reply_markup: keyboard.reply_markup,
+      });
+    }
+  }
+
+  /**
+   * Увеличить количество позиции.
+   */
+  private async handleCartIncrease(ctx: Context) {
+    const userId = ctx.from?.id?.toString();
+    if (!userId) return;
+
+    // @ts-expect-error - ctx.match exists for action with regex
+    const itemId = ctx.match[1];
+
+    const cart = this.getCart(userId);
+    const item = cart.find((i) => i.id === itemId);
+
+    if (item) {
+      item.quantity += 1;
+      this.carts.set(userId, cart);
+      await ctx.answerCbQuery(`➕ ${item.name}: ${item.quantity}`);
+    }
+
+    await this.updateCartView(ctx, cart);
+  }
+
+  /**
+   * Уменьшить количество позиции.
+   */
+  private async handleCartDecrease(ctx: Context) {
+    const userId = ctx.from?.id?.toString();
+    if (!userId) return;
+
+    // @ts-expect-error - ctx.match exists for action with regex
+    const itemId = ctx.match[1];
+
+    let cart = this.getCart(userId);
+    const item = cart.find((i) => i.id === itemId);
+
+    if (item) {
+      if (item.quantity <= 1) {
+        cart = cart.filter((i) => i.id !== itemId);
+        await ctx.answerCbQuery(`🗑 ${item.name} удалён`);
+      } else {
+        item.quantity -= 1;
+        await ctx.answerCbQuery(`➖ ${item.name}: ${item.quantity}`);
+      }
+      this.carts.set(userId, cart);
+    }
+
+    await this.updateCartView(ctx, cart);
+  }
+
+  /**
+   * Удалить позицию из корзины.
+   */
+  private async handleCartDelete(ctx: Context) {
+    const userId = ctx.from?.id?.toString();
+    if (!userId) return;
+
+    // @ts-expect-error - ctx.match exists for action with regex
+    const itemId = ctx.match[1];
+
+    let cart = this.getCart(userId);
+    const item = cart.find((i) => i.id === itemId);
+
+    if (item) {
+      cart = cart.filter((i) => i.id !== itemId);
+      this.carts.set(userId, cart);
+      await ctx.answerCbQuery(`🗑 Удалено: ${item.name}`);
+    }
+
+    await this.updateCartView(ctx, cart);
+  }
+
+  /**
+   * Очистить корзину.
+   */
+  private async handleCartClear(ctx: Context) {
+    const userId = ctx.from?.id?.toString();
+    if (!userId) return;
+
+    this.carts.delete(userId);
+
+    await ctx.editMessageText('🗑 <b>Корзина очищена</b>', {
+      parse_mode: 'HTML',
+      reply_markup: getCartEmptyKeyboard().reply_markup,
+    });
+    await ctx.answerCbQuery('🗑 Корзина очищена');
+  }
+
+  /**
+   * Обновить отображение корзины.
+   */
+  private async updateCartView(ctx: Context, cart: CartItem[]) {
+    if (cart.length === 0) {
+      await ctx.editMessageText('🛒 <b>Корзина пуста</b>', {
+        parse_mode: 'HTML',
+        reply_markup: getCartEmptyKeyboard().reply_markup,
+      });
+      return;
+    }
+
+    const lines = ['🛒 <b>Ваша корзина</b>\n'];
+    let totalItems = 0;
+
+    cart.forEach((item, i) => {
+      lines.push(`${i + 1}. ${item.name}`);
+      lines.push(`   📦 ${item.quantity} ${item.unit}`);
+      totalItems += item.quantity;
+    });
+
+    lines.push(`\n📊 <b>Позиций:</b> ${cart.length}`);
+    lines.push(`📦 <b>Единиц:</b> ${totalItems}`);
+
+    try {
+      await ctx.editMessageText(lines.join('\n'), {
+        parse_mode: 'HTML',
+        reply_markup: getCartKeyboard(cart).reply_markup,
+      });
+    } catch (e) {
+      // Ignore if nothing changed
+    }
+  }
+
+  /**
+   * Начать оформление заказа.
+   */
+  private async handleStartCheckout(ctx: Context) {
+    const userId = ctx.from?.id?.toString();
+    if (!userId) return;
+
+    const cart = this.getCart(userId);
+
+    if (cart.length === 0) {
+      await ctx.answerCbQuery('❌ Корзина пуста', { show_alert: true });
+      return;
+    }
+
+    // Сохраняем данные checkout
+    await this.sessionService.setSessionData(userId, {
+      ...defaultSessionData,
+      checkoutItems: cart.length,
+      priority: 'normal',
+      comment: undefined,
+    });
+
+    // Формируем summary
+    const lines = ['📋 <b>Оформление заявки</b>\n'];
+
+    for (const item of cart) {
+      lines.push(`• ${item.name}: ${item.quantity} ${item.unit}`);
+    }
+
+    lines.push('\n<b>Выберите приоритет:</b>');
+    lines.push('🔵 Обычная — стандартная обработка');
+    lines.push('🟡 Высокая — ускоренная обработка');
+    lines.push('🔴 Срочная — немедленная обработка');
+
+    await ctx.editMessageText(lines.join('\n'), {
+      parse_mode: 'HTML',
+      reply_markup: getCheckoutKeyboard().reply_markup,
+    });
+    await ctx.answerCbQuery();
+  }
+
+  /**
+   * Установить приоритет.
+   */
+  private async handleSetPriority(ctx: Context) {
+    const userId = ctx.from?.id?.toString();
+    if (!userId) return;
+
+    // @ts-expect-error - ctx.match exists for action with regex
+    const priority = ctx.match[1] as 'normal' | 'high' | 'urgent';
+
+    const session = await this.sessionService.getSessionData(userId);
+    await this.sessionService.setSessionData(userId, {
+      ...session,
+      priority,
+    });
+
+    const priorityNames: Record<string, string> = {
+      normal: '🔵 Обычная',
+      high: '🟡 Высокая',
+      urgent: '🔴 Срочная',
+    };
+
+    await ctx.answerCbQuery(`Приоритет: ${priorityNames[priority] || priority}`);
+  }
+
+  /**
+   * Начать добавление комментария.
+   */
+  private async handleAddCommentStart(ctx: Context) {
+    const userId = ctx.from?.id?.toString();
+    if (!userId) return;
+
+    const session = await this.sessionService.getSessionData(userId);
+    await this.sessionService.setSessionData(userId, {
+      ...session,
+      state: CartState.ENTERING_COMMENT,
+    });
+
+    await ctx.editMessageText(
+      '💬 <b>Добавьте комментарий</b>\n\n' + 'Введите текст или отправьте /skip чтобы пропустить:',
+      { parse_mode: 'HTML' },
+    );
+    await ctx.answerCbQuery();
+  }
+
+  /**
+   * Отменить оформление.
+   */
+  private async handleCancelCheckout(ctx: Context) {
+    const userId = ctx.from?.id?.toString();
+    if (!userId) return;
+
+    const cart = this.getCart(userId);
+
+    await this.sessionService.setSessionData(userId, defaultSessionData);
+
+    await ctx.editMessageText('❌ <b>Оформление отменено</b>\n\n' + 'Ваша корзина сохранена.', {
+      parse_mode: 'HTML',
+      reply_markup: getCartKeyboard(cart).reply_markup,
+    });
+    await ctx.answerCbQuery('Отменено');
+  }
+
+  /**
+   * Подтвердить и создать заявку.
+   */
+  private async handleConfirmCheckout(ctx: Context) {
+    const userId = ctx.from?.id?.toString();
+    if (!userId) return;
+
+    const cart = this.getCart(userId);
+
+    if (cart.length === 0) {
+      await ctx.answerCbQuery('❌ Корзина пуста', { show_alert: true });
+      return;
+    }
+
+    const session = await this.sessionService.getSessionData(userId);
+    const priority = session?.priority || 'normal';
+    const comment = session?.comment;
+
+    // TODO: Создать заявку через RequestsService
+    // const requestId = await this.requestsService.create(userId, {
+    //   priority,
+    //   comment,
+    //   items: cart.map(item => ({
+    //     material_id: item.materialId,
+    //     quantity: item.quantity,
+    //   })),
+    // });
+
+    const requestId = Math.floor(Math.random() * 10000); // Temporary
+
+    // Очищаем корзину и сессию
+    this.carts.delete(userId);
+    await this.sessionService.setSessionData(userId, defaultSessionData);
+
+    const priorityEmoji: Record<string, string> = {
+      normal: '🔵',
+      high: '🟡',
+      urgent: '🔴',
+    };
+
+    // TODO: Уведомить администраторов
+    // await this.notifyAdmins(requestId, userId, cart, priority, comment);
+
+    await ctx.editMessageText(
+      `✅ <b>Заявка #${requestId} создана!</b>\n\n` +
+        `📦 Позиций: ${cart.length}\n` +
+        `${priorityEmoji[priority] || '🔵'} Приоритет: ${priority}\n\n` +
+        'Администратор получил уведомление.\n' +
+        'Следите за статусом в разделе «📋 Мои заявки»',
+      {
+        parse_mode: 'HTML',
+        reply_markup: getCategoryKeyboard(0).reply_markup,
+      },
+    );
+    await ctx.answerCbQuery('✅ Заявка создана!');
+  }
+
+  /**
+   * Показать мои заявки.
+   */
+  private async handleMyRequests(ctx: Context) {
+    const userId = ctx.from?.id?.toString();
+    if (!userId) return;
+
+    // TODO: Получить заявки пользователя через RequestsService
+    // const requests = await this.requestsService.findAll({
+    //   created_by_user_id: userId,
+    //   limit: 15,
+    // });
+
+    const requests: any[] = []; // Temporary
+
+    if (requests.length === 0) {
+      await ctx.reply(
+        '📋 <b>У вас пока нет заявок</b>\n\n' + 'Создайте первую заявку через «📦 Создать заявку»',
+        { parse_mode: 'HTML' },
+      );
+      return;
+    }
+
+    const lines = ['📋 <b>Ваши заявки</b>\n'];
+
+    for (const req of requests) {
+      const date = req.created_at?.toISOString().slice(0, 10) || '';
+      lines.push(`#${req.request_number} • ${req.status}`);
+      lines.push(`   📦 ${req.items?.length || 0} поз. • ${date}`);
+    }
+
+    await ctx.reply(lines.join('\n'), { parse_mode: 'HTML' });
+  }
+
+  /**
+   * Обработка текстового ввода.
+   */
+  private async handleTextInput(ctx: Context, next: () => Promise<void>) {
+    const userId = ctx.from?.id?.toString();
+    if (!userId || !ctx.message || !('text' in ctx.message)) {
+      return next();
+    }
+
+    const session = await this.sessionService.getSessionData(userId);
+    if (!session) {
+      return next();
+    }
+
+    const text = ctx.message.text;
+
+    // Обработка ввода комментария
+    if (session.state === CartState.ENTERING_COMMENT) {
+      const comment = text === '/skip' ? undefined : text.slice(0, 500);
+
+      const cart = this.getCart(userId);
+
+      await this.sessionService.setSessionData(userId, {
+        ...session,
+        state: CartState.IDLE,
+        comment,
+      });
+
+      // Показываем checkout снова
+      const lines = ['📋 <b>Оформление заявки</b>\n'];
+
+      for (const item of cart) {
+        lines.push(`• ${item.name}: ${item.quantity} ${item.unit}`);
+      }
+
+      const priorityNames: Record<string, string> = {
+        normal: '🔵 Обычная',
+        high: '🟡 Высокая',
+        urgent: '🔴 Срочная',
+      };
+
+      lines.push(`\n<b>Приоритет:</b> ${priorityNames[session.priority || 'normal']}`);
+
+      if (comment) {
+        lines.push(
+          `<b>Комментарий:</b> ${comment.length > 50 ? comment.slice(0, 50) + '...' : comment}`,
+        );
+      }
+
+      await ctx.reply(lines.join('\n'), {
+        parse_mode: 'HTML',
+        reply_markup: getCheckoutKeyboard().reply_markup,
+      });
+      return;
+    }
+
+    return next();
+  }
+}

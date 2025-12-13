@@ -27,7 +27,14 @@ export async function initSuperAdmin(dataSource: DataSource) {
 
     // Create super admin user
     const userId = uuidv4();
-    const passwordHash = await bcrypt.hash('VendHub2024!', 12);
+    const initialPassword = process.env.INITIAL_ADMIN_PASSWORD;
+    if (!initialPassword) {
+      throw new Error(
+        'INITIAL_ADMIN_PASSWORD environment variable is required for seeding. ' +
+          'Set it in .env file and change it immediately after first login.',
+      );
+    }
+    const passwordHash = await bcrypt.hash(initialPassword, 12);
 
     await queryRunner.query(
       `INSERT INTO users (
@@ -64,9 +71,9 @@ export async function initSuperAdmin(dataSource: DataSource) {
 
     console.log('✅ Super Admin created successfully!');
     console.log('📧 Email: admin@vendhub.com');
-    console.log('🔑 Password: VendHub2024!');
+    console.log('🔑 Password: [set via INITIAL_ADMIN_PASSWORD env var]');
     console.log('🤖 Telegram: @Jamshiddin (ID: 42283329)');
-    console.log('⚠️  Please change the password after first login!');
+    console.log('⚠️  SECURITY: Change the password immediately after first login!');
 
     await queryRunner.commitTransaction();
   } catch (error) {
