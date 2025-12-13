@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useEffect, useState, useCallback } from 'react'
+import Image from 'next/image'
 import { telegramApi } from '@/lib/telegram-api'
 import type { MyTelegramAccount, VerificationCodeResponse, NotificationPreferences } from '@/types/telegram'
 import { QrCode, Copy, CheckCircle, RefreshCw, Send, Bell, BellOff, Link as LinkIcon, Unlink } from 'lucide-react'
@@ -251,7 +252,7 @@ export default function TelegramLinkPage() {
           <div className="flex flex-col items-center">
             <div className="p-4 bg-white rounded-xl shadow-md mb-4">
               {qrCodeUrl ? (
-                <img src={qrCodeUrl} alt="QR Code" className="w-64 h-64" />
+                <Image src={qrCodeUrl} alt="QR Code" width={256} height={256} unoptimized />
               ) : (
                 <div className="w-64 h-64 flex items-center justify-center">
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />

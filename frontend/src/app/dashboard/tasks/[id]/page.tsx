@@ -10,6 +10,7 @@ import { formatDateTime, formatCurrency, getStatusColor, getPriorityColor } from
 import { toast } from 'react-toastify'
 import { MapPin, User, Clock, Package, AlertTriangle, Camera, Wrench, Image as ImageIcon, Upload } from 'lucide-react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useState } from 'react'
 import { PhotoUploader } from '@/components/tasks/PhotoUploader'
 import type { TaskPhoto, TaskComponent } from '@/types/tasks'
@@ -345,10 +346,12 @@ export default function TaskDetailPage() {
                             }
                           }}
                         >
-                          <img
+                          <Image
                             src={photo.file_url || photo.cloudflare_url || ''}
                             alt="Фото до"
-                            className="w-full h-full object-cover"
+                            fill
+                            className="object-cover"
+                            unoptimized
                           />
                         </div>
                       ))}
@@ -382,10 +385,12 @@ export default function TaskDetailPage() {
                             }
                           }}
                         >
-                          <img
+                          <Image
                             src={photo.file_url || photo.cloudflare_url || ''}
                             alt="Фото после"
-                            className="w-full h-full object-cover"
+                            fill
+                            className="object-cover"
+                            unoptimized
                           />
                         </div>
                       ))}
@@ -517,10 +522,13 @@ export default function TaskDetailPage() {
           />
           {/* Content */}
           <div className="relative max-w-4xl max-h-full z-10">
-            <img
+            <Image
               src={selectedPhoto}
               alt="Просмотр фото"
+              width={800}
+              height={600}
               className="max-w-full max-h-[90vh] object-contain rounded-lg"
+              unoptimized
             />
           </div>
         </div>

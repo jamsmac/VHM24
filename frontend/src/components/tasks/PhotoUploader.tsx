@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback } from 'react'
+import Image from 'next/image'
 import { Camera, Upload, X, CheckCircle, AlertCircle } from 'lucide-react'
 import { filesApi, type FileUploadParams } from '@/lib/files-api'
 import { compressImage } from '@/lib/image-utils'
@@ -235,10 +236,12 @@ export function PhotoUploader({
         <div className="grid grid-cols-3 gap-2">
           {existingPhotos.map((photo) => (
             <div key={photo.id} className="relative aspect-square bg-gray-100 rounded-lg overflow-hidden">
-              <img
-                src={photo.file_url || photo.cloudflare_url}
+              <Image
+                src={photo.file_url || photo.cloudflare_url || ''}
                 alt="Фото"
-                className="w-full h-full object-cover"
+                fill
+                className="object-cover"
+                unoptimized
               />
               <div className="absolute top-1 right-1">
                 <div className="bg-green-500 rounded-full p-1">
@@ -258,10 +261,12 @@ export function PhotoUploader({
               key={uploadingFile.preview}
               className="relative aspect-square bg-gray-100 rounded-lg overflow-hidden"
             >
-              <img
+              <Image
                 src={uploadingFile.preview}
                 alt="Загрузка..."
-                className="w-full h-full object-cover"
+                fill
+                className="object-cover"
+                unoptimized
               />
 
               {/* Overlay */}
