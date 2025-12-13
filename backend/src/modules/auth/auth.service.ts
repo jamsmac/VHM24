@@ -417,9 +417,6 @@ export class AuthService {
     // Revoke all user sessions in database (REQ-AUTH-54)
     await this.sessionService.revokeAllUserSessions(userId, 'logout');
 
-    // Get user for audit log (using entity method since we only need email)
-    const user = await this.usersService.findOneEntity(userId);
-
     // Log logout (REQ-AUTH-80)
     await this.auditLogService.log({
       event_type: AuditEventType.LOGOUT,
@@ -457,8 +454,9 @@ export class AuthService {
    */
   private async generateTokens(user: User): Promise<AuthTokens> {
     // Generate unique JWT IDs for blacklist support
-    const accessJti = uuidv4();
-    const refreshJti = uuidv4();
+    // TODO: Use these JTIs when implementing token blacklisting
+    const _accessJti = uuidv4();
+    const _refreshJti = uuidv4();
 
     const basePayload: Partial<JwtPayload> = {
       sub: user.id,

@@ -243,7 +243,7 @@ export class JsonParser implements DataParser {
   /**
    * Convert value based on type and options
    */
-  private convertValue(value: any, options: ParserOptions): any {
+  private convertValue(value: any, _options: ParserOptions): any {
     // Handle dates
     if (value instanceof Date) {
       return value;
@@ -277,7 +277,7 @@ export class JsonParser implements DataParser {
   }
 
   // Implementation of other interface methods
-  validate(data: ParsedData, schema?: any): ValidationResult {
+  validate(data: ParsedData, _schema?: any): ValidationResult {
     return {
       isValid: true,
       data: data.data,
@@ -293,7 +293,7 @@ export class JsonParser implements DataParser {
     };
   }
 
-  transform(data: ParsedData, rules?: any): TransformedData {
+  transform(data: ParsedData, _rules?: any): TransformedData {
     return {
       data: data.data,
       transformations: [],
@@ -302,7 +302,7 @@ export class JsonParser implements DataParser {
     };
   }
 
-  detectFormat(input: Buffer): FileFormat {
+  detectFormat(_input: Buffer): FileFormat {
     return FileFormat.JSON;
   }
 

@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, Between } from 'typeorm';
-import { Cron, CronExpression } from '@nestjs/schedule';
+import { Cron } from '@nestjs/schedule';
 import { DailyStats } from './entities/daily-stats.entity';
 import { Transaction, TransactionType } from '../transactions/entities/transaction.entity';
 import { Task, TaskStatus, TaskType } from '../tasks/entities/task.entity';

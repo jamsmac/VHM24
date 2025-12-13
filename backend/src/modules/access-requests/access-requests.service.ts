@@ -6,7 +6,6 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, FindOptionsWhere } from 'typeorm';
-import * as bcrypt from 'bcrypt';
 import { randomBytes } from 'crypto';
 import { AccessRequest, AccessRequestStatus } from './entities/access-request.entity';
 import { CreateAccessRequestDto } from './dto/create-access-request.dto';

@@ -59,5 +59,4 @@ describe('Health Check (e2e)', () => {
         });
     });
   });
-
 });

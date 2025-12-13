@@ -15,12 +15,12 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
 export class ImproveAuthModule1732100000000 implements MigrationInterface {
   name = 'ImproveAuthModule1732100000000';
 
-  public async up(queryRunner: QueryRunner): Promise<void> {
+  public async up(_queryRunner: QueryRunner): Promise<void> {
     // All required database fields already exist
     // This migration is for documentation purposes
   }
 
-  public async down(queryRunner: QueryRunner): Promise<void> {
+  public async down(_queryRunner: QueryRunner): Promise<void> {
     // Nothing to revert
   }
 }

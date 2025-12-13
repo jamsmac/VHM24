@@ -5,7 +5,7 @@ import { Task, TaskStatus, TaskPriority } from '@modules/tasks/entities/task.ent
 import { OperatorRating } from '@modules/operator-ratings/entities/operator-rating.entity';
 import { Machine } from '@modules/machines/entities/machine.entity';
 import { Incident } from '@modules/incidents/entities/incident.entity';
-import { startOfDay, startOfWeek, startOfMonth, subMonths } from 'date-fns';
+import { startOfDay, startOfWeek, startOfMonth } from 'date-fns';
 
 export interface OperatorDashboard {
   operator: {

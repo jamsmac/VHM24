@@ -51,7 +51,7 @@ export class AddEquipmentNotificationTypes1731585600005 implements MigrationInte
     }
   }
 
-  public async down(queryRunner: QueryRunner): Promise<void> {
+  public async down(_queryRunner: QueryRunner): Promise<void> {
     // Note: PostgreSQL doesn't support removing enum values directly
     // You would need to recreate the enum without these values
     // For simplicity in development, we'll leave it as is

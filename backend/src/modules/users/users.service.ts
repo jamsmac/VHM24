@@ -8,7 +8,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
 import * as bcrypt from 'bcrypt';
-import { User, UserStatus, UserRole } from './entities/user.entity';
+import { User, UserStatus } from './entities/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UpdateIpWhitelistDto } from './dto/update-ip-whitelist.dto';
@@ -355,7 +355,11 @@ export class UsersService {
 
     // Clear block reason from settings
     if (user.settings?.block_reason) {
-      const { block_reason, blocked_at, ...otherSettings } = user.settings;
+      const {
+        block_reason: _block_reason,
+        blocked_at: _blocked_at,
+        ...otherSettings
+      } = user.settings;
       user.settings = otherSettings;
     }
 
@@ -397,7 +401,7 @@ export class UsersService {
 
     // Clear deactivation timestamp
     if (user.settings?.deactivated_at) {
-      const { deactivated_at, ...otherSettings } = user.settings;
+      const { deactivated_at: _deactivated_at, ...otherSettings } = user.settings;
       user.settings = otherSettings;
     }
 

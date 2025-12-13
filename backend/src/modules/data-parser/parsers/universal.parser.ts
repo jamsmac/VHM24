@@ -6,10 +6,8 @@ import {
   ParserOptions,
   ValidationResult,
   TransformedData,
-  ParseMetadata,
   ParseWarning,
   ParseError,
-  ParseStatistics,
 } from '../interfaces/parser.interface';
 import { ExcelParser } from './excel.parser';
 import { CsvParser } from './csv.parser';
@@ -281,7 +279,7 @@ export class UniversalParser implements DataParser {
   /**
    * Validate parsed data
    */
-  validate(data: ParsedData, schema?: any): ValidationResult {
+  validate(data: ParsedData, _schema?: any): ValidationResult {
     // Implementation would go here
     // For now, return a basic validation result
     return {
@@ -302,7 +300,7 @@ export class UniversalParser implements DataParser {
   /**
    * Transform parsed data
    */
-  transform(data: ParsedData, rules?: any): TransformedData {
+  transform(data: ParsedData, _rules?: any): TransformedData {
     // Implementation would go here
     // For now, return the data as-is
     return {

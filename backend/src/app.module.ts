@@ -42,6 +42,8 @@ import { TelegramBotModule } from './modules/telegram-bot/telegram-bot.module';
 import { WebPushModule } from './modules/web-push/web-push.module';
 import { SalesImportModule } from './modules/sales-import/sales-import.module';
 import { CounterpartyModule } from './modules/counterparty/counterparty.module';
+import { RequestsModule } from './modules/requests/requests.module';
+import { ReconciliationModule } from './modules/reconciliation/reconciliation.module';
 import { OpeningBalancesModule } from './modules/opening-balances/opening-balances.module';
 import { PurchaseHistoryModule } from './modules/purchase-history/purchase-history.module';
 import { IntelligentImportModule } from './modules/intelligent-import/intelligent-import.module';
@@ -179,6 +181,8 @@ import { CommonModule } from './common/common.module';
     TelegramBotModule,
     WebPushModule,
     SalesImportModule,
+    RequestsModule,
+    ReconciliationModule,
     BullBoardModule,
     WebsocketModule,
     HealthModule,

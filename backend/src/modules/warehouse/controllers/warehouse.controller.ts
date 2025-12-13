@@ -1,22 +1,8 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Put,
-  Delete,
-  Body,
-  Param,
-  Query,
-  UseGuards,
-  ParseUUIDPipe,
-} from '@nestjs/common';
+import { Controller, Get, Param, UseGuards, ParseUUIDPipe } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { WarehouseService } from '../services/warehouse.service';
-import { CreateWarehouseDto } from '../dto/create-warehouse.dto';
-import { UpdateWarehouseDto } from '../dto/update-warehouse.dto';
 import { JwtAuthGuard } from '@modules/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '@modules/auth/guards/roles.guard';
-import { Roles } from '@modules/auth/decorators/roles.decorator';
 
 @ApiTags('warehouses')
 @ApiBearerAuth('JWT-auth')

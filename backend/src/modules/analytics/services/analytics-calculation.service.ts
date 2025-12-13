@@ -1,9 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between } from 'typeorm';
-import { AnalyticsSnapshot, SnapshotType } from '../entities/analytics-snapshot.entity';
+import { Repository } from 'typeorm';
+import { AnalyticsSnapshot } from '../entities/analytics-snapshot.entity';
 import { AnalyticsQueryDto, MetricType, GroupByType } from '../dto/analytics-query.dto';
-import { startOfDay, endOfDay, startOfWeek, startOfMonth, format, subDays } from 'date-fns';
+import { startOfWeek, format, subDays } from 'date-fns';
 
 export interface AnalyticsResult {
   labels: string[];

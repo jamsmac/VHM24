@@ -382,7 +382,7 @@ export class ExcelParser implements DataParser {
   /**
    * Clean and normalize row data
    */
-  private async cleanRow(row: any, columnMapping: any): Promise<any> {
+  private async cleanRow(row: any, _columnMapping: any): Promise<any> {
     const cleaned: any = {};
 
     for (const [field, value] of Object.entries(row)) {
@@ -480,7 +480,7 @@ export class ExcelParser implements DataParser {
   }
 
   // Implementation of other interface methods
-  validate(data: ParsedData, schema?: any): ValidationResult {
+  validate(data: ParsedData, _schema?: any): ValidationResult {
     return {
       isValid: true,
       data: data.data,
@@ -496,7 +496,7 @@ export class ExcelParser implements DataParser {
     };
   }
 
-  transform(data: ParsedData, rules?: any): TransformedData {
+  transform(data: ParsedData, _rules?: any): TransformedData {
     return {
       data: data.data,
       transformations: [],
@@ -505,7 +505,7 @@ export class ExcelParser implements DataParser {
     };
   }
 
-  detectFormat(input: Buffer): FileFormat {
+  detectFormat(_input: Buffer): FileFormat {
     return FileFormat.EXCEL;
   }
 

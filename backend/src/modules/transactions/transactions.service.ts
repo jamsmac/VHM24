@@ -1,13 +1,8 @@
 import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between } from 'typeorm';
+import { Repository } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import {
-  Transaction,
-  TransactionType,
-  PaymentMethod,
-  ExpenseCategory,
-} from './entities/transaction.entity';
+import { Transaction, TransactionType, PaymentMethod } from './entities/transaction.entity';
 import {
   CreateTransactionDto,
   RecordSaleDto,
@@ -45,7 +40,7 @@ export class TransactionsService {
   /**
    * Создание транзакции
    */
-  async create(dto: CreateTransactionDto, userId?: string): Promise<Transaction> {
+  async create(dto: CreateTransactionDto, _userId?: string): Promise<Transaction> {
     // Генерируем уникальный номер транзакции
     const transactionNumber = await this.generateTransactionNumber();
 

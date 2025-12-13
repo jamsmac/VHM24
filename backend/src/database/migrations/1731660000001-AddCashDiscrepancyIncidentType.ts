@@ -8,7 +8,7 @@ export class AddCashDiscrepancyIncidentType1731660000001 implements MigrationInt
     `);
   }
 
-  public async down(queryRunner: QueryRunner): Promise<void> {
+  public async down(_queryRunner: QueryRunner): Promise<void> {
     // Note: PostgreSQL doesn't support removing enum values directly
     // This would require recreating the enum type, which is complex
     // For now, we'll leave the value in the enum even on rollback

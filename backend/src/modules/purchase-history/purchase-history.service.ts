@@ -1,6 +1,6 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between, LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
+import { Repository } from 'typeorm';
 import { PurchaseHistory } from './entities/purchase-history.entity';
 import { CreatePurchaseDto, PurchaseStatus } from './dto/create-purchase.dto';
 import { UpdatePurchaseDto } from './dto/update-purchase.dto';
@@ -150,7 +150,7 @@ export class PurchaseHistoryService {
    * Delete purchase record
    */
   async remove(id: string): Promise<void> {
-    const purchase = await this.findOne(id);
+    await this.findOne(id); // Verify exists
     await this.purchaseRepository.softDelete(id);
   }
 
@@ -282,7 +282,7 @@ export class PurchaseHistoryService {
 
     for (const item of data) {
       try {
-        const purchase = await this.create(
+        await this.create(
           {
             ...item,
             import_source: 'csv',

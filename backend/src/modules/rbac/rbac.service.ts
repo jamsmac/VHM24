@@ -14,7 +14,6 @@ import {
   UpdateRoleDto,
   CreatePermissionDto,
   UpdatePermissionDto,
-  AssignRoleDto,
   PermissionAction,
 } from './dto';
 
@@ -195,7 +194,7 @@ export class RbacService {
    * @throws NotFoundException if role not found
    */
   async removeRole(id: string): Promise<void> {
-    const role = await this.findOneRole(id);
+    await this.findOneRole(id); // Verify exists
     await this.roleRepository.softDelete(id);
   }
 
@@ -351,7 +350,7 @@ export class RbacService {
    * @throws NotFoundException if permission not found
    */
   async removePermission(id: string): Promise<void> {
-    const permission = await this.findOnePermission(id);
+    await this.findOnePermission(id); // Verify exists
     await this.permissionRepository.softDelete(id);
   }
 

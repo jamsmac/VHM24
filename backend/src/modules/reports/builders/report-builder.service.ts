@@ -621,7 +621,7 @@ export class ReportBuilderService {
   private async processData(
     rawData: RawQueryResults,
     template: ReportTemplate,
-    params: ReportParams,
+    _params: ReportParams,
   ): Promise<ReportData> {
     // Simple processing for now
     const firstQuery = template.queries[0];
@@ -671,8 +671,8 @@ export class ReportBuilderService {
    */
   private async calculateMetrics(
     data: ReportData,
-    template: ReportTemplate,
-    params: ReportParams,
+    _template: ReportTemplate,
+    _params: ReportParams,
   ): Promise<ReportMetrics> {
     const metrics: ReportMetrics = {};
 
@@ -690,9 +690,9 @@ export class ReportBuilderService {
    * Generate charts
    */
   private async generateCharts(
-    data: ReportData,
-    template: ReportTemplate,
-    params: ReportParams,
+    _data: ReportData,
+    _template: ReportTemplate,
+    _params: ReportParams,
   ): Promise<ChartData[]> {
     return [];
   }
@@ -702,8 +702,8 @@ export class ReportBuilderService {
    */
   private generateSummary(
     data: ReportData,
-    metrics: ReportMetrics,
-    params: ReportParams,
+    _metrics: ReportMetrics,
+    _params: ReportParams,
   ): ReportSummary {
     return {
       totalRows: data.rows.length,

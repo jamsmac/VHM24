@@ -259,6 +259,44 @@ export class TelegramSessionService {
     return session?.context?.activeTaskId || null;
   }
 
+  // ========================================
+  // FSM Session Data Methods (for catalog/cart handlers)
+  // ========================================
+
+  /**
+   * Get FSM session data from context.tempData
+   */
+  async getSessionData(userId: string): Promise<Record<string, any> | null> {
+    const session = await this.getSession(userId);
+    return session?.context?.tempData || null;
+  }
+
+  /**
+   * Set FSM session data in context.tempData
+   */
+  async setSessionData(userId: string, data: Record<string, any>): Promise<void> {
+    const session = await this.getSession(userId);
+
+    if (session) {
+      await this.saveSession(userId, {
+        context: {
+          ...session.context,
+          tempData: data,
+        },
+      });
+    } else {
+      // Create a minimal session with the FSM data
+      await this.saveSession(userId, {
+        chatId: userId,
+        telegramId: userId,
+        state: ConversationState.IDLE,
+        context: {
+          tempData: data,
+        },
+      });
+    }
+  }
+
   /**
    * Clean up expired sessions (can be called by cron job)
    */

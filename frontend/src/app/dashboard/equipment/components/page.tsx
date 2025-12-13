@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { Plus, Search, Filter, MapPin, MoveRight, Package, Wrench } from 'lucide-react'
 import Link from 'next/link'
 import { componentsApi } from '@/lib/equipment-api'
@@ -23,11 +23,7 @@ export default function ComponentsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedComponent, setSelectedComponent] = useState<EquipmentComponent | null>(null)
 
-  useEffect(() => {
-    fetchComponents()
-  }, [filterType, filterStatus])
-
-  const fetchComponents = async () => {
+  const fetchComponents = useCallback(async () => {
     try {
       setLoading(true)
       const data = await componentsApi.getAll({
@@ -40,7 +36,11 @@ export default function ComponentsPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [filterType, filterStatus])
+
+  useEffect(() => {
+    fetchComponents()
+  }, [fetchComponents])
 
   const filteredComponents = components.filter(component =>
     component.name.toLowerCase().includes(searchTerm.toLowerCase()) ||

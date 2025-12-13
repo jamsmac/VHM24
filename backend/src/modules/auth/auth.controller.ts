@@ -441,7 +441,7 @@ export class AuthController {
   @ApiResponse({ status: 404, description: 'Сессия не найдена' })
   async revokeSession(
     @Param('sessionId') sessionId: string,
-    @CurrentUser() user: User,
+    @CurrentUser() _user: User,
   ): Promise<void> {
     await this.sessionService.revokeSession(sessionId, 'revoked_by_user');
   }

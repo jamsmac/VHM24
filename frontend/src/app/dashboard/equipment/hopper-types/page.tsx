@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { Plus, Search, Filter, Trash2, Edit, Tag } from 'lucide-react'
 import { hopperTypesApi } from '@/lib/equipment-api'
 import type { HopperType } from '@/types/equipment'
@@ -14,11 +14,7 @@ export default function HopperTypesPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedType, setSelectedType] = useState<HopperType | null>(null)
 
-  useEffect(() => {
-    fetchHopperTypes()
-  }, [filterCategory])
-
-  const fetchHopperTypes = async () => {
+  const fetchHopperTypes = useCallback(async () => {
     try {
       setLoading(true)
       const data = await hopperTypesApi.getAll({
@@ -30,7 +26,11 @@ export default function HopperTypesPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [filterCategory])
+
+  useEffect(() => {
+    fetchHopperTypes()
+  }, [fetchHopperTypes])
 
   const filteredTypes = hopperTypes.filter(type =>
     type.name.toLowerCase().includes(searchTerm.toLowerCase()) ||

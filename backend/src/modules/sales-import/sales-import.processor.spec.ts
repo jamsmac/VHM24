@@ -449,26 +449,28 @@ describe('SalesImportProcessor', () => {
     it('should handle cells with empty headers (skip them)', async () => {
       mockWorkbook.worksheets = [
         {
-          eachRow: jest.fn((callback: (row: { eachCell: jest.Mock }, rowNumber: number) => void) => {
-            callback(
-              {
-                eachCell: jest.fn((cb: (cell: { value: unknown }, idx: number) => void) => {
-                  cb({ value: null }, 1);
-                  cb({ value: 'date' }, 2);
-                }),
-              },
-              1,
-            );
-            callback(
-              {
-                eachCell: jest.fn((cb: (cell: { value: unknown }, idx: number) => void) => {
-                  cb({ value: '2025-01-15' }, 1);
-                  cb({ value: '2025-01-16' }, 2);
-                }),
-              },
-              2,
-            );
-          }),
+          eachRow: jest.fn(
+            (callback: (row: { eachCell: jest.Mock }, rowNumber: number) => void) => {
+              callback(
+                {
+                  eachCell: jest.fn((cb: (cell: { value: unknown }, idx: number) => void) => {
+                    cb({ value: null }, 1);
+                    cb({ value: 'date' }, 2);
+                  }),
+                },
+                1,
+              );
+              callback(
+                {
+                  eachCell: jest.fn((cb: (cell: { value: unknown }, idx: number) => void) => {
+                    cb({ value: '2025-01-15' }, 1);
+                    cb({ value: '2025-01-16' }, 2);
+                  }),
+                },
+                2,
+              );
+            },
+          ),
         },
       ];
       const parseExcel = (processor as any).parseExcel.bind(processor);

@@ -5,7 +5,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { AnalyticsService } from './analytics.service';
 import { DailyStats } from './entities/daily-stats.entity';
-import { format, subDays, parseISO } from 'date-fns';
+import { subDays, parseISO } from 'date-fns';
 import { UserRole } from '../users/entities/user.entity';
 
 @ApiTags('Analytics')

@@ -239,7 +239,7 @@ export class CsvParser implements DataParser {
   /**
    * Check if value is a date
    */
-  private isDate(value: string, options: ParserOptions): boolean {
+  private isDate(value: string, _options: ParserOptions): boolean {
     const datePatterns = [
       /^\d{2}[./]\d{2}[./]\d{4}$/, // DD.MM.YYYY or DD/MM/YYYY
       /^\d{4}-\d{2}-\d{2}$/, // YYYY-MM-DD
@@ -315,7 +315,7 @@ export class CsvParser implements DataParser {
   }
 
   // Implementation of other interface methods
-  validate(data: ParsedData, schema?: any): ValidationResult {
+  validate(data: ParsedData, _schema?: any): ValidationResult {
     return {
       isValid: true,
       data: data.data,
@@ -331,7 +331,7 @@ export class CsvParser implements DataParser {
     };
   }
 
-  transform(data: ParsedData, rules?: any): TransformedData {
+  transform(data: ParsedData, _rules?: any): TransformedData {
     return {
       data: data.data,
       transformations: [],
@@ -340,7 +340,7 @@ export class CsvParser implements DataParser {
     };
   }
 
-  detectFormat(input: Buffer): FileFormat {
+  detectFormat(_input: Buffer): FileFormat {
     return FileFormat.CSV;
   }
 

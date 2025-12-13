@@ -24,36 +24,35 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
   });
 
   useEffect(() => {
-    fetchProduct();
-  }, []);
-
-  const fetchProduct = async () => {
-    try {
-      const token = localStorage.getItem('access_token');
-      const response = await axios.get(`http://localhost:3000/nomenclature/${params.id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = response.data;
-      setFormData({
-        sku: data.sku,
-        name: data.name,
-        category_code: data.category_code,
-        unit_of_measure_code: data.unit_of_measure_code,
-        description: data.description || '',
-        purchase_price: data.purchase_price?.toString() || '',
-        selling_price: data.selling_price?.toString() || '',
+    const fetchProduct = async () => {
+      try {
+        const token = localStorage.getItem('access_token');
+        const response = await axios.get(`http://localhost:3000/nomenclature/${params.id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = response.data;
+        setFormData({
+          sku: data.sku,
+          name: data.name,
+          category_code: data.category_code,
+          unit_of_measure_code: data.unit_of_measure_code,
+          description: data.description || '',
+          purchase_price: data.purchase_price?.toString() || '',
+          selling_price: data.selling_price?.toString() || '',
         is_ingredient: data.is_ingredient,
         is_active: data.is_active,
         min_stock_level: data.min_stock_level?.toString() || '0',
         max_stock_level: data.max_stock_level?.toString() || '1000',
       });
-    } catch (error) {
-      console.error('Failed to fetch product:', error);
-      alert('Ошибка при загрузке данных');
-    } finally {
-      setFetching(false);
-    }
-  };
+      } catch (error) {
+        console.error('Failed to fetch product:', error);
+        alert('Ошибка при загрузке данных');
+      } finally {
+        setFetching(false);
+      }
+    };
+    fetchProduct();
+  }, [params.id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -26,24 +26,23 @@ export default function ProductsPage() {
   const [filter, setFilter] = useState<'all' | 'products' | 'ingredients'>('all');
 
   useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setLoading(true);
+        const token = localStorage.getItem('access_token');
+        const response = await axios.get('http://localhost:3000/nomenclature', {
+          headers: { Authorization: `Bearer ${token}` },
+          params: filter !== 'all' ? { is_ingredient: filter === 'ingredients' } : {},
+        });
+        setProducts(response.data);
+      } catch (error) {
+        console.error('Failed to fetch products:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
     fetchProducts();
   }, [filter]);
-
-  const fetchProducts = async () => {
-    try {
-      setLoading(true);
-      const token = localStorage.getItem('access_token');
-      const response = await axios.get('http://localhost:3000/nomenclature', {
-        headers: { Authorization: `Bearer ${token}` },
-        params: filter !== 'all' ? { is_ingredient: filter === 'ingredients' } : {},
-      });
-      setProducts(response.data);
-    } catch (error) {
-      console.error('Failed to fetch products:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const filteredProducts = products.filter((p) => {
     if (filter === 'all') {return true;}

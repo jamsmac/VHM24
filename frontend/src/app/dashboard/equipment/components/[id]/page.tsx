@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { ArrowLeft, MapPin, Clock, Wrench, Package, Calendar, MoveRight, Download, Upload } from 'lucide-react'
 import { componentsApi } from '@/lib/equipment-api'
@@ -30,11 +30,7 @@ export default function ComponentDetailPage() {
   const [loading, setLoading] = useState(true)
   const [movementAction, setMovementAction] = useState<MovementAction>(null)
 
-  useEffect(() => {
-    fetchData()
-  }, [componentId])
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true)
       const [componentData, movementsData] = await Promise.all([
@@ -48,7 +44,11 @@ export default function ComponentDetailPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [componentId])
+
+  useEffect(() => {
+    fetchData()
+  }, [fetchData])
 
   if (loading) {
     return (
