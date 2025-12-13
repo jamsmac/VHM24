@@ -108,12 +108,6 @@ export function PhotoUploader({
             quality: 0.85,
           })
 
-          console.log('[PhotoUploader] Compression:', {
-            original: `${(uploadingFile.file.size / 1024 / 1024).toFixed(2)}MB`,
-            compressed: `${(compressedFile.size / 1024 / 1024).toFixed(2)}MB`,
-            saved: `${(((uploadingFile.file.size - compressedFile.size) / uploadingFile.file.size) * 100).toFixed(1)}%`,
-          })
-
           // Загружаем сжатый файл
           setUploadingFiles((prev) =>
             prev.map((f) =>

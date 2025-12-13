@@ -19,6 +19,30 @@ export function QRScanner({ onScan, onClose, continuous = false }: QRScannerProp
   const [hasPermission, setHasPermission] = useState<boolean | null>(null)
   const scanIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
+  const handleScan = useCallback((data: string) => {
+    setScannedData(data)
+    onScan(data)
+
+    if (!continuous) {
+      // Stop scanning after first successful scan
+      setIsScanning(false)
+      setTimeout(() => {
+        if (scanIntervalRef.current) {
+          clearInterval(scanIntervalRef.current)
+          scanIntervalRef.current = null
+        }
+        if (onClose) {onClose()}
+      }, 1500)
+    } else {
+      // Brief pause in continuous mode
+      setIsScanning(false)
+      setTimeout(() => {
+        setScannedData(null)
+        setIsScanning(true)
+      }, 2000)
+    }
+  }, [onScan, onClose, continuous])
+
   const scanWithCanvas = useCallback(() => {
     // Simplified canvas-based QR detection
     // In production, you'd use a library like jsQR here
@@ -59,21 +83,23 @@ export function QRScanner({ onScan, onClose, continuous = false }: QRScannerProp
 
             if (barcodes.length > 0) {
               const qrCode = barcodes[0].rawValue
-              console.log('QR Code scanned:', qrCode)
+              if (qrCode) {
+                handleScan(qrCode)
+              }
             }
-          } catch (err) {
-            console.error('Barcode detection error:', err)
+          } catch {
+            // Barcode detection error - retry on next interval
           }
         }, 300)
-      } catch (err) {
-        console.error('BarcodeDetector error:', err)
+      } catch {
+        // BarcodeDetector not available, fallback to canvas
         scanWithCanvas()
       }
     } else {
       // Fallback to canvas-based scanning (simplified)
       scanWithCanvas()
     }
-  }, [scanWithCanvas])
+  }, [scanWithCanvas, handleScan])
 
   const stopCamera = useCallback(() => {
     if (scanIntervalRef.current) {
@@ -116,13 +142,13 @@ export function QRScanner({ onScan, onClose, continuous = false }: QRScannerProp
         setIsScanning(true)
         startScanning()
       }, 500)
-    } catch (err: any) {
-      console.error('Camera error:', err)
+    } catch (err: unknown) {
+      const error = err as { name?: string }
       setHasPermission(false)
       setError(
-        err.name === 'NotAllowedError'
+        error.name === 'NotAllowedError'
           ? 'Доступ к камере запрещен. Разрешите доступ в настройках браузера.'
-          : err.name === 'NotFoundError'
+          : error.name === 'NotFoundError'
           ? 'Камера не найдена'
           : 'Не удалось получить доступ к камере'
       )
@@ -136,27 +162,6 @@ export function QRScanner({ onScan, onClose, continuous = false }: QRScannerProp
     }
   }, [startCamera, stopCamera])
 
-  const handleScan = (data: string) => {
-    console.log('QR Code scanned:', data)
-    setScannedData(data)
-    onScan(data)
-
-    if (!continuous) {
-      // Stop scanning after first successful scan
-      setIsScanning(false)
-      setTimeout(() => {
-        stopCamera()
-        if (onClose) {onClose()}
-      }, 1500)
-    } else {
-      // Brief pause in continuous mode
-      setIsScanning(false)
-      setTimeout(() => {
-        setScannedData(null)
-        setIsScanning(true)
-      }, 2000)
-    }
-  }
 
   return (
     <div className="fixed inset-0 bg-black z-50 flex flex-col">

@@ -65,7 +65,6 @@ class VendHubDB {
 
       request.onsuccess = () => {
         this.db = request.result
-        console.log('[DB] Database opened successfully')
         resolve()
       }
 
@@ -105,7 +104,6 @@ class VendHubDB {
           syncStore.createIndex('created_at', 'created_at', { unique: false })
         }
 
-        console.log('[DB] Database upgraded to version', DB_VERSION)
       }
     })
   }
@@ -379,7 +377,6 @@ class VendHubDB {
     if (this.db) {
       this.db.close()
       this.db = null
-      console.log('[DB] Database closed')
     }
   }
 }

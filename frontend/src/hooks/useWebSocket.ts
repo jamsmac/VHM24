@@ -80,8 +80,8 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
       onError?.(err as Error)
     })
 
-    socket.on('connection:success', (data) => {
-      console.log('[WebSocket] Connected:', data)
+    socket.on('connection:success', () => {
+      // WebSocket connection successful
     })
 
     // Cleanup on unmount

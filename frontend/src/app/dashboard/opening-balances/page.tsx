@@ -65,9 +65,8 @@ export default function OpeningBalancesPage() {
         if (warehousesResponse.data.length > 0) {
           setDefaultWarehouse(warehousesResponse.data[0].id);
         }
-      } catch (error) {
-        console.log('Warehouses endpoint not available, using default');
-        // If warehouse endpoint doesn't exist, we'll work without it
+      } catch {
+        // Warehouses endpoint not available, using default
       }
     } catch (error) {
       console.error('Failed to fetch data:', error);

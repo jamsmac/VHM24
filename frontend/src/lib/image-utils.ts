@@ -84,13 +84,6 @@ export async function compressImage(
                 }
               )
 
-              console.log('[Image] Compressed:', {
-                original: `${(file.size / 1024 / 1024).toFixed(2)}MB`,
-                compressed: `${(compressedFile.size / 1024 / 1024).toFixed(2)}MB`,
-                ratio: `${((compressedFile.size / file.size) * 100).toFixed(1)}%`,
-                dimensions: `${width}x${height}`,
-              })
-
               resolve(compressedFile)
             },
             opts.mimeType,

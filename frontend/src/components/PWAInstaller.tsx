@@ -14,8 +14,6 @@ export function PWAInstaller() {
       navigator.serviceWorker
         .register('/service-worker.js')
         .then((registration) => {
-          console.log('SW registered:', registration)
-
           // Check for updates
           registration.addEventListener('updatefound', () => {
             const newWorker = registration.installing
@@ -31,8 +29,8 @@ export function PWAInstaller() {
             }
           })
         })
-        .catch((error) => {
-          console.error('SW registration failed:', error)
+        .catch(() => {
+          // SW registration failed - handled silently
         })
     }
 
@@ -82,7 +80,6 @@ export function PWAInstaller() {
     const { outcome } = await deferredPrompt.userChoice
 
     if (outcome === 'accepted') {
-      console.log('PWA installed')
       toast.success('Приложение установлено!')
     }
 
