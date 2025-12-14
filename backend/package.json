@@ -71,6 +71,7 @@
     "i18next-fs-backend": "^2.6.1",
     "ioredis": "^5.8.2",
     "jsqr": "^1.4.0",
+    "keyv": "^5.5.5",
     "moment": "^2.30.1",
     "multer": "^2.0.2",
     "nest-winston": "^1.10.2",
