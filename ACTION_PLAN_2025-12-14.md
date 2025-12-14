@@ -643,7 +643,7 @@ export class CartService {
 - [x] Telegram cart в Redis (PERF-4: CartStorageService with 24h TTL)
 
 ### После Недели 4 (Finalization):
-- [ ] Grafana dashboards готовы
+- [x] Grafana dashboards готовы (Security, API Performance, Business Metrics)
 - [ ] Documentation обновлена
 - [ ] Security audit passed
 - [ ] Production deployment validated
