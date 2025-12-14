@@ -1,0 +1,407 @@
+{
+  "dashboard": {
+    "id": null,
+    "uid": "vendhub-business",
+    "title": "VendHub - Business Metrics",
+    "tags": ["vendhub", "business", "operations"],
+    "timezone": "Asia/Tashkent",
+    "schemaVersion": 38,
+    "version": 1,
+    "refresh": "1m",
+    "time": {
+      "from": "now-24h",
+      "to": "now"
+    },
+    "annotations": {
+      "list": []
+    },
+    "templating": {
+      "list": []
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "Tasks Created Today",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+        "targets": [
+          {
+            "expr": "increase(vendhub_tasks_created_total[24h])",
+            "legendFormat": "Tasks"
+          }
+        ],
+        "options": {
+          "colorMode": "background",
+          "graphMode": "area",
+          "justifyMode": "auto",
+          "textMode": "auto"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "color": "blue", "value": null }
+              ]
+            },
+            "unit": "short"
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "Task Completion Rate",
+        "type": "gauge",
+        "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+        "targets": [
+          {
+            "expr": "sum(increase(vendhub_tasks_completed_total{status=\"completed\"}[24h])) / sum(increase(vendhub_tasks_created_total[24h])) * 100",
+            "legendFormat": "Completion %"
+          }
+        ],
+        "options": {
+          "reduceOptions": {
+            "calcs": ["lastNotNull"],
+            "fields": "",
+            "values": false
+          },
+          "showThresholdLabels": false,
+          "showThresholdMarkers": true
+        },
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "color": "red", "value": null },
+                { "color": "yellow", "value": 70 },
+                { "color": "green", "value": 90 }
+              ]
+            },
+            "min": 0,
+            "max": 100,
+            "unit": "percent"
+          }
+        }
+      },
+      {
+        "id": 3,
+        "title": "Active Machines",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+        "targets": [
+          {
+            "expr": "vendhub_machines_active{status=\"active\"}",
+            "legendFormat": "Active"
+          }
+        ],
+        "options": {
+          "colorMode": "background",
+          "graphMode": "none"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "color": "green", "value": null }
+              ]
+            },
+            "unit": "short"
+          }
+        }
+      },
+      {
+        "id": 4,
+        "title": "Offline Machines",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+        "targets": [
+          {
+            "expr": "vendhub_machines_offline{reason=\"total\"}",
+            "legendFormat": "Offline"
+          }
+        ],
+        "options": {
+          "colorMode": "background",
+          "graphMode": "none"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "color": "green", "value": null },
+                { "color": "yellow", "value": 5 },
+                { "color": "red", "value": 10 }
+              ]
+            },
+            "unit": "short"
+          }
+        }
+      },
+      {
+        "id": 5,
+        "title": "Tasks Created Over Time",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+        "targets": [
+          {
+            "expr": "sum(increase(vendhub_tasks_created_total[1h])) by (type)",
+            "legendFormat": "{{ type }}"
+          }
+        ],
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom"
+          }
+        },
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "drawStyle": "bars",
+              "fillOpacity": 80,
+              "stacking": { "mode": "normal" }
+            },
+            "unit": "short"
+          }
+        }
+      },
+      {
+        "id": 6,
+        "title": "Task Completion by Type",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+        "targets": [
+          {
+            "expr": "sum(increase(vendhub_tasks_completed_total[1h])) by (type, status)",
+            "legendFormat": "{{ type }} - {{ status }}"
+          }
+        ],
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom"
+          }
+        },
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 10
+            },
+            "unit": "short"
+          }
+        }
+      },
+      {
+        "id": 7,
+        "title": "Task Duration by Type",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, sum(rate(vendhub_task_duration_seconds_bucket[1h])) by (le, type))",
+            "legendFormat": "{{ type }} P50"
+          },
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(vendhub_task_duration_seconds_bucket[1h])) by (le, type))",
+            "legendFormat": "{{ type }} P95"
+          }
+        ],
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom"
+          }
+        },
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 0
+            },
+            "unit": "s"
+          }
+        }
+      },
+      {
+        "id": 8,
+        "title": "Inventory Movements",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+        "targets": [
+          {
+            "expr": "sum(increase(vendhub_inventory_movements_total[1h])) by (type, direction)",
+            "legendFormat": "{{ type }} {{ direction }}"
+          }
+        ],
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom"
+          }
+        },
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "drawStyle": "bars",
+              "fillOpacity": 80,
+              "stacking": { "mode": "normal" }
+            },
+            "unit": "short"
+          }
+        }
+      },
+      {
+        "id": 9,
+        "title": "Tasks by Priority",
+        "type": "piechart",
+        "gridPos": { "h": 8, "w": 8, "x": 0, "y": 20 },
+        "targets": [
+          {
+            "expr": "sum(increase(vendhub_tasks_created_total[24h])) by (priority)",
+            "legendFormat": "{{ priority }}"
+          }
+        ],
+        "options": {
+          "legend": {
+            "displayMode": "table",
+            "placement": "right",
+            "values": ["value", "percent"]
+          },
+          "pieType": "donut"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short"
+          },
+          "overrides": [
+            {
+              "matcher": { "id": "byName", "options": "urgent" },
+              "properties": [{ "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } }]
+            },
+            {
+              "matcher": { "id": "byName", "options": "high" },
+              "properties": [{ "id": "color", "value": { "fixedColor": "orange", "mode": "fixed" } }]
+            },
+            {
+              "matcher": { "id": "byName", "options": "normal" },
+              "properties": [{ "id": "color", "value": { "fixedColor": "blue", "mode": "fixed" } }]
+            },
+            {
+              "matcher": { "id": "byName", "options": "low" },
+              "properties": [{ "id": "color", "value": { "fixedColor": "green", "mode": "fixed" } }]
+            }
+          ]
+        }
+      },
+      {
+        "id": 10,
+        "title": "Tasks by Type",
+        "type": "piechart",
+        "gridPos": { "h": 8, "w": 8, "x": 8, "y": 20 },
+        "targets": [
+          {
+            "expr": "sum(increase(vendhub_tasks_created_total[24h])) by (type)",
+            "legendFormat": "{{ type }}"
+          }
+        ],
+        "options": {
+          "legend": {
+            "displayMode": "table",
+            "placement": "right",
+            "values": ["value", "percent"]
+          },
+          "pieType": "donut"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short"
+          }
+        }
+      },
+      {
+        "id": 11,
+        "title": "Machine Status Distribution",
+        "type": "piechart",
+        "gridPos": { "h": 8, "w": 8, "x": 16, "y": 20 },
+        "targets": [
+          {
+            "expr": "vendhub_machines_active{status=\"active\"}",
+            "legendFormat": "Active"
+          },
+          {
+            "expr": "vendhub_machines_offline{reason!=\"total\"}",
+            "legendFormat": "Offline - {{ reason }}"
+          }
+        ],
+        "options": {
+          "legend": {
+            "displayMode": "table",
+            "placement": "right",
+            "values": ["value", "percent"]
+          },
+          "pieType": "donut"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short"
+          },
+          "overrides": [
+            {
+              "matcher": { "id": "byName", "options": "Active" },
+              "properties": [{ "id": "color", "value": { "fixedColor": "green", "mode": "fixed" } }]
+            }
+          ]
+        }
+      },
+      {
+        "id": 12,
+        "title": "Daily Operations Summary",
+        "type": "table",
+        "gridPos": { "h": 8, "w": 24, "x": 0, "y": 28 },
+        "targets": [
+          {
+            "expr": "sum(increase(vendhub_tasks_created_total[24h])) by (type)",
+            "format": "table",
+            "instant": true,
+            "legendFormat": "Created"
+          },
+          {
+            "expr": "sum(increase(vendhub_tasks_completed_total{status=\"completed\"}[24h])) by (type)",
+            "format": "table",
+            "instant": true,
+            "legendFormat": "Completed"
+          }
+        ],
+        "options": {
+          "showHeader": true
+        },
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "align": "auto"
+            }
+          }
+        },
+        "transformations": [
+          {
+            "id": "merge",
+            "options": {}
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": { "Time": true, "__name__": true },
+              "renameByName": { "type": "Task Type" }
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

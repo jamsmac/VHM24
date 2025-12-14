@@ -162,3 +162,115 @@ groups:
         annotations:
           summary: "MinIO is down"
           description: "MinIO storage has been down for more than 2 minutes"
+
+  # ==========================================================================
+  # Security Alerts
+  # ==========================================================================
+  - name: security_alerts
+    interval: 30s
+    rules:
+      - alert: HighLoginFailureRate
+        expr: rate(vendhub_login_failures_total[5m]) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+          component: security
+        annotations:
+          summary: "High login failure rate detected"
+          description: "Login failure rate is {{ $value | humanizePercentage }} - possible brute force attack"
+
+      - alert: RateLimitExceeded
+        expr: increase(vendhub_http_request_errors_total{status="429"}[5m]) > 100
+        for: 5m
+        labels:
+          severity: warning
+          component: security
+        annotations:
+          summary: "High rate limiting activity"
+          description: "{{ $value }} requests rate limited in last 5 minutes - possible attack"
+
+      - alert: SuspiciousLoginPattern
+        expr: increase(vendhub_login_failures_total{reason="invalid_credentials"}[1h]) > 50
+        for: 10m
+        labels:
+          severity: critical
+          component: security
+        annotations:
+          summary: "Suspicious login pattern detected"
+          description: "{{ $value }} failed logins in the last hour - possible credential stuffing attack"
+
+      - alert: SessionAnomalies
+        expr: rate(vendhub_sessions_created_total[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          component: security
+        annotations:
+          summary: "Unusual session creation rate"
+          description: "Session creation rate is {{ $value }}/s - investigate for potential abuse"
+
+      - alert: TokenRefreshAnomalies
+        expr: rate(vendhub_http_requests_total{route="/api/auth/refresh", status="401"}[5m]) > 1
+        for: 5m
+        labels:
+          severity: warning
+          component: security
+        annotations:
+          summary: "High token refresh failures"
+          description: "Token refresh failure rate is {{ $value }}/s - possible token theft"
+
+  # ==========================================================================
+  # Business Alerts
+  # ==========================================================================
+  - name: business_alerts
+    interval: 60s
+    rules:
+      - alert: LowTaskCompletionRate
+        expr: sum(increase(vendhub_tasks_completed_total{status="completed"}[24h])) / sum(increase(vendhub_tasks_created_total[24h])) < 0.7
+        for: 1h
+        labels:
+          severity: warning
+          component: business
+        annotations:
+          summary: "Low task completion rate"
+          description: "Task completion rate is {{ $value | humanizePercentage }} - below 70% threshold"
+
+      - alert: HighMachineOfflineRate
+        expr: vendhub_machines_offline{reason="total"} / (vendhub_machines_active{status="active"} + vendhub_machines_offline{reason="total"}) > 0.1
+        for: 30m
+        labels:
+          severity: warning
+          component: business
+        annotations:
+          summary: "High machine offline rate"
+          description: "{{ $value | humanizePercentage }} of machines are offline"
+
+      - alert: UrgentTasksNotCompleted
+        expr: increase(vendhub_tasks_created_total{priority="urgent"}[4h]) - increase(vendhub_tasks_completed_total{priority="urgent", status="completed"}[4h]) > 5
+        for: 1h
+        labels:
+          severity: critical
+          component: business
+        annotations:
+          summary: "Urgent tasks pending"
+          description: "{{ $value }} urgent tasks have not been completed in 4 hours"
+
+      - alert: InventoryMovementAnomaly
+        expr: rate(vendhub_inventory_movements_total[1h]) == 0
+        for: 4h
+        labels:
+          severity: warning
+          component: business
+        annotations:
+          summary: "No inventory movements"
+          description: "No inventory movements recorded in the last 4 hours during business hours"
+
+      - alert: TaskProcessingDelayed
+        expr: histogram_quantile(0.95, rate(vendhub_task_duration_seconds_bucket[1h])) > 7200
+        for: 1h
+        labels:
+          severity: warning
+          component: business
+        annotations:
+          summary: "Task processing delayed"
+          description: "95th percentile task duration is {{ $value | humanizeDuration }} - above 2 hour threshold"
