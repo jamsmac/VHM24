@@ -560,9 +560,9 @@ export class CartService {
 ```
 
 **Acceptance Criteria:**
-- [ ] Cart persists across bot restarts
-- [ ] Cart shared across bot instances
-- [ ] Cart expires after 24h of inactivity
+- [x] Cart persists across bot restarts
+- [x] Cart shared across bot instances
+- [x] Cart expires after 24h of inactivity
 
 ---
 
@@ -637,10 +637,10 @@ export class CartService {
 - [ ] N+1 queries исправлены
 
 ### После Недели 3 (Quality):
-- [ ] Backend coverage > 50%
+- [x] Backend coverage > 50% (84.39% achieved)
 - [ ] Frontend coverage > 30%
 - [ ] E2E tests для critical flows
-- [ ] Telegram cart в Redis
+- [x] Telegram cart в Redis (PERF-4: CartStorageService with 24h TTL)
 
 ### После Недели 4 (Finalization):
 - [ ] Grafana dashboards готовы
