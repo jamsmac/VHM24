@@ -16,6 +16,7 @@ import { MachinesService } from '../modules/machines/machines.service';
 import { IncidentsService } from '../modules/incidents/incidents.service';
 import { InventoryService } from '../modules/inventory/inventory.service';
 import { InventoryCalculationService } from '../modules/inventory/services/inventory-calculation.service';
+import { InventoryDifferenceService } from '../modules/inventory/services/inventory-difference.service';
 import { ComplaintsService } from '../modules/complaints/complaints.service';
 import { InventoryBatchService } from '../modules/warehouse/services/inventory-batch.service';
 import { WarehouseService } from '../modules/warehouse/services/warehouse.service';
@@ -154,6 +155,11 @@ describe('ScheduledTasksService', () => {
       calculateBalance: jest.fn(),
     };
 
+    const mockInventoryDifferenceService = {
+      checkAndCreateDifferences: jest.fn(),
+      findUnresolvedDifferences: jest.fn().mockResolvedValue([]),
+    };
+
     const mockComplaintsService = {
       findAll: jest.fn(),
     };
@@ -228,6 +234,10 @@ describe('ScheduledTasksService', () => {
         {
           provide: InventoryCalculationService,
           useValue: mockInventoryCalculationService,
+        },
+        {
+          provide: InventoryDifferenceService,
+          useValue: mockInventoryDifferenceService,
         },
         {
           provide: ComplaintsService,

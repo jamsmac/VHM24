@@ -622,13 +622,26 @@ describe('ManagerDashboardService', () => {
         { id: 'loc-2', name: 'Location 2' },
       ];
 
-      const mockMachinesLoc1 = [
-        { id: 'm-1', status: 'active' },
-        { id: 'm-2', status: 'active' },
-        { id: 'm-3', status: 'error' },
+      // Mock data for bulk queries (optimized implementation uses getRawMany)
+      const mockMachinesByLocation = [
+        { location_id: 'loc-1', total_count: '3', active_count: '2' },
+        { location_id: 'loc-2', total_count: '1', active_count: '1' },
       ];
 
-      const mockMachinesLoc2 = [{ id: 'm-4', status: 'active' }];
+      const mockRevenueByLocation = [
+        { location_id: 'loc-1', revenue: '1000' },
+        { location_id: 'loc-2', revenue: '500' },
+      ];
+
+      const mockTasksByLocation = [
+        { location_id: 'loc-1', pending_count: '5' },
+        { location_id: 'loc-2', pending_count: '2' },
+      ];
+
+      const mockIncidentsByLocation = [
+        { location_id: 'loc-1', open_count: '2' },
+        { location_id: 'loc-2', open_count: '0' },
+      ];
 
       machineQueryBuilder.getMany.mockResolvedValue([]);
       locationQueryBuilder.getMany.mockResolvedValue(mockLocations);
@@ -638,29 +651,11 @@ describe('ManagerDashboardService', () => {
       incidentQueryBuilder.getMany.mockResolvedValue([]);
       complaintQueryBuilder.getMany.mockResolvedValue([]);
 
-      let findCallCount = 0;
-      mockMachineRepository.find.mockImplementation(() => {
-        findCallCount++;
-        if (findCallCount === 1) return Promise.resolve(mockMachinesLoc1);
-        if (findCallCount === 2) return Promise.resolve(mockMachinesLoc2);
-        return Promise.resolve([]);
-      });
-
-      let taskCountCallCount = 0;
-      mockTaskRepository.count.mockImplementation(() => {
-        taskCountCallCount++;
-        if (taskCountCallCount === 1) return Promise.resolve(5);
-        if (taskCountCallCount === 2) return Promise.resolve(2);
-        return Promise.resolve(0);
-      });
-
-      let incidentCountCallCount = 0;
-      mockIncidentRepository.count.mockImplementation(() => {
-        incidentCountCallCount++;
-        if (incidentCountCallCount === 1) return Promise.resolve(2);
-        if (incidentCountCallCount === 2) return Promise.resolve(0);
-        return Promise.resolve(0);
-      });
+      // Mock getRawMany for bulk location performance queries
+      machineQueryBuilder.getRawMany.mockResolvedValue(mockMachinesByLocation);
+      transactionQueryBuilder.getRawMany.mockResolvedValue(mockRevenueByLocation);
+      taskQueryBuilder.getRawMany.mockResolvedValue(mockTasksByLocation);
+      incidentQueryBuilder.getRawMany.mockResolvedValue(mockIncidentsByLocation);
 
       const result = await service.generateDashboard();
 
