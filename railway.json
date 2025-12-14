@@ -2,10 +2,11 @@
   "$schema": "https://railway.app/schema.json",
   "build": {
     "builder": "nixpacks",
+    "buildCommand": "cd backend && npm ci && npm run build",
     "watchPatterns": ["backend/**"]
   },
   "deploy": {
-    "startCommand": "cd backend && npm run migration:run && npm run start:prod",
+    "startCommand": "cd backend && npm run start:prod",
     "healthcheckPath": "/health",
     "healthcheckTimeout": 300,
     "restartPolicyType": "ON_FAILURE",
