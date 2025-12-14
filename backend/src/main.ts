@@ -1,11 +1,13 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, Logger } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import helmet from 'helmet';
 import * as cookieParser from 'cookie-parser';
 import * as compression from 'compression';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+
+const logger = new Logger('Bootstrap');
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -57,10 +59,10 @@ async function bootstrap() {
 
   // In production, warn if FRONTEND_URL is not set but don't fail
   if (isProduction && !frontendUrl) {
-    console.warn(
-      '⚠️  WARNING: FRONTEND_URL is not set in production environment.\n' +
-        '   CORS will be configured with restrictive defaults.\n' +
-        '   To enable specific origins, please set FRONTEND_URL in your .env file.',
+    logger.warn(
+      'FRONTEND_URL is not set in production environment. ' +
+        'CORS will be configured with restrictive defaults. ' +
+        'To enable specific origins, please set FRONTEND_URL in your .env file.',
     );
   }
 
@@ -83,7 +85,7 @@ async function bootstrap() {
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization'],
     };
-    console.log('📛 CORS is disabled. Only same-origin requests are allowed.');
+    logger.log('CORS is disabled. Only same-origin requests are allowed.');
   } else {
     // Development: allow localhost
     corsOptions = {
@@ -114,7 +116,7 @@ async function bootstrap() {
   });
 
   // Swagger documentation
-  console.log('📝 Configuring Swagger documentation...');
+  logger.log('Configuring Swagger documentation...');
   const config = new DocumentBuilder()
     .setTitle('VendHub Manager API')
     .setDescription('API documentation for VendHub Manager - Vending Machine Management System')
@@ -132,17 +134,17 @@ async function bootstrap() {
     )
     .build();
 
-  console.log('📝 Creating Swagger document...');
+  logger.debug('Creating Swagger document...');
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
-  console.log('📝 Swagger setup complete.');
+  logger.log('Swagger setup complete');
 
   const port = process.env.PORT || 3000;
-  console.log(`🔌 Starting server on port ${port}...`);
+  logger.log(`Starting server on port ${port}...`);
   await app.listen(port, '0.0.0.0');
 
-  console.log(`🚀 VendHub Manager API running on port ${port}`);
-  console.log(`📚 API Documentation: http://localhost:${port}/api/docs`);
+  logger.log(`VendHub Manager API running on port ${port}`);
+  logger.log(`API Documentation: http://localhost:${port}/api/docs`);
 }
 
 bootstrap();
