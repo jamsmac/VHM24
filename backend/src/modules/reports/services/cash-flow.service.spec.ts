@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { CashFlowService, CashFlowReport } from './cash-flow.service';
+import { CashFlowService } from './cash-flow.service';
 import {
   Transaction,
   TransactionType,

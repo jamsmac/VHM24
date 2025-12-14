@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository, LessThan, Not, IsNull } from 'typeorm';
+import { Repository, Not, IsNull } from 'typeorm';
 import { ScheduledTasksService } from './scheduled-tasks.service';
 import { Task, TaskStatus } from '../modules/tasks/entities/task.entity';
 import { MachineInventory } from '../modules/inventory/entities/machine-inventory.entity';

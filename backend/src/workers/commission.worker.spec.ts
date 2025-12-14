@@ -563,7 +563,7 @@ describe('CommissionWorker', () => {
   describe('graceful shutdown', () => {
     it('should close queue and app on SIGTERM', async () => {
       // Arrange
-      const shutdown = async (signal: string) => {
+      const shutdown = async (_signal: string) => {
         await mockCommissionQueue.close();
         await mockApp.close();
       };
@@ -578,7 +578,7 @@ describe('CommissionWorker', () => {
 
     it('should close queue and app on SIGINT', async () => {
       // Arrange
-      const shutdown = async (signal: string) => {
+      const shutdown = async (_signal: string) => {
         await mockCommissionQueue.close();
         await mockApp.close();
       };

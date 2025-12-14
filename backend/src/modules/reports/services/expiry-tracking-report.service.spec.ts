@@ -10,7 +10,7 @@ import { MachineInventory } from '@modules/inventory/entities/machine-inventory.
 
 describe('ExpiryTrackingReportService', () => {
   let service: ExpiryTrackingReportService;
-  let warehouseInventoryRepository: jest.Mocked<Repository<WarehouseInventory>>;
+  let _warehouseInventoryRepository: jest.Mocked<Repository<WarehouseInventory>>;
   let machineInventoryRepository: jest.Mocked<Repository<MachineInventory>>;
 
   // Test fixtures
@@ -73,7 +73,7 @@ describe('ExpiryTrackingReportService', () => {
     machine: mockMachineWithoutLocation,
   };
 
-  const mockMachineInventoryZeroQuantity = {
+  const _mockMachineInventoryZeroQuantity = {
     id: 'inventory-uuid-5',
     current_quantity: 0,
     nomenclature: mockNomenclature,
@@ -137,7 +137,7 @@ describe('ExpiryTrackingReportService', () => {
     }).compile();
 
     service = module.get<ExpiryTrackingReportService>(ExpiryTrackingReportService);
-    warehouseInventoryRepository = module.get(getRepositoryToken(WarehouseInventory));
+    _warehouseInventoryRepository = module.get(getRepositoryToken(WarehouseInventory));
     machineInventoryRepository = module.get(getRepositoryToken(MachineInventory));
   });
 

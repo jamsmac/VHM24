@@ -19,8 +19,8 @@ const mockedBcrypt = bcrypt as jest.Mocked<typeof bcrypt>;
 // Mock class-transformer
 jest.mock('class-transformer', () => ({
   plainToInstance: jest.fn((cls, plain) => plain),
-  Exclude: jest.fn(() => (target: any, key: string) => {}),
-  Expose: jest.fn(() => (target: any, key: string) => {}),
+  Exclude: jest.fn(() => (_target: any, _key: string) => {}),
+  Expose: jest.fn(() => (_target: any, _key: string) => {}),
 }));
 
 describe('UsersService', () => {

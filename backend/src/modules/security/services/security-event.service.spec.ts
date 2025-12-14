@@ -404,7 +404,7 @@ describe('SecurityEventService', () => {
         investigation_notes: 'Reviewed and cleared',
       });
 
-      const result = await service.markInvestigated(
+      const _result = await service.markInvestigated(
         'event-123',
         'admin-123',
         'Reviewed and cleared',

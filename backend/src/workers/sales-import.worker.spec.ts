@@ -99,7 +99,7 @@ describe('SalesImportWorker', () => {
   describe('graceful shutdown', () => {
     it('should close queue and app on SIGTERM', async () => {
       // Arrange
-      const shutdown = async (signal: string) => {
+      const shutdown = async (_signal: string) => {
         await mockSalesImportQueue.close();
         await mockApp.close();
       };
@@ -114,7 +114,7 @@ describe('SalesImportWorker', () => {
 
     it('should close queue and app on SIGINT', async () => {
       // Arrange
-      const shutdown = async (signal: string) => {
+      const shutdown = async (_signal: string) => {
         await mockSalesImportQueue.close();
         await mockApp.close();
       };
@@ -137,7 +137,7 @@ describe('SalesImportWorker', () => {
         callOrder.push('app');
       });
 
-      const shutdown = async (signal: string) => {
+      const shutdown = async (_signal: string) => {
         await mockSalesImportQueue.close();
         await mockApp.close();
       };
@@ -153,7 +153,7 @@ describe('SalesImportWorker', () => {
       // Arrange
       mockSalesImportQueue.close.mockRejectedValue(new Error('Queue close failed'));
 
-      const shutdown = async (signal: string) => {
+      const shutdown = async (_signal: string) => {
         try {
           await mockSalesImportQueue.close();
         } catch (error) {
@@ -174,7 +174,7 @@ describe('SalesImportWorker', () => {
       // Arrange
       mockApp.close.mockRejectedValue(new Error('App close failed'));
 
-      const shutdown = async (signal: string) => {
+      const shutdown = async (_signal: string) => {
         await mockSalesImportQueue.close();
         try {
           await mockApp.close();
@@ -520,7 +520,7 @@ describe('SalesImportWorker', () => {
       const app = await mockNestFactory.createApplicationContext({});
       steps.push('App context created');
 
-      const salesImportQueue = app.get('BullQueue_sales-import');
+      const _salesImportQueue = app.get('BullQueue_sales-import');
       steps.push('Queue obtained');
 
       // Assert

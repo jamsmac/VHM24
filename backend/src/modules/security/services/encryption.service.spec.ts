@@ -193,7 +193,7 @@ describe('EncryptionService', () => {
       mockRepository.create.mockReturnValue({ ...encryptedRecord });
       mockRepository.save.mockImplementation((record: any) => Promise.resolve(record));
 
-      const encrypted = await service.encryptField(entityType, entityId, fieldName, originalValue);
+      const _encrypted = await service.encryptField(entityType, entityId, fieldName, originalValue);
 
       // Now test decryption
       encryptedRecord.encrypted_value = (

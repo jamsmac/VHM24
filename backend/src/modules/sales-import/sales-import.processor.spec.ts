@@ -121,7 +121,7 @@ describe('SalesImportProcessor', () => {
     } = {},
   ) => {
     mockEntityManager = {
-      findOne: jest.fn().mockImplementation((entity, options) => {
+      findOne: jest.fn().mockImplementation((entity, _options) => {
         if (entity === Machine) {
           if (config.machineResult === null) {
             return Promise.resolve(null);

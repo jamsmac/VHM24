@@ -293,7 +293,7 @@ describe('RbacService', () => {
       } as any);
 
       // Act
-      const result = await service.createRole(createDto);
+      const _result = await service.createRole(createDto);
 
       // Assert
       expect(mockRoleRepository.create).toHaveBeenCalledWith(

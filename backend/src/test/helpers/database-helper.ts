@@ -105,7 +105,7 @@ export class DatabaseTestHelper {
 /**
  * Create a mock repository for testing
  */
-export function createMockRepository<T extends ObjectLiteral = any>(): any {
+export function createMockRepository<_T extends ObjectLiteral = any>(): any {
   return {
     find: jest.fn(),
     findOne: jest.fn(),

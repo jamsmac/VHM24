@@ -1,15 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { getQueueToken } from '@nestjs/bull';
-import { Repository, DataSource, In } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { SalesImportService } from './sales-import.service';
 import { SalesImport, ImportStatus, ImportFileType } from './entities/sales-import.entity';
-import {
-  Transaction,
-  TransactionType,
-  PaymentMethod,
-} from '../transactions/entities/transaction.entity';
+import { Transaction, PaymentMethod } from '../transactions/entities/transaction.entity';
 import { Machine } from '../machines/entities/machine.entity';
 import { Nomenclature } from '../nomenclature/entities/nomenclature.entity';
 import { InventoryService } from '../inventory/inventory.service';
@@ -754,7 +750,7 @@ describe('SalesImportService', () => {
       } as SalesImport);
 
       // Act
-      const result = await service.retryImport('import-123');
+      const _result = await service.retryImport('import-123');
 
       // Assert
       expect(mockImportRepository.save).toHaveBeenCalledWith(

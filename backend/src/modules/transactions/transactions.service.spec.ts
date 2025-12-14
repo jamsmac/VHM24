@@ -60,7 +60,7 @@ describe('TransactionsService', () => {
   };
 
   // Create mock repository
-  const createMockRepository = <T>() => ({
+  const createMockRepository = <_T>() => ({
     find: jest.fn(),
     findOne: jest.fn(),
     findOneBy: jest.fn(),
@@ -302,7 +302,7 @@ describe('TransactionsService', () => {
         transaction_date: new Date(customDate),
       } as Transaction);
 
-      const result = await service.create(dtoWithDate);
+      const _result = await service.create(dtoWithDate);
 
       expect(transactionRepository.create).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -1096,7 +1096,7 @@ describe('TransactionsService', () => {
       const dateFrom = new Date('2025-11-01');
       const dateTo = new Date('2025-11-30');
 
-      const result = await service.getMachineStats('machine-uuid', dateFrom, dateTo);
+      const _result = await service.getMachineStats('machine-uuid', dateFrom, dateTo);
 
       expect(machineQueryBuilder.andWhere).toHaveBeenCalledWith(
         'transaction.transaction_date BETWEEN :dateFrom AND :dateTo',

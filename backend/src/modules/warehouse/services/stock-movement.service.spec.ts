@@ -11,7 +11,7 @@ describe('StockMovementService', () => {
   let service: StockMovementService;
   let movementRepository: jest.Mocked<Repository<StockMovement>>;
   let batchRepository: jest.Mocked<Repository<InventoryBatch>>;
-  let reservationRepository: jest.Mocked<Repository<StockReservation>>;
+  let _reservationRepository: jest.Mocked<Repository<StockReservation>>;
 
   // Mock fixtures
   const mockMovement: Partial<StockMovement> = {
@@ -80,7 +80,7 @@ describe('StockMovementService', () => {
     service = module.get<StockMovementService>(StockMovementService);
     movementRepository = module.get(getRepositoryToken(StockMovement));
     batchRepository = module.get(getRepositoryToken(InventoryBatch));
-    reservationRepository = module.get(getRepositoryToken(StockReservation));
+    _reservationRepository = module.get(getRepositoryToken(StockReservation));
 
     jest.clearAllMocks();
   });

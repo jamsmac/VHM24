@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { NetworkSummaryService } from './network-summary.service';
-import { Machine, MachineStatus } from '@modules/machines/entities/machine.entity';
+import { Machine } from '@modules/machines/entities/machine.entity';
 import { Transaction, TransactionType } from '@modules/transactions/entities/transaction.entity';
 import { Task, TaskStatus } from '@modules/tasks/entities/task.entity';
 import { Incident } from '@modules/incidents/entities/incident.entity';

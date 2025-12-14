@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository, DataSource, EntityManager } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import { BadRequestException } from '@nestjs/common';
 import { InventoryBatchService } from './inventory-batch.service';
 import { InventoryBatch } from '../entities/inventory-batch.entity';
@@ -40,7 +40,7 @@ describe('InventoryBatchService', () => {
     createQueryBuilder: jest.fn(),
   });
 
-  const createMockTransactionManager = () => ({
+  const _createMockTransactionManager = () => ({
     find: jest.fn(),
     save: jest.fn(),
   });

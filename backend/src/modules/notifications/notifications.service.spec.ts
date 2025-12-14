@@ -511,7 +511,7 @@ describe('NotificationsService', () => {
         mockNotificationRepository.save.mockImplementation(async (n) => n as Notification);
 
         // Act
-        const result = await service.sendNotification(mockNotificationId);
+        const _result = await service.sendNotification(mockNotificationId);
 
         // Assert
         expect(mockTelegramBotService.notifyTaskOverdue).toHaveBeenCalled();
@@ -529,7 +529,7 @@ describe('NotificationsService', () => {
         mockNotificationRepository.save.mockImplementation(async (n) => n as Notification);
 
         // Act
-        const result = await service.sendNotification(mockNotificationId);
+        const _result = await service.sendNotification(mockNotificationId);
 
         // Assert
         expect(mockTelegramBotService.sendNotification).toHaveBeenCalled();
@@ -596,7 +596,7 @@ describe('NotificationsService', () => {
         mockNotificationRepository.save.mockImplementation(async (n) => n as Notification);
 
         // Act
-        const result = await service.sendNotification(mockNotificationId);
+        const _result = await service.sendNotification(mockNotificationId);
 
         // Assert
         expect(mockEmailService.sendOverdueNotification).toHaveBeenCalledWith(
@@ -620,7 +620,7 @@ describe('NotificationsService', () => {
         mockNotificationRepository.save.mockImplementation(async (n) => n as Notification);
 
         // Act
-        const result = await service.sendNotification(mockNotificationId);
+        const _result = await service.sendNotification(mockNotificationId);
 
         // Assert
         expect(mockEmailService.sendLowStockAlert).toHaveBeenCalledWith(
@@ -642,7 +642,7 @@ describe('NotificationsService', () => {
         mockNotificationRepository.save.mockImplementation(async (n) => n as Notification);
 
         // Act
-        const result = await service.sendNotification(mockNotificationId);
+        const _result = await service.sendNotification(mockNotificationId);
 
         // Assert
         expect(mockEmailService.sendEmail).toHaveBeenCalledWith(

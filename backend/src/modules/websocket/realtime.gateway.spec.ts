@@ -178,7 +178,7 @@ describe('RealtimeGateway', () => {
 
     it('should disconnect client when rate limit exceeded', async () => {
       // Create a mock socket with specific IP address
-      const rateLimitedSocket = {
+      const _rateLimitedSocket = {
         ...mockSocket,
         id: 'rate-limited-socket',
         handshake: {

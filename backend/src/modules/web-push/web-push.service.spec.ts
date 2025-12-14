@@ -168,7 +168,7 @@ describe('WebPushService', () => {
           Promise.resolve(sub as PushSubscription),
         );
 
-        const result = await service.subscribe('user-uuid', mockSubscribeDto);
+        const _result = await service.subscribe('user-uuid', mockSubscribeDto);
 
         expect(subscriptionRepository.create).not.toHaveBeenCalled();
         expect(subscriptionRepository.save).toHaveBeenCalledWith(

@@ -1,12 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { AdminDashboardService } from './admin-dashboard.service';
-import { Machine, MachineStatus } from '@modules/machines/entities/machine.entity';
+import { Machine } from '@modules/machines/entities/machine.entity';
 import { Transaction } from '@modules/transactions/entities/transaction.entity';
 import { Task, TaskStatus } from '@modules/tasks/entities/task.entity';
 import { Incident, IncidentStatus } from '@modules/incidents/entities/incident.entity';
-import { Complaint, ComplaintStatus } from '@modules/complaints/entities/complaint.entity';
-import { User, UserRole } from '@modules/users/entities/user.entity';
+import { Complaint } from '@modules/complaints/entities/complaint.entity';
+import { User } from '@modules/users/entities/user.entity';
 import { Location } from '@modules/locations/entities/location.entity';
 import { MachineInventory } from '@modules/inventory/entities/machine-inventory.entity';
 import { OperatorRating } from '@modules/operator-ratings/entities/operator-rating.entity';

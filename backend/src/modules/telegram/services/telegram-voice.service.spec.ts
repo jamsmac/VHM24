@@ -23,7 +23,7 @@ jest.mock('fs', () => ({
 
 // Mock util
 jest.mock('util', () => ({
-  promisify: (fn: any) => jest.fn(),
+  promisify: (_fn: any) => jest.fn(),
 }));
 
 describe('TelegramVoiceService', () => {

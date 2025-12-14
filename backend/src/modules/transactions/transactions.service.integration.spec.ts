@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { TypeOrmModule, getRepositoryToken } from '@nestjs/typeorm';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import { EventEmitterModule, EventEmitter2 } from '@nestjs/event-emitter';
 import { TransactionsService } from './transactions.service';
 import { InventoryService } from '../inventory/inventory.service';
@@ -9,10 +9,7 @@ import { AuditLogService } from '../security/services/audit-log.service';
 import { Transaction, TransactionType, PaymentMethod } from './entities/transaction.entity';
 import { Machine } from '../machines/entities/machine.entity';
 import { Recipe } from '../recipes/entities/recipe.entity';
-import { RecipeIngredient } from '../recipes/entities/recipe-ingredient.entity';
 import { Nomenclature } from '../nomenclature/entities/nomenclature.entity';
-import { MachineInventory } from '../inventory/entities/machine-inventory.entity';
-import { InventoryMovement } from '../inventory/entities/inventory-movement.entity';
 import { createMockRepository } from '@/test/helpers';
 
 /**
@@ -36,10 +33,10 @@ describe('TransactionsService - Inventory Integration (Integration)', () => {
   let module: TestingModule;
 
   // Mock entities for test
-  let machine: Machine;
-  let recipe: Recipe;
-  let coffee: Nomenclature;
-  let milk: Nomenclature;
+  let _machine: Machine;
+  let _recipe: Recipe;
+  let _coffee: Nomenclature;
+  let _milk: Nomenclature;
 
   beforeAll(async () => {
     // Note: This requires actual database connection for integration testing

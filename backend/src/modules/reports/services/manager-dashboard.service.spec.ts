@@ -4,7 +4,7 @@ import { ManagerDashboardService } from './manager-dashboard.service';
 import { Machine } from '@modules/machines/entities/machine.entity';
 import { Transaction } from '@modules/transactions/entities/transaction.entity';
 import { Task, TaskStatus } from '@modules/tasks/entities/task.entity';
-import { Incident, IncidentStatus } from '@modules/incidents/entities/incident.entity';
+import { Incident } from '@modules/incidents/entities/incident.entity';
 import { Complaint, ComplaintStatus } from '@modules/complaints/entities/complaint.entity';
 import { MachineInventory } from '@modules/inventory/entities/machine-inventory.entity';
 import { Location } from '@modules/locations/entities/location.entity';
@@ -195,9 +195,9 @@ describe('ManagerDashboardService', () => {
       mockLocationRepository.count.mockResolvedValue(3);
 
       // Use mockImplementation to handle parallel calls based on query params
-      let taskGetCountCalls = 0;
+      let _taskGetCountCalls = 0;
       taskQueryBuilder.getCount.mockImplementation(() => {
-        taskGetCountCalls++;
+        _taskGetCountCalls++;
         // The order of Promise.all calls can vary, so we track by andWhere params
         return Promise.resolve(0);
       });
@@ -326,7 +326,7 @@ describe('ManagerDashboardService', () => {
           leftJoinAndSelect: jest.fn().mockReturnThis(),
           getCount: jest.fn().mockImplementation(function (this: typeof clone) {
             const calls = this.andWhere.mock.calls;
-            for (const call of calls) {
+            for (const _call of calls) {
               // Check for type filter
               const typeCall = calls.find((c: any) => c[0]?.includes('type ='));
               const typesCall = calls.find((c: any) => c[0]?.includes('type IN'));

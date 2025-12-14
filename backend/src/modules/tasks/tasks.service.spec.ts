@@ -26,7 +26,7 @@ describe('TasksService', () => {
   let taskRepository: jest.Mocked<Repository<Task>>;
   let taskItemRepository: jest.Mocked<Repository<TaskItem>>;
   let taskCommentRepository: jest.Mocked<Repository<TaskComment>>;
-  let taskComponentRepository: jest.Mocked<Repository<TaskComponent>>;
+  let _taskComponentRepository: jest.Mocked<Repository<TaskComponent>>;
   let filesService: jest.Mocked<FilesService>;
   let machinesService: jest.Mocked<MachinesService>;
   let inventoryService: jest.Mocked<InventoryService>;
@@ -37,7 +37,7 @@ describe('TasksService', () => {
   let usersService: jest.Mocked<UsersService>;
   let washingSchedulesService: jest.Mocked<WashingSchedulesService>;
   let componentMovementsService: jest.Mocked<ComponentMovementsService>;
-  let componentsService: jest.Mocked<ComponentsService>;
+  let _componentsService: jest.Mocked<ComponentsService>;
   let eventEmitter: jest.Mocked<EventEmitter2>;
   let dataSource: jest.Mocked<DataSource>;
 
@@ -304,7 +304,7 @@ describe('TasksService', () => {
     taskRepository = module.get(getRepositoryToken(Task));
     taskItemRepository = module.get(getRepositoryToken(TaskItem));
     taskCommentRepository = module.get(getRepositoryToken(TaskComment));
-    taskComponentRepository = module.get(getRepositoryToken(TaskComponent));
+    _taskComponentRepository = module.get(getRepositoryToken(TaskComponent));
     filesService = module.get(FilesService);
     machinesService = module.get(MachinesService);
     inventoryService = module.get(InventoryService);
@@ -315,7 +315,7 @@ describe('TasksService', () => {
     usersService = module.get(UsersService);
     washingSchedulesService = module.get(WashingSchedulesService);
     componentMovementsService = module.get(ComponentMovementsService);
-    componentsService = module.get(ComponentsService);
+    _componentsService = module.get(ComponentsService);
     eventEmitter = module.get(EventEmitter2);
     dataSource = module.get(DataSource);
 
@@ -463,7 +463,7 @@ describe('TasksService', () => {
     });
 
     it('should allow creating task when existing tasks on machine are COMPLETED', async () => {
-      const completedTask = {
+      const _completedTask = {
         id: 'completed-task-uuid',
         machine_id: 'machine-uuid',
         status: TaskStatus.COMPLETED,

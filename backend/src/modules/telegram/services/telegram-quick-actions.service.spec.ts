@@ -2,7 +2,6 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { TelegramQuickActionsService, UserState } from './telegram-quick-actions.service';
 import { TelegramI18nService } from './telegram-i18n.service';
 import { UserRole } from '@modules/users/entities/user.entity';
-import { TelegramLanguage } from '../entities/telegram-user.entity';
 
 describe('TelegramQuickActionsService', () => {
   let service: TelegramQuickActionsService;
@@ -10,10 +9,10 @@ describe('TelegramQuickActionsService', () => {
 
   beforeEach(async () => {
     const mockI18nService = {
-      t: jest.fn((lang, key) => key),
+      t: jest.fn((_lang, key) => key),
       getFixedT: jest.fn().mockReturnValue((key: string) => key),
-      getLanguageName: jest.fn((lang) => lang),
-      getLanguageFlag: jest.fn((lang) => ''),
+      getLanguageName: jest.fn((_lang) => _lang),
+      getLanguageFlag: jest.fn((_lang) => ''),
       getSupportedLanguages: jest.fn().mockReturnValue(['ru', 'en', 'uz']),
       isLanguageSupported: jest.fn().mockReturnValue(true),
       getDateFormat: jest.fn().mockReturnValue('dd.MM.yyyy'),

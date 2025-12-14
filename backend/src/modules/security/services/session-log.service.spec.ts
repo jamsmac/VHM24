@@ -91,7 +91,7 @@ describe('SessionLogService', () => {
       mockRepository.create.mockReturnValue({ id: 'log-456', ...sessionData });
       mockRepository.save.mockResolvedValue({ id: 'log-456', ...sessionData });
 
-      const result = await service.createSession(sessionData);
+      const _result = await service.createSession(sessionData);
 
       expect(mockRepository.create).toHaveBeenCalledWith(
         expect.objectContaining({

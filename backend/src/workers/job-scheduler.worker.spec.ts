@@ -568,7 +568,7 @@ describe('JobSchedulerWorker', () => {
   describe('graceful shutdown', () => {
     it('should close queue and app on SIGTERM', async () => {
       // Arrange
-      const shutdown = async (signal: string) => {
+      const shutdown = async (_signal: string) => {
         await mockCommissionQueue.close();
         await mockApp.close();
       };
@@ -583,7 +583,7 @@ describe('JobSchedulerWorker', () => {
 
     it('should close queue and app on SIGINT', async () => {
       // Arrange
-      const shutdown = async (signal: string) => {
+      const shutdown = async (_signal: string) => {
         await mockCommissionQueue.close();
         await mockApp.close();
       };
@@ -606,7 +606,7 @@ describe('JobSchedulerWorker', () => {
         callOrder.push('app');
       });
 
-      const shutdown = async (signal: string) => {
+      const shutdown = async (_signal: string) => {
         await mockCommissionQueue.close();
         await mockApp.close();
       };
@@ -700,7 +700,7 @@ describe('JobSchedulerWorker', () => {
   describe('cron expression validation', () => {
     it('should use valid cron expression for daily job', () => {
       // Arrange
-      const cronRegex =
+      const _cronRegex =
         /^(\*|([0-9]|1[0-9]|2[0-9]|3[0-9]|4[0-9]|5[0-9])|\*\/([0-9]|1[0-9]|2[0-9]|3[0-9]|4[0-9]|5[0-9])) (\*|([0-9]|1[0-9]|2[0-3])|\*\/([0-9]|1[0-9]|2[0-3])) (\*|([1-9]|1[0-9]|2[0-9]|3[0-1])|\*\/([1-9]|1[0-9]|2[0-9]|3[0-1])) (\*|([1-9]|1[0-2])|\*\/([1-9]|1[0-2])) (\*|([0-7])|\*\/([0-7]))$/;
 
       // Assert

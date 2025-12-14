@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository, Between } from 'typeorm';
+import { Repository } from 'typeorm';
 import { AuditLogService } from './audit-log.service';
 import { AuditLog, AuditEventType, AuditSeverity } from '../entities/audit-log.entity';
 
