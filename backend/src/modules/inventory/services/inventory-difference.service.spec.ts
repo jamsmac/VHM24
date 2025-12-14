@@ -3,6 +3,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { InventoryDifferenceService } from './inventory-difference.service';
 import { InventoryCalculationService } from './inventory-calculation.service';
 import { InventoryThresholdActionsService } from './inventory-threshold-actions.service';
+import { InventoryThresholdService } from './inventory-threshold.service';
 import {
   InventoryActualCount,
   InventoryLevelType,
@@ -25,6 +26,7 @@ describe('InventoryDifferenceService', () => {
   let thresholdRepo: any;
   let calculationService: any;
   let thresholdActionsService: any;
+  let thresholdService: any;
 
   // Test fixtures
   const testUserId = '11111111-1111-1111-1111-111111111111';
@@ -42,6 +44,10 @@ describe('InventoryDifferenceService', () => {
 
     thresholdActionsService = {
       executeThresholdActions: jest.fn(),
+    };
+
+    thresholdService = {
+      findApplicableThreshold: jest.fn().mockResolvedValue(null),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -62,6 +68,10 @@ describe('InventoryDifferenceService', () => {
         {
           provide: InventoryThresholdActionsService,
           useValue: thresholdActionsService,
+        },
+        {
+          provide: InventoryThresholdService,
+          useValue: thresholdService,
         },
       ],
     }).compile();
@@ -442,7 +452,7 @@ describe('InventoryDifferenceService', () => {
       };
 
       calculationService.calculateBalance.mockResolvedValue(100); // Diff = -50
-      thresholdRepo.find.mockResolvedValue([threshold]);
+      thresholdService.findApplicableThreshold.mockResolvedValue(threshold);
 
       // Act
       const result = await service.calculateDifferenceForCount(actualCount as any);
@@ -478,7 +488,7 @@ describe('InventoryDifferenceService', () => {
       };
 
       calculationService.calculateBalance.mockResolvedValue(100);
-      thresholdRepo.find.mockResolvedValue([threshold]);
+      thresholdService.findApplicableThreshold.mockResolvedValue(threshold);
 
       // Act
       const result = await service.calculateDifferenceForCount(actualCount as any);
@@ -501,6 +511,7 @@ describe('InventoryDifferenceService', () => {
         counted_by: { id: testUserId, full_name: 'John Doe' },
       };
 
+      // thresholdService.findApplicableThreshold returns the most specific threshold
       const nomenclatureThreshold = {
         id: 'threshold-nom',
         name: 'Coffee Beans Threshold',
@@ -510,28 +521,16 @@ describe('InventoryDifferenceService', () => {
         threshold_rel: null,
         severity_level: SeverityLevel.CRITICAL,
         is_active: true,
-        priority: 20, // Higher priority
-      };
-
-      const globalThreshold = {
-        id: 'threshold-global',
-        name: 'Global Threshold',
-        threshold_type: ThresholdType.GLOBAL,
-        reference_id: null,
-        threshold_abs: 10,
-        threshold_rel: null,
-        severity_level: SeverityLevel.WARNING,
-        is_active: true,
-        priority: 5, // Lower priority
+        priority: 20,
       };
 
       calculationService.calculateBalance.mockResolvedValue(100); // Diff = -5
-      thresholdRepo.find.mockResolvedValue([nomenclatureThreshold, globalThreshold]);
+      thresholdService.findApplicableThreshold.mockResolvedValue(nomenclatureThreshold);
 
       // Act
       const result = await service.calculateDifferenceForCount(actualCount as any);
 
-      // Assert - Should use nomenclature threshold (higher priority)
+      // Assert - Should use nomenclature threshold
       expect(result.applied_threshold?.id).toBe('threshold-nom');
       expect(result.severity).toBe(SeverityLevel.CRITICAL);
     });
@@ -562,7 +561,7 @@ describe('InventoryDifferenceService', () => {
       };
 
       calculationService.calculateBalance.mockResolvedValue(100);
-      thresholdRepo.find.mockResolvedValue([machineThreshold]);
+      thresholdService.findApplicableThreshold.mockResolvedValue(machineThreshold);
 
       // Act
       const result = await service.calculateDifferenceForCount(actualCount as any);
@@ -571,12 +570,12 @@ describe('InventoryDifferenceService', () => {
       expect(result.applied_threshold?.id).toBe('threshold-machine');
     });
 
-    it('should not apply machine threshold to operator level', async () => {
+    it('should not apply threshold when none found', async () => {
       // Arrange
       const actualCount = {
         id: 'count-1',
         nomenclature_id: testNomenclatureId,
-        level_type: InventoryLevelType.OPERATOR, // Not machine level
+        level_type: InventoryLevelType.OPERATOR,
         level_ref_id: testOperatorId,
         actual_quantity: 95,
         counted_at: new Date('2025-06-15'),
@@ -584,73 +583,51 @@ describe('InventoryDifferenceService', () => {
         counted_by: { id: testUserId, full_name: 'John Doe' },
       };
 
-      const machineThreshold = {
-        id: 'threshold-machine',
-        name: 'Machine Specific',
-        threshold_type: ThresholdType.MACHINE,
-        reference_id: testMachineId,
-        threshold_abs: 2,
-        threshold_rel: null,
-        severity_level: SeverityLevel.CRITICAL,
-        is_active: true,
-        priority: 15,
-      };
-
       calculationService.calculateBalance.mockResolvedValue(100);
-      thresholdRepo.find.mockResolvedValue([machineThreshold]);
+      thresholdService.findApplicableThreshold.mockResolvedValue(null);
 
       // Act
       const result = await service.calculateDifferenceForCount(actualCount as any);
 
-      // Assert - Should not apply machine threshold, should be INFO
+      // Assert - Should return INFO when no threshold found
       expect(result.applied_threshold).toBeNull();
       expect(result.severity).toBe(SeverityLevel.INFO);
     });
 
-    it('should respect threshold priority order', async () => {
+    it('should not exceed threshold when difference is within limits', async () => {
       // Arrange
       const actualCount = {
         id: 'count-1',
         nomenclature_id: testNomenclatureId,
         level_type: InventoryLevelType.MACHINE,
         level_ref_id: testMachineId,
-        actual_quantity: 85,
+        actual_quantity: 92, // Only 8% difference
         counted_at: new Date('2025-06-15'),
         nomenclature: { name: 'Coffee Beans' },
         counted_by: { id: testUserId, full_name: 'John Doe' },
       };
 
-      const highPriorityThreshold = {
-        id: 'threshold-high',
-        name: 'High Priority',
+      const threshold = {
+        id: 'threshold-1',
+        name: 'Warning Threshold',
         threshold_type: ThresholdType.GLOBAL,
-        threshold_abs: 20, // Won't exceed (diff = 15)
-        threshold_rel: null,
-        severity_level: SeverityLevel.CRITICAL,
-        is_active: true,
-        priority: 100,
-      };
-
-      const lowPriorityThreshold = {
-        id: 'threshold-low',
-        name: 'Low Priority',
-        threshold_type: ThresholdType.GLOBAL,
-        threshold_abs: 10, // Will exceed
-        threshold_rel: null,
+        threshold_abs: null,
+        threshold_rel: 10, // 10% threshold - not exceeded
         severity_level: SeverityLevel.WARNING,
         is_active: true,
-        priority: 1,
+        priority: 5,
       };
 
       calculationService.calculateBalance.mockResolvedValue(100);
-      thresholdRepo.find.mockResolvedValue([highPriorityThreshold, lowPriorityThreshold]);
+      thresholdService.findApplicableThreshold.mockResolvedValue(threshold);
 
       // Act
       const result = await service.calculateDifferenceForCount(actualCount as any);
 
-      // Assert - Should use low priority threshold since high priority wasn't exceeded
-      expect(result.applied_threshold?.id).toBe('threshold-low');
-      expect(result.severity).toBe(SeverityLevel.WARNING);
+      // Assert - Threshold returned but not exceeded
+      expect(result.threshold_exceeded).toBe(false);
+      expect(result.severity).toBe(SeverityLevel.INFO);
+      expect(result.applied_threshold?.id).toBe('threshold-1');
     });
   });
 
@@ -693,7 +670,7 @@ describe('InventoryDifferenceService', () => {
       calculationService.calculateBalance
         .mockResolvedValueOnce(100) // First: diff = -10
         .mockResolvedValueOnce(100); // Second: diff = 0
-      thresholdRepo.find.mockResolvedValue([]);
+      thresholdService.findApplicableThreshold.mockResolvedValue(null);
 
       // Act
       const result = await service.getDifferenceDashboard({});
@@ -752,7 +729,8 @@ describe('InventoryDifferenceService', () => {
 
       actualCountRepo.createQueryBuilder.mockReturnValue(queryBuilder);
       calculationService.calculateBalance.mockResolvedValue(100);
-      thresholdRepo.find.mockResolvedValue([criticalThreshold]);
+      // First count (-20 diff) exceeds threshold, second (+10 diff) doesn't
+      thresholdService.findApplicableThreshold.mockResolvedValue(criticalThreshold);
 
       // Act
       const result = await service.getDifferenceDashboard({});
@@ -760,8 +738,8 @@ describe('InventoryDifferenceService', () => {
       // Assert
       expect(result.summary.total_abs_difference).toBe(30); // |20| + |10|
       expect(result.summary.avg_rel_difference).toBe(15); // (|20| + |10|) / 2
-      expect(result.summary.critical_count).toBe(1); // Only -20 exceeds threshold
-      expect(result.summary.info_count).toBe(1);
+      expect(result.summary.critical_count).toBe(1); // Only -20 exceeds threshold of 15
+      expect(result.summary.info_count).toBe(1); // +10 doesn't exceed threshold
     });
 
     it('should aggregate top products correctly', async () => {
@@ -800,7 +778,7 @@ describe('InventoryDifferenceService', () => {
 
       actualCountRepo.createQueryBuilder.mockReturnValue(queryBuilder);
       calculationService.calculateBalance.mockResolvedValue(100);
-      thresholdRepo.find.mockResolvedValue([]);
+      thresholdService.findApplicableThreshold.mockResolvedValue(null);
 
       // Act
       const result = await service.getDifferenceDashboard({});
@@ -847,7 +825,7 @@ describe('InventoryDifferenceService', () => {
 
       actualCountRepo.createQueryBuilder.mockReturnValue(queryBuilder);
       calculationService.calculateBalance.mockResolvedValue(100);
-      thresholdRepo.find.mockResolvedValue([]);
+      thresholdService.findApplicableThreshold.mockResolvedValue(null);
 
       // Act
       const result = await service.getDifferenceDashboard({});
@@ -889,7 +867,7 @@ describe('InventoryDifferenceService', () => {
 
       actualCountRepo.findOne.mockResolvedValue(actualCount);
       calculationService.calculateBalance.mockResolvedValue(100);
-      thresholdRepo.find.mockResolvedValue([threshold]);
+      thresholdService.findApplicableThreshold.mockResolvedValue(threshold);
       thresholdRepo.findOne.mockResolvedValue(threshold);
       thresholdActionsService.executeThresholdActions.mockResolvedValue({
         incidentId: 'incident-1',
@@ -922,7 +900,7 @@ describe('InventoryDifferenceService', () => {
 
       actualCountRepo.findOne.mockResolvedValue(actualCount);
       calculationService.calculateBalance.mockResolvedValue(100);
-      thresholdRepo.find.mockResolvedValue([]); // No thresholds
+      thresholdService.findApplicableThreshold.mockResolvedValue(null); // No thresholds
 
       // Act
       const result = await service.executeThresholdActionsForCount('count-1', testUserId);

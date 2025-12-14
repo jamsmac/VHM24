@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import {
@@ -11,6 +11,7 @@ import {
   GetActualCountsFilterDto,
 } from '../dto/inventory-count.dto';
 import { v4 as uuidv4 } from 'uuid';
+import { InventoryDifferenceService } from './inventory-difference.service';
 
 /**
  * InventoryCountService
@@ -29,10 +30,15 @@ export class InventoryCountService {
   constructor(
     @InjectRepository(InventoryActualCount)
     private readonly actualCountRepository: Repository<InventoryActualCount>,
+    @Inject(forwardRef(() => InventoryDifferenceService))
+    private readonly differenceService: InventoryDifferenceService,
   ) {}
 
   /**
    * Создать фактический замер
+   *
+   * После создания автоматически проверяет пороги расхождений
+   * и выполняет настроенные действия (инциденты, задачи, уведомления)
    */
   async createActualCount(
     dto: CreateActualCountDto,
@@ -48,11 +54,52 @@ export class InventoryCountService {
       counted_at: new Date(dto.counted_at),
     });
 
-    return await this.actualCountRepository.save(actualCount);
+    const saved = await this.actualCountRepository.save(actualCount);
+
+    // Автоматическая проверка порогов и выполнение действий
+    await this.checkThresholdsAndExecuteActions(saved.id, userId);
+
+    return saved;
+  }
+
+  /**
+   * Проверить пороги расхождений и выполнить автоматические действия
+   *
+   * Вызывается после создания фактического замера.
+   * Создаёт инциденты, задачи, уведомления при превышении порогов.
+   */
+  private async checkThresholdsAndExecuteActions(
+    actualCountId: string,
+    userId: string,
+  ): Promise<void> {
+    try {
+      const result = await this.differenceService.executeThresholdActionsForCount(
+        actualCountId,
+        userId,
+      );
+
+      if (result.incidentId || result.taskId || result.notificationsSent > 0) {
+        this.logger.log(
+          `Threshold actions executed for count ${actualCountId}: ` +
+            `incident=${result.incidentId || 'none'}, ` +
+            `task=${result.taskId || 'none'}, ` +
+            `notifications=${result.notificationsSent}`,
+        );
+      }
+    } catch (error) {
+      // Не прерываем создание замера при ошибке в автоматических действиях
+      this.logger.error(
+        `Failed to execute threshold actions for count ${actualCountId}: ${error.message}`,
+        error.stack,
+      );
+    }
   }
 
   /**
    * Массовая инвентаризация (много товаров за раз)
+   *
+   * После создания автоматически проверяет пороги расхождений
+   * для каждого созданного замера
    */
   async createBatchCount(
     dto: CreateBatchCountDto,
@@ -84,7 +131,46 @@ export class InventoryCountService {
       actualCounts.push(actualCount);
     }
 
-    return await this.actualCountRepository.save(actualCounts);
+    const savedCounts = await this.actualCountRepository.save(actualCounts);
+
+    // Автоматическая проверка порогов для каждого замера (асинхронно)
+    // Не блокируем возврат результата, но логируем ошибки
+    this.checkThresholdsForBatch(savedCounts, userId);
+
+    return savedCounts;
+  }
+
+  /**
+   * Проверить пороги для массовой инвентаризации
+   */
+  private async checkThresholdsForBatch(
+    counts: InventoryActualCount[],
+    userId: string,
+  ): Promise<void> {
+    let actionsExecuted = 0;
+
+    for (const count of counts) {
+      try {
+        const result = await this.differenceService.executeThresholdActionsForCount(
+          count.id,
+          userId,
+        );
+
+        if (result.incidentId || result.taskId || result.notificationsSent > 0) {
+          actionsExecuted++;
+        }
+      } catch (error) {
+        this.logger.error(
+          `Failed to execute threshold actions for batch count ${count.id}: ${error.message}`,
+        );
+      }
+    }
+
+    if (actionsExecuted > 0) {
+      this.logger.log(
+        `Batch threshold check complete: ${actionsExecuted}/${counts.length} counts triggered actions`,
+      );
+    }
   }
 
   /**

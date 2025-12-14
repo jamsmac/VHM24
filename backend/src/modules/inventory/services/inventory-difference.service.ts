@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import {
@@ -12,6 +12,7 @@ import {
 } from '../entities/inventory-difference-threshold.entity';
 import { InventoryCalculationService } from './inventory-calculation.service';
 import { InventoryThresholdActionsService } from './inventory-threshold-actions.service';
+import { InventoryThresholdService } from './inventory-threshold.service';
 
 /**
  * Difference Report Item
@@ -101,6 +102,8 @@ export class InventoryDifferenceService {
     private readonly thresholdRepository: Repository<InventoryDifferenceThreshold>,
     private readonly calculationService: InventoryCalculationService,
     private readonly thresholdActionsService: InventoryThresholdActionsService,
+    @Inject(forwardRef(() => InventoryThresholdService))
+    private readonly thresholdService: InventoryThresholdService,
   ) {}
 
   /**
@@ -245,6 +248,9 @@ export class InventoryDifferenceService {
 
   /**
    * Применить пороги к расхождению (REQ-ANL-05/06)
+   *
+   * Использует InventoryThresholdService для поиска наиболее специфичного порога
+   * с приоритетом: NOMENCLATURE > MACHINE > OPERATOR > LOCATION > GLOBAL
    */
   private async evaluateThresholds(
     nomenclatureId: string,
@@ -261,47 +267,64 @@ export class InventoryDifferenceService {
       threshold_type: ThresholdType;
     } | null;
   }> {
-    // Получить активные пороги, отсортированные по приоритету
-    const thresholds = await this.thresholdRepository.find({
-      where: { is_active: true },
-      order: { priority: 'DESC' },
-    });
+    // Определить параметры для поиска порога
+    let machineId: string | undefined;
+    let operatorId: string | undefined;
+    let locationId: string | undefined;
 
-    // Применить пороги в порядке приоритета
-    for (const threshold of thresholds) {
-      // Проверить, применим ли порог
-      const isApplicable = this.isThresholdApplicable(
-        threshold,
-        nomenclatureId,
-        levelType,
-        levelRefId,
-      );
-
-      if (!isApplicable) {
-        continue;
-      }
-
-      // Проверить превышение
-      const isExceeded = this.isThresholdExceeded(threshold, differenceAbs, differenceRel);
-
-      if (isExceeded) {
-        return {
-          severity: threshold.severity_level,
-          threshold_exceeded: true,
-          applied_threshold: {
-            id: threshold.id,
-            name: threshold.name,
-            threshold_type: threshold.threshold_type,
-          },
-        };
-      }
+    switch (levelType) {
+      case InventoryLevelType.MACHINE:
+        machineId = levelRefId;
+        break;
+      case InventoryLevelType.OPERATOR:
+        operatorId = levelRefId;
+        break;
+      case InventoryLevelType.WAREHOUSE:
+        locationId = levelRefId;
+        break;
     }
 
-    // Нет превышений
+    // Найти наиболее специфичный применимый порог
+    const threshold = await this.thresholdService.findApplicableThreshold(
+      nomenclatureId,
+      machineId,
+      operatorId,
+      locationId,
+    );
+
+    if (!threshold) {
+      // Нет активных порогов
+      return {
+        severity: SeverityLevel.INFO,
+        threshold_exceeded: false,
+        applied_threshold: null,
+      };
+    }
+
+    // Проверить превышение
+    const isExceeded = this.isThresholdExceeded(threshold, differenceAbs, differenceRel);
+
+    if (isExceeded) {
+      return {
+        severity: threshold.severity_level,
+        threshold_exceeded: true,
+        applied_threshold: {
+          id: threshold.id,
+          name: threshold.name,
+          threshold_type: threshold.threshold_type,
+        },
+      };
+    }
+
+    // Порог не превышен
     return {
       severity: SeverityLevel.INFO,
       threshold_exceeded: false,
-      applied_threshold: null,
+      applied_threshold: {
+        id: threshold.id,
+        name: threshold.name,
+        threshold_type: threshold.threshold_type,
+      },
     };
   }
 
