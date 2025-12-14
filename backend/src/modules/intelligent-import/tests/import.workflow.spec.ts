@@ -447,7 +447,7 @@ describe('ImportWorkflow', () => {
   describe('createSession', () => {
     it('should create new session with correct initial values', async () => {
       // Act
-      const result = await (workflow as any).createSession('user-123');
+      const _result = await (workflow as any).createSession('user-123');
 
       // Assert
       expect(mockSessionRepo.create).toHaveBeenCalledWith({

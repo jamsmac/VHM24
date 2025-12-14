@@ -133,7 +133,7 @@ describe('DataParserService', () => {
       validationService.inferSchema.mockResolvedValue(inferredSchema);
       validationService.validateBatch.mockResolvedValue(mockValidationResult);
 
-      const result = await service.parseAndValidate(Buffer.from('test data'));
+      const _result = await service.parseAndValidate(Buffer.from('test data'));
 
       expect(validationService.inferSchema).toHaveBeenCalledWith(mockParsedData.data);
       expect(validationService.validateBatch).toHaveBeenCalledWith(

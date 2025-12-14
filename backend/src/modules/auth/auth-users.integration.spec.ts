@@ -14,7 +14,8 @@ import { EmailService } from '../email/email.service';
 import { SessionService } from './services/session.service';
 import { TokenBlacklistService } from './services/token-blacklist.service';
 import { AuditLogService } from '../security/services/audit-log.service';
-import { Repository } from 'typeorm';
+// Repository type imported for potential future use in type annotations
+import type { Repository as _Repository } from 'typeorm';
 
 /**
  * Integration tests for Auth and Users modules
@@ -23,9 +24,9 @@ import { Repository } from 'typeorm';
 describe('Auth + Users Integration', () => {
   let authService: AuthService;
   let usersService: any;
-  let userRepository: any;
+  let _userRepository: any;
   let jwtService: any;
-  let configService: any;
+  let _configService: any;
   let module: TestingModule;
 
   const mockUser: User = {
@@ -182,8 +183,8 @@ describe('Auth + Users Integration', () => {
     authService = moduleRef.get<AuthService>(AuthService);
     usersService = moduleRef.get(UsersService);
     jwtService = moduleRef.get(JwtService);
-    configService = moduleRef.get(ConfigService);
-    userRepository = moduleRef.get(getRepositoryToken(User));
+    _configService = moduleRef.get(ConfigService);
+    _userRepository = moduleRef.get(getRepositoryToken(User));
   });
 
   afterEach(() => {

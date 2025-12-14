@@ -27,7 +27,7 @@ describe('AuthService', () => {
   let service: AuthService;
   let usersService: jest.Mocked<UsersService>;
   let jwtService: JwtService;
-  let configService: ConfigService;
+  let _configService: ConfigService;
   let auditLogService: jest.Mocked<AuditLogService>;
   let sessionService: jest.Mocked<SessionService>;
   let emailService: jest.Mocked<EmailService>;
@@ -159,7 +159,7 @@ describe('AuthService', () => {
     service = module.get<AuthService>(AuthService);
     usersService = module.get(UsersService) as jest.Mocked<UsersService>;
     jwtService = module.get<JwtService>(JwtService);
-    configService = module.get<ConfigService>(ConfigService);
+    _configService = module.get<ConfigService>(ConfigService);
     auditLogService = module.get(AuditLogService) as jest.Mocked<AuditLogService>;
     sessionService = module.get(SessionService) as jest.Mocked<SessionService>;
     emailService = module.get(EmailService) as jest.Mocked<EmailService>;

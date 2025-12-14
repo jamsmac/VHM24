@@ -54,7 +54,7 @@ describe('PurchaseHistoryService', () => {
   };
 
   // Create mock repository
-  const createMockRepository = <T>() => ({
+  const createMockRepository = <_T>() => ({
     find: jest.fn(),
     findOne: jest.fn(),
     findOneBy: jest.fn(),

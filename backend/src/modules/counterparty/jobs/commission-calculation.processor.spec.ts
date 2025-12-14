@@ -5,7 +5,7 @@ import { Job } from 'bull';
 
 describe('CommissionCalculationProcessor', () => {
   let processor: CommissionCalculationProcessor;
-  let schedulerService: CommissionSchedulerService;
+  let _schedulerService: CommissionSchedulerService;
 
   const mockSchedulerService = {
     calculateDailyCommissions: jest.fn(),
@@ -27,7 +27,7 @@ describe('CommissionCalculationProcessor', () => {
     }).compile();
 
     processor = module.get<CommissionCalculationProcessor>(CommissionCalculationProcessor);
-    schedulerService = module.get<CommissionSchedulerService>(CommissionSchedulerService);
+    _schedulerService = module.get<CommissionSchedulerService>(CommissionSchedulerService);
   });
 
   afterEach(() => {

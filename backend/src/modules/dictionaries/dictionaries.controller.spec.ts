@@ -32,7 +32,7 @@ describe('DictionariesController', () => {
     updated_by_id: null,
   };
 
-  const mockSystemDictionary: Dictionary = {
+  const _mockSystemDictionary: Dictionary = {
     ...mockDictionary,
     id: 'dict-2',
     code: 'task_statuses',

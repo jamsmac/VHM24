@@ -16,7 +16,7 @@ jest.mock('qrcode', () => ({
 describe('QrCodeService', () => {
   let service: QrCodeService;
   let machineRepository: jest.Mocked<Repository<Machine>>;
-  let configService: jest.Mocked<ConfigService>;
+  let _configService: jest.Mocked<ConfigService>;
 
   // Mock data - use unknown cast to avoid strict type checks on relations
   const mockMachine = {
@@ -114,7 +114,7 @@ describe('QrCodeService', () => {
 
     service = module.get<QrCodeService>(QrCodeService);
     machineRepository = module.get(getRepositoryToken(Machine));
-    configService = module.get(ConfigService);
+    _configService = module.get(ConfigService);
   });
 
   afterEach(() => {

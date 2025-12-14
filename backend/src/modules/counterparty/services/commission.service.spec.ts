@@ -8,8 +8,8 @@ import { CommissionCalculation, PaymentStatus } from '../entities/commission-cal
 
 describe('CommissionService', () => {
   let service: CommissionService;
-  let contractRepository: Repository<Contract>;
-  let calculationRepository: Repository<CommissionCalculation>;
+  let _contractRepository: Repository<Contract>;
+  let _calculationRepository: Repository<CommissionCalculation>;
   let mockQueryBuilder: Partial<SelectQueryBuilder<CommissionCalculation>>;
 
   const mockContractRepository = {
@@ -50,8 +50,8 @@ describe('CommissionService', () => {
     }).compile();
 
     service = module.get<CommissionService>(CommissionService);
-    contractRepository = module.get<Repository<Contract>>(getRepositoryToken(Contract));
-    calculationRepository = module.get<Repository<CommissionCalculation>>(
+    _contractRepository = module.get<Repository<Contract>>(getRepositoryToken(Contract));
+    _calculationRepository = module.get<Repository<CommissionCalculation>>(
       getRepositoryToken(CommissionCalculation),
     );
   });

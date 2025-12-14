@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository, In, LessThan, MoreThan, Not, IsNull, SelectQueryBuilder } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { MachinesService } from './machines.service';
 import { Machine, MachineStatus } from './entities/machine.entity';
@@ -17,7 +17,7 @@ describe('MachinesService', () => {
   let machineRepository: jest.Mocked<Repository<Machine>>;
   let locationHistoryRepository: jest.Mocked<Repository<MachineLocationHistory>>;
   let qrCodeService: jest.Mocked<QrCodeService>;
-  let transactionsService: jest.Mocked<TransactionsService>;
+  let _transactionsService: jest.Mocked<TransactionsService>;
   let writeoffQueue: any;
 
   // Mock data - use Partial and casting to avoid strict type checks on relations
@@ -188,7 +188,7 @@ describe('MachinesService', () => {
     machineRepository = module.get(getRepositoryToken(Machine));
     locationHistoryRepository = module.get(getRepositoryToken(MachineLocationHistory));
     qrCodeService = module.get(QrCodeService);
-    transactionsService = module.get(TransactionsService);
+    _transactionsService = module.get(TransactionsService);
     writeoffQueue = module.get('BullQueue_machine-writeoff');
   });
 

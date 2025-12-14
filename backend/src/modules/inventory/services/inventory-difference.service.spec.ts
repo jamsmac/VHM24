@@ -1,7 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { NotFoundException } from '@nestjs/common';
-import { InventoryDifferenceService, DifferenceReportItem } from './inventory-difference.service';
+import { InventoryDifferenceService } from './inventory-difference.service';
 import { InventoryCalculationService } from './inventory-calculation.service';
 import { InventoryThresholdActionsService } from './inventory-threshold-actions.service';
 import {

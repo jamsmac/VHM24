@@ -9,9 +9,9 @@ import { FileUpload, FileType, AgentContext } from '../interfaces/common.interfa
 describe('FileIntakeAgent', () => {
   let agent: FileIntakeAgent;
   let xlsxParser: XlsxParser;
-  let csvParser: CsvParser;
-  let jsonParser: JsonParser;
-  let xmlParser: XmlParser;
+  let _csvParser: CsvParser;
+  let _jsonParser: JsonParser;
+  let _xmlParser: XmlParser;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -20,9 +20,9 @@ describe('FileIntakeAgent', () => {
 
     agent = module.get<FileIntakeAgent>(FileIntakeAgent);
     xlsxParser = module.get<XlsxParser>(XlsxParser);
-    csvParser = module.get<CsvParser>(CsvParser);
-    jsonParser = module.get<JsonParser>(JsonParser);
-    xmlParser = module.get<XmlParser>(XmlParser);
+    _csvParser = module.get<CsvParser>(CsvParser);
+    _jsonParser = module.get<JsonParser>(JsonParser);
+    _xmlParser = module.get<XmlParser>(XmlParser);
   });
 
   it('should be defined', () => {

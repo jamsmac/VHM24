@@ -347,7 +347,7 @@ describe('NotificationsService', () => {
       mockNotificationRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder as any);
 
       // Act
-      const result = await service.getUserNotifications(mockUserId, NotificationStatus.SENT);
+      const _result = await service.getUserNotifications(mockUserId, NotificationStatus.SENT);
 
       // Assert
       expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith('notification.status = :status', {
@@ -362,7 +362,7 @@ describe('NotificationsService', () => {
       mockNotificationRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder as any);
 
       // Act
-      const result = await service.getUserNotifications(mockUserId, undefined, true);
+      const _result = await service.getUserNotifications(mockUserId, undefined, true);
 
       // Assert
       expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith('notification.read_at IS NULL');

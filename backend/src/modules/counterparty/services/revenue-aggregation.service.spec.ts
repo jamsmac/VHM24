@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { RevenueAggregationService, RevenueAggregation } from './revenue-aggregation.service';
+import { RevenueAggregationService } from './revenue-aggregation.service';
 import { Transaction, TransactionType } from '@/modules/transactions/entities/transaction.entity';
 
 describe('RevenueAggregationService', () => {

@@ -394,7 +394,7 @@ describe('AnalyticsService', () => {
       });
 
       // Setup collection stats
-      const collectionQueryBuilder = {
+      const _collectionQueryBuilder = {
         ...mockTransactionRepo.createQueryBuilder(),
         getRawOne: jest.fn().mockResolvedValue({
           collection_count: '5',
@@ -489,7 +489,7 @@ describe('AnalyticsService', () => {
   describe('rebuildYesterdayStats (cron job)', () => {
     it('should rebuild stats for yesterday', async () => {
       // Arrange
-      const yesterday = subDays(new Date(), 1);
+      const _yesterday = subDays(new Date(), 1);
       const mockRepo = createMockRepository();
       mockRepo.createQueryBuilder().getRawOne.mockResolvedValue({
         sales_count: '0',

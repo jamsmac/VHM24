@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { DataSource } from 'typeorm';
 import { ReportBuilderService } from './report-builder.service';
-import { ReportType, ReportParams, DateRange, Report } from '../interfaces/report.interface';
+import { ReportType, ReportParams, DateRange } from '../interfaces/report.interface';
 
 describe('ReportBuilderService', () => {
   let service: ReportBuilderService;

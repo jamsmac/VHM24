@@ -878,7 +878,7 @@ describe('ExcelParser', () => {
     });
 
     it('should skip rows without any data', async () => {
-      const mockRow = (values: any[], hasData: boolean) => ({
+      const mockRow = (values: any[], _hasData: boolean) => ({
         getCell: jest.fn().mockImplementation((col) => ({
           value: values[col - 1],
         })),

@@ -625,7 +625,7 @@ describe('InventoryService - Comprehensive Tests', () => {
         };
 
         // Act
-        const result = await service.transferWarehouseToOperator(dto, testUserId);
+        const _result = await service.transferWarehouseToOperator(dto, testUserId);
 
         // Assert
         expect(mockManager.create).toHaveBeenCalledWith(
@@ -1992,7 +1992,7 @@ describe('InventoryService - Comprehensive Tests', () => {
 
       mockManager.findOne.mockResolvedValue(warehouseInventory);
 
-      const dto = {
+      const _dto = {
         operator_id: testOperatorId,
         nomenclature_id: testNomenclatureId,
         quantity: 0,

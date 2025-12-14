@@ -280,7 +280,7 @@ describe('NotificationsController', () => {
       ] as Notification[]);
 
       // Act
-      const result = await controller.getMyNotifications(mockRequest, undefined, true);
+      const _result = await controller.getMyNotifications(mockRequest, undefined, true);
 
       // Assert
       expect(mockNotificationsService.getUserNotifications).toHaveBeenCalledWith(
@@ -295,7 +295,7 @@ describe('NotificationsController', () => {
       mockNotificationsService.getUserNotifications.mockResolvedValue([]);
 
       // Act
-      const result = await controller.getMyNotifications(
+      const _result = await controller.getMyNotifications(
         mockRequest,
         NotificationStatus.SENT,
         true,
@@ -755,7 +755,7 @@ describe('NotificationsController', () => {
         ] as Notification[]);
 
         // Act
-        const result = await controller.getMyNotifications(mockRequest, status);
+        const _result = await controller.getMyNotifications(mockRequest, status);
 
         // Assert
         expect(mockNotificationsService.getUserNotifications).toHaveBeenCalledWith(

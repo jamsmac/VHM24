@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { IpWhitelistGuard } from './ip-whitelist.guard';
 import { UsersService } from '@modules/users/users.service';
-import { User, UserRole, UserStatus } from '@modules/users/entities/user.entity';
+import { UserRole, UserStatus } from '@modules/users/entities/user.entity';
 import { UserResponseDto } from '@modules/users/dto/user-response.dto';
 
 describe('IpWhitelistGuard', () => {

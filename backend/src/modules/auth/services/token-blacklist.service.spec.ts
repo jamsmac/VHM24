@@ -24,7 +24,7 @@ jest.mock('ioredis', () => {
 
 describe('TokenBlacklistService', () => {
   let service: TokenBlacklistService;
-  let configService: ConfigService;
+  let _configService: ConfigService;
 
   const mockJti = 'jwt-id-123';
   const mockUserId = 'user-456';
@@ -63,7 +63,7 @@ describe('TokenBlacklistService', () => {
     }).compile();
 
     service = module.get<TokenBlacklistService>(TokenBlacklistService);
-    configService = module.get<ConfigService>(ConfigService);
+    _configService = module.get<ConfigService>(ConfigService);
 
     // Initialize Redis connection
     await service.onModuleInit();

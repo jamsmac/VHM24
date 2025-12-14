@@ -90,7 +90,7 @@ describe('IntegrationLogService', () => {
       repository.create.mockReturnValue(errorLog as IntegrationLog);
       repository.save.mockResolvedValue(errorLog as IntegrationLog);
 
-      const result = await service.createLog(logData);
+      const _result = await service.createLog(logData);
 
       expect(repository.create).toHaveBeenCalledWith({
         ...logData,

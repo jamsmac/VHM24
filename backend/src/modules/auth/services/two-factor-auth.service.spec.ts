@@ -30,7 +30,7 @@ describe('TwoFactorAuthService', () => {
   let service: TwoFactorAuthService;
   let mockUsersService: jest.Mocked<UsersService>;
   let mockAuditLogService: jest.Mocked<AuditLogService>;
-  let mockConfigService: ConfigService;
+  let _mockConfigService: ConfigService;
 
   const mockUserId = 'user-123';
   const mockEmail = 'test@example.com';
@@ -89,7 +89,7 @@ describe('TwoFactorAuthService', () => {
     }).compile();
 
     service = module.get<TwoFactorAuthService>(TwoFactorAuthService);
-    mockConfigService = module.get<ConfigService>(ConfigService);
+    _mockConfigService = module.get<ConfigService>(ConfigService);
 
     // Reset mocks
     (authenticator.generateSecret as jest.Mock).mockReturnValue(mockSecret);

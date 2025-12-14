@@ -85,7 +85,7 @@ describe('WebhookService', () => {
       repository.create.mockReturnValue({ ...mockWebhook, ...webhookData } as Webhook);
       repository.save.mockResolvedValue({ ...mockWebhook, ...webhookData } as Webhook);
 
-      const result = await service.createWebhook(webhookData);
+      const _result = await service.createWebhook(webhookData);
 
       expect(repository.create).toHaveBeenCalledWith({
         ...webhookData,
@@ -213,7 +213,7 @@ describe('WebhookService', () => {
     it('should return false for invalid signature', async () => {
       const payload = { test: 'data' };
       const secret = 'webhook_secret';
-      const invalidSignature = 'invalid_signature_hex_value_1234567890abcdef12345678';
+      const _invalidSignature = 'invalid_signature_hex_value_1234567890abcdef12345678';
 
       // Create a valid length signature (64 hex chars for sha256)
       const result = await service.verifySignature(payload, '0'.repeat(64), secret);

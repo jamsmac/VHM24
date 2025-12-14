@@ -453,7 +453,7 @@ describe('DictionaryCacheService', () => {
 
       // Manually expire all cache entries
       const cache = (service as any).dictionariesCache;
-      for (const [key, entry] of cache.entries()) {
+      for (const [_key, entry] of cache.entries()) {
         entry.expiresAt = Date.now() - 1000;
       }
 

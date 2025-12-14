@@ -5,7 +5,7 @@ import { PasswordPolicyService } from './password-policy.service';
 
 describe('PasswordPolicyService', () => {
   let service: PasswordPolicyService;
-  let configService: ConfigService;
+  let _configService: ConfigService;
 
   // Default config values
   const defaultConfig = {
@@ -39,7 +39,7 @@ describe('PasswordPolicyService', () => {
     }).compile();
 
     service = module.get<PasswordPolicyService>(PasswordPolicyService);
-    configService = module.get<ConfigService>(ConfigService);
+    _configService = module.get<ConfigService>(ConfigService);
   });
 
   afterEach(() => {

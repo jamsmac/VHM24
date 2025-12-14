@@ -161,7 +161,7 @@ describe('InventoryAdjustmentService', () => {
       machineInventoryRepo.save.mockResolvedValue({ ...machineInventory, current_quantity: 110 });
 
       // Act
-      const result = await service.createAdjustment(dto, testUserId);
+      const _result = await service.createAdjustment(dto, testUserId);
 
       // Assert
       expect(adjustmentRepo.create).toHaveBeenCalledWith(
@@ -413,7 +413,7 @@ describe('InventoryAdjustmentService', () => {
       };
 
       // Act
-      const result = await service.approveOrReject('adj-1', dto, testUserId);
+      const _result = await service.approveOrReject('adj-1', dto, testUserId);
 
       // Assert
       expect(adjustmentRepo.save).toHaveBeenCalled();
@@ -447,7 +447,7 @@ describe('InventoryAdjustmentService', () => {
       };
 
       // Act
-      const result = await service.approveOrReject('adj-1', dto, testUserId);
+      const _result = await service.approveOrReject('adj-1', dto, testUserId);
 
       // Assert
       expect(machineInventoryRepo.save).not.toHaveBeenCalled();
@@ -550,7 +550,7 @@ describe('InventoryAdjustmentService', () => {
       adjustmentRepo.save.mockResolvedValue({});
 
       // Act
-      const result = await service.applyAdjustment('adj-1', testUserId);
+      const _result = await service.applyAdjustment('adj-1', testUserId);
 
       // Assert
       expect(warehouseInventoryRepo.save).toHaveBeenCalledWith(
@@ -587,7 +587,7 @@ describe('InventoryAdjustmentService', () => {
       adjustmentRepo.save.mockResolvedValue({});
 
       // Act
-      const result = await service.applyAdjustment('adj-1', testUserId);
+      const _result = await service.applyAdjustment('adj-1', testUserId);
 
       // Assert
       expect(operatorInventoryRepo.save).toHaveBeenCalledWith(
@@ -624,7 +624,7 @@ describe('InventoryAdjustmentService', () => {
       adjustmentRepo.save.mockResolvedValue({});
 
       // Act
-      const result = await service.applyAdjustment('adj-1', testUserId);
+      const _result = await service.applyAdjustment('adj-1', testUserId);
 
       // Assert
       expect(machineInventoryRepo.save).toHaveBeenCalledWith(
@@ -740,7 +740,7 @@ describe('InventoryAdjustmentService', () => {
       adjustmentRepo.save.mockImplementation((adj: any) => Promise.resolve(adj));
 
       // Act
-      const result = await service.cancelAdjustment('adj-1', testUserId);
+      const _result = await service.cancelAdjustment('adj-1', testUserId);
 
       // Assert
       expect(adjustmentRepo.save).toHaveBeenCalledWith(
@@ -769,7 +769,7 @@ describe('InventoryAdjustmentService', () => {
       adjustmentRepo.save.mockImplementation((adj: any) => Promise.resolve(adj));
 
       // Act
-      const result = await service.cancelAdjustment('adj-1', testUserId);
+      const _result = await service.cancelAdjustment('adj-1', testUserId);
 
       // Assert
       expect(adjustmentRepo.save).toHaveBeenCalled();

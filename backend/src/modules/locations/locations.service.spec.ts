@@ -53,7 +53,7 @@ describe('LocationsService', () => {
     address: 'Another St. 20',
   };
 
-  const mockInactiveLocation: Partial<Location> = {
+  const _mockInactiveLocation: Partial<Location> = {
     ...mockLocation,
     id: 'location-id-3',
     status: LocationStatus.INACTIVE,

@@ -9,7 +9,7 @@ const mockedNodemailer = nodemailer as jest.Mocked<typeof nodemailer>;
 
 describe('EmailService', () => {
   let service: EmailService;
-  let configService: jest.Mocked<ConfigService>;
+  let _configService: jest.Mocked<ConfigService>;
   let mockTransporter: {
     sendMail: jest.Mock;
     verify: jest.Mock;
@@ -69,7 +69,7 @@ describe('EmailService', () => {
 
     const result = await createTestModule();
     service = result.service;
-    configService = result.configService;
+    _configService = result.configService;
   });
 
   afterEach(() => {

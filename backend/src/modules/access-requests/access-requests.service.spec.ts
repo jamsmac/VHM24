@@ -54,7 +54,7 @@ describe('AccessRequestsService', () => {
     created_user_id: mockCreatedUserId,
   };
 
-  const mockRejectedRequest: Partial<AccessRequest> = {
+  const _mockRejectedRequest: Partial<AccessRequest> = {
     ...mockAccessRequest,
     status: AccessRequestStatus.REJECTED,
     processed_by_user_id: mockAdminUserId,
@@ -253,7 +253,7 @@ describe('AccessRequestsService', () => {
       ]);
 
       // Act
-      const result = await service.findAll(queryDto);
+      const _result = await service.findAll(queryDto);
 
       // Assert
       expect(mockAccessRequestRepository.findAndCount).toHaveBeenCalledWith(
@@ -274,7 +274,7 @@ describe('AccessRequestsService', () => {
       ]);
 
       // Act
-      const result = await service.findAll(queryDto);
+      const _result = await service.findAll(queryDto);
 
       // Assert
       expect(mockAccessRequestRepository.findAndCount).toHaveBeenCalledWith(

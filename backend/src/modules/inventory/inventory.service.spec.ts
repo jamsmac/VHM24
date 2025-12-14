@@ -743,7 +743,7 @@ describe('InventoryService', () => {
 
   describe('getMovementStats', () => {
     it('should return movement statistics', async () => {
-      const mockStats = {
+      const _mockStats = {
         total: 100,
         by_type: [
           { type: MovementType.WAREHOUSE_IN, count: 30, total_quantity: 1000 },

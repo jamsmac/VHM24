@@ -4,9 +4,9 @@ import { Repository, SelectQueryBuilder } from 'typeorm';
 import { ReportsService } from './reports.service';
 import { Transaction } from '../transactions/entities/transaction.entity';
 import { Task, TaskStatus } from '../tasks/entities/task.entity';
-import { Incident, IncidentStatus, IncidentPriority } from '../incidents/entities/incident.entity';
-import { Complaint, ComplaintStatus } from '../complaints/entities/complaint.entity';
-import { Machine, MachineStatus } from '../machines/entities/machine.entity';
+import { Incident } from '../incidents/entities/incident.entity';
+import { Complaint } from '../complaints/entities/complaint.entity';
+import { Machine } from '../machines/entities/machine.entity';
 import { ReportFiltersDto } from './dto/report-filters.dto';
 
 describe('ReportsService', () => {

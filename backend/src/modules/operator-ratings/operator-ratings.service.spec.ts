@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
+import { Repository } from 'typeorm';
 import { OperatorRatingsService } from './operator-ratings.service';
 import { OperatorRating } from './entities/operator-rating.entity';
 import { Task } from '@modules/tasks/entities/task.entity';
@@ -57,7 +57,7 @@ describe('OperatorRatingsService', () => {
     ],
   };
 
-  const mockLateTask: Partial<Task> = {
+  const _mockLateTask: Partial<Task> = {
     id: 'task-2',
     assigned_to_user_id: mockOperatorId,
     assigned_to: null,

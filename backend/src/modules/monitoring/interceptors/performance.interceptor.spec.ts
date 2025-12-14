@@ -350,7 +350,7 @@ describe('PerformanceInterceptor', () => {
       // We can't easily test the logger output, but we can verify
       // that slow requests still record metrics correctly
       const context = createMockExecutionContext();
-      const handler: CallHandler = {
+      const _handler: CallHandler = {
         handle: () => {
           return new Promise((resolve) => {
             setTimeout(() => resolve(of({})), 10);
