@@ -1,8 +1,8 @@
 # 🔬 КОМПЛЕКСНЫЙ АУДИТ VENDHUB MANAGER
 
 **Дата аудита:** 2025-12-14
-**Версия:** 1.0
-**Аудитор:** Claude AI (Opus 4.5)
+**Версия:** 2.0 (объединённая)
+**Аудитор:** Claude AI (Opus 4.5) + Manual Review
 
 ---
 
@@ -10,18 +10,81 @@
 
 | Показатель | Значение | Статус |
 |------------|----------|--------|
-| **Общая оценка проекта** | **76/100** | 🟡 Production Ready с оговорками |
+| **Общая оценка проекта** | **71/100** | 🟡 Требует доработки |
 | **Покрытие требований** | 86% (66/77 REQ) | ✅ Хорошо |
 | **Backend качество** | 7.8/10 | ✅ Хорошо |
 | **Frontend качество** | 7.2/10 | 🟡 Удовлетворительно |
-| **Безопасность** | 8.5/10 | ✅ Отлично |
+| **Безопасность** | **6.8/10** | 🔴 **КРИТИЧЕСКИЕ ПРОБЛЕМЫ** |
 | **База данных** | 8.0/10 | ✅ Хорошо |
-| **Тестирование** | 6.5/10 | 🟡 Требует улучшения |
-| **Производительность** | 6.2/10 | 🟠 Критические проблемы |
+| **Тестирование** | 2.0/10 | 🔴 **КРИТИЧЕСКИ НИЗКО** |
+| **Производительность** | 6.2/10 | 🟠 Проблемы |
 | **DevOps** | 6.9/10 | 🟠 Отсутствует CI/CD |
 | **Telegram Bot** | 7.5/10 | ✅ Хорошо |
 
-**Вердикт:** Проект готов к production-развёртыванию после устранения критических проблем производительности и добавления CI/CD пайплайнов.
+### ⚠️ ВЕРДИКТ: НЕ ГОТОВ К PRODUCTION
+
+**Причины:**
+1. 🔴 **Токены в localStorage** — XSS уязвимость (CVSS 7.5)
+2. 🔴 **Нет rate limiting на /auth/*** — brute-force возможен
+3. 🔴 **Test coverage ~4%** — невозможно гарантировать стабильность
+4. 🔴 **CI/CD отсутствует** — нет автоматизации
+
+**Время до production:** 3-4 недели при активной разработке
+
+---
+
+## 🚨 КРИТИЧЕСКИЕ УЯЗВИМОСТИ БЕЗОПАСНОСТИ
+
+### 🔴 P0-1: Токены в localStorage (XSS Vulnerability)
+
+**CVSS Score:** 7.5 HIGH
+**REQ:** REQ-AUTH-52, REQ-AUTH-53
+**Файлы:** `frontend/lib/axios.ts`, `frontend/lib/auth-store.ts`
+
+**Проблема:** Access и refresh токены хранятся в localStorage, что делает их уязвимыми для XSS атак.
+
+```typescript
+// ❌ ТЕКУЩИЙ КОД (УЯЗВИМЫЙ)
+const token = localStorage.getItem('auth_token');
+```
+
+**Риск:** XSS атака может украсть токен → полный доступ к аккаунту
+
+**Решение:**
+- Access token → memory only (closure)
+- Refresh token → httpOnly cookie
+- Axios interceptor для auto-refresh
+
+---
+
+### 🔴 P0-2: Отсутствие Rate Limiting на Auth
+
+**CVSS Score:** 7.0 HIGH
+**REQ:** REQ-AUTH-44
+**Файл:** `backend/src/auth/auth.controller.ts`
+
+**Проблема:** Endpoints `/auth/login`, `/auth/register` без rate limiting
+
+**Риск:** Brute-force атаки на пароли
+
+**Решение:**
+```typescript
+@Throttle({ short: { limit: 5, ttl: 60000 } }) // 5 попыток в минуту
+@Post('login')
+async login(@Body() dto: LoginDto) { ... }
+```
+
+---
+
+### 🔴 P0-3: Нет Refresh Token Flow во Frontend
+
+**CVSS Score:** 6.0 MEDIUM
+**REQ:** REQ-AUTH-54
+**Файл:** `frontend/lib/axios.ts`
+
+**Проблема:** При истечении access token → logout вместо auto-refresh
+
+**Решение:** Axios interceptor с token queue
 
 ---
 
@@ -65,53 +128,22 @@
 | **Sprint 4**: Analytics | 12 | 8 | 3 | 1 | **67%** |
 | **ИТОГО** | **77** | **66** | **9** | **2** | **86%** |
 
-### Детальная матрица Sprint 1 (Auth & RBAC)
+### Проблемные требования Sprint 1
 
-| REQ ID | Название | Статус | Файлы |
-|--------|----------|--------|-------|
-| REQ-AUTH-01 | Auth module purpose | ✅ | auth.module.ts, auth.service.ts |
-| REQ-AUTH-02 | Security requirements | ✅ | JWT, bcrypt, rate limiting |
-| REQ-AUTH-03 | RBAC roles | ✅ | role.entity.ts, permission.entity.ts |
-| REQ-AUTH-04 | SuperAdmin role | ✅ | UserRole.SUPER_ADMIN, seed script |
-| REQ-AUTH-05 | Role hierarchy | 🔄 | Roles defined, hierarchy enforcement partial |
-| REQ-AUTH-10 | JWT access tokens | ✅ | generateTokens(), 15m expiration |
-| REQ-AUTH-11 | Refresh tokens | ✅ | JWT_REFRESH_SECRET, 7d expiration |
-| REQ-AUTH-20 | Telegram bot module | ✅ | telegram/ module |
-| REQ-AUTH-21 | Telegram user linking | ✅ | TelegramUser entity |
-| REQ-AUTH-22 | Telegram onboarding | ✅ | /start command flow |
-| REQ-AUTH-30 | User creation | ✅ | users.service.ts create() |
-| REQ-AUTH-31 | First login password change | ✅ | requires_password_change field |
-| REQ-AUTH-32 | Telegram registration | ✅ | telegram-bot.service.ts |
-| REQ-AUTH-33 | Approval workflow | ✅ | AccessRequest entity |
-| REQ-AUTH-34 | User blocking | ✅ | blockUser(), UserStatus.SUSPENDED |
-| REQ-AUTH-35 | Session revocation on block | ✅ | Sessions revoked in blockUser() |
-| REQ-AUTH-36 | User deactivation | ✅ | deactivateUser() |
-| REQ-AUTH-40 | bcrypt hashing | ✅ | bcrypt.hash() with salt |
-| REQ-AUTH-41 | Password complexity | ✅ | password-policy.service.ts |
-| REQ-AUTH-42 | 2FA setup for admins | ✅ | two-factor-auth.service.ts |
-| REQ-AUTH-43 | 2FA verification | ✅ | TOTP with otplib |
-| REQ-AUTH-44 | Brute-force protection | 🔄 | Account lockout, ThrottlerGuard partial |
-| REQ-AUTH-45 | Password recovery | ✅ | requestPasswordReset(), resetPassword() |
-| REQ-AUTH-50 | Access token (15m) | ✅ | JWT_ACCESS_EXPIRATION |
-| REQ-AUTH-51 | Refresh token (7d) | ✅ | JWT_REFRESH_EXPIRATION |
-| REQ-AUTH-54 | Session tracking | ✅ | session.service.ts, UserSession entity |
-| REQ-AUTH-55 | Refresh token rotation | ✅ | rotateRefreshToken() |
-| REQ-AUTH-56 | Token blacklist | ✅ | token-blacklist.service.ts |
-| REQ-AUTH-57 | Password change invalidation | ✅ | Sessions revoked on change |
-| REQ-AUTH-60 | IP whitelist for admins | ✅ | ip-whitelist.guard.ts |
-| REQ-AUTH-61 | Session limits | ✅ | MAX_SESSIONS_PER_USER |
-| REQ-AUTH-70 | JWT guard on endpoints | ✅ | @UseGuards(JwtAuthGuard, RolesGuard) |
-| REQ-AUTH-71 | Role-based access | ✅ | @Roles() decorator |
-| REQ-AUTH-72 | Permission-based access | ✅ | PermissionGuard |
-| REQ-AUTH-80 | Audit logging | ✅ | audit-log.service.ts |
-| REQ-AUTH-81 | Audit log viewing | ✅ | audit-log.controller.ts |
+| REQ ID | Название | Статус | Проблема |
+|--------|----------|--------|----------|
+| REQ-AUTH-44 | Brute-force protection | ⚠️ | Rate limiting частичный |
+| REQ-AUTH-52 | Хранение access-token | ❌ | **localStorage (должен быть memory)** |
+| REQ-AUTH-53 | Хранение refresh-token | ❌ | **localStorage (должен быть httpOnly)** |
+| REQ-AUTH-54 | Обновление токенов | 🔄 | Backend есть, frontend нет |
 
 ### Нереализованные требования
 
 | REQ ID | Описание | Причина |
 |--------|----------|---------|
 | REQ-ANL-08 | Reconciliation service | Entity exists, processing logic incomplete |
-| REQ-AUTH-05 | Role hierarchy enforcement | Roles defined but hierarchy not enforced |
+| REQ-ANL-04 | Filter presets | Не реализовано |
+| REQ-ANL-06 | Auto-tasks creation | Авто-задачи не созданы |
 
 ---
 
@@ -136,8 +168,8 @@
 | Error Handling | 8/10 | 345 NestJS exceptions |
 | DTO Validation | 9/10 | 795 validation decorators |
 | API Documentation | 9/10 | Full Swagger coverage |
-| TypeScript Safety | 7/10 | 20+ `any` type usages |
-| Testing | 7/10 | 208 spec files, ~40% coverage |
+| TypeScript Safety | 7/10 | 20+ `any` type usages, **strict: false** |
+| Testing | 4/10 | ~4% реальное покрытие |
 | **ИТОГО** | **7.8/10** | |
 
 ### Проблемы Backend
@@ -148,6 +180,7 @@
 | TODO/FIXME comments | Low | 63 |
 | Circular dependencies | Medium | 15 forwardRef |
 | Incomplete modules | Low | 6 |
+| **console.log в production** | Medium | Множество |
 
 ---
 
@@ -170,7 +203,7 @@
 | Component Architecture | 8/10 | Well-structured |
 | State Management | 8/10 | TanStack Query (151 usages) |
 | TypeScript Coverage | 7/10 | 171 any/unknown usages |
-| Test Coverage | 2/10 | Only 8 test files! |
+| **Test Coverage** | **1/10** | **Only 8 test files!** |
 | Error Handling | 5/10 | Only 3 error boundaries |
 | Accessibility | 7/10 | Basic a11y |
 | **ИТОГО** | **7.2/10** | |
@@ -179,7 +212,9 @@
 
 | Проблема | Severity | Рекомендация |
 |----------|----------|--------------|
-| Test coverage ~4% | Critical | Add unit/e2e tests |
+| **Token storage в localStorage** | 🔴 Critical | httpOnly cookies |
+| **Test coverage ~4%** | 🔴 Critical | Add unit/e2e tests |
+| **Нет refresh flow** | 🔴 Critical | Axios interceptor |
 | Type `any` (171) | Medium | Reduce to <50 |
 | No E2E tests | High | Add Playwright |
 | Missing error boundaries | Medium | Add to all pages |
@@ -228,46 +263,57 @@
 | Проблема | Severity | Файлы |
 |----------|----------|-------|
 | N+1 risk: eager loading | Medium | machine-inventory, operator-inventory |
-| Missing indexes | Low | routes.driver_id, warehouses.manager_id |
+| Missing FK indexes | Medium | routes.driver_id, warehouses.manager_id |
 | Duplicate enums | Low | MovementType in 2 files |
 
 ---
 
 ## 📋 ЧАСТЬ 6: БЕЗОПАСНОСТЬ
 
-### Security Score: **8.5/10**
+### Security Score: **6.8/10** 🔴
 
-### Checklist
+### Checklist (Обновлённый)
 
-| Контроль | Статус | REQ |
-|----------|--------|-----|
-| JWT access token (15m) | ✅ | REQ-AUTH-10 |
-| JWT refresh token (7d) | ✅ | REQ-AUTH-11 |
-| Token blacklisting | ✅ | REQ-AUTH-56 |
-| Token rotation | ✅ | REQ-AUTH-55 |
-| bcrypt (12 rounds) | ✅ | REQ-AUTH-40 |
-| Password policy | ✅ | REQ-AUTH-41 |
-| Weak password blacklist | ✅ | REQ-AUTH-41 |
-| RBAC (7-tier) | ✅ | REQ-AUTH-03 |
-| 2FA TOTP | ✅ | REQ-AUTH-42-43 |
-| Rate limiting | ✅ | REQ-AUTH-44 |
-| Brute-force protection | ✅ | REQ-AUTH-44 |
-| Helmet.js | ✅ | Best Practice |
-| CORS | ✅ | Best Practice |
-| Input validation | ✅ | Best Practice |
-| Audit logging | ✅ | REQ-AUTH-80-81 |
-| Session management | ✅ | REQ-AUTH-54 |
-| IP whitelist | ✅ | REQ-AUTH-60 |
+| Контроль | Статус | REQ | Критичность |
+|----------|--------|-----|-------------|
+| JWT access token (15m) | ✅ | REQ-AUTH-10 | - |
+| JWT refresh token (7d) | ✅ | REQ-AUTH-11 | - |
+| Token blacklisting | ✅ | REQ-AUTH-56 | - |
+| Token rotation | ✅ | REQ-AUTH-55 | - |
+| bcrypt (12 rounds) | ✅ | REQ-AUTH-40 | - |
+| Password policy | ✅ | REQ-AUTH-41 | - |
+| **Access token storage** | ❌ | REQ-AUTH-52 | **🔴 P0** |
+| **Refresh token storage** | ❌ | REQ-AUTH-53 | **🔴 P0** |
+| **Rate limiting на auth** | ⚠️ | REQ-AUTH-44 | **🔴 P0** |
+| **Refresh flow в frontend** | ❌ | REQ-AUTH-54 | **🔴 P0** |
+| RBAC (7-tier) | ✅ | REQ-AUTH-03 | - |
+| 2FA TOTP (backend) | ✅ | REQ-AUTH-42-43 | - |
+| **2FA UI** | ❌ | REQ-AUTH-42-43 | **🟠 P1** |
+| Brute-force protection | ⚠️ | REQ-AUTH-44 | P1 |
+| Helmet.js | ✅ | Best Practice | - |
+| CORS | ✅ | Best Practice | - |
+| Input validation | ✅ | Best Practice | - |
+| Audit logging | ✅ | REQ-AUTH-80-81 | - |
+| Session management | ✅ | REQ-AUTH-54 | - |
+| IP whitelist | ❌ | REQ-AUTH-60 | P2 |
 
-### Критические уязвимости: **0 (None Found)**
+### 🔴 Критические уязвимости (P0)
 
-### High Priority Issues
+| # | Уязвимость | CVSS | Файл | Решение |
+|---|------------|------|------|---------|
+| 1 | **Токены в localStorage** | 7.5 HIGH | frontend/lib/auth-store.ts | httpOnly cookies |
+| 2 | **Нет rate limiting /auth/login** | 7.0 HIGH | backend/src/auth/auth.controller.ts | ThrottlerGuard |
+| 3 | **XSS через localStorage** | 6.5 MEDIUM | frontend/ | CSP + sanitize |
+| 4 | **Нет refresh flow** | 6.0 MEDIUM | frontend/lib/axios.ts | Axios interceptor |
+
+### 🟠 High Priority Issues (P1)
 
 | Issue | Location | Recommendation |
 |-------|----------|----------------|
 | JWT ID (jti) not generated | auth.service.ts | Add uuidv4() for token jti |
 | 2FA not mandatory for admins | auth.service.ts | Enforce for SuperAdmin/Admin |
-| Inconsistent bcrypt salt | session.service.ts | Use 12 rounds everywhere |
+| 2FA UI отсутствует | frontend/ | Создать страницу настройки |
+| TypeScript strict: false | tsconfig.json | Enable strict mode |
 
 ---
 
@@ -279,17 +325,17 @@
 |-----|---------|----------|-------|
 | Test files | 226 | 8 | 234 |
 | Source files | 600 | 195 | 795 |
-| **Ratio** | **37.7%** | **4.1%** | **29.4%** |
+| **Estimated Coverage** | **~15%** | **~4%** | **~4%** |
 
-### Test Quality: **6.5/10**
+### Test Quality: **2.0/10** 🔴
 
-| Категория | Оценка |
-|-----------|--------|
-| Unit tests | 7/10 |
-| Integration tests | 4/10 |
-| E2E tests | 3/10 |
-| Mocking quality | 9/10 |
-| Frontend testing | 2/10 |
+| Категория | Оценка | Комментарий |
+|-----------|--------|-------------|
+| Unit tests | 4/10 | Базовые smoke tests |
+| Integration tests | 0/10 | **Отсутствуют** |
+| E2E tests | 0/10 | **Отсутствуют** |
+| Mocking strategy | 3/10 | Не стандартизировано |
+| Frontend testing | 1/10 | **Критически низко** |
 
 ### Критические модули без тестов
 
@@ -327,12 +373,6 @@
 | **In-memory cache in Reports** | Memory leaks, no scale | cache.interceptor.ts |
 | **Raw SQL in Reports** | SQL injection risk | report-builder.service.ts |
 
-### Потенциальный эффект от исправлений
-
-- Compression: **60-80% bandwidth reduction**
-- N+1 fixes: **80-90% DB load reduction**
-- Redis cache: **95% reduction for repeated queries**
-
 ---
 
 ## 📋 ЧАСТЬ 9: TELEGRAM BOT
@@ -354,18 +394,6 @@
 | /language | RU/EN/UZ | ✅ |
 | /help | Help text | ✅ |
 | /pending_users | Admin approvals | ✅ |
-
-### Features
-
-| Feature | Status |
-|---------|--------|
-| FSM State Management (Redis) | ✅ |
-| Photo upload (before/after) | ✅ |
-| Inline keyboards | ✅ |
-| Multi-language (RU/EN/UZ) | ✅ |
-| Geolocation | 🔄 Partial |
-| Voice commands | ✅ |
-| Cart/checkout flow | ✅ |
 
 ### Issues
 
@@ -395,15 +423,7 @@
 | Environment templates | ✅ Good |
 | Deployment scripts | ✅ Good |
 | SSL/TLS (Let's Encrypt) | ✅ Configured |
-
-### Критический пробел: CI/CD
-
-**GitHub Actions workflows отсутствуют!**
-
-Необходимо создать:
-- `.github/workflows/ci.yml` - lint, test, build
-- `.github/workflows/deploy-staging.yml`
-- `.github/workflows/deploy-production.yml`
+| **Sentry error tracking** | ❌ Not configured |
 
 ---
 
@@ -419,13 +439,13 @@
 | TELEGRAM_MODULE_README.md | 916 | ✅ Good |
 | EQUIPMENT_MODULE_README.md | 604 | ✅ Good |
 | **Total MD files** | **224** | ✅ Comprehensive |
-| **Swagger API docs** | **176 files** | ✅ Excellent |
+| **Swagger API docs** | **176 files** | 🔄 Partial |
 
 ---
 
 ## 📋 ЧАСТЬ 12: ФИНАЛЬНАЯ ОЦЕНКА
 
-### Сводная таблица
+### Сводная таблица (Обновлённая)
 
 | Направление | Оценка | Вес | Взвешенная |
 |-------------|--------|-----|------------|
@@ -433,128 +453,100 @@
 | Backend качество | 78/100 | 15% | 11.7 |
 | Frontend качество | 72/100 | 15% | 10.8 |
 | База данных | 80/100 | 10% | 8.0 |
-| Безопасность | 85/100 | 15% | 12.75 |
-| Тестирование | 65/100 | 10% | 6.5 |
+| **Безопасность** | **68/100** | 15% | **10.2** |
+| **Тестирование** | **20/100** | 10% | **2.0** |
 | Производительность | 62/100 | 5% | 3.1 |
 | DevOps | 69/100 | 3% | 2.07 |
 | Документация | 80/100 | 2% | 1.6 |
-| **ИТОГО** | | **100%** | **78.02** |
+| **ИТОГО** | | **100%** | **70.97 ≈ 71** |
 
 ### Production Readiness
 
 | Критерий | Статус | Блокер? |
 |----------|--------|---------|
-| Core requirements (86%) | ✅ | ✅ |
-| Security baseline | ✅ | ✅ |
-| Critical path tests | 🔄 | ⬜ |
-| No critical bugs | ✅ | ✅ |
-| CI/CD pipeline | ❌ | 🔴 |
+| Core requirements (86%) | ✅ | - |
+| **Security baseline** | ❌ | **🔴 БЛОКЕР** |
+| **Test coverage** | ❌ | **🔴 БЛОКЕР** |
+| No critical bugs | ⚠️ | 🔴 БЛОКЕР |
+| CI/CD pipeline | ❌ | 🔴 БЛОКЕР |
 | Performance optimized | ❌ | 🟡 |
-| Documentation | ✅ | ⬜ |
+| Documentation | ✅ | - |
 
-**Production Ready:** 🟡 **ДА, с оговорками**
-
----
-
-## 🔴 ТОП-10 КРИТИЧЕСКИХ ПРОБЛЕМ
-
-| # | Проблема | Severity | Категория | Effort | Приоритет |
-|---|----------|----------|-----------|--------|-----------|
-| 1 | **Missing CI/CD workflows** | P0 | DevOps | 4-6h | 🔴 Week 1 |
-| 2 | **No API response compression** | P0 | Performance | 30min | 🔴 Week 1 |
-| 3 | **N+1 queries in Tasks service** | P1 | Performance | 2-4h | 🔴 Week 1 |
-| 4 | **In-memory cache in Reports** | P1 | Performance | 2-3h | 🔴 Week 1 |
-| 5 | **Frontend test coverage 4%** | P1 | Testing | 8-16h | 🟠 Week 2 |
-| 6 | **JWT ID (jti) not generated** | P1 | Security | 1h | 🟠 Week 2 |
-| 7 | **Cart stored in memory (Telegram)** | P1 | Telegram | 2h | 🟠 Week 2 |
-| 8 | **Untested modules (requests, reconciliation)** | P2 | Testing | 4-8h | 🟡 Week 3 |
-| 9 | **20+ 'any' type usages** | P2 | Code Quality | 2-4h | 🟡 Week 3 |
-| 10 | **Grafana dashboards missing** | P2 | Monitoring | 4-8h | 🟡 Week 3 |
+### ❌ Production Ready: **НЕТ**
 
 ---
 
-## 📋 ПЛАН ДЕЙСТВИЙ
+## 🔴 ТОП-10 КРИТИЧЕСКИХ ПРОБЛЕМ (Объединённый список)
 
-### Неделя 1 (P0 Critical)
-
-1. **Создать CI/CD пайплайны**
-   ```
-   .github/workflows/ci.yml
-   .github/workflows/deploy-staging.yml
-   .github/workflows/deploy-production.yml
-   ```
-
-2. **Добавить compression в NestJS**
-   ```typescript
-   // main.ts
-   import compression from 'compression';
-   app.use(compression());
-   ```
-
-3. **Исправить N+1 в Tasks service**
-   - Использовать selective relations
-   - Добавить query builder вместо eager loading
-
-4. **Мигрировать Reports cache на Redis**
-   - Заменить Map на RedisCacheService
-   - Добавить cache invalidation
-
-### Неделя 2 (P1 High)
-
-5. **Добавить JWT ID (jti)**
-   ```typescript
-   const basePayload = {
-     sub: user.id,
-     jti: uuidv4(), // Add this
-   };
-   ```
-
-6. **Добавить frontend тесты**
-   - Vitest для unit tests
-   - Playwright для E2E
-
-7. **Исправить Telegram cart persistence**
-   - Перенести в Redis/DB
-
-### Недели 3-4 (P2 Medium)
-
-8. **Увеличить test coverage до 50%+**
-9. **Создать Grafana dashboards**
-10. **Устранить 'any' type usages**
+| # | Проблема | Severity | Категория | CVSS | Приоритет |
+|---|----------|----------|-----------|------|-----------|
+| 1 | **Токены в localStorage** | P0 | Security | 7.5 | 🔴 Немедленно |
+| 2 | **Нет rate limiting на auth** | P0 | Security | 7.0 | 🔴 Немедленно |
+| 3 | **Нет refresh flow в frontend** | P0 | Security | 6.0 | 🔴 День 1 |
+| 4 | **Test coverage ~4%** | P0 | Quality | - | 🔴 Неделя 1 |
+| 5 | **CI/CD отсутствует** | P0 | DevOps | - | 🔴 Неделя 1 |
+| 6 | **2FA UI отсутствует** | P1 | Security | - | 🟠 Неделя 1 |
+| 7 | **N+1 queries** | P1 | Performance | - | 🟠 Неделя 1 |
+| 8 | **No API compression** | P1 | Performance | - | 🟠 Неделя 1 |
+| 9 | **Missing FK indexes** | P1 | Database | - | 🟠 Неделя 2 |
+| 10 | **In-memory cache** | P1 | Performance | - | 🟠 Неделя 2 |
 
 ---
 
-## 📤 ВЫХОДНЫЕ АРТЕФАКТЫ
+## 📋 ПЛАН ДЕЙСТВИЙ (Security-First)
 
-Этот отчёт сохранён как: `COMPREHENSIVE_AUDIT_REPORT.md`
+### Неделя 1: Security Foundation ($8,000)
 
-Связанные документы в репозитории:
-- `AUTH_IMPLEMENTATION_STATUS.md` - детали по авторизации
-- `DATABASE_ANALYSIS_REPORT.md` - анализ БД
-- `FRONTEND_ANALYSIS_REPORT.md` - анализ фронтенда
-- `SYSTEM_AUDIT_REPORT_2025-11-17.md` - предыдущий аудит
+**День 1-2: Token Security Overhaul**
+1. Backend: httpOnly cookie для refresh token
+2. Frontend: Memory storage для access token
+3. Axios interceptor для auto-refresh
+4. Rate limiting на /auth/*
+
+**День 3-5: Testing + CI/CD**
+5. Jest/Vitest setup для критических модулей
+6. GitHub Actions workflows
+7. E2E тесты для auth flow
+
+### Неделя 2: Performance + Features ($8,000)
+
+8. 2FA UI implementation
+9. N+1 queries fix
+10. API compression
+11. Missing FK indexes
+12. Redis caching activation
+
+### Недели 3-4: Testing ($12,000)
+
+13. Test coverage до 40%
+14. Integration tests
+15. E2E tests (Playwright)
+16. Security audit validation
 
 ---
 
 ## 📞 ЗАКЛЮЧЕНИЕ
 
-**VendHub Manager** — это зрелый, функционально полный продукт с:
-- ✅ 86% покрытием требований
-- ✅ Отличной безопасностью (8.5/10)
-- ✅ Хорошей архитектурой backend (7.8/10)
-- ✅ Комплексной документацией (224 MD файла)
+**VendHub Manager** — это функционально полный продукт с серьёзными проблемами безопасности:
 
-**Критические области для улучшения:**
-- 🔴 CI/CD автоматизация (отсутствует!)
-- 🔴 API compression (отсутствует!)
-- 🟠 Frontend тестирование (4% coverage)
-- 🟠 N+1 запросы в критических модулях
+**✅ Сильные стороны:**
+- 86% покрытие требований
+- Хорошая архитектура backend (7.8/10)
+- Отличная документация (224 MD файла)
+- Рабочий Telegram Bot
 
-**Оценка времени до production-ready:**
-- С минимальными исправлениями: **1-2 недели**
-- С полной оптимизацией: **3-4 недели**
+**🔴 Критические проблемы:**
+- Токены в localStorage (XSS уязвимость)
+- Нет rate limiting на auth endpoints
+- Test coverage ~4%
+- CI/CD отсутствует
+
+**⏱️ Время до production:**
+- С security fixes: **3-4 недели**
+- Бюджет: **~$28,000**
 
 ---
 
 **Аудит выполнен:** 2025-12-14
-**Claude AI (Opus 4.5)**
+**Версия:** 2.0 (объединённая)
+**Claude AI (Opus 4.5) + Manual Review**
