@@ -6,12 +6,13 @@ import {
   HttpCode,
   HttpStatus,
   Req,
+  Res,
   Get,
   BadRequestException,
   Param,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
-import { Request } from 'express';
+import { Request, Response } from 'express';
 import { AuthService, AuthResponse, AuthTokens } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
@@ -31,6 +32,7 @@ import { CurrentUser } from './decorators/current-user.decorator';
 import { User } from '../users/entities/user.entity';
 import { TwoFactorAuthService } from './services/two-factor-auth.service';
 import { SessionService } from './services/session.service';
+import { setAuthCookies, clearAuthCookies, COOKIE_NAMES } from './utils/cookie.utils';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -49,7 +51,7 @@ export class AuthController {
   @ApiResponse({
     status: 200,
     description:
-      'Успешная аутентификация. Может вернуть requires_password_change=true (REQ-AUTH-31) или requires_2fa=true (REQ-AUTH-42) если требуется дополнительная верификация.',
+      'Успешная аутентификация. Токены устанавливаются в httpOnly cookies (SEC-1). Может вернуть requires_password_change=true (REQ-AUTH-31) или requires_2fa=true (REQ-AUTH-42) если требуется дополнительная верификация.',
     type: AuthResponseDto,
   })
   @ApiResponse({ status: 401, description: 'Неверные учетные данные' })
@@ -62,13 +64,21 @@ export class AuthController {
     description: 'Слишком много попыток входа. Превышен лимит (5 попыток в минуту).',
   })
   async login(
-    @Body() loginDto: LoginDto,
+    @Body() _loginDto: LoginDto,
     @CurrentUser() user: User,
     @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
   ): Promise<AuthResponse> {
     const ip = req.ip || req.socket.remoteAddress || '0.0.0.0';
     const userAgent = req.headers['user-agent'];
-    return this.authService.login(user, ip, userAgent);
+    const authResponse = await this.authService.login(user, ip, userAgent);
+
+    // SEC-1: Set httpOnly cookies for XSS protection
+    if (authResponse.access_token && authResponse.refresh_token) {
+      setAuthCookies(res, authResponse.access_token, authResponse.refresh_token);
+    }
+
+    return authResponse;
   }
 
   @Post('register')
@@ -77,7 +87,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Регистрация нового пользователя (оператора)' })
   @ApiResponse({
     status: 201,
-    description: 'Пользователь успешно зарегистрирован',
+    description: 'Пользователь успешно зарегистрирован. Токены устанавливаются в httpOnly cookies (SEC-1).',
     type: AuthResponseDto,
   })
   @ApiResponse({
@@ -88,23 +98,57 @@ export class AuthController {
     status: 429,
     description: 'Слишком много попыток регистрации. Превышен лимит (3 попытки за 5 минут).',
   })
-  async register(@Body() registerDto: RegisterDto, @Req() req: Request): Promise<AuthResponse> {
+  async register(
+    @Body() registerDto: RegisterDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<AuthResponse> {
     const ip = req.ip || req.socket.remoteAddress;
     const userAgent = req.headers['user-agent'];
-    return this.authService.register(registerDto, ip, userAgent);
+    const authResponse = await this.authService.register(registerDto, ip, userAgent);
+
+    // SEC-1: Set httpOnly cookies for XSS protection
+    if (authResponse.access_token && authResponse.refresh_token) {
+      setAuthCookies(res, authResponse.access_token, authResponse.refresh_token);
+    }
+
+    return authResponse;
   }
 
   @Post('refresh')
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 10, ttl: 60000 } }) // 10 attempts per minute (SEC-2)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Обновление токенов' })
   @ApiResponse({
     status: 200,
-    description: 'Токены успешно обновлены',
+    description: 'Токены успешно обновлены. Новые токены устанавливаются в httpOnly cookies (SEC-1).',
     type: AuthTokensDto,
   })
   @ApiResponse({ status: 401, description: 'Неверный refresh token' })
-  async refresh(@Body() refreshTokenDto: RefreshTokenDto): Promise<AuthTokens> {
-    return this.authService.refreshTokens(refreshTokenDto.refreshToken);
+  @ApiResponse({
+    status: 429,
+    description: 'Слишком много попыток обновления токенов. Превышен лимит (10 попыток в минуту).',
+  })
+  async refresh(
+    @Body() refreshTokenDto: RefreshTokenDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<AuthTokens> {
+    // SEC-1: Read refresh token from httpOnly cookie first, fallback to body for backward compatibility
+    const refreshToken =
+      req.cookies?.[COOKIE_NAMES.REFRESH_TOKEN] || refreshTokenDto.refreshToken;
+
+    if (!refreshToken) {
+      throw new BadRequestException('Refresh token не предоставлен');
+    }
+
+    const tokens = await this.authService.refreshTokens(refreshToken);
+
+    // SEC-1: Set new httpOnly cookies
+    setAuthCookies(res, tokens.access_token, tokens.refresh_token);
+
+    return tokens;
   }
 
   @Post('logout')
@@ -112,11 +156,18 @@ export class AuthController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Выход из системы (глобальный - отзывает все сессии)' })
-  @ApiResponse({ status: 204, description: 'Успешный выход' })
+  @ApiResponse({ status: 204, description: 'Успешный выход. Cookies очищены (SEC-1).' })
   @ApiResponse({ status: 401, description: 'Не авторизован' })
-  async logout(@CurrentUser() user: User, @Req() req: Request): Promise<void> {
+  async logout(
+    @CurrentUser() user: User,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<void> {
     const ip = req.ip || req.socket.remoteAddress;
-    return this.authService.logout(user.id, ip);
+    await this.authService.logout(user.id, ip);
+
+    // SEC-1: Clear httpOnly cookies
+    clearAuthCookies(res);
   }
 
   @Get('profile')
@@ -225,7 +276,7 @@ export class AuthController {
   @ApiResponse({
     status: 200,
     description:
-      'Пароль успешно изменен, возвращаются новые токены. Флаг requires_password_change снят.',
+      'Пароль успешно изменен, возвращаются новые токены в httpOnly cookies (SEC-1). Флаг requires_password_change снят.',
     type: AuthResponseDto,
   })
   @ApiResponse({
@@ -238,16 +289,24 @@ export class AuthController {
     @CurrentUser() user: User,
     @Body() dto: FirstLoginChangePasswordDto,
     @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
   ): Promise<AuthResponse> {
     const ip = req.ip || req.socket.remoteAddress || '0.0.0.0';
     const userAgent = req.headers['user-agent'];
-    return this.authService.firstLoginChangePassword(
+    const authResponse = await this.authService.firstLoginChangePassword(
       user.id,
       dto.currentPassword,
       dto.newPassword,
       ip,
       userAgent,
     );
+
+    // SEC-1: Set httpOnly cookies for XSS protection
+    if (authResponse.access_token && authResponse.refresh_token) {
+      setAuthCookies(res, authResponse.access_token, authResponse.refresh_token);
+    }
+
+    return authResponse;
   }
 
   // ============================================================================
@@ -364,7 +423,7 @@ export class AuthController {
   })
   @ApiResponse({
     status: 200,
-    description: 'Вход завершен, токены обновлены',
+    description: 'Вход завершен, токены обновлены в httpOnly cookies (SEC-1)',
   })
   @ApiResponse({ status: 400, description: 'Неверный код 2FA' })
   @ApiResponse({ status: 401, description: 'Не авторизован' })
@@ -376,6 +435,7 @@ export class AuthController {
     @CurrentUser() user: User,
     @Body() dto: Verify2FADto,
     @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
   ): Promise<AuthResponse> {
     const ip = req.ip || req.socket.remoteAddress || '0.0.0.0';
     const userAgent = req.headers['user-agent'];
@@ -388,7 +448,14 @@ export class AuthController {
     }
 
     // Complete login
-    return this.authService.complete2FALogin(user.id, dto.token, ip, userAgent);
+    const authResponse = await this.authService.complete2FALogin(user.id, dto.token, ip, userAgent);
+
+    // SEC-1: Set httpOnly cookies for XSS protection
+    if (authResponse.access_token && authResponse.refresh_token) {
+      setAuthCookies(res, authResponse.access_token, authResponse.refresh_token);
+    }
+
+    return authResponse;
   }
 
   // ============================================================================

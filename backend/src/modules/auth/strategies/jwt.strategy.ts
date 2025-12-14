@@ -2,6 +2,7 @@ import { Injectable, UnauthorizedException, Inject, forwardRef } from '@nestjs/c
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
+import { Request } from 'express';
 import { UsersService } from '../../users/users.service';
 import { TokenBlacklistService } from '../services/token-blacklist.service';
 
@@ -20,12 +21,30 @@ export interface JwtPayload {
 }
 
 /**
+ * Extract JWT from httpOnly cookie or Authorization header
+ * SEC-1: Cookie-based auth with Bearer token fallback for API clients
+ */
+const cookieOrBearerExtractor = (req: Request): string | null => {
+  // Priority 1: httpOnly cookie (secure, XSS-proof)
+  if (req?.cookies?.access_token) {
+    return req.cookies.access_token;
+  }
+  // Priority 2: Bearer token header (for API clients, mobile apps)
+  const authHeader = req?.headers?.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    return authHeader.substring(7);
+  }
+  return null;
+};
+
+/**
  * JWT Strategy
  *
  * REQ-AUTH-10: JWT Authentication
  * REQ-AUTH-56: Token Blacklist Checking
+ * SEC-1: httpOnly cookie support
  *
- * Validates JWT tokens and checks against blacklist.
+ * Validates JWT tokens from cookies or Bearer header and checks against blacklist.
  */
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -36,7 +55,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     private readonly tokenBlacklistService: TokenBlacklistService,
   ) {
     super({
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      jwtFromRequest: cookieOrBearerExtractor,
       ignoreExpiration: false,
       secretOrKey: configService.get<string>('JWT_SECRET'),
     });

@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException } from '@nestjs/common';
-import { Request } from 'express';
+import { Request, Response } from 'express';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { AuthController } from './auth.controller';
 import { AuthService, AuthResponse, AuthTokens } from './auth.service';
@@ -32,8 +32,17 @@ describe('AuthController', () => {
       ip: '127.0.0.1',
       socket: { remoteAddress: '127.0.0.1' },
       headers: { 'user-agent': 'test-agent' },
+      cookies: {},
       ...overrides,
     } as Request;
+  };
+
+  // SEC-1: Mock Response for httpOnly cookie testing
+  const mockResponse = (): Response => {
+    return {
+      cookie: jest.fn(),
+      clearCookie: jest.fn(),
+    } as unknown as Response;
   };
 
   beforeEach(async () => {
@@ -102,14 +111,17 @@ describe('AuthController', () => {
       };
       mockAuthService.login.mockResolvedValue(mockAuthResponse);
 
+      const res = mockResponse();
       const result = await controller.login(
         { email: 'test@example.com', password: 'password' },
         mockUser as User,
         mockRequest(),
+        res,
       );
 
       expect(result).toEqual(mockAuthResponse);
       expect(mockAuthService.login).toHaveBeenCalledWith(mockUser, '127.0.0.1', 'test-agent');
+      expect(res.cookie).toHaveBeenCalled(); // SEC-1: Verify cookies are set
     });
 
     it('should return requires_2fa when 2FA is enabled', async () => {
@@ -126,10 +138,12 @@ describe('AuthController', () => {
       };
       mockAuthService.login.mockResolvedValue(mockAuthResponse);
 
+      const res = mockResponse();
       const result = await controller.login(
         { email: 'test@example.com', password: 'password' },
         mockUser as User,
         mockRequest(),
+        res,
       );
 
       expect(result.requires_2fa).toBe(true);
@@ -149,10 +163,12 @@ describe('AuthController', () => {
       };
       mockAuthService.login.mockResolvedValue(mockAuthResponse);
 
+      const res = mockResponse();
       const result = await controller.login(
         { email: 'test@example.com', password: 'password' },
         mockUser as User,
         mockRequest(),
+        res,
       );
 
       expect(result.requires_password_change).toBe(true);
@@ -170,11 +186,13 @@ describe('AuthController', () => {
       mockAuthService.login.mockResolvedValue(mockAuthResponse);
 
       const req = mockRequest({ ip: undefined, socket: { remoteAddress: undefined } } as any);
+      const res = mockResponse();
 
       await controller.login(
         { email: 'test@example.com', password: 'password' },
         mockUser as User,
         req,
+        res,
       );
 
       expect(mockAuthService.login).toHaveBeenCalledWith(mockUser, '0.0.0.0', 'test-agent');
@@ -192,11 +210,13 @@ describe('AuthController', () => {
       mockAuthService.login.mockResolvedValue(mockAuthResponse);
 
       const req = mockRequest({ ip: undefined, socket: { remoteAddress: '192.168.1.100' } } as any);
+      const res = mockResponse();
 
       await controller.login(
         { email: 'test@example.com', password: 'password' },
         mockUser as User,
         req,
+        res,
       );
 
       expect(mockAuthService.login).toHaveBeenCalledWith(mockUser, '192.168.1.100', 'test-agent');
@@ -218,6 +238,7 @@ describe('AuthController', () => {
       };
       mockAuthService.register.mockResolvedValue(mockAuthResponse);
 
+      const res = mockResponse();
       const result = await controller.register(
         {
           email: 'new@example.com',
@@ -225,6 +246,7 @@ describe('AuthController', () => {
           full_name: 'New User',
         },
         mockRequest(),
+        res,
       );
 
       expect(result.success).toBe(true);
@@ -245,6 +267,7 @@ describe('AuthController', () => {
       mockAuthService.register.mockResolvedValue(mockAuthResponse);
 
       const req = mockRequest({ ip: undefined, socket: { remoteAddress: '10.0.0.1' } } as any);
+      const res = mockResponse();
 
       await controller.register(
         {
@@ -253,6 +276,7 @@ describe('AuthController', () => {
           full_name: 'New User',
         },
         req,
+        res,
       );
 
       expect(mockAuthService.register).toHaveBeenCalledWith(
@@ -271,28 +295,34 @@ describe('AuthController', () => {
       };
       mockAuthService.refreshTokens.mockResolvedValue(mockTokens);
 
-      const result = await controller.refresh({ refreshToken: 'old-refresh' });
+      const req = mockRequest();
+      const res = mockResponse();
+      const result = await controller.refresh({ refreshToken: 'old-refresh' }, req, res);
 
       expect(result).toEqual(mockTokens);
       expect(mockAuthService.refreshTokens).toHaveBeenCalledWith('old-refresh');
+      expect(res.cookie).toHaveBeenCalled(); // SEC-1: Verify cookies are set
     });
   });
 
   describe('logout', () => {
-    it('should call logout service', async () => {
+    it('should call logout service and clear cookies', async () => {
       mockAuthService.logout.mockResolvedValue(undefined);
 
-      await controller.logout(mockUser as User, mockRequest());
+      const res = mockResponse();
+      await controller.logout(mockUser as User, mockRequest(), res);
 
       expect(mockAuthService.logout).toHaveBeenCalledWith('user-123', '127.0.0.1');
+      expect(res.clearCookie).toHaveBeenCalled(); // SEC-1: Verify cookies are cleared
     });
 
     it('should fallback to socket.remoteAddress when ip is undefined in logout', async () => {
       mockAuthService.logout.mockResolvedValue(undefined);
 
       const req = mockRequest({ ip: undefined, socket: { remoteAddress: '172.16.0.1' } } as any);
+      const res = mockResponse();
 
-      await controller.logout(mockUser as User, req);
+      await controller.logout(mockUser as User, req, res);
 
       expect(mockAuthService.logout).toHaveBeenCalledWith('user-123', '172.16.0.1');
     });
@@ -433,10 +463,12 @@ describe('AuthController', () => {
       };
       mockAuthService.firstLoginChangePassword.mockResolvedValue(mockAuthResponse);
 
+      const res = mockResponse();
       const result = await controller.firstLoginChangePassword(
         mockUser as User,
         { currentPassword: 'old-pass', newPassword: 'new-pass' },
         mockRequest(),
+        res,
       );
 
       expect(result.access_token).toBe('new-access');
@@ -447,6 +479,7 @@ describe('AuthController', () => {
         '127.0.0.1',
         'test-agent',
       );
+      expect(res.cookie).toHaveBeenCalled(); // SEC-1: Verify cookies are set
     });
 
     it('should use fallback IP in firstLoginChangePassword', async () => {
@@ -463,11 +496,13 @@ describe('AuthController', () => {
       mockAuthService.firstLoginChangePassword.mockResolvedValue(mockAuthResponse);
 
       const req = mockRequest({ ip: undefined, socket: { remoteAddress: '10.0.0.7' } } as any);
+      const res = mockResponse();
 
       await controller.firstLoginChangePassword(
         mockUser as User,
         { currentPassword: 'old', newPassword: 'new' },
         req,
+        res,
       );
 
       expect(mockAuthService.firstLoginChangePassword).toHaveBeenCalledWith(
@@ -626,10 +661,12 @@ describe('AuthController', () => {
       mockTwoFactorAuthService.verifyToken.mockResolvedValue(true);
       mockAuthService.complete2FALogin.mockResolvedValue(mockAuthResponse);
 
+      const res = mockResponse();
       const result = await controller.complete2FALogin(
         mockUser as User,
         { token: '123456' },
         mockRequest(),
+        res,
       );
 
       expect(result.access_token).toBe('full-access');
@@ -639,13 +676,15 @@ describe('AuthController', () => {
         '127.0.0.1',
         'test-agent',
       );
+      expect(res.cookie).toHaveBeenCalled(); // SEC-1: Verify cookies are set
     });
 
     it('should throw BadRequestException for invalid 2FA token', async () => {
       mockTwoFactorAuthService.verifyToken.mockResolvedValue(false);
 
+      const res = mockResponse();
       await expect(
-        controller.complete2FALogin(mockUser as User, { token: '000000' }, mockRequest()),
+        controller.complete2FALogin(mockUser as User, { token: '000000' }, mockRequest(), res),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -664,8 +703,9 @@ describe('AuthController', () => {
       mockAuthService.complete2FALogin.mockResolvedValue(mockAuthResponse);
 
       const req = mockRequest({ ip: undefined, socket: { remoteAddress: '10.0.0.11' } } as any);
+      const res = mockResponse();
 
-      await controller.complete2FALogin(mockUser as User, { token: '123456' }, req);
+      await controller.complete2FALogin(mockUser as User, { token: '123456' }, req, res);
 
       expect(mockTwoFactorAuthService.verifyToken).toHaveBeenCalledWith(
         'user-123',
