@@ -13,18 +13,31 @@ import {
 describe('ReportsCacheInterceptor', () => {
   let interceptor: ReportsCacheInterceptor;
   let reflector: jest.Mocked<Reflector>;
+  let mockCacheManager: any;
 
   beforeEach(() => {
     reflector = {
       get: jest.fn(),
     } as any;
 
-    interceptor = new ReportsCacheInterceptor(reflector);
+    // Mock Redis cache manager
+    mockCacheManager = {
+      get: jest.fn(),
+      set: jest.fn(),
+      del: jest.fn(),
+      reset: jest.fn(),
+      store: {
+        client: {
+          keys: jest.fn().mockResolvedValue([]),
+        },
+      },
+    };
+
+    interceptor = new ReportsCacheInterceptor(reflector, mockCacheManager);
   });
 
   afterEach(() => {
     jest.clearAllMocks();
-    jest.useRealTimers();
   });
 
   const createMockExecutionContext = (
@@ -32,6 +45,7 @@ describe('ReportsCacheInterceptor', () => {
     method: string = 'GET',
     query: Record<string, unknown> = {},
     params: Record<string, unknown> = {},
+    user: { id: string } | null = { id: 'user-123' },
   ): ExecutionContext => {
     return {
       switchToHttp: () => ({
@@ -40,6 +54,7 @@ describe('ReportsCacheInterceptor', () => {
           method,
           query,
           params,
+          user,
         }),
       }),
       getHandler: () => jest.fn(),
@@ -51,32 +66,32 @@ describe('ReportsCacheInterceptor', () => {
   });
 
   describe('intercept', () => {
-    it('should cache response on first request', async () => {
+    it('should cache response on first request (cache miss)', async () => {
       const context = createMockExecutionContext();
       const handler = createMockCallHandler({ result: 'data' });
 
       reflector.get.mockReturnValue(undefined);
+      mockCacheManager.get.mockResolvedValue(undefined);
 
       const result$ = interceptor.intercept(context, handler);
       const result = await lastValueFrom(result$);
 
       expect(result).toEqual({ result: 'data' });
+      expect(mockCacheManager.get).toHaveBeenCalled();
+      expect(mockCacheManager.set).toHaveBeenCalled();
     });
 
-    it('should return cached response on subsequent request', async () => {
+    it('should return cached response on cache hit', async () => {
       const context = createMockExecutionContext('/reports/cached');
-      const handler1 = createMockCallHandler({ result: 'first' });
-      const handler2 = createMockCallHandler({ result: 'second' });
+      const handler = createMockCallHandler({ result: 'from-handler' });
 
       reflector.get.mockReturnValue(undefined);
+      mockCacheManager.get.mockResolvedValue({ result: 'from-cache' });
 
-      // First request - caches the response
-      const result1 = await lastValueFrom(interceptor.intercept(context, handler1));
-      expect(result1).toEqual({ result: 'first' });
+      const result = await lastValueFrom(interceptor.intercept(context, handler));
 
-      // Second request - should return cached value
-      const result2 = await lastValueFrom(interceptor.intercept(context, handler2));
-      expect(result2).toEqual({ result: 'first' });
+      expect(result).toEqual({ result: 'from-cache' });
+      expect(mockCacheManager.set).not.toHaveBeenCalled();
     });
 
     it('should use custom cache key from metadata', async () => {
@@ -87,129 +102,115 @@ describe('ReportsCacheInterceptor', () => {
         if (key === CACHE_KEY_METADATA) return 'custom-key';
         return undefined;
       });
+      mockCacheManager.get.mockResolvedValue(undefined);
 
       await lastValueFrom(interceptor.intercept(context, handler));
 
-      const stats = interceptor.getStats();
-      expect(stats.keys).toContain('custom-key');
+      expect(mockCacheManager.get).toHaveBeenCalledWith(expect.stringContaining('custom-key'));
     });
 
     it('should use custom TTL from metadata', async () => {
-      jest.useFakeTimers();
-
-      const context = createMockExecutionContext('/reports/short-ttl');
-      const handler1 = createMockCallHandler({ result: 'first' });
-      const handler2 = createMockCallHandler({ result: 'second' });
+      const context = createMockExecutionContext('/reports/custom-ttl');
+      const handler = createMockCallHandler({ result: 'data' });
 
       reflector.get.mockImplementation((key: string) => {
-        if (key === CACHE_TTL_METADATA) return 1; // 1 second TTL
+        if (key === CACHE_TTL_METADATA) return 600; // 10 minutes
         return undefined;
       });
+      mockCacheManager.get.mockResolvedValue(undefined);
 
-      // First request
-      await lastValueFrom(interceptor.intercept(context, handler1));
+      await lastValueFrom(interceptor.intercept(context, handler));
 
-      // Advance time past TTL
-      jest.advanceTimersByTime(2000);
-
-      // Second request should get new data (cache expired)
-      const result = await lastValueFrom(interceptor.intercept(context, handler2));
-      expect(result).toEqual({ result: 'second' });
+      // TTL is converted to milliseconds (600 * 1000)
+      expect(mockCacheManager.set).toHaveBeenCalledWith(
+        expect.any(String),
+        { result: 'data' },
+        600000,
+      );
     });
 
-    it('should build cache key from request details', async () => {
+    it('should build cache key with user id', async () => {
       const context = createMockExecutionContext(
         '/reports/detail',
         'GET',
         { startDate: '2025-01-01' },
         { id: '123' },
+        { id: 'user-456' },
       );
       const handler = createMockCallHandler();
 
       reflector.get.mockReturnValue(undefined);
+      mockCacheManager.get.mockResolvedValue(undefined);
 
       await lastValueFrom(interceptor.intercept(context, handler));
 
-      const stats = interceptor.getStats();
-      expect(stats.keys[0]).toContain('GET');
-      expect(stats.keys[0]).toContain('/reports/detail');
-      expect(stats.keys[0]).toContain('startDate');
-      expect(stats.keys[0]).toContain('123');
+      expect(mockCacheManager.get).toHaveBeenCalledWith(expect.stringContaining('user-456'));
+    });
+
+    it('should skip caching if cache manager is not available', async () => {
+      const interceptorWithoutCache = new ReportsCacheInterceptor(reflector, undefined);
+      const context = createMockExecutionContext();
+      const handler = createMockCallHandler({ result: 'data' });
+
+      reflector.get.mockReturnValue(undefined);
+
+      const result = await lastValueFrom(interceptorWithoutCache.intercept(context, handler));
+
+      expect(result).toEqual({ result: 'data' });
     });
 
     it('should differentiate cache by query parameters', async () => {
-      const context1 = createMockExecutionContext('/reports', 'GET', { page: 1 });
-      const context2 = createMockExecutionContext('/reports', 'GET', { page: 2 });
+      const context1 = createMockExecutionContext('/reports', 'GET', { page: '1' });
+      const context2 = createMockExecutionContext('/reports', 'GET', { page: '2' });
 
       const handler1 = createMockCallHandler({ page: 1 });
       const handler2 = createMockCallHandler({ page: 2 });
 
       reflector.get.mockReturnValue(undefined);
+      mockCacheManager.get.mockResolvedValue(undefined);
 
-      const result1 = await lastValueFrom(interceptor.intercept(context1, handler1));
-      const result2 = await lastValueFrom(interceptor.intercept(context2, handler2));
+      await lastValueFrom(interceptor.intercept(context1, handler1));
+      await lastValueFrom(interceptor.intercept(context2, handler2));
 
-      expect(result1).toEqual({ page: 1 });
-      expect(result2).toEqual({ page: 2 });
+      // Should have been called with different cache keys
+      const calls = mockCacheManager.get.mock.calls;
+      expect(calls[0][0]).not.toBe(calls[1][0]);
     });
   });
 
   describe('clearAll', () => {
-    it('should clear all cache entries', async () => {
-      const context = createMockExecutionContext();
-      const handler = createMockCallHandler();
+    it('should clear all report cache entries', async () => {
+      const keysToDelete = ['vendhub:reports:key1', 'vendhub:reports:key2'];
+      mockCacheManager.store.client.keys.mockResolvedValue(keysToDelete);
 
-      reflector.get.mockReturnValue(undefined);
+      await interceptor.clearAll();
 
-      await lastValueFrom(interceptor.intercept(context, handler));
-      expect(interceptor.getStats().size).toBe(1);
-
-      interceptor.clearAll();
-      expect(interceptor.getStats().size).toBe(0);
+      expect(mockCacheManager.store.client.keys).toHaveBeenCalledWith('vendhub:reports:*');
+      expect(mockCacheManager.del).toHaveBeenCalledTimes(2);
     });
   });
 
   describe('clearPattern', () => {
     it('should clear cache entries matching pattern', async () => {
-      const context1 = createMockExecutionContext('/reports/financial');
-      const context2 = createMockExecutionContext('/reports/network');
-      const context3 = createMockExecutionContext('/dashboard/admin');
+      const keysToDelete = ['vendhub:reports:financial:key1', 'vendhub:reports:financial:key2'];
+      mockCacheManager.store.client.keys.mockResolvedValue(keysToDelete);
 
-      const handler = createMockCallHandler();
-      reflector.get.mockReturnValue(undefined);
+      const count = await interceptor.clearPattern('financial');
 
-      await lastValueFrom(interceptor.intercept(context1, handler));
-      await lastValueFrom(interceptor.intercept(context2, handler));
-      await lastValueFrom(interceptor.intercept(context3, handler));
-
-      expect(interceptor.getStats().size).toBe(3);
-
-      interceptor.clearPattern('/reports');
-      expect(interceptor.getStats().size).toBe(1);
-      expect(interceptor.getStats().keys[0]).toContain('/dashboard');
-    });
-  });
-
-  describe('getStats', () => {
-    it('should return cache statistics', async () => {
-      const context = createMockExecutionContext('/reports/test');
-      const handler = createMockCallHandler();
-
-      reflector.get.mockReturnValue(undefined);
-
-      await lastValueFrom(interceptor.intercept(context, handler));
-
-      const stats = interceptor.getStats();
-
-      expect(stats.size).toBe(1);
-      expect(stats.keys).toHaveLength(1);
+      expect(mockCacheManager.store.client.keys).toHaveBeenCalledWith(
+        'vendhub:reports:*financial*',
+      );
+      expect(mockCacheManager.del).toHaveBeenCalledTimes(2);
+      expect(count).toBe(2);
     });
 
-    it('should return empty stats when cache is empty', () => {
-      const stats = interceptor.getStats();
+    it('should return 0 when no keys match pattern', async () => {
+      mockCacheManager.store.client.keys.mockResolvedValue([]);
 
-      expect(stats.size).toBe(0);
-      expect(stats.keys).toEqual([]);
+      const count = await interceptor.clearPattern('nonexistent');
+
+      expect(count).toBe(0);
+      expect(mockCacheManager.del).not.toHaveBeenCalled();
     });
   });
 });

@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Reflector } from '@nestjs/core';
+import { RedisCacheModule } from '@/common/cache/redis-cache.module';
 import { ReportsService } from './reports.service';
 import { ReportsController } from './reports.controller';
 import { PdfGeneratorService } from './pdf-generator.service';
@@ -42,6 +43,7 @@ import { InventoryBatch } from '../warehouse/entities/inventory-batch.entity';
 
 @Module({
   imports: [
+    RedisCacheModule,
     TypeOrmModule.forFeature([
       Transaction,
       Task,

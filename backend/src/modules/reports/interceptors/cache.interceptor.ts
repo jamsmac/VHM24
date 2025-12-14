@@ -1,14 +1,18 @@
-import { Injectable, NestInterceptor, ExecutionContext, CallHandler, Logger } from '@nestjs/common';
-import { Observable, of } from 'rxjs';
-import { tap } from 'rxjs/operators';
+import {
+  Injectable,
+  NestInterceptor,
+  ExecutionContext,
+  CallHandler,
+  Logger,
+  Inject,
+  Optional,
+} from '@nestjs/common';
+import { Observable, of, from } from 'rxjs';
+import { tap, switchMap } from 'rxjs/operators';
 import { Reflector } from '@nestjs/core';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 import { Request } from 'express';
-
-/** Cache entry with data and expiration timestamp */
-interface CacheEntry {
-  data: unknown;
-  expiresAt: number;
-}
 
 /**
  * Custom cache key metadata
@@ -37,23 +41,33 @@ export const CacheTTL = (ttl: number) => {
 };
 
 /**
- * In-memory cache interceptor for reports and dashboards
+ * Redis-backed cache interceptor for reports and dashboards
  *
- * This provides simple in-memory caching without Redis dependency.
- * For production, consider using @nestjs/cache-manager with Redis.
+ * PERF-3: Upgraded from in-memory to Redis for:
+ * - Persistence across server restarts
+ * - Shared cache across multiple instances
+ * - Better memory management
+ *
+ * Cache key format: vendhub:reports:{method}:{url}:{params_hash}
  */
 @Injectable()
 export class ReportsCacheInterceptor implements NestInterceptor {
   private readonly logger = new Logger(ReportsCacheInterceptor.name);
-  private cache = new Map<string, CacheEntry>();
   private readonly defaultTTL = 300; // 5 minutes in seconds
+  private readonly cacheKeyPrefix = 'vendhub:reports:';
 
-  constructor(private reflector: Reflector) {
-    // Clean up expired entries every minute
-    setInterval(() => this.cleanupExpired(), 60000);
-  }
+  constructor(
+    private reflector: Reflector,
+    @Optional() @Inject(CACHE_MANAGER) private readonly cacheManager?: Cache,
+  ) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
+    // If cache manager is not available, skip caching
+    if (!this.cacheManager) {
+      this.logger.warn('[Cache SKIP] Cache manager not available');
+      return next.handle();
+    }
+
     const request = context.switchToHttp().getRequest<Request>();
     const handler = context.getHandler();
 
@@ -61,29 +75,56 @@ export class ReportsCacheInterceptor implements NestInterceptor {
     const customKey = this.reflector.get<string>(CACHE_KEY_METADATA, handler);
     const customTTL = this.reflector.get<number>(CACHE_TTL_METADATA, handler);
 
-    // Build cache key
-    const cacheKey = customKey || this.buildCacheKey(request);
+    // Build cache key with prefix
+    const baseCacheKey = customKey || this.buildCacheKey(request);
+    const cacheKey = `${this.cacheKeyPrefix}${baseCacheKey}`;
     const ttl = customTTL || this.defaultTTL;
 
-    // Check if we have a valid cached response
-    const cached = this.cache.get(cacheKey);
-    if (cached && cached.expiresAt > Date.now()) {
-      this.logger.debug(`[Cache HIT] ${cacheKey}`);
-      return of(cached.data);
-    }
+    // Check cache and handle async operations
+    return from(this.getFromCache(cacheKey)).pipe(
+      switchMap((cached) => {
+        if (cached !== undefined && cached !== null) {
+          this.logger.debug(`[Redis Cache HIT] ${cacheKey}`);
+          return of(cached);
+        }
 
-    this.logger.debug(`[Cache MISS] ${cacheKey}`);
+        this.logger.debug(`[Redis Cache MISS] ${cacheKey}`);
 
-    // Execute the handler and cache the result
-    return next.handle().pipe(
-      tap((data) => {
-        this.cache.set(cacheKey, {
-          data,
-          expiresAt: Date.now() + ttl * 1000,
-        });
-        this.logger.debug(`[Cache SET] ${cacheKey} (TTL: ${ttl}s)`);
+        // Execute the handler and cache the result
+        return next.handle().pipe(
+          tap((data) => {
+            this.setToCache(cacheKey, data, ttl).catch((err) => {
+              this.logger.error(`[Redis Cache SET Error] ${cacheKey}: ${err.message}`);
+            });
+          }),
+        );
       }),
     );
+  }
+
+  /**
+   * Get value from Redis cache
+   */
+  private async getFromCache(key: string): Promise<unknown | undefined> {
+    try {
+      return await this.cacheManager?.get(key);
+    } catch (error) {
+      this.logger.error(`[Redis Cache GET Error] ${key}: ${error.message}`);
+      return undefined;
+    }
+  }
+
+  /**
+   * Set value to Redis cache
+   */
+  private async setToCache(key: string, data: unknown, ttl: number): Promise<void> {
+    try {
+      // Convert TTL to milliseconds for cache-manager
+      await this.cacheManager?.set(key, data, ttl * 1000);
+      this.logger.debug(`[Redis Cache SET] ${key} (TTL: ${ttl}s)`);
+    } catch (error) {
+      this.logger.error(`[Redis Cache SET Error] ${key}: ${error.message}`);
+    }
   }
 
   /**
@@ -91,67 +132,87 @@ export class ReportsCacheInterceptor implements NestInterceptor {
    */
   private buildCacheKey(request: Request): string {
     const method = request.method;
-    const url = request.url;
-    const query = JSON.stringify(request.query || {});
-    const params = JSON.stringify(request.params || {});
+    const url = request.url.split('?')[0]; // Remove query string from URL
+    const query = this.hashParams(request.query || {});
+    const userId = (request as any).user?.id || 'anonymous';
 
-    return `${method}:${url}:${query}:${params}`;
+    return `${method}:${url}:${userId}:${query}`;
   }
 
   /**
-   * Clean up expired cache entries
+   * Simple hash function for params object
    */
-  private cleanupExpired(): void {
-    const now = Date.now();
-    let cleanedCount = 0;
+  private hashParams(params: Record<string, any>): string {
+    const sortedParams = Object.keys(params)
+      .sort()
+      .reduce(
+        (acc, key) => {
+          acc[key] = params[key];
+          return acc;
+        },
+        {} as Record<string, any>,
+      );
 
-    for (const [key, value] of this.cache.entries()) {
-      if (value.expiresAt <= now) {
-        this.cache.delete(key);
-        cleanedCount++;
+    const str = JSON.stringify(sortedParams);
+
+    // Simple djb2 hash
+    let hash = 5381;
+    for (let i = 0; i < str.length; i++) {
+      hash = (hash << 5) + hash + str.charCodeAt(i);
+    }
+    return Math.abs(hash).toString(36);
+  }
+
+  /**
+   * Clear all report cache entries
+   */
+  async clearAll(): Promise<void> {
+    try {
+      // Get underlying Redis client to clear by pattern
+      const store = this.cacheManager?.store as any;
+      const client = store?.client || store?.getClient?.();
+
+      if (client && typeof client.keys === 'function') {
+        const keys = await client.keys(`${this.cacheKeyPrefix}*`);
+        if (keys.length > 0) {
+          await Promise.all(keys.map((key: string) => this.cacheManager?.del(key)));
+          this.logger.debug(`[Redis Cache CLEAR] Cleared ${keys.length} entries`);
+        }
+      } else {
+        this.logger.warn('[Redis Cache CLEAR] Pattern delete not available');
       }
+    } catch (error) {
+      this.logger.error(`[Redis Cache CLEAR Error] ${error.message}`);
     }
-
-    if (cleanedCount > 0) {
-      this.logger.debug(`[Cache CLEANUP] Removed ${cleanedCount} expired entries`);
-    }
-  }
-
-  /**
-   * Clear all cache entries
-   */
-  clearAll(): void {
-    const size = this.cache.size;
-    this.cache.clear();
-    this.logger.debug(`[Cache CLEAR] Cleared ${size} entries`);
   }
 
   /**
    * Clear cache entries matching a pattern
    */
-  clearPattern(pattern: string): void {
-    let clearedCount = 0;
+  async clearPattern(pattern: string): Promise<number> {
+    try {
+      const store = this.cacheManager?.store as any;
+      const client = store?.client || store?.getClient?.();
 
-    for (const key of this.cache.keys()) {
-      if (key.includes(pattern)) {
-        this.cache.delete(key);
-        clearedCount++;
+      if (client && typeof client.keys === 'function') {
+        const fullPattern = `${this.cacheKeyPrefix}*${pattern}*`;
+        const keys = await client.keys(fullPattern);
+
+        if (keys.length > 0) {
+          await Promise.all(keys.map((key: string) => this.cacheManager?.del(key)));
+          this.logger.debug(
+            `[Redis Cache CLEAR PATTERN] Cleared ${keys.length} entries matching '${pattern}'`,
+          );
+        }
+
+        return keys.length;
       }
+
+      return 0;
+    } catch (error) {
+      this.logger.error(`[Redis Cache CLEAR PATTERN Error] ${error.message}`);
+      return 0;
     }
-
-    this.logger.debug(
-      `[Cache CLEAR PATTERN] Cleared ${clearedCount} entries matching '${pattern}'`,
-    );
-  }
-
-  /**
-   * Get cache statistics
-   */
-  getStats(): { size: number; keys: string[] } {
-    return {
-      size: this.cache.size,
-      keys: Array.from(this.cache.keys()),
-    };
   }
 }
 
