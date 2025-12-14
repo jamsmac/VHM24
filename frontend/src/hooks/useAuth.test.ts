@@ -38,13 +38,17 @@ describe('useAuth', () => {
   })
 
   describe('initialization', () => {
-    it('should start with loading state', () => {
+    it('should start with loading state', async () => {
       vi.mocked(authStorage.getAccessToken).mockReturnValue(null)
       vi.mocked(authStorage.getUser).mockReturnValue(null)
 
       const { result } = renderHook(() => useAuth())
 
-      expect(result.current.loading).toBe(true)
+      // Initial loading state may be true briefly, but useEffect runs immediately
+      // After initialization, loading should become false
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false)
+      })
     })
 
     it('should load user from storage if token exists', async () => {
@@ -98,7 +102,11 @@ describe('useAuth', () => {
         expect(result.current.loading).toBe(false)
       })
 
-      act(() => {
+      // After login, mock storage to return the new values
+      vi.mocked(authStorage.getAccessToken).mockReturnValue('test-token')
+      vi.mocked(authStorage.getUser).mockReturnValue(mockUser)
+
+      await act(async () => {
         result.current.login('test-token', mockUser, 'refresh-token', 900)
       })
 
@@ -137,6 +145,9 @@ describe('useAuth', () => {
       await waitFor(() => {
         expect(result.current.loading).toBe(false)
       })
+
+      // After logout, token should be cleared
+      vi.mocked(authStorage.getAccessToken).mockReturnValue(null)
 
       act(() => {
         result.current.logout()

@@ -102,13 +102,12 @@ describe('Auth API', () => {
 
   describe('logout', () => {
     it('should successfully logout', async () => {
-      const mockResponse = { data: { success: true } }
-      vi.mocked(apiClient.post).mockResolvedValue(mockResponse)
+      vi.mocked(apiClient.post).mockResolvedValue({ data: { success: true } })
 
-      const result = await authApi.logout()
+      await authApi.logout()
 
       expect(apiClient.post).toHaveBeenCalledWith('/auth/logout')
-      expect(result).toEqual(mockResponse.data)
+      // logout returns void, no return value to check
     })
 
     it('should handle logout error gracefully', async () => {
