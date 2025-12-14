@@ -566,63 +566,91 @@ export class ManagerDashboardService {
 
   /**
    * Get location performance overview
+   *
+   * PERF-2: Optimized to use bulk queries instead of N+1 pattern
+   * Previously: N queries per location (4 queries × N locations)
+   * Now: 5 queries total regardless of location count
    */
   private async getLocationPerformance(
     todayStart: Date,
     locationIds?: string[],
   ): Promise<ManagerDashboard['location_performance']> {
+    // 1. Get all locations
     const locationQuery = this.locationRepository.createQueryBuilder('location');
     if (locationIds && locationIds.length > 0) {
       locationQuery.where('location.id IN (:...locationIds)', { locationIds });
     }
-
     const locations = await locationQuery.getMany();
 
-    const performance = await Promise.all(
-      locations.map(async (location) => {
-        const [machines, revenue, pendingTasks, openIncidents] = await Promise.all([
-          this.machineRepository.find({ where: { location_id: location.id } }),
-          this.getTodayRevenueForLocation(location.id, todayStart),
-          this.taskRepository.count({
-            where: {
-              machine: { location_id: location.id },
-              status: TaskStatus.PENDING,
-            } as any,
-          }),
-          this.incidentRepository.count({
-            where: {
-              machine: { location_id: location.id },
-              status: IncidentStatus.OPEN,
-            } as any,
-          }),
-        ]);
+    if (locations.length === 0) {
+      return [];
+    }
 
-        const activeMachines = machines.filter((m) => m.status === 'active').length;
+    const allLocationIds = locations.map((l) => l.id);
 
-        return {
-          location_id: location.id,
-          location_name: location.name,
-          machines_count: machines.length,
-          active_machines: activeMachines,
-          today_revenue: revenue,
-          pending_tasks: pendingTasks,
-          open_incidents: openIncidents,
-        };
-      }),
-    );
+    // 2. Get all machines grouped by location (single query)
+    const machinesByLocation = await this.machineRepository
+      .createQueryBuilder('machine')
+      .select('machine.location_id', 'location_id')
+      .addSelect('COUNT(*)', 'total_count')
+      .addSelect("COUNT(*) FILTER (WHERE machine.status = 'active')", 'active_count')
+      .where('machine.location_id IN (:...locationIds)', { locationIds: allLocationIds })
+      .groupBy('machine.location_id')
+      .getRawMany();
 
-    return performance;
-  }
-
-  private async getTodayRevenueForLocation(locationId: string, todayStart: Date): Promise<number> {
-    const result = await this.transactionRepository
+    // 3. Get revenue grouped by location (single query)
+    const revenueByLocation = await this.transactionRepository
       .createQueryBuilder('transaction')
       .leftJoin('transaction.machine', 'machine')
-      .select('SUM(transaction.amount)', 'revenue')
-      .where('machine.location_id = :locationId', { locationId })
+      .select('machine.location_id', 'location_id')
+      .addSelect('COALESCE(SUM(transaction.amount), 0)', 'revenue')
+      .where('machine.location_id IN (:...locationIds)', { locationIds: allLocationIds })
       .andWhere('transaction.transaction_date >= :todayStart', { todayStart })
-      .getRawOne();
+      .groupBy('machine.location_id')
+      .getRawMany();
 
-    return Number(result?.revenue || 0);
+    // 4. Get pending tasks count grouped by location (single query)
+    const tasksByLocation = await this.taskRepository
+      .createQueryBuilder('task')
+      .leftJoin('task.machine', 'machine')
+      .select('machine.location_id', 'location_id')
+      .addSelect('COUNT(*)', 'pending_count')
+      .where('machine.location_id IN (:...locationIds)', { locationIds: allLocationIds })
+      .andWhere('task.status = :status', { status: TaskStatus.PENDING })
+      .groupBy('machine.location_id')
+      .getRawMany();
+
+    // 5. Get open incidents count grouped by location (single query)
+    const incidentsByLocation = await this.incidentRepository
+      .createQueryBuilder('incident')
+      .leftJoin('incident.machine', 'machine')
+      .select('machine.location_id', 'location_id')
+      .addSelect('COUNT(*)', 'open_count')
+      .where('machine.location_id IN (:...locationIds)', { locationIds: allLocationIds })
+      .andWhere('incident.status = :status', { status: IncidentStatus.OPEN })
+      .groupBy('machine.location_id')
+      .getRawMany();
+
+    // Create lookup maps for O(1) access
+    const machinesMap = new Map(machinesByLocation.map((m) => [m.location_id, m]));
+    const revenueMap = new Map(revenueByLocation.map((r) => [r.location_id, Number(r.revenue)]));
+    const tasksMap = new Map(tasksByLocation.map((t) => [t.location_id, Number(t.pending_count)]));
+    const incidentsMap = new Map(
+      incidentsByLocation.map((i) => [i.location_id, Number(i.open_count)]),
+    );
+
+    // 6. Combine results in memory
+    return locations.map((location) => {
+      const machineData = machinesMap.get(location.id);
+      return {
+        location_id: location.id,
+        location_name: location.name,
+        machines_count: machineData ? Number(machineData.total_count) : 0,
+        active_machines: machineData ? Number(machineData.active_count) : 0,
+        today_revenue: revenueMap.get(location.id) || 0,
+        pending_tasks: tasksMap.get(location.id) || 0,
+        open_incidents: incidentsMap.get(location.id) || 0,
+      };
+    });
   }
 }
