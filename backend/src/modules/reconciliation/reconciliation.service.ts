@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import {
@@ -52,6 +52,8 @@ interface MatchResult {
  */
 @Injectable()
 export class ReconciliationService {
+  private readonly logger = new Logger(ReconciliationService.name);
+
   constructor(
     @InjectRepository(ReconciliationRun)
     private readonly runRepository: Repository<ReconciliationRun>,
@@ -84,7 +86,7 @@ export class ReconciliationService {
 
     // Запускаем обработку асинхронно
     this.processReconciliation(savedRun.id).catch((error) => {
-      console.error(`Reconciliation ${savedRun.id} failed:`, error);
+      this.logger.error(`Reconciliation ${savedRun.id} failed: ${error.message}`, error.stack);
     });
 
     return savedRun;
