@@ -11,7 +11,7 @@ import { Repository, LessThan, IsNull } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
-// Note: uuidv4 can be imported from 'uuid' when JWT ID (jti) tracking is implemented
+import { v4 as uuidv4 } from 'uuid';
 import { UsersService } from '../users/users.service';
 import { User, UserRole, UserStatus } from '../users/entities/user.entity';
 import { RegisterDto } from './dto/register.dto';
@@ -451,15 +451,25 @@ export class AuthService {
    *
    * REQ-AUTH-10: Access token uses JWT_SECRET
    * REQ-AUTH-11: Refresh token uses JWT_REFRESH_SECRET (falls back to JWT_SECRET if not set)
+   * SEC-4: Each token has unique JWT ID (jti) for revocation tracking
    */
   private async generateTokens(user: User): Promise<AuthTokens> {
-    // TODO: Generate and use unique JWT IDs (JTIs) when implementing token blacklisting
-    // Example: const accessJti = uuidv4(); const refreshJti = uuidv4();
+    // SEC-4: Generate unique JWT IDs for token revocation tracking
+    const accessJti = uuidv4();
+    const refreshJti = uuidv4();
 
-    const basePayload: Partial<JwtPayload> = {
+    const accessPayload: Partial<JwtPayload> = {
       sub: user.id,
       email: user.email,
       role: user.role,
+      jti: accessJti,
+    };
+
+    const refreshPayload: Partial<JwtPayload> = {
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+      jti: refreshJti,
     };
 
     // Use separate secrets for access and refresh tokens (REQ-AUTH-10, REQ-AUTH-11)
@@ -467,11 +477,11 @@ export class AuthService {
     const refreshSecret = this.configService.get<string>('JWT_REFRESH_SECRET') || accessSecret;
 
     const [access_token, refresh_token] = await Promise.all([
-      this.jwtService.signAsync(basePayload, {
+      this.jwtService.signAsync(accessPayload, {
         secret: accessSecret,
         expiresIn: this.configService.get<string>('JWT_ACCESS_EXPIRATION', '15m'),
       }),
-      this.jwtService.signAsync(basePayload, {
+      this.jwtService.signAsync(refreshPayload, {
         secret: refreshSecret,
         expiresIn: this.configService.get<string>('JWT_REFRESH_EXPIRATION', '7d'),
       }),
