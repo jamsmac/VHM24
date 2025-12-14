@@ -614,11 +614,11 @@ export class CartService {
 ### День 13-14: Documentation & Finalization
 
 **Обновить документацию:**
-- [ ] README.md - Quick start актуален
+- [x] README.md - Quick start актуален (updated with security, monitoring, ops docs)
 - [ ] API docs - Swagger полный
-- [ ] SECURITY.md - Security practices
-- [ ] DEPLOYMENT.md - Deployment процедуры
-- [ ] RUNBOOK.md - Операционные процедуры
+- [x] SECURITY.md - Security practices (comprehensive security guide)
+- [x] DEPLOYMENT.md - Deployment процедуры (production deployment guide)
+- [x] RUNBOOK.md - Операционные процедуры (ops runbook with incident response)
 
 ---
 
@@ -644,7 +644,7 @@ export class CartService {
 
 ### После Недели 4 (Finalization):
 - [x] Grafana dashboards готовы (Security, API Performance, Business Metrics)
-- [ ] Documentation обновлена
+- [x] Documentation обновлена (README, SECURITY.md, DEPLOYMENT.md, RUNBOOK.md)
 - [ ] Security audit passed
 - [ ] Production deployment validated
 
