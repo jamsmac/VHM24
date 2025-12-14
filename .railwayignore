@@ -1,0 +1,6 @@
+# Ignore frontend and other directories for backend deployment
+frontend/
+mobile/
+docs/
+*.md
+!backend/
