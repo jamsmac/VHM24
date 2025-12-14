@@ -21,13 +21,10 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
+      // SEC-1: Backend sets httpOnly cookies automatically
+      // We only need to store user data for UI display
       const response = await authApi.login({ email: emailOrUsername, password })
-      login(
-        response.access_token,
-        response.user,
-        response.refresh_token,
-        response.expires_in
-      )
+      login(response.user)
       toast.success('Вход выполнен успешно!')
       router.push('/dashboard')
     } catch (error: unknown) {
