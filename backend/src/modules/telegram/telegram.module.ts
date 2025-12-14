@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { BullModule } from '@nestjs/bull';
+import { RedisCacheModule } from '@/common/cache/redis-cache.module';
 import { TelegramUser } from './entities/telegram-user.entity';
 import { TelegramSettings } from './entities/telegram-settings.entity';
 import { TelegramMessageLog } from './entities/telegram-message-log.entity';
@@ -17,6 +18,7 @@ import { TelegramLocationService } from './services/telegram-location.service';
 import { TelegramQuickActionsService } from './services/telegram-quick-actions.service';
 import { TelegramManagerToolsService } from './services/telegram-manager-tools.service';
 import { TelegramPhotoCompressionService } from './services/telegram-photo-compression.service';
+import { CartStorageService } from './services/cart-storage.service';
 import { TelegramQueueProcessor } from './processors/telegram-queue.processor';
 import { TelegramUsersController } from './controllers/telegram-users.controller';
 import { TelegramSettingsController } from './controllers/telegram-settings.controller';
@@ -36,6 +38,7 @@ import { AccessRequestsModule } from '../access-requests/access-requests.module'
     BullModule.registerQueue({
       name: 'telegram-messages',
     }),
+    RedisCacheModule,
     TasksModule,
     FilesModule,
     UsersModule,
@@ -64,6 +67,7 @@ import { AccessRequestsModule } from '../access-requests/access-requests.module'
     TelegramQuickActionsService,
     TelegramManagerToolsService,
     TelegramPhotoCompressionService,
+    CartStorageService,
     TelegramQueueProcessor,
   ],
   exports: [
@@ -80,6 +84,7 @@ import { AccessRequestsModule } from '../access-requests/access-requests.module'
     TelegramQuickActionsService,
     TelegramManagerToolsService,
     TelegramPhotoCompressionService,
+    CartStorageService,
   ],
 })
 export class TelegramModule {}
