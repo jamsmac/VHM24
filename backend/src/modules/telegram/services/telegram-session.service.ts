@@ -307,7 +307,7 @@ export class TelegramSessionService {
 
     try {
       const pattern = `${this.SESSION_PREFIX}*`;
-      const keys = [];
+      const keys: string[] = [];
 
       // Scan for all session keys
       for await (const key of this.redisClient.scanIterator({ MATCH: pattern, COUNT: 100 })) {
@@ -318,7 +318,7 @@ export class TelegramSessionService {
 
       let expiredCount = 0;
       for (const key of keys) {
-        const data = await this.redisClient.get(key);
+        const data = await this.redisClient.get(key as any);
         if (data) {
           const session: UserSession = JSON.parse(data);
           if (new Date(session.expiresAt) < new Date()) {
