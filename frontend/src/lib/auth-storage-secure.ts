@@ -4,26 +4,30 @@
  * SECURITY ARCHITECTURE:
  * =====================
  *
- * PHASE 1 (Current - Frontend Only):
+ * PHASE 1 (Completed):
  * - Access tokens: Memory-first, sessionStorage as backup (XSS mitigation)
  * - Refresh tokens: sessionStorage (better than localStorage)
  * - Auto-clear on tab close (sessionStorage behavior)
  * - Token encryption in storage
  * - CSP headers recommended
  *
- * PHASE 2 (Requires Backend Update):
- * - Access tokens: Memory only
- * - Refresh tokens: httpOnly cookie (XSS immune)
- * - Backend sets: Set-Cookie with HttpOnly, Secure, SameSite=Strict
- * - Frontend: No manual refresh token handling
+ * PHASE 2 (CURRENT - SEC-1 Implemented):
+ * - Backend now sets httpOnly cookies on login/refresh/logout ✅
+ * - JWT strategy reads from cookie first, Bearer header as fallback ✅
+ * - Access tokens: Memory + sessionStorage (legacy) + httpOnly cookie (primary)
+ * - Refresh tokens: httpOnly cookie (XSS immune) + body (backward compat)
+ * - Frontend can gradually remove manual token storage
  *
- * PHASE 3 (Full Production):
- * - All tokens in httpOnly cookies
+ * PHASE 3 (Future - Full Production):
+ * - All tokens in httpOnly cookies only
  * - Zero tokens in JavaScript
  * - Backend handles all token management
  *
- * CURRENT STATUS: Phase 1 ✅ (Production-safe with XSS mitigation)
- * NEXT STEP: Phase 2 (requires backend /auth/login to set httpOnly cookie)
+ * CURRENT STATUS: Phase 2 ✅ (httpOnly cookies active, backward compatible)
+ * NEXT STEP: Phase 3 (remove manual token storage from frontend)
+ *
+ * NOTE: axios.ts has withCredentials: true, so httpOnly cookies are sent automatically.
+ * The Bearer header is still sent for backward compatibility but cookies take priority.
  */
 
 interface TokenData {
@@ -615,10 +619,10 @@ class SecureAuthStorage {
    */
   getSecurityInfo() {
     return {
-      phase: 'Phase 1 - Enhanced Frontend Security',
-      storageType: 'Memory + Encrypted sessionStorage',
+      phase: 'Phase 2 - httpOnly Cookies Active (SEC-1)',
+      storageType: 'Memory + Encrypted sessionStorage + httpOnly Cookies',
       encrypted: true,
-      httpOnlyCookies: false, // Will be true in Phase 2
+      httpOnlyCookies: true, // SEC-1: Backend now sets httpOnly cookies
       sessionIntegrity: this.verifySessionIntegrity(),
       hasAccessToken: !!this.tokenData?.accessToken,
       hasRefreshToken: !!this.tokenData?.refreshToken,

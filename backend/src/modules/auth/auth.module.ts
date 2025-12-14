@@ -17,6 +17,7 @@ import { PasswordPolicyService } from './services/password-policy.service';
 import { TwoFactorAuthService } from './services/two-factor-auth.service';
 import { SessionService } from './services/session.service';
 import { TokenBlacklistService } from './services/token-blacklist.service';
+import { CookieService } from './services/cookie.service';
 import { IpWhitelistGuard } from './guards/ip-whitelist.guard';
 import { IsStrongPasswordConstraint } from './decorators/is-strong-password.decorator';
 
@@ -48,6 +49,7 @@ import { IsStrongPasswordConstraint } from './decorators/is-strong-password.deco
     TwoFactorAuthService,
     SessionService,
     TokenBlacklistService,
+    CookieService,
     IpWhitelistGuard,
     IsStrongPasswordConstraint,
   ],
@@ -57,6 +59,7 @@ import { IsStrongPasswordConstraint } from './decorators/is-strong-password.deco
     TwoFactorAuthService,
     SessionService,
     TokenBlacklistService,
+    CookieService,
     IpWhitelistGuard,
   ],
 })

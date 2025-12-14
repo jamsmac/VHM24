@@ -17,7 +17,7 @@ import { createMockRepository } from '@/test/helpers';
 describe('InventoryCountService', () => {
   let service: InventoryCountService;
   let actualCountRepo: any;
-  let differenceService: jest.Mocked<InventoryDifferenceService>;
+  let _differenceService: jest.Mocked<InventoryDifferenceService>;
 
   // Test fixtures
   const testUserId = '11111111-1111-1111-1111-111111111111';
@@ -53,7 +53,7 @@ describe('InventoryCountService', () => {
     }).compile();
 
     service = module.get<InventoryCountService>(InventoryCountService);
-    differenceService = module.get(InventoryDifferenceService);
+    _differenceService = module.get(InventoryDifferenceService);
   });
 
   afterEach(() => {
