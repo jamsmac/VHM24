@@ -1,1 +1,0 @@
-ALTER TABLE `accessRequests` ADD `adminNotes` text;
