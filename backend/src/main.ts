@@ -3,6 +3,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import helmet from 'helmet';
 import * as cookieParser from 'cookie-parser';
+import * as compression from 'compression';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 
@@ -11,6 +12,26 @@ async function bootstrap() {
 
   // SEC-1: Cookie parser for httpOnly cookie-based authentication
   app.use(cookieParser());
+
+  // PERF-1: Gzip compression for API responses
+  // Reduces bandwidth usage and improves response times
+  app.use(
+    compression({
+      // Skip compression if client sends x-no-compression header
+      filter: (req, res) => {
+        if (req.headers['x-no-compression']) {
+          return false;
+        }
+        // Use default filter (compresses based on content-type)
+        return compression.filter(req, res);
+      },
+      // Only compress responses larger than 1KB
+      threshold: 1024,
+      // Compression level (1-9, default 6)
+      // Higher = better compression but more CPU
+      level: 6,
+    }),
+  );
 
   // Security headers via Helmet
   app.use(
