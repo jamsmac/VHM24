@@ -63,7 +63,7 @@
     "compression": "^1.8.1",
     "cookie-parser": "^1.4.7",
     "csv-parser": "^3.0.0",
-    "date-fns": "^3.0.6",
+    "date-fns": "^4.1.0",
     "decimal.js": "^10.6.0",
     "exceljs": "^4.4.0",
     "helmet": "^8.1.0",
