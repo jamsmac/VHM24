@@ -1,0 +1,104 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches: [develop]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  # Run CI checks first
+  ci-check:
+    name: CI Checks
+    uses: ./.github/workflows/ci.yml
+
+  # Deploy to staging after CI passes
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: ci-check
+    environment: staging
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install backend dependencies
+        working-directory: ./backend
+        run: npm ci --production
+
+      - name: Build backend
+        working-directory: ./backend
+        run: npm run build
+
+      - name: Install frontend dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: ./frontend
+        env:
+          NEXT_PUBLIC_API_URL: ${{ secrets.STAGING_API_URL }}
+        run: npm run build
+
+      # Placeholder for actual deployment steps
+      # Uncomment and configure based on your hosting provider
+
+      # Example: Deploy to a VPS via SSH
+      # - name: Deploy to staging server
+      #   uses: appleboy/ssh-action@v1.0.0
+      #   with:
+      #     host: ${{ secrets.STAGING_HOST }}
+      #     username: ${{ secrets.STAGING_USER }}
+      #     key: ${{ secrets.STAGING_SSH_KEY }}
+      #     script: |
+      #       cd /var/www/vendhub
+      #       git pull origin develop
+      #       cd backend && npm ci --production && npm run build
+      #       pm2 restart vendhub-backend
+      #       cd ../frontend && npm ci && npm run build
+      #       pm2 restart vendhub-frontend
+
+      # Example: Deploy to Docker
+      # - name: Build and push Docker images
+      #   run: |
+      #     docker build -t vendhub-backend:staging ./backend
+      #     docker build -t vendhub-frontend:staging ./frontend
+      #     # Push to registry...
+
+      - name: Deployment placeholder
+        run: |
+          echo "=========================================="
+          echo "Staging deployment workflow triggered"
+          echo "=========================================="
+          echo ""
+          echo "To complete this workflow, configure:"
+          echo "1. Add deployment secrets to GitHub repository"
+          echo "2. Uncomment deployment steps above"
+          echo "3. Configure your hosting provider"
+          echo ""
+          echo "Build artifacts are ready for deployment:"
+          echo "- Backend: ./backend/dist"
+          echo "- Frontend: ./frontend/.next"
+          echo "=========================================="
+
+      - name: Notify deployment
+        if: success()
+        run: |
+          echo "Staging deployment completed successfully!"
+          # Add Slack/Discord notification here if needed

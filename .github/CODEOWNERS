@@ -1,0 +1,19 @@
+# CODEOWNERS file for VendHub Manager
+# These owners will be requested for review when someone opens a pull request
+
+# Default owners for everything in the repo
+* @jamsmac
+
+# Security-critical files require additional review
+backend/src/modules/auth/ @jamsmac
+backend/src/modules/security/ @jamsmac
+backend/src/common/guards/ @jamsmac
+
+# Infrastructure files
+.github/ @jamsmac
+docker-compose*.yml @jamsmac
+Dockerfile* @jamsmac
+
+# Environment and configuration
+backend/.env* @jamsmac
+frontend/.env* @jamsmac
