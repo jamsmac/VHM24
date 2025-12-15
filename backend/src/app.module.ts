@@ -178,7 +178,7 @@ import { CommonModule } from './common/common.module';
     IntegrationModule,
     SecurityModule,
     ReportsModule,
-    TelegramBotModule,
+    // TelegramBotModule, // Removed - functionality merged into TelegramModule
     WebPushModule,
     SalesImportModule,
     RequestsModule,
