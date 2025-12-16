@@ -41,6 +41,8 @@ export default function LoginPage() {
     setError(null)
 
     try {
+      // SEC-1: Backend sets httpOnly cookies automatically
+      // We only need to store user data for UI display
       const response = await authApi.login({ email: emailOrUsername, password })
 
       // Check if 2FA is required

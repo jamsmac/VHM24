@@ -119,11 +119,12 @@ describe('AuthController', () => {
       };
       mockAuthService.login.mockResolvedValue(mockAuthResponse);
 
+      const res = mockResponse();
       const result = await controller.login(
         { email: 'test@example.com', password: 'password' },
         mockUser as User,
         mockRequest(),
-        mockResponse(),
+        res,
       );
 
       expect(result).toEqual(mockAuthResponse);
@@ -145,11 +146,12 @@ describe('AuthController', () => {
       };
       mockAuthService.login.mockResolvedValue(mockAuthResponse);
 
+      const res = mockResponse();
       const result = await controller.login(
         { email: 'test@example.com', password: 'password' },
         mockUser as User,
         mockRequest(),
-        mockResponse(),
+        res,
       );
 
       expect(result.requires_2fa).toBe(true);
@@ -169,11 +171,12 @@ describe('AuthController', () => {
       };
       mockAuthService.login.mockResolvedValue(mockAuthResponse);
 
+      const res = mockResponse();
       const result = await controller.login(
         { email: 'test@example.com', password: 'password' },
         mockUser as User,
         mockRequest(),
-        mockResponse(),
+        res,
       );
 
       expect(result.requires_password_change).toBe(true);
@@ -191,12 +194,13 @@ describe('AuthController', () => {
       mockAuthService.login.mockResolvedValue(mockAuthResponse);
 
       const req = mockRequest({ ip: undefined, socket: { remoteAddress: undefined } } as any);
+      const res = mockResponse();
 
       await controller.login(
         { email: 'test@example.com', password: 'password' },
         mockUser as User,
         req,
-        mockResponse(),
+        res,
       );
 
       expect(mockAuthService.login).toHaveBeenCalledWith(mockUser, '0.0.0.0', 'test-agent');
@@ -214,12 +218,13 @@ describe('AuthController', () => {
       mockAuthService.login.mockResolvedValue(mockAuthResponse);
 
       const req = mockRequest({ ip: undefined, socket: { remoteAddress: '192.168.1.100' } } as any);
+      const res = mockResponse();
 
       await controller.login(
         { email: 'test@example.com', password: 'password' },
         mockUser as User,
         req,
-        mockResponse(),
+        res,
       );
 
       expect(mockAuthService.login).toHaveBeenCalledWith(mockUser, '192.168.1.100', 'test-agent');
@@ -241,6 +246,7 @@ describe('AuthController', () => {
       };
       mockAuthService.register.mockResolvedValue(mockAuthResponse);
 
+      const res = mockResponse();
       const result = await controller.register(
         {
           email: 'new@example.com',
@@ -248,7 +254,7 @@ describe('AuthController', () => {
           full_name: 'New User',
         },
         mockRequest(),
-        mockResponse(),
+        res,
       );
 
       expect(result.success).toBe(true);
@@ -269,6 +275,7 @@ describe('AuthController', () => {
       mockAuthService.register.mockResolvedValue(mockAuthResponse);
 
       const req = mockRequest({ ip: undefined, socket: { remoteAddress: '10.0.0.1' } } as any);
+      const res = mockResponse();
 
       await controller.register(
         {
@@ -277,7 +284,7 @@ describe('AuthController', () => {
           full_name: 'New User',
         },
         req,
-        mockResponse(),
+        res,
       );
 
       expect(mockAuthService.register).toHaveBeenCalledWith(
@@ -296,11 +303,9 @@ describe('AuthController', () => {
       };
       mockAuthService.refreshTokens.mockResolvedValue(mockTokens);
 
-      const result = await controller.refresh(
-        { refreshToken: 'old-refresh' },
-        mockRequest(),
-        mockResponse(),
-      );
+      const req = mockRequest();
+      const res = mockResponse();
+      const result = await controller.refresh({ refreshToken: 'old-refresh' }, req, res);
 
       expect(result).toEqual(mockTokens);
       expect(mockAuthService.refreshTokens).toHaveBeenCalledWith('old-refresh');
@@ -315,18 +320,20 @@ describe('AuthController', () => {
       mockAuthService.refreshTokens.mockResolvedValue(mockTokens);
 
       const req = mockRequest({ cookies: { refresh_token: 'cookie-refresh' } } as any);
+      const res = mockResponse();
 
-      await controller.refresh({ refreshToken: 'body-refresh' }, req, mockResponse());
+      await controller.refresh({ refreshToken: 'body-refresh' }, req, res);
 
       expect(mockAuthService.refreshTokens).toHaveBeenCalledWith('cookie-refresh');
     });
   });
 
   describe('logout', () => {
-    it('should call logout service', async () => {
+    it('should call logout service and clear cookies', async () => {
       mockAuthService.logout.mockResolvedValue(undefined);
 
-      await controller.logout(mockUser as User, mockRequest(), mockResponse());
+      const res = mockResponse();
+      await controller.logout(mockUser as User, mockRequest(), res);
 
       expect(mockAuthService.logout).toHaveBeenCalledWith('user-123', '127.0.0.1');
       expect(mockCookieService.clearAuthCookies).toHaveBeenCalled();
@@ -336,8 +343,9 @@ describe('AuthController', () => {
       mockAuthService.logout.mockResolvedValue(undefined);
 
       const req = mockRequest({ ip: undefined, socket: { remoteAddress: '172.16.0.1' } } as any);
+      const res = mockResponse();
 
-      await controller.logout(mockUser as User, req, mockResponse());
+      await controller.logout(mockUser as User, req, res);
 
       expect(mockAuthService.logout).toHaveBeenCalledWith('user-123', '172.16.0.1');
     });
@@ -478,11 +486,12 @@ describe('AuthController', () => {
       };
       mockAuthService.firstLoginChangePassword.mockResolvedValue(mockAuthResponse);
 
+      const res = mockResponse();
       const result = await controller.firstLoginChangePassword(
         mockUser as User,
         { currentPassword: 'old-pass', newPassword: 'new-pass' },
         mockRequest(),
-        mockResponse(),
+        res,
       );
 
       expect(result.access_token).toBe('new-access');
@@ -510,12 +519,13 @@ describe('AuthController', () => {
       mockAuthService.firstLoginChangePassword.mockResolvedValue(mockAuthResponse);
 
       const req = mockRequest({ ip: undefined, socket: { remoteAddress: '10.0.0.7' } } as any);
+      const res = mockResponse();
 
       await controller.firstLoginChangePassword(
         mockUser as User,
         { currentPassword: 'old', newPassword: 'new' },
         req,
-        mockResponse(),
+        res,
       );
 
       expect(mockAuthService.firstLoginChangePassword).toHaveBeenCalledWith(
@@ -674,11 +684,12 @@ describe('AuthController', () => {
       mockTwoFactorAuthService.verifyToken.mockResolvedValue(true);
       mockAuthService.complete2FALogin.mockResolvedValue(mockAuthResponse);
 
+      const res = mockResponse();
       const result = await controller.complete2FALogin(
         mockUser as User,
         { token: '123456' },
         mockRequest(),
-        mockResponse(),
+        res,
       );
 
       expect(result.access_token).toBe('full-access');
@@ -694,13 +705,9 @@ describe('AuthController', () => {
     it('should throw BadRequestException for invalid 2FA token', async () => {
       mockTwoFactorAuthService.verifyToken.mockResolvedValue(false);
 
+      const res = mockResponse();
       await expect(
-        controller.complete2FALogin(
-          mockUser as User,
-          { token: '000000' },
-          mockRequest(),
-          mockResponse(),
-        ),
+        controller.complete2FALogin(mockUser as User, { token: '000000' }, mockRequest(), res),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -719,8 +726,9 @@ describe('AuthController', () => {
       mockAuthService.complete2FALogin.mockResolvedValue(mockAuthResponse);
 
       const req = mockRequest({ ip: undefined, socket: { remoteAddress: '10.0.0.11' } } as any);
+      const res = mockResponse();
 
-      await controller.complete2FALogin(mockUser as User, { token: '123456' }, req, mockResponse());
+      await controller.complete2FALogin(mockUser as User, { token: '123456' }, req, res);
 
       expect(mockTwoFactorAuthService.verifyToken).toHaveBeenCalledWith(
         'user-123',

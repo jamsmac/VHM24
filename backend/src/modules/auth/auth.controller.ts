@@ -91,7 +91,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Регистрация нового пользователя (оператора)' })
   @ApiResponse({
     status: 201,
-    description: 'Пользователь успешно зарегистрирован',
+    description: 'Пользователь успешно зарегистрирован. Токены устанавливаются в httpOnly cookies (SEC-1).',
     type: AuthResponseDto,
   })
   @ApiResponse({
@@ -120,6 +120,8 @@ export class AuthController {
   }
 
   @Post('refresh')
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 10, ttl: 60000 } }) // 10 attempts per minute (SEC-2)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Обновление токенов' })
   @ApiResponse({
@@ -128,6 +130,10 @@ export class AuthController {
     type: AuthTokensDto,
   })
   @ApiResponse({ status: 401, description: 'Неверный refresh token' })
+  @ApiResponse({
+    status: 429,
+    description: 'Слишком много попыток обновления токенов. Превышен лимит (10 попыток в минуту).',
+  })
   async refresh(
     @Body() refreshTokenDto: RefreshTokenDto,
     @Req() req: Request,
@@ -135,6 +141,10 @@ export class AuthController {
   ): Promise<AuthTokens> {
     // SEC-1: Try to get refresh token from cookie first, then from body
     const refreshToken = req.cookies?.refresh_token || refreshTokenDto.refreshToken;
+
+    if (!refreshToken) {
+      throw new BadRequestException('Refresh token не предоставлен');
+    }
 
     const tokens = await this.authService.refreshTokens(refreshToken);
 
