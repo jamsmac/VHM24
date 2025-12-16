@@ -219,24 +219,19 @@ export class TelegramBotService implements OnModuleInit {
         return;
       }
 
-      // Case 3: New user - create access request (REQ-AUTH-32)
+      // Case 3: New user - create pending user and notify admin
       if (!ctx.telegramUser && ctx.from) {
         try {
-          // Create simplified access request
-          await this.accessRequestsService.create({
+          // Create pending user directly (simplified flow)
+          const pendingUser = await this.usersService.createPendingFromTelegram({
             telegram_id: ctx.from.id.toString(),
-            telegram_username: ctx.from.username || undefined,
-            telegram_first_name: ctx.from.first_name || undefined,
-            telegram_last_name: ctx.from.last_name || undefined,
-            source: 'telegram' as any,
-            metadata: {
-              language_code: ctx.from.language_code,
-              is_bot: ctx.from.is_bot,
-            },
+            telegram_username: ctx.from.username,
+            telegram_first_name: ctx.from.first_name,
+            telegram_last_name: ctx.from.last_name,
           });
 
           this.logger.log(
-            `Access request created for Telegram user ${ctx.from.id} (@${ctx.from.username})`,
+            `Pending user created for Telegram user ${ctx.from.id} (@${ctx.from.username})`,
           );
 
           // Send confirmation to user
@@ -245,13 +240,13 @@ export class TelegramBotService implements OnModuleInit {
             this.getVerificationKeyboard(lang),
           );
 
-          // TODO: Notify admins about new access request
-          // await this.notifyAdminsAboutNewRequest(ctx.from);
+          // Notify admin about new pending user
+          await this.notifyAdminAboutNewUser(pendingUser.id, ctx.from);
         } catch (error) {
-          this.logger.error('Failed to create access request', error);
+          this.logger.error('Failed to create pending user', error);
 
-          // Check if it's a conflict (request already exists)
-          if (error.message?.includes('already exists')) {
+          // Check if it's a conflict (user already exists)
+          if (error.message?.includes('уже существует') || error.message?.includes('already exists')) {
             await ctx.reply(
               this.t(lang, 'access_request_pending'),
               this.getVerificationKeyboard(lang),
@@ -1471,6 +1466,51 @@ export class TelegramBotService implements OnModuleInit {
   private isSuperAdmin(telegramId: string | undefined): boolean {
     const SUPER_ADMIN_TELEGRAM_ID = '42283329';
     return telegramId === SUPER_ADMIN_TELEGRAM_ID;
+  }
+
+  /**
+   * Notify super admin about new pending user registration
+   * Sends a message with user info and role selection buttons
+   */
+  private async notifyAdminAboutNewUser(
+    userId: string,
+    telegramFrom: { id: number; first_name?: string; last_name?: string; username?: string },
+  ): Promise<void> {
+    const SUPER_ADMIN_TELEGRAM_ID = '42283329';
+
+    try {
+      // Get super admin's TelegramUser to find their chat_id
+      const adminTelegramUser = await this.telegramUserRepository.findOne({
+        where: { telegram_id: SUPER_ADMIN_TELEGRAM_ID },
+      });
+
+      if (!adminTelegramUser) {
+        this.logger.warn('Super admin TelegramUser not found, cannot send notification');
+        return;
+      }
+
+      // Build user info
+      const name = [telegramFrom.first_name, telegramFrom.last_name].filter(Boolean).join(' ') ||
+        `@${telegramFrom.username}` ||
+        `User ${telegramFrom.id}`;
+
+      const message =
+        `🆕 <b>Новая заявка на регистрацию</b>\n\n` +
+        `👤 Имя: <b>${name}</b>\n` +
+        `📱 Telegram: ${telegramFrom.username ? `@${telegramFrom.username}` : 'не указан'}\n` +
+        `🆔 ID: <code>${telegramFrom.id}</code>\n\n` +
+        `<b>Выберите роль для пользователя:</b>`;
+
+      // Create role selection keyboard
+      const keyboard = this.getRoleSelectionKeyboard(userId, TelegramLanguage.RU);
+
+      await this.sendMessage(adminTelegramUser.chat_id, message, keyboard);
+
+      this.logger.log(`Notification sent to admin about new user ${userId}`);
+    } catch (error) {
+      this.logger.error('Failed to notify admin about new user:', error);
+      // Don't throw - notification failure shouldn't block registration
+    }
   }
 
   /**

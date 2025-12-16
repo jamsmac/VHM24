@@ -419,6 +419,56 @@ export class UsersService {
   }
 
   /**
+   * Create a PENDING user from Telegram data
+   * Used for simplified registration via Telegram bot
+   *
+   * @param telegramData - Data from Telegram user
+   * @returns Created user with PENDING status
+   * @throws ConflictException if user already exists
+   */
+  async createPendingFromTelegram(telegramData: {
+    telegram_id: string;
+    telegram_username?: string;
+    telegram_first_name?: string;
+    telegram_last_name?: string;
+  }): Promise<User> {
+    // Check if user already exists
+    const existingUser = await this.findByTelegramId(telegramData.telegram_id);
+    if (existingUser) {
+      throw new ConflictException('Пользователь с таким Telegram ID уже существует');
+    }
+
+    // Build full name from Telegram data
+    const parts: string[] = [];
+    if (telegramData.telegram_first_name) {
+      parts.push(telegramData.telegram_first_name);
+    }
+    if (telegramData.telegram_last_name) {
+      parts.push(telegramData.telegram_last_name);
+    }
+    let full_name: string;
+    if (parts.length > 0) {
+      full_name = parts.join(' ');
+    } else if (telegramData.telegram_username) {
+      full_name = `@${telegramData.telegram_username}`;
+    } else {
+      full_name = `Telegram User ${telegramData.telegram_id}`;
+    }
+
+    // Create pending user (no password or role yet - will be set on approval)
+    const user = this.userRepository.create({
+      full_name,
+      email: `telegram_${telegramData.telegram_id}@vendhub.temp`,
+      telegram_user_id: telegramData.telegram_id,
+      telegram_username: telegramData.telegram_username || null,
+      status: UserStatus.PENDING,
+      role: UserRole.VIEWER, // Temporary role, will be set by admin on approval
+    });
+
+    return await this.userRepository.save(user);
+  }
+
+  /**
    * Approve pending user and generate credentials
    *
    * @param userId - User ID to approve
