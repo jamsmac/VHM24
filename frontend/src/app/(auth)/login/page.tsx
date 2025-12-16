@@ -58,12 +58,8 @@ export default function LoginPage() {
       }
 
       // No 2FA required, complete login
-      login(
-        response.access_token,
-        response.user,
-        response.refresh_token,
-        response.expires_in
-      )
+      // Note: Tokens are handled via httpOnly cookies by the backend
+      login(response.user)
       toast.success('Вход выполнен успешно!')
       router.push('/dashboard')
     } catch (error: unknown) {
@@ -113,12 +109,8 @@ export default function LoginPage() {
       }
 
       // Complete login
-      login(
-        response.access_token,
-        response.user,
-        response.refresh_token,
-        response.expires_in
-      )
+      // Note: Tokens are handled via httpOnly cookies by the backend
+      login(response.user)
       toast.success('Вход выполнен успешно!')
       router.push('/dashboard')
     } catch (error: unknown) {
