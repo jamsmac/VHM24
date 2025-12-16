@@ -118,17 +118,26 @@ import { RateLimitModule } from './common/modules/rate-limit.module';
     // Bull queue for background jobs
     BullModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        redis: {
-          host: configService.get('REDIS_HOST', 'localhost'),
-          port: configService.get('REDIS_PORT', 6379),
-          password: configService.get('REDIS_PASSWORD'),
-        },
-        defaultJobOptions: {
-          removeOnComplete: 100, // Keep last 100 completed jobs
-          removeOnFail: 200, // Keep last 200 failed jobs
-        },
-      }),
+      useFactory: (configService: ConfigService) => {
+        const redisUrl = configService.get('REDIS_URL');
+
+        // Support both REDIS_URL and individual variables
+        const redisConfig = redisUrl
+          ? { url: redisUrl }
+          : {
+              host: configService.get('REDIS_HOST', 'localhost'),
+              port: configService.get('REDIS_PORT', 6379),
+              password: configService.get('REDIS_PASSWORD'),
+            };
+
+        return {
+          redis: redisConfig,
+          defaultJobOptions: {
+            removeOnComplete: 100, // Keep last 100 completed jobs
+            removeOnFail: 200, // Keep last 200 failed jobs
+          },
+        };
+      },
       inject: [ConfigService],
     }),
 
