@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 import { useAuth } from './useAuth'
 import { authStorage } from '@/lib/auth-storage'
-import type { UserData } from '@/lib/auth-storage'
+import type { UserData, AuthEvent } from '@/lib/auth-storage'
 
 // Mock Next.js router
 const mockPush = vi.fn()
@@ -12,19 +12,32 @@ vi.mock('next/navigation', () => ({
   }),
 }))
 
-// Mock auth storage
-vi.mock('@/lib/auth-storage', () => ({
-  authStorage: {
-    getAccessToken: vi.fn(),
-    getUser: vi.fn(),
-    setTokens: vi.fn(),
-    setUser: vi.fn(),
-    clearStorage: vi.fn(),
-    migrateFromOldStorage: vi.fn(),
+// Mock axios
+vi.mock('@/lib/axios', () => ({
+  apiClient: {
+    post: vi.fn().mockResolvedValue({}),
   },
 }))
 
-describe('useAuth', () => {
+// Mock auth storage for Phase 2
+vi.mock('@/lib/auth-storage', () => ({
+  authStorage: {
+    getUser: vi.fn(),
+    handleLogin: vi.fn(),
+    setUser: vi.fn(),
+    clearStorage: vi.fn(),
+    isLoggedIn: vi.fn(),
+    subscribe: vi.fn(),
+  },
+}))
+
+/**
+ * useAuth Hook Tests - Phase 2 (httpOnly Cookies)
+ *
+ * In Phase 2, tokens are stored in httpOnly cookies.
+ * The hook manages user state for UI, not tokens.
+ */
+describe('useAuth - Phase 2', () => {
   const mockUser: UserData = {
     id: '123',
     email: 'test@example.com',
@@ -32,15 +45,24 @@ describe('useAuth', () => {
     role: 'admin',
   }
 
+  let subscriberCallback: ((event: AuthEvent, data?: unknown) => void) | null = null
+
   beforeEach(() => {
     vi.clearAllMocks()
     mockPush.mockClear()
+    subscriberCallback = null
+
+    // Setup subscribe mock to capture the callback
+    vi.mocked(authStorage.subscribe).mockImplementation((callback) => {
+      subscriberCallback = callback
+      return vi.fn() // Return unsubscribe function
+    })
   })
 
   describe('initialization', () => {
     it('should start with loading state', async () => {
-      vi.mocked(authStorage.getAccessToken).mockReturnValue(null)
       vi.mocked(authStorage.getUser).mockReturnValue(null)
+      vi.mocked(authStorage.isLoggedIn).mockReturnValue(false)
 
       const { result } = renderHook(() => useAuth())
 
@@ -51,9 +73,9 @@ describe('useAuth', () => {
       })
     })
 
-    it('should load user from storage if token exists', async () => {
-      vi.mocked(authStorage.getAccessToken).mockReturnValue('test-token')
+    it('should load user from storage if authenticated', async () => {
       vi.mocked(authStorage.getUser).mockReturnValue(mockUser)
+      vi.mocked(authStorage.isLoggedIn).mockReturnValue(true)
 
       const { result } = renderHook(() => useAuth())
 
@@ -65,9 +87,9 @@ describe('useAuth', () => {
       expect(result.current.isAuthenticated).toBe(true)
     })
 
-    it('should set user to null if no token exists', async () => {
-      vi.mocked(authStorage.getAccessToken).mockReturnValue(null)
+    it('should set user to null if not authenticated', async () => {
       vi.mocked(authStorage.getUser).mockReturnValue(null)
+      vi.mocked(authStorage.isLoggedIn).mockReturnValue(false)
 
       const { result } = renderHook(() => useAuth())
 
@@ -79,46 +101,22 @@ describe('useAuth', () => {
       expect(result.current.isAuthenticated).toBe(false)
     })
 
-    it('should migrate old storage on mount', async () => {
-      vi.mocked(authStorage.getAccessToken).mockReturnValue(null)
+    it('should subscribe to auth events', async () => {
       vi.mocked(authStorage.getUser).mockReturnValue(null)
+      vi.mocked(authStorage.isLoggedIn).mockReturnValue(false)
 
       renderHook(() => useAuth())
 
       await waitFor(() => {
-        expect(authStorage.migrateFromOldStorage).toHaveBeenCalled()
+        expect(authStorage.subscribe).toHaveBeenCalled()
       })
     })
   })
 
   describe('login', () => {
-    it('should set user and tokens on successful login', async () => {
-      vi.mocked(authStorage.getAccessToken).mockReturnValue(null)
+    it('should call handleLogin and update user state', async () => {
       vi.mocked(authStorage.getUser).mockReturnValue(null)
-
-      const { result } = renderHook(() => useAuth())
-
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false)
-      })
-
-      // After login, mock storage to return the new values
-      vi.mocked(authStorage.getAccessToken).mockReturnValue('test-token')
-      vi.mocked(authStorage.getUser).mockReturnValue(mockUser)
-
-      await act(async () => {
-        result.current.login('test-token', mockUser, 'refresh-token', 900)
-      })
-
-      expect(authStorage.setTokens).toHaveBeenCalledWith('test-token', 'refresh-token', 900)
-      expect(authStorage.setUser).toHaveBeenCalledWith(mockUser)
-      expect(result.current.user).toEqual(mockUser)
-      expect(result.current.isAuthenticated).toBe(true)
-    })
-
-    it('should handle login without refresh token', async () => {
-      vi.mocked(authStorage.getAccessToken).mockReturnValue(null)
-      vi.mocked(authStorage.getUser).mockReturnValue(null)
+      vi.mocked(authStorage.isLoggedIn).mockReturnValue(false)
 
       const { result } = renderHook(() => useAuth())
 
@@ -127,18 +125,18 @@ describe('useAuth', () => {
       })
 
       act(() => {
-        result.current.login('test-token', mockUser)
+        result.current.login(mockUser)
       })
 
-      expect(authStorage.setTokens).toHaveBeenCalledWith('test-token', undefined, undefined)
+      expect(authStorage.handleLogin).toHaveBeenCalledWith(mockUser)
       expect(result.current.user).toEqual(mockUser)
     })
   })
 
   describe('logout', () => {
     it('should clear storage and redirect to login', async () => {
-      vi.mocked(authStorage.getAccessToken).mockReturnValue('test-token')
       vi.mocked(authStorage.getUser).mockReturnValue(mockUser)
+      vi.mocked(authStorage.isLoggedIn).mockReturnValue(true)
 
       const { result } = renderHook(() => useAuth())
 
@@ -146,11 +144,8 @@ describe('useAuth', () => {
         expect(result.current.loading).toBe(false)
       })
 
-      // After logout, token should be cleared
-      vi.mocked(authStorage.getAccessToken).mockReturnValue(null)
-
-      act(() => {
-        result.current.logout()
+      await act(async () => {
+        await result.current.logout()
       })
 
       expect(authStorage.clearStorage).toHaveBeenCalled()
@@ -161,8 +156,8 @@ describe('useAuth', () => {
 
   describe('refreshAuth', () => {
     it('should refresh user data from storage', async () => {
-      vi.mocked(authStorage.getAccessToken).mockReturnValue('test-token')
       vi.mocked(authStorage.getUser).mockReturnValue(mockUser)
+      vi.mocked(authStorage.isLoggedIn).mockReturnValue(true)
 
       const { result } = renderHook(() => useAuth())
 
@@ -181,8 +176,8 @@ describe('useAuth', () => {
     })
 
     it('should handle missing user data', async () => {
-      vi.mocked(authStorage.getAccessToken).mockReturnValue('test-token')
       vi.mocked(authStorage.getUser).mockReturnValue(mockUser)
+      vi.mocked(authStorage.isLoggedIn).mockReturnValue(true)
 
       const { result } = renderHook(() => useAuth())
 
@@ -201,10 +196,10 @@ describe('useAuth', () => {
     })
   })
 
-  describe('edge cases', () => {
-    it('should logout if token exists but no user data', async () => {
-      vi.mocked(authStorage.getAccessToken).mockReturnValue('test-token')
-      vi.mocked(authStorage.getUser).mockReturnValue(null)
+  describe('auth events', () => {
+    it('should handle logout event', async () => {
+      vi.mocked(authStorage.getUser).mockReturnValue(mockUser)
+      vi.mocked(authStorage.isLoggedIn).mockReturnValue(true)
 
       const { result } = renderHook(() => useAuth())
 
@@ -212,34 +207,87 @@ describe('useAuth', () => {
         expect(result.current.loading).toBe(false)
       })
 
-      expect(authStorage.clearStorage).toHaveBeenCalled()
+      // Simulate logout event
+      act(() => {
+        if (subscriberCallback) {
+          subscriberCallback('logout')
+        }
+      })
+
+      expect(result.current.user).toBeNull()
       expect(mockPush).toHaveBeenCalledWith('/login')
     })
 
-    it('should handle isAuthenticated correctly', async () => {
-      // Case 1: No user, no token
-      vi.mocked(authStorage.getAccessToken).mockReturnValue(null)
-      vi.mocked(authStorage.getUser).mockReturnValue(null)
-
-      const { result: result1 } = renderHook(() => useAuth())
-
-      await waitFor(() => {
-        expect(result1.current.loading).toBe(false)
-      })
-
-      expect(result1.current.isAuthenticated).toBe(false)
-
-      // Case 2: User exists, token exists
-      vi.mocked(authStorage.getAccessToken).mockReturnValue('test-token')
+    it('should handle token-expired event', async () => {
       vi.mocked(authStorage.getUser).mockReturnValue(mockUser)
+      vi.mocked(authStorage.isLoggedIn).mockReturnValue(true)
 
-      const { result: result2 } = renderHook(() => useAuth())
+      const { result } = renderHook(() => useAuth())
 
       await waitFor(() => {
-        expect(result2.current.loading).toBe(false)
+        expect(result.current.loading).toBe(false)
       })
 
-      expect(result2.current.isAuthenticated).toBe(true)
+      // Simulate token-expired event
+      act(() => {
+        if (subscriberCallback) {
+          subscriberCallback('token-expired')
+        }
+      })
+
+      expect(result.current.user).toBeNull()
+      expect(mockPush).toHaveBeenCalledWith('/login')
+    })
+
+    it('should handle user-updated event', async () => {
+      vi.mocked(authStorage.getUser).mockReturnValue(mockUser)
+      vi.mocked(authStorage.isLoggedIn).mockReturnValue(true)
+
+      const { result } = renderHook(() => useAuth())
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false)
+      })
+
+      const updatedUser = { ...mockUser, full_name: 'New Name' }
+      vi.mocked(authStorage.getUser).mockReturnValue(updatedUser)
+
+      // Simulate user-updated event
+      act(() => {
+        if (subscriberCallback) {
+          subscriberCallback('user-updated')
+        }
+      })
+
+      expect(result.current.user).toEqual(updatedUser)
+    })
+  })
+
+  describe('isAuthenticated', () => {
+    it('should return false when not logged in', async () => {
+      vi.mocked(authStorage.getUser).mockReturnValue(null)
+      vi.mocked(authStorage.isLoggedIn).mockReturnValue(false)
+
+      const { result } = renderHook(() => useAuth())
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false)
+      })
+
+      expect(result.current.isAuthenticated).toBe(false)
+    })
+
+    it('should return true when logged in', async () => {
+      vi.mocked(authStorage.getUser).mockReturnValue(mockUser)
+      vi.mocked(authStorage.isLoggedIn).mockReturnValue(true)
+
+      const { result } = renderHook(() => useAuth())
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false)
+      })
+
+      expect(result.current.isAuthenticated).toBe(true)
     })
   })
 })

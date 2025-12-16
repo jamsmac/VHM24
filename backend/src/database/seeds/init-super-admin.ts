@@ -15,7 +15,7 @@ export async function initSuperAdmin(dataSource: DataSource) {
   try {
     // Check if super admin already exists
     const existingAdmin = await queryRunner.query(
-      `SELECT id FROM users WHERE telegram_id = $1 OR email = $2`,
+      `SELECT id FROM users WHERE telegram_user_id = $1 OR email = $2`,
       ['42283329', 'admin@vendhub.com'],
     );
 
@@ -41,30 +41,28 @@ export async function initSuperAdmin(dataSource: DataSource) {
         id,
         email,
         password_hash,
-        first_name,
-        last_name,
+        full_name,
         phone,
-        telegram_id,
+        telegram_user_id,
         telegram_username,
         role,
-        is_active,
-        is_verified,
-        is_two_fa_enabled,
+        status,
+        is_2fa_enabled,
+        requires_password_change,
         created_at,
         updated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), NOW())`,
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())`,
       [
         userId,
         'admin@vendhub.com',
         passwordHash,
-        'Jamshiddin',
-        'Admin',
+        'Jamshiddin Admin',
         '+998901234567',
         '42283329',
         'Jamshiddin',
-        'SUPER_ADMIN',
-        true,
-        true,
+        'SuperAdmin',
+        'active',
+        false,
         false,
       ],
     );
@@ -87,12 +85,41 @@ export async function initSuperAdmin(dataSource: DataSource) {
 
 // Run if executed directly
 if (require.main === module) {
-  const AppDataSource = require('../config/typeorm.config').AppDataSource;
+  const { DataSource } = require('typeorm');
+  const { config } = require('dotenv');
+
+  config();
+
+  // Support both DATABASE_URL and individual variables
+  const getDatabaseConfig = () => {
+    if (process.env.DATABASE_URL) {
+      return {
+        type: 'postgres',
+        url: process.env.DATABASE_URL,
+        ssl: process.env.DATABASE_SSL === 'true' ? { rejectUnauthorized: false } : false,
+      };
+    }
+    return {
+      type: 'postgres',
+      host: process.env.DATABASE_HOST || 'localhost',
+      port: parseInt(process.env.DATABASE_PORT || '5432'),
+      username: process.env.DATABASE_USER || 'vendhub',
+      password: process.env.DATABASE_PASSWORD || 'vendhub_password_dev',
+      database: process.env.DATABASE_NAME || 'vendhub',
+    };
+  };
+
+  const AppDataSource = new DataSource({
+    ...getDatabaseConfig(),
+    entities: [],
+    synchronize: false,
+  });
 
   AppDataSource.initialize()
     .then(async () => {
       await initSuperAdmin(AppDataSource);
       await AppDataSource.destroy();
+      process.exit(0);
     })
     .catch((error: any) => {
       console.error('Error:', error);

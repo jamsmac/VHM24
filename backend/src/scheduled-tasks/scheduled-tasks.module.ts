@@ -16,6 +16,7 @@ import { WarehouseModule } from '../modules/warehouse/warehouse.module';
 import { TransactionsModule } from '../modules/transactions/transactions.module';
 import { CounterpartyModule } from '../modules/counterparty/counterparty.module';
 import { OperatorRatingsModule } from '../modules/operator-ratings/operator-ratings.module';
+import { AlertsModule } from '../modules/alerts/alerts.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { OperatorRatingsModule } from '../modules/operator-ratings/operator-rati
     TransactionsModule,
     CounterpartyModule,
     OperatorRatingsModule,
+    AlertsModule,
   ],
   providers: [ScheduledTasksService],
 })

@@ -32,7 +32,9 @@ import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { User } from '../users/entities/user.entity';
 import { TwoFactorAuthService } from './services/two-factor-auth.service';
+import { TwoFactorAuthService as SecurityTwoFactorAuthService } from '@modules/security/services/two-factor-auth.service';
 import { SessionService } from './services/session.service';
+import { VerifyBackupCodeDto } from './dto/verify-backup-code.dto';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -40,6 +42,7 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly twoFactorAuthService: TwoFactorAuthService,
+    private readonly securityTwoFactorAuthService: SecurityTwoFactorAuthService,
     private readonly sessionService: SessionService,
     private readonly cookieService: CookieService,
   ) {}
@@ -88,7 +91,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Регистрация нового пользователя (оператора)' })
   @ApiResponse({
     status: 201,
-    description: 'Пользователь успешно зарегистрирован',
+    description: 'Пользователь успешно зарегистрирован. Токены устанавливаются в httpOnly cookies (SEC-1).',
     type: AuthResponseDto,
   })
   @ApiResponse({
@@ -117,6 +120,8 @@ export class AuthController {
   }
 
   @Post('refresh')
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 10, ttl: 60000 } }) // 10 attempts per minute (SEC-2)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Обновление токенов' })
   @ApiResponse({
@@ -125,6 +130,10 @@ export class AuthController {
     type: AuthTokensDto,
   })
   @ApiResponse({ status: 401, description: 'Неверный refresh token' })
+  @ApiResponse({
+    status: 429,
+    description: 'Слишком много попыток обновления токенов. Превышен лимит (10 попыток в минуту).',
+  })
   async refresh(
     @Body() refreshTokenDto: RefreshTokenDto,
     @Req() req: Request,
@@ -132,6 +141,10 @@ export class AuthController {
   ): Promise<AuthTokens> {
     // SEC-1: Try to get refresh token from cookie first, then from body
     const refreshToken = req.cookies?.refresh_token || refreshTokenDto.refreshToken;
+
+    if (!refreshToken) {
+      throw new BadRequestException('Refresh token не предоставлен');
+    }
 
     const tokens = await this.authService.refreshTokens(refreshToken);
 
@@ -439,6 +452,52 @@ export class AuthController {
 
     // Complete login
     const authResponse = await this.authService.complete2FALogin(user.id, dto.token, ip, userAgent);
+
+    // SEC-1: Set httpOnly cookies for XSS protection
+    if (authResponse.access_token && authResponse.refresh_token) {
+      this.cookieService.setAuthCookies(res, authResponse.access_token, authResponse.refresh_token);
+    }
+
+    return authResponse;
+  }
+
+  @Post('2fa/login/backup')
+  @UseGuards(ThrottlerGuard, JwtAuthGuard, IpWhitelistGuard)
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 attempts per minute
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Завершить вход с резервным кодом 2FA',
+    description: 'Завершает процесс входа используя резервный код вместо TOTP',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Вход завершен, токены обновлены. SEC-1: Tokens are also set as httpOnly cookies.',
+  })
+  @ApiResponse({ status: 400, description: 'Неверный резервный код' })
+  @ApiResponse({ status: 401, description: 'Не авторизован' })
+  @ApiResponse({
+    status: 429,
+    description: 'Слишком много попыток входа с резервным кодом. Превышен лимит (5 попыток в минуту).',
+  })
+  async complete2FALoginWithBackupCode(
+    @CurrentUser() user: User,
+    @Body() dto: VerifyBackupCodeDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<AuthResponse> {
+    const ip = req.ip || req.socket.remoteAddress || '0.0.0.0';
+    const userAgent = req.headers['user-agent'];
+
+    // Verify backup code using security service
+    const isValid = await this.securityTwoFactorAuthService.verifyBackupCode(user.id, dto.code);
+
+    if (!isValid) {
+      throw new BadRequestException('Неверный резервный код двухфакторной аутентификации');
+    }
+
+    // Complete login (generates new tokens and creates session)
+    const authResponse = await this.authService.complete2FALogin(user.id, 'backup', ip, userAgent);
 
     // SEC-1: Set httpOnly cookies for XSS protection
     if (authResponse.access_token && authResponse.refresh_token) {

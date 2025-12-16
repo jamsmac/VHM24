@@ -1,21 +1,21 @@
 /**
- * Secure Token Storage Service
+ * Secure Token Storage Service - Phase 2
  *
- * ⚠️ MIGRATION NOTICE: This file now re-exports from auth-storage-secure.ts
+ * SEC-1: httpOnly Cookie Authentication
  *
- * All code now uses the enhanced secure storage implementation with:
- * - ✅ Token encryption in storage
- * - ✅ Session hijacking detection
- * - ✅ Auto-refresh before expiry
- * - ✅ Memory-first storage strategy
- *
+ * This file re-exports the secure storage implementation.
  * See auth-storage-secure.ts for implementation details.
- * See SECURITY.md for full security architecture documentation.
  *
- * Future: Phase 2 will add httpOnly cookie support (requires backend update)
+ * Phase 2 Features:
+ * - ✅ Tokens stored in httpOnly cookies (XSS immune)
+ * - ✅ User data stored in sessionStorage (for UI only)
+ * - ✅ Automatic cookie management by browser
+ * - ✅ CSRF protection via SameSite=Strict
+ *
+ * @see backend/src/modules/auth/utils/cookie.utils.ts for cookie settings
  */
 
-// Re-export everything from the new secure implementation
+// Re-export everything from the secure implementation
 export {
   authStorage,
   type TokenData,

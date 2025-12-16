@@ -1,6 +1,7 @@
 # ============================================================================
 # VendHub Manager - Production-Ready Multi-Stage Dockerfile
 # ============================================================================
+# Build context: repository root (for Railway deployment)
 
 # ----------------------------------------------------------------------------
 # Stage 1: Dependencies
@@ -9,11 +10,10 @@ FROM node:20-alpine AS dependencies
 
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
+# Copy package files from backend folder
+COPY backend/package*.json ./
 
 # Install all dependencies (including dev dependencies for build)
-# Using npm install with legacy-peer-deps for better compatibility
 RUN npm install --legacy-peer-deps
 
 # ----------------------------------------------------------------------------
@@ -26,13 +26,13 @@ WORKDIR /app
 # Copy dependencies from previous stage
 COPY --from=dependencies /app/node_modules ./node_modules
 
-# Copy source code
-COPY . .
+# Copy backend source code
+COPY backend/ .
 
-# Build the application
-RUN npm run build
+# Build the application using nest CLI directly
+RUN ./node_modules/.bin/nest build
 
-# Remove dev dependencies with legacy peer deps for compatibility
+# Remove dev dependencies
 RUN npm prune --production --legacy-peer-deps
 
 # ----------------------------------------------------------------------------
@@ -53,13 +53,17 @@ RUN addgroup -g 1001 -S nodejs && \
     adduser -S nestjs -u 1001
 
 # Copy package files
-COPY --chown=nestjs:nodejs package*.json ./
+COPY --chown=nestjs:nodejs backend/package*.json ./
 
 # Copy production dependencies
 COPY --chown=nestjs:nodejs --from=build /app/node_modules ./node_modules
 
 # Copy built application
 COPY --chown=nestjs:nodejs --from=build /app/dist ./dist
+
+# Copy startup script
+COPY --chown=nestjs:nodejs backend/startup.sh ./startup.sh
+RUN chmod +x ./startup.sh
 
 # Create necessary directories with proper permissions
 RUN mkdir -p /app/uploads /app/temp/voice && \
@@ -78,5 +82,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
 # Use dumb-init to handle signals properly
 ENTRYPOINT ["dumb-init", "--"]
 
-# Start the application
-CMD ["node", "dist/main"]
+# Start the application via startup script
+CMD ["./startup.sh"]

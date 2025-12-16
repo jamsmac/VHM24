@@ -1,49 +1,60 @@
 'use client'
 
-import { Bell, Search, User, LogOut } from 'lucide-react'
+import { Search, User, LogOut, Settings, Command } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useState } from 'react'
+import Link from 'next/link'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { LanguageToggle } from '@/components/LanguageToggle'
+import { NotificationCenter } from '@/components/notifications/NotificationCenter'
+import { Breadcrumbs, BreadcrumbsCompact } from '@/components/layout/Breadcrumbs'
 import { useTranslations } from '@/providers/I18nProvider'
+import { useCommandPaletteContext } from '@/providers/CommandPaletteProvider'
 
 export function Header() {
   const { user, logout } = useAuth()
   const { t } = useTranslations()
   const [showUserMenu, setShowUserMenu] = useState(false)
+  const { open: openCommandPalette } = useCommandPaletteContext()
+
+  const isMac = typeof navigator !== 'undefined' && navigator.platform.toUpperCase().indexOf('MAC') >= 0
 
   return (
     <header className="bg-card border-b border-border h-16" role="banner">
       <div className="h-full px-6 flex items-center justify-between">
-        {/* Search */}
-        <div className="flex-1 max-w-lg">
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
-            </div>
-            <input
-              type="text"
-              className="block w-full pl-10 pr-3 py-2 border border-input rounded-md leading-5 bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring focus:border-ring sm:text-sm"
-              placeholder={t('common.search')}
-              aria-label={t('common.search')}
-            />
+        {/* Left side: Breadcrumbs + Search */}
+        <div className="flex items-center gap-4 flex-1">
+          {/* Breadcrumbs - hidden on mobile */}
+          <div className="hidden md:block">
+            <Breadcrumbs />
+          </div>
+          {/* Compact breadcrumbs for mobile */}
+          <div className="md:hidden">
+            <BreadcrumbsCompact />
+          </div>
+
+          {/* Search Trigger */}
+          <div className="flex-1 max-w-lg">
+          <button
+            onClick={openCommandPalette}
+            className="w-full flex items-center gap-3 px-3 py-2 text-left border border-input rounded-md bg-background hover:bg-accent/50 transition-colors group"
+          >
+            <Search className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+            <span className="flex-1 text-sm text-muted-foreground">
+              {t('common.search')}...
+            </span>
+            <kbd className="hidden md:inline-flex items-center gap-0.5 px-2 py-0.5 text-xs font-medium text-muted-foreground bg-muted rounded border border-border">
+              {isMac ? <Command className="h-3 w-3" /> : 'Ctrl'}
+              <span>K</span>
+            </kbd>
+          </button>
           </div>
         </div>
 
         {/* Right side */}
         <div className="flex items-center space-x-4">
           {/* Notifications */}
-          <button
-            className="relative p-2 text-muted-foreground hover:text-foreground transition-colors"
-            aria-label={t('nav.notifications')}
-          >
-            <span className="sr-only">{t('nav.notifications')}</span>
-            <Bell className="h-6 w-6" aria-hidden="true" />
-            <span
-              className="absolute top-0 right-0 block h-2 w-2 rounded-full bg-destructive ring-2 ring-card"
-              aria-label="New notifications"
-            />
-          </button>
+          <NotificationCenter />
 
           {/* Language Toggle */}
           <LanguageToggle />
@@ -75,6 +86,25 @@ export function Header() {
                 role="menu"
                 aria-label="User menu options"
               >
+                <Link
+                  href="/dashboard/profile"
+                  onClick={() => setShowUserMenu(false)}
+                  className="flex items-center w-full px-4 py-2 text-sm text-popover-foreground hover:bg-accent hover:text-accent-foreground"
+                  role="menuitem"
+                >
+                  <User className="mr-3 h-4 w-4" aria-hidden="true" />
+                  Профиль
+                </Link>
+                <Link
+                  href="/dashboard/settings"
+                  onClick={() => setShowUserMenu(false)}
+                  className="flex items-center w-full px-4 py-2 text-sm text-popover-foreground hover:bg-accent hover:text-accent-foreground"
+                  role="menuitem"
+                >
+                  <Settings className="mr-3 h-4 w-4" aria-hidden="true" />
+                  Настройки
+                </Link>
+                <hr className="my-1 border-border" />
                 <button
                   onClick={logout}
                   className="flex items-center w-full px-4 py-2 text-sm text-popover-foreground hover:bg-accent hover:text-accent-foreground"

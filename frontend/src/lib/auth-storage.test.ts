@@ -1,7 +1,13 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { authStorage, type UserData } from './auth-storage'
 
-describe('AuthStorage', () => {
+/**
+ * Auth Storage Tests - Phase 2 (httpOnly Cookies)
+ *
+ * In Phase 2, tokens are stored in httpOnly cookies (managed by browser).
+ * This test file tests the user data storage and auth state management.
+ */
+describe('AuthStorage - Phase 2 (httpOnly Cookies)', () => {
   const mockUser: UserData = {
     id: '123',
     email: 'test@example.com',
@@ -21,180 +27,235 @@ describe('AuthStorage', () => {
     localStorage.clear()
   })
 
-  describe('Token Management', () => {
-    it('should store and retrieve access token', () => {
-      const token = 'test-access-token'
-      authStorage.setTokens(token, undefined, 3600)
-
-      expect(authStorage.getAccessToken()).toBe(token)
-    })
-
-    it('should store refresh token', () => {
-      authStorage.setTokens('access-token', 'refresh-token', 3600)
-
-      expect(authStorage.getRefreshToken()).toBe('refresh-token')
-    })
-
-    it('should return null for expired token', () => {
-      // Set token that expires immediately
-      authStorage.setTokens('expired-token', undefined, -1)
-
-      // Wait a tick for expiration
-      expect(authStorage.getAccessToken()).toBeNull()
-    })
-
-    it('should check if token is expired', () => {
-      // Fresh token (1 hour)
-      authStorage.setTokens('fresh-token', undefined, 3600)
-      expect(authStorage.isTokenExpired()).toBe(false)
-
-      // Expired token
-      authStorage.setTokens('expired-token', undefined, -1)
-      expect(authStorage.isTokenExpired()).toBe(true)
-    })
-
-    it('should clear tokens', () => {
-      authStorage.setTokens('token', 'refresh', 3600)
-      authStorage.clearTokens()
-
-      expect(authStorage.getAccessToken()).toBeNull()
-      expect(authStorage.getRefreshToken()).toBeNull()
-    })
-  })
-
   describe('User Data Management', () => {
-    it('should store and retrieve user data', () => {
-      authStorage.setUser(mockUser)
+    it('should store and retrieve user data via handleLogin', () => {
+      authStorage.handleLogin(mockUser)
 
       const retrieved = authStorage.getUser()
       expect(retrieved).toEqual(mockUser)
     })
 
-    it('should clear user data', () => {
-      authStorage.setUser(mockUser)
+    it('should update user data via setUser', () => {
+      authStorage.handleLogin(mockUser)
+
+      const updatedUser = { ...mockUser, full_name: 'Updated Name' }
+      authStorage.setUser(updatedUser)
+
+      expect(authStorage.getUser()).toEqual(updatedUser)
+    })
+
+    it('should clear user data on clearStorage', () => {
+      authStorage.handleLogin(mockUser)
       authStorage.clearStorage()
 
       expect(authStorage.getUser()).toBeNull()
     })
+
+    it('should set isLoggedIn to true after handleLogin', () => {
+      expect(authStorage.isLoggedIn()).toBe(false)
+
+      authStorage.handleLogin(mockUser)
+
+      expect(authStorage.isLoggedIn()).toBe(true)
+    })
+
+    it('should set isLoggedIn to false after clearStorage', () => {
+      authStorage.handleLogin(mockUser)
+      expect(authStorage.isLoggedIn()).toBe(true)
+
+      authStorage.clearStorage()
+
+      expect(authStorage.isLoggedIn()).toBe(false)
+    })
   })
 
   describe('Storage Persistence', () => {
-    it('should persist tokens in sessionStorage', () => {
-      authStorage.setTokens('test-token', 'refresh-token', 3600)
-
-      // Check for v2 keys (encrypted storage)
-      const stored = sessionStorage.getItem('__auth_token_v2')
-      expect(stored).toBeTruthy()
-
-      // Verify token can be retrieved (decrypted)
-      expect(authStorage.getAccessToken()).toBe('test-token')
-      expect(authStorage.getRefreshToken()).toBe('refresh-token')
-    })
-
     it('should persist user data in sessionStorage', () => {
-      authStorage.setUser(mockUser)
+      authStorage.handleLogin(mockUser)
 
-      // Check for v2 key (encrypted storage)
-      const stored = sessionStorage.getItem('__user_data_v2')
+      // Check for v3 key (Phase 2)
+      const stored = sessionStorage.getItem('__user_data_v3')
       expect(stored).toBeTruthy()
 
-      // Verify user can be retrieved (decrypted)
+      // Verify user can be retrieved
       const retrieved = authStorage.getUser()
       expect(retrieved).toEqual(mockUser)
     })
 
-    it('should persist data across page reloads (via sessionStorage)', () => {
-      // Set tokens and user
-      authStorage.setTokens('persistent-token', 'refresh-token', 3600)
-      authStorage.setUser(mockUser)
+    it('should not use localStorage for user data', () => {
+      authStorage.handleLogin(mockUser)
 
-      // Verify data is in sessionStorage (v2 keys)
-      const tokenData = sessionStorage.getItem('__auth_token_v2')
-      const userData = sessionStorage.getItem('__user_data_v2')
-      const refreshToken = sessionStorage.getItem('__refresh_token_v2')
-
-      expect(tokenData).toBeTruthy()
-      expect(userData).toBeTruthy()
-      expect(refreshToken).toBeTruthy()
-
-      // Verify we can retrieve it (decrypted)
-      expect(authStorage.getAccessToken()).toBe('persistent-token')
-      expect(authStorage.getUser()).toEqual(mockUser)
+      // Check localStorage is not used
+      expect(localStorage.getItem('__user_data_v3')).toBeNull()
+      expect(localStorage.getItem('user_data')).toBeNull()
     })
   })
 
-  describe('Migration from localStorage', () => {
-    it('should migrate old localStorage data', () => {
+  describe('Auth Events', () => {
+    it('should notify listeners on login', () => {
+      const listener = vi.fn()
+      const unsubscribe = authStorage.subscribe(listener)
+
+      authStorage.handleLogin(mockUser)
+
+      expect(listener).toHaveBeenCalledWith('login', { user: mockUser })
+
+      unsubscribe()
+    })
+
+    it('should notify listeners on logout', () => {
+      const listener = vi.fn()
+      authStorage.handleLogin(mockUser)
+
+      const unsubscribe = authStorage.subscribe(listener)
+      authStorage.clearStorage()
+
+      expect(listener).toHaveBeenCalledWith('logout')
+
+      unsubscribe()
+    })
+
+    it('should notify listeners on user update', () => {
+      const listener = vi.fn()
+      authStorage.handleLogin(mockUser)
+
+      const unsubscribe = authStorage.subscribe(listener)
+
+      const updatedUser = { ...mockUser, full_name: 'New Name' }
+      authStorage.setUser(updatedUser)
+
+      expect(listener).toHaveBeenCalledWith('user-updated', { user: updatedUser })
+
+      unsubscribe()
+    })
+
+    it('should notify listeners on token refresh', () => {
+      const listener = vi.fn()
+      const unsubscribe = authStorage.subscribe(listener)
+
+      authStorage.handleTokenRefresh()
+
+      expect(listener).toHaveBeenCalledWith('token-refreshed')
+
+      unsubscribe()
+    })
+
+    it('should notify listeners on auth failure', () => {
+      const listener = vi.fn()
+      authStorage.handleLogin(mockUser)
+
+      const unsubscribe = authStorage.subscribe(listener)
+      authStorage.handleAuthFailure()
+
+      expect(listener).toHaveBeenCalledWith('token-expired')
+
+      unsubscribe()
+    })
+
+    it('should allow unsubscribing from events', () => {
+      const listener = vi.fn()
+      const unsubscribe = authStorage.subscribe(listener)
+
+      unsubscribe()
+      authStorage.handleLogin(mockUser)
+
+      expect(listener).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('Old Storage Cleanup', () => {
+    it('should clean up Phase 1 storage keys', () => {
       // Set old format data
+      sessionStorage.setItem('__auth_token_v2', 'old-token')
+      sessionStorage.setItem('__refresh_token_v2', 'old-refresh')
+      sessionStorage.setItem('__user_data_v2', JSON.stringify(mockUser))
+      sessionStorage.setItem('__session_fp', 'fingerprint')
       localStorage.setItem('auth_token', 'old-token')
       localStorage.setItem('user_data', JSON.stringify(mockUser))
 
-      authStorage.migrateFromOldStorage()
+      // handleLogin should clean up old keys
+      authStorage.handleLogin(mockUser)
 
-      // Check migrated
-      expect(authStorage.getAccessToken()).toBe('old-token')
-      expect(authStorage.getUser()).toEqual(mockUser)
-
-      // Check old data cleared
-      expect(localStorage.getItem('auth_token')).toBeNull()
-      expect(localStorage.getItem('user_data')).toBeNull()
-    })
-
-    it('should handle migration errors gracefully', () => {
-      localStorage.setItem('auth_token', 'token')
-      localStorage.setItem('user_data', 'invalid-json')
-
-      expect(() => {
-        authStorage.migrateFromOldStorage()
-      }).not.toThrow()
-    })
-  })
-
-  describe('Security Features', () => {
-    it('should use sessionStorage instead of localStorage', () => {
-      authStorage.setTokens('token', 'refresh', 3600)
-
-      // Check sessionStorage has it (v2 key)
-      expect(sessionStorage.getItem('__auth_token_v2')).toBeTruthy()
-
-      // Check localStorage doesn't have new data
-      expect(localStorage.getItem('__auth_token_v2')).toBeNull()
-      expect(localStorage.getItem('__auth_token')).toBeNull()
-    })
-
-    it('should clear all storage on clearStorage', () => {
-      authStorage.setTokens('token', 'refresh', 3600)
-      authStorage.setUser(mockUser)
-
-      // Set old format too
-      localStorage.setItem('auth_token', 'old')
-      localStorage.setItem('user_data', 'old')
-
-      authStorage.clearStorage()
-
-      // Check everything cleared
-      expect(sessionStorage.getItem('__auth_token')).toBeNull()
-      expect(sessionStorage.getItem('__user_data')).toBeNull()
+      // Old keys should be removed
+      expect(sessionStorage.getItem('__auth_token_v2')).toBeNull()
+      expect(sessionStorage.getItem('__refresh_token_v2')).toBeNull()
+      expect(sessionStorage.getItem('__user_data_v2')).toBeNull()
       expect(localStorage.getItem('auth_token')).toBeNull()
       expect(localStorage.getItem('user_data')).toBeNull()
     })
   })
 
-  describe('Token Expiration Buffer', () => {
-    it('should consider token expired 5 minutes before actual expiry', () => {
-      // Token expires in 4 minutes (less than 5-minute buffer)
-      const fourMinutes = 4 * 60
-      authStorage.setTokens('soon-expired', undefined, fourMinutes)
+  describe('Security Info', () => {
+    it('should return correct security info', () => {
+      const info = authStorage.getSecurityInfo()
 
-      expect(authStorage.isTokenExpired()).toBe(true)
+      expect(info.phase).toBe('Phase 2 - httpOnly Cookie Authentication')
+      expect(info.tokenStorage).toBe('httpOnly cookies (browser-managed)')
+      expect(info.xssProtection).toBe('Full (tokens not accessible to JavaScript)')
+      expect(info.csrfProtection).toBe('SameSite=Strict cookies')
     })
 
-    it('should not consider token expired if more than 5 minutes left', () => {
-      // Token expires in 10 minutes (more than 5-minute buffer)
-      const tenMinutes = 10 * 60
-      authStorage.setTokens('still-valid', undefined, tenMinutes)
+    it('should reflect authentication state in security info', () => {
+      expect(authStorage.getSecurityInfo().isAuthenticated).toBe(false)
+      expect(authStorage.getSecurityInfo().hasUserData).toBe(false)
 
-      expect(authStorage.isTokenExpired()).toBe(false)
+      authStorage.handleLogin(mockUser)
+
+      expect(authStorage.getSecurityInfo().isAuthenticated).toBe(true)
+      expect(authStorage.getSecurityInfo().hasUserData).toBe(true)
+    })
+  })
+
+  describe('Deprecated Methods (Backward Compatibility)', () => {
+    it('getAccessToken should return null and log warning', () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+      const result = authStorage.getAccessToken()
+
+      expect(result).toBeNull()
+      expect(warnSpy).toHaveBeenCalledWith(
+        'getAccessToken() is deprecated in Phase 2. Tokens are in httpOnly cookies.'
+      )
+
+      warnSpy.mockRestore()
+    })
+
+    it('getRefreshToken should return null and log warning', () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+      const result = authStorage.getRefreshToken()
+
+      expect(result).toBeNull()
+      expect(warnSpy).toHaveBeenCalledWith(
+        'getRefreshToken() is deprecated in Phase 2. Tokens are in httpOnly cookies.'
+      )
+
+      warnSpy.mockRestore()
+    })
+
+    it('setTokens should log warning and do nothing', () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+      authStorage.setTokens()
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        'setTokens() is deprecated in Phase 2. Backend sets httpOnly cookies.'
+      )
+
+      warnSpy.mockRestore()
+    })
+
+    it('isTokenExpired should return false and log warning', () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+      const result = authStorage.isTokenExpired()
+
+      expect(result).toBe(false)
+      expect(warnSpy).toHaveBeenCalledWith(
+        'isTokenExpired() is deprecated in Phase 2. Cookie expiry is browser-managed.'
+      )
+
+      warnSpy.mockRestore()
     })
   })
 })

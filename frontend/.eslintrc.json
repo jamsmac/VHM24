@@ -1,7 +1,8 @@
 {
   "extends": [
     "next/core-web-vitals",
-    "plugin:jsx-a11y/recommended"
+    "plugin:jsx-a11y/recommended",
+    "plugin:storybook/recommended"
   ],
   "rules": {
     "react-hooks/exhaustive-deps": "warn",
@@ -9,12 +10,19 @@
     "no-console": [
       "warn",
       {
-        "allow": ["warn", "error", "info"]
+        "allow": [
+          "warn",
+          "error",
+          "info"
+        ]
       }
     ],
     "prefer-const": "warn",
     "no-var": "error",
-    "eqeqeq": ["warn", "always"],
+    "eqeqeq": [
+      "warn",
+      "always"
+    ],
     "curly": "warn",
     "react/self-closing-comp": "warn",
     "react/jsx-curly-brace-presence": [
@@ -28,9 +36,17 @@
     "jsx-a11y/anchor-is-valid": [
       "error",
       {
-        "components": ["Link"],
-        "specialLink": ["hrefLeft", "hrefRight"],
-        "aspects": ["invalidHref", "preferButton"]
+        "components": [
+          "Link"
+        ],
+        "specialLink": [
+          "hrefLeft",
+          "hrefRight"
+        ],
+        "aspects": [
+          "invalidHref",
+          "preferButton"
+        ]
       }
     ],
     "jsx-a11y/aria-props": "error",

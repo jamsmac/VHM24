@@ -1,167 +1,68 @@
 # КРИТИЧЕСКИЕ ПРОБЛЕМЫ VENDHUB MANAGER
 
 **Дата:** 2025-12-14
-**Статус:** Требуют немедленного внимания
-**Обновлено:** Объединено с результатами security-аудита
+**Статус:** Security blockers RESOLVED ✅
+**Обновлено:** 2025-12-14 - SEC-1, SEC-2, SEC-3 исправлены
 
 ---
 
 ## P0 CRITICAL - SECURITY BLOCKERS
 
-### SEC-1: Токены в localStorage (XSS Vulnerability)
+### SEC-1: Токены в localStorage (XSS Vulnerability) ✅ RESOLVED
 
 **CVSS Score:** 7.5 HIGH
-**Статус:** PRODUCTION BLOCKER
+**Статус:** ✅ ИСПРАВЛЕНО (commit d2800b0, 644de68)
 
-**Проблема:** Access и Refresh токены хранятся в localStorage, что делает их доступными для XSS-атак.
+**Проблема:** Access и Refresh токены хранились в localStorage, что делало их доступными для XSS-атак.
 
-**Влияние:**
-- Полная компрометация сессии при XSS
-- Кража токенов через любой injected JavaScript
-- Возможность lateral movement между пользователями
-- Нарушение REQ-AUTH-52, REQ-AUTH-53
+**Решение реализовано:**
+- Backend: httpOnly cookies с SameSite=Strict
+- Frontend: Phase 2 cookie-based auth, withCredentials: true
+- Токены полностью недоступны JavaScript (XSS immune)
 
-**Локации:**
-- `frontend/lib/axios.ts` - сохранение токенов
-- `frontend/lib/auth-store.ts` - хранение в localStorage
-- `frontend/hooks/useAuth.ts` - чтение токенов
-
-**Текущий код (УЯЗВИМЫЙ):**
-```typescript
-// frontend/lib/auth-store.ts
-export const setTokens = (access: string, refresh: string) => {
-  localStorage.setItem('access_token', access);  // XSS VULNERABLE!
-  localStorage.setItem('refresh_token', refresh);
-};
-```
-
-**Решение:**
-```typescript
-// 1. Backend: Set httpOnly cookies
-// backend/src/modules/auth/auth.controller.ts
-@Post('login')
-async login(@Body() dto: LoginDto, @Res() res: Response) {
-  const tokens = await this.authService.login(dto);
-
-  res.cookie('access_token', tokens.accessToken, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
-    maxAge: 15 * 60 * 1000, // 15 min
-  });
-
-  res.cookie('refresh_token', tokens.refreshToken, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
-    path: '/api/auth/refresh',
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-  });
-
-  return res.json({ user: tokens.user });
-}
-
-// 2. Frontend: Remove localStorage usage
-// frontend/lib/auth-store.ts
-// DELETE localStorage token storage entirely
-// Use credentials: 'include' in fetch/axios
-```
-
-**Время исправления:** 4-6 часов
-**Приоритет:** НЕМЕДЛЕННО
-**Ответственный:** Backend + Frontend Lead
+**Коммиты:**
+- `644de68` - fix(security): implement httpOnly cookie-based auth (SEC-1)
+- `d2800b0` - fix(security): update frontend for httpOnly cookie auth (SEC-1)
 
 ---
 
-### SEC-2: Отсутствие Rate Limiting на Auth Endpoints
+### SEC-2: Rate Limiting на Auth Endpoints ✅ RESOLVED
 
 **CVSS Score:** 7.0 HIGH
-**Статус:** PRODUCTION BLOCKER
+**Статус:** ✅ УЖЕ РЕАЛИЗОВАНО
 
-**Проблема:** Эндпоинты `/auth/login`, `/auth/refresh`, `/auth/register` не защищены rate limiting.
+**Проблема:** Требовался rate limiting на auth endpoints.
 
-**Влияние:**
-- Brute-force атаки на пароли
-- Credential stuffing атаки
-- DoS через массовые запросы
-- Нарушение REQ-AUTH-44
-
-**Локация:** `backend/src/modules/auth/auth.controller.ts`
-
-**Текущий код:**
+**Решение уже реализовано:**
 ```typescript
-@Controller('auth')
-export class AuthController {
-  @Post('login')  // NO @Throttle() decorator!
-  async login(@Body() dto: LoginDto) { ... }
-}
+// auth.controller.ts - все endpoints защищены @Throttle
+@Post('login')
+@Throttle({ default: { limit: 5, ttl: 60000 } }) // 5/min
+
+@Post('register')
+@Throttle({ default: { limit: 3, ttl: 300000 } }) // 3/5min
+
+@Post('refresh')
+@Throttle({ default: { limit: 10, ttl: 60000 } }) // 10/min
+
+@Post('password-reset/*')
+@Throttle({ default: { limit: 3, ttl: 3600000 } }) // 3/hour
 ```
-
-**Решение:**
-```typescript
-import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
-
-@Controller('auth')
-@UseGuards(ThrottlerGuard)
-export class AuthController {
-  @Post('login')
-  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 attempts per minute
-  async login(@Body() dto: LoginDto) { ... }
-
-  @Post('refresh')
-  @Throttle({ default: { limit: 10, ttl: 60000 } }) // 10 per minute
-  async refresh(@Body() dto: RefreshDto) { ... }
-
-  @Post('register')
-  @Throttle({ default: { limit: 3, ttl: 300000 } }) // 3 per 5 min
-  async register(@Body() dto: RegisterDto) { ... }
-}
-```
-
-**Время исправления:** 2 часа
-**Приоритет:** НЕМЕДЛЕННО
-**Ответственный:** Backend Security
 
 ---
 
-### SEC-3: Refresh Token Reuse (Отсутствие ротации)
+### SEC-3: Refresh Token Rotation ✅ RESOLVED
 
 **CVSS Score:** 5.5 MEDIUM
-**Статус:** HIGH PRIORITY
+**Статус:** ✅ УЖЕ РЕАЛИЗОВАНО
 
-**Проблема:** Refresh token может использоваться многократно без ротации, что позволяет атакующему с украденным токеном генерировать новые access токены неограниченно.
+**Проблема:** Требовалась ротация refresh token при обновлении.
 
-**Влияние:**
-- Персистентный доступ при краже refresh token
-- Невозможность обнаружить компрометацию
-- Нарушение REQ-AUTH-55
-
-**Локация:** `backend/src/modules/auth/auth.service.ts`
-
-**Решение:**
+**Решение уже реализовано:**
 ```typescript
-async refreshTokens(refreshToken: string): Promise<TokenPair> {
-  const payload = await this.verifyRefreshToken(refreshToken);
-
-  // Invalidate old refresh token
-  await this.sessionService.revokeRefreshToken(refreshToken);
-
-  // Generate new pair with rotation
-  const newTokens = await this.generateTokenPair(payload.userId);
-
-  // Store new refresh token
-  await this.sessionService.storeRefreshToken(
-    payload.userId,
-    newTokens.refreshToken
-  );
-
-  return newTokens;
-}
+// auth.service.ts:397
+await this.sessionService.rotateRefreshToken(session.id, tokens.refresh_token);
 ```
-
-**Время исправления:** 3 часа
-**Приоритет:** ВЫСОКИЙ
-**Ответственный:** Backend Security
 
 ---
 
@@ -468,23 +369,23 @@ async create(@Req() req: RequestWithUser)
 
 ## СВОДКА
 
-| Severity | Category | Count | Estimated Time |
-|----------|----------|-------|----------------|
-| P0 Critical | Security | 3 | ~9 hours |
-| P0 Critical | Infrastructure | 2 | ~6 hours |
-| P1 High | Performance | 2 | ~6 hours |
-| P1 High | Quality | 3 | ~12 hours |
-| P2 Medium | Improvements | 3 | ~14 hours |
-| **TOTAL** | | **13** | **~47 hours** |
+| Severity | Category | Count | Status | Estimated Time |
+|----------|----------|-------|--------|----------------|
+| P0 Critical | Security | 3 | ✅ RESOLVED | ~9 hours |
+| P0 Critical | Infrastructure | 2 | 🔄 Pending | ~6 hours |
+| P1 High | Performance | 2 | 🔄 Pending | ~6 hours |
+| P1 High | Quality | 3 | 🔄 Pending | ~12 hours |
+| P2 Medium | Improvements | 3 | 🔄 Pending | ~14 hours |
+| **TOTAL** | | **13** | **3 done** | **~38 hours remaining** |
 
 ---
 
 ## ПРИОРИТЕТ ИСПРАВЛЕНИЙ
 
-### Phase 1: Security First (БЛОКЕРЫ) - 1-2 дня
-- [ ] SEC-1: Миграция токенов в httpOnly cookies
-- [ ] SEC-2: Rate limiting на auth endpoints
-- [ ] SEC-3: Refresh token rotation
+### Phase 1: Security First (БЛОКЕРЫ) ✅ ЗАВЕРШЕНО
+- [x] SEC-1: Миграция токенов в httpOnly cookies ✅
+- [x] SEC-2: Rate limiting на auth endpoints ✅
+- [x] SEC-3: Refresh token rotation ✅
 
 ### Phase 2: Infrastructure - 1 день
 - [ ] INFRA-1: CI/CD workflows
@@ -508,10 +409,10 @@ async create(@Req() req: RequestWithUser)
 
 ## СТАТУС ОТСЛЕЖИВАНИЯ
 
-### Security Blockers
-- [ ] SEC-1: localStorage tokens → httpOnly cookies
-- [ ] SEC-2: Rate limiting на /auth/*
-- [ ] SEC-3: Refresh token rotation
+### Security Blockers ✅ ALL RESOLVED
+- [x] SEC-1: localStorage tokens → httpOnly cookies ✅ (d2800b0, 644de68)
+- [x] SEC-2: Rate limiting на /auth/* ✅ (уже реализовано)
+- [x] SEC-3: Refresh token rotation ✅ (уже реализовано)
 
 ### Infrastructure
 - [ ] INFRA-1: CI/CD workflows

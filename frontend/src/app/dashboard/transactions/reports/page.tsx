@@ -233,7 +233,7 @@ export default function TransactionReportsPage() {
                   cx="50%"
                   cy="50%"
                   outerRadius={100}
-                  label={(entry) => `${entry.machine_number}: ${formatCurrency(entry.revenue)}`}
+                  label={({ name, value }: { name?: string; value?: number }) => `${name || ''}: ${formatCurrency(value || 0)}`}
                 >
                   {(machineStats as MachineStatItem[]).map((_: MachineStatItem, index: number) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />

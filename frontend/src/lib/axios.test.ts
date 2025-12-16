@@ -1,70 +1,75 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import axios from 'axios'
 import { authStorage } from './auth-storage'
 
 // Mock auth storage
 vi.mock('./auth-storage', () => ({
   authStorage: {
-    ensureValidToken: vi.fn(),
-    refreshAccessToken: vi.fn(),
     clearStorage: vi.fn(),
-    getAccessToken: vi.fn(),
   },
 }))
 
-describe('Axios Client', () => {
+/**
+ * Axios Client Tests - Phase 2 (httpOnly Cookies)
+ *
+ * In Phase 2, tokens are stored in httpOnly cookies.
+ * - Request interceptor no longer injects Authorization header
+ * - Browser sends cookies automatically (withCredentials: true)
+ * - 401 handling calls /auth/refresh endpoint directly
+ */
+describe('Axios Client - Phase 2', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.resetModules()
   })
 
+  describe('Client Configuration', () => {
+    it('should have withCredentials set to true', async () => {
+      const { apiClient } = await import('./axios')
+
+      expect(apiClient.defaults.withCredentials).toBe(true)
+    })
+
+    it('should have correct Content-Type header', async () => {
+      const { apiClient } = await import('./axios')
+
+      expect(apiClient.defaults.headers['Content-Type']).toBe('application/json')
+    })
+
+    it('should have timeout configured', async () => {
+      const { apiClient } = await import('./axios')
+
+      expect(apiClient.defaults.timeout).toBe(30000)
+    })
+  })
+
   describe('Request Interceptor', () => {
-    it('should add authorization header with valid token', async () => {
-      const mockToken = 'valid-access-token'
-      vi.mocked(authStorage.ensureValidToken).mockResolvedValue(mockToken)
+    it('should not add Authorization header for protected endpoints', async () => {
+      const { apiClient } = await import('./axios')
 
-      // Import after mocking to get configured instance
-      const { default: apiClient } = await import('./axios')
-
-      const config: any = { headers: {} }
+      const config: any = {
+        url: '/api/users',
+        headers: {},
+      }
       const interceptor = (apiClient.interceptors.request as any).handlers[0]
 
       const result = await interceptor.fulfilled(config)
 
-      expect(authStorage.ensureValidToken).toHaveBeenCalled()
-      expect(result.headers.Authorization).toBe(`Bearer ${mockToken}`)
+      // In Phase 2, no Authorization header is added - cookies handle auth
+      expect(result.headers.Authorization).toBeUndefined()
     })
 
-    it('should handle request without token by redirecting to login', async () => {
-      vi.mocked(authStorage.ensureValidToken).mockResolvedValue(null)
+    it('should pass through config for public endpoints', async () => {
+      const { apiClient } = await import('./axios')
 
-      // Mock window.location
-      const mockLocation = { href: '' }
-      Object.defineProperty(window, 'location', {
-        value: mockLocation,
-        writable: true,
-      })
-
-      const { default: apiClient } = await import('./axios')
-
-      const config: any = { headers: {}, url: '/api/test' }
+      const config: any = {
+        url: '/auth/login',
+        headers: {},
+      }
       const interceptor = (apiClient.interceptors.request as any).handlers[0]
 
-      // Should reject and redirect to login when no token
-      await expect(interceptor.fulfilled(config)).rejects.toThrow('No valid authentication token')
-      expect(mockLocation.href).toBe('/login')
-    })
+      const result = await interceptor.fulfilled(config)
 
-    it('should handle token refresh error by rejecting', async () => {
-      vi.mocked(authStorage.ensureValidToken).mockRejectedValue(new Error('Refresh failed'))
-
-      const { default: apiClient } = await import('./axios')
-
-      const config: any = { headers: {}, url: '/api/test' }
-      const interceptor = (apiClient.interceptors.request as any).handlers[0]
-
-      // Should reject with the refresh error
-      await expect(interceptor.fulfilled(config)).rejects.toThrow('Refresh failed')
+      expect(result.url).toBe('/auth/login')
     })
   })
 
@@ -78,7 +83,7 @@ describe('Axios Client', () => {
         config: {},
       }
 
-      const { default: apiClient } = await import('./axios')
+      const { apiClient } = await import('./axios')
       const interceptor = (apiClient.interceptors.response as any).handlers[0]
 
       const result = interceptor.fulfilled(mockResponse)
@@ -88,43 +93,6 @@ describe('Axios Client', () => {
   })
 
   describe('Response Interceptor - 401 Error Handling', () => {
-    it('should attempt token refresh on 401 error', async () => {
-      const mockError: {
-        response: { status: number; data: { message: string } }
-        config: { url: string; headers: Record<string, string>; _retry?: boolean }
-      } = {
-        response: {
-          status: 401,
-          data: { message: 'Unauthorized' },
-        },
-        config: {
-          url: '/api/test',
-          headers: {},
-        },
-      }
-
-      // Mock refresh to fail so we can test the refresh was attempted
-      vi.mocked(authStorage.refreshAccessToken).mockResolvedValue(false)
-
-      // Mock window.location for the redirect
-      const mockLocation = { href: '' }
-      Object.defineProperty(window, 'location', {
-        value: mockLocation,
-        writable: true,
-      })
-
-      const { default: apiClient } = await import('./axios')
-      const interceptor = (apiClient.interceptors.response as any).handlers[0]
-
-      // Should reject after failed refresh
-      await expect(interceptor.rejected(mockError)).rejects.toEqual(mockError)
-
-      // Verify refresh was attempted
-      expect(authStorage.refreshAccessToken).toHaveBeenCalled()
-      expect(mockError.config._retry).toBe(true)
-      expect(authStorage.clearStorage).toHaveBeenCalled()
-    })
-
     it('should not retry if already retried', async () => {
       const mockError = {
         response: {
@@ -138,14 +106,38 @@ describe('Axios Client', () => {
         },
       }
 
-      const { default: apiClient } = await import('./axios')
+      const { apiClient } = await import('./axios')
       const interceptor = (apiClient.interceptors.response as any).handlers[0]
 
       await expect(interceptor.rejected(mockError)).rejects.toEqual(mockError)
-      expect(authStorage.refreshAccessToken).not.toHaveBeenCalled()
     })
 
-    it('should redirect to login if refresh fails', async () => {
+    it('should not retry for auth endpoints', async () => {
+      const mockError = {
+        response: {
+          status: 401,
+          data: { message: 'Invalid credentials' },
+        },
+        config: {
+          url: '/auth/login',
+          headers: {},
+        },
+      }
+
+      const { apiClient } = await import('./axios')
+      const interceptor = (apiClient.interceptors.response as any).handlers[0]
+
+      await expect(interceptor.rejected(mockError)).rejects.toEqual(mockError)
+    })
+
+    it('should clear storage and redirect on auth failure', async () => {
+      // Mock window.location
+      const mockLocation = { href: '' }
+      Object.defineProperty(window, 'location', {
+        value: mockLocation,
+        writable: true,
+      })
+
       const mockError = {
         response: {
           status: 401,
@@ -154,54 +146,22 @@ describe('Axios Client', () => {
         config: {
           url: '/api/test',
           headers: {},
+          _retry: true, // Already retried, so will clear and redirect
         },
       }
 
-      vi.mocked(authStorage.refreshAccessToken).mockResolvedValue(false)
-
-      // Mock window.location
-      const mockLocation = { href: '' }
-      Object.defineProperty(window, 'location', {
-        value: mockLocation,
-        writable: true,
-      })
-
-      const { default: apiClient } = await import('./axios')
+      const { apiClient } = await import('./axios')
       const interceptor = (apiClient.interceptors.response as any).handlers[0]
 
-      await expect(interceptor.rejected(mockError)).rejects.toEqual(mockError)
+      try {
+        await interceptor.rejected(mockError)
+      } catch {
+        // Expected to reject
+      }
 
+      // After failed retry, should clear storage
       expect(authStorage.clearStorage).toHaveBeenCalled()
       expect(mockLocation.href).toBe('/login')
-    })
-
-    it('should handle refresh error and redirect', async () => {
-      const mockError = {
-        response: {
-          status: 401,
-          data: { message: 'Unauthorized' },
-        },
-        config: {
-          url: '/api/test',
-          headers: {},
-        },
-      }
-
-      vi.mocked(authStorage.refreshAccessToken).mockRejectedValue(new Error('Refresh failed'))
-
-      // Mock window.location
-      const mockLocation = { href: '' }
-      Object.defineProperty(window, 'location', {
-        value: mockLocation,
-        writable: true,
-      })
-
-      const { default: apiClient } = await import('./axios')
-      const interceptor = (apiClient.interceptors.response as any).handlers[0]
-
-      await expect(interceptor.rejected(mockError)).rejects.toEqual(mockError)
-
-      expect(authStorage.clearStorage).toHaveBeenCalled()
     })
   })
 
@@ -217,11 +177,10 @@ describe('Axios Client', () => {
         },
       }
 
-      const { default: apiClient } = await import('./axios')
+      const { apiClient } = await import('./axios')
       const interceptor = (apiClient.interceptors.response as any).handlers[0]
 
       await expect(interceptor.rejected(mockError)).rejects.toEqual(mockError)
-      expect(authStorage.refreshAccessToken).not.toHaveBeenCalled()
     })
 
     it('should handle network errors', async () => {
@@ -230,7 +189,7 @@ describe('Axios Client', () => {
         config: {},
       }
 
-      const { default: apiClient } = await import('./axios')
+      const { apiClient } = await import('./axios')
       const interceptor = (apiClient.interceptors.response as any).handlers[0]
 
       await expect(interceptor.rejected(mockError)).rejects.toEqual(mockError)
@@ -244,7 +203,7 @@ describe('Axios Client', () => {
         // No config
       }
 
-      const { default: apiClient } = await import('./axios')
+      const { apiClient } = await import('./axios')
       const interceptor = (apiClient.interceptors.response as any).handlers[0]
 
       await expect(interceptor.rejected(mockError)).rejects.toEqual(mockError)
