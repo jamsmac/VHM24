@@ -70,29 +70,40 @@ import { RateLimitModule } from './common/modules/rate-limit.module';
     // Database with connection pool
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        type: 'postgres',
-        host: configService.get('DATABASE_HOST'),
-        port: configService.get('DATABASE_PORT'),
-        username: configService.get('DATABASE_USER'),
-        password: configService.get('DATABASE_PASSWORD'),
-        database: configService.get('DATABASE_NAME'),
-        entities: [__dirname + '/**/*.entity{.ts,.js}'],
-        // NEVER use synchronize in production - always use migrations
-        synchronize:
-          configService.get('DATABASE_SYNCHRONIZE', 'false') === 'true' &&
-          configService.get('NODE_ENV') !== 'production',
-        logging: configService.get('NODE_ENV') === 'development',
-        migrations: [__dirname + '/database/migrations/*{.ts,.js}'],
-        migrationsRun: false,
-        // Connection pool configuration for better performance under load
-        extra: {
-          max: parseInt(configService.get('DB_POOL_MAX', '20')), // Maximum connections
-          min: parseInt(configService.get('DB_POOL_MIN', '5')), // Minimum connections
-          idleTimeoutMillis: 30000, // Close idle connections after 30s
-          connectionTimeoutMillis: 2000, // Wait max 2s for connection
-        },
-      }),
+      useFactory: (configService: ConfigService) => {
+        const databaseUrl = configService.get('DATABASE_URL');
+
+        // Support both DATABASE_URL and individual variables
+        const baseConfig = databaseUrl
+          ? { url: databaseUrl }
+          : {
+              host: configService.get('DATABASE_HOST'),
+              port: configService.get('DATABASE_PORT'),
+              username: configService.get('DATABASE_USER'),
+              password: configService.get('DATABASE_PASSWORD'),
+              database: configService.get('DATABASE_NAME'),
+            };
+
+        return {
+          type: 'postgres' as const,
+          ...baseConfig,
+          entities: [__dirname + '/**/*.entity{.ts,.js}'],
+          // NEVER use synchronize in production - always use migrations
+          synchronize:
+            configService.get('DATABASE_SYNCHRONIZE', 'false') === 'true' &&
+            configService.get('NODE_ENV') !== 'production',
+          logging: configService.get('NODE_ENV') === 'development',
+          migrations: [__dirname + '/database/migrations/*{.ts,.js}'],
+          migrationsRun: false,
+          // Connection pool configuration for better performance under load
+          extra: {
+            max: parseInt(configService.get('DB_POOL_MAX', '20')), // Maximum connections
+            min: parseInt(configService.get('DB_POOL_MIN', '5')), // Minimum connections
+            idleTimeoutMillis: 30000, // Close idle connections after 30s
+            connectionTimeoutMillis: 2000, // Wait max 2s for connection
+          },
+        };
+      },
       inject: [ConfigService],
     }),
 
