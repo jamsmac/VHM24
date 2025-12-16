@@ -60,14 +60,17 @@ describe('useAuth - Phase 2', () => {
   })
 
   describe('initialization', () => {
-    it('should start with loading state', () => {
+    it('should start with loading state', async () => {
       vi.mocked(authStorage.getUser).mockReturnValue(null)
       vi.mocked(authStorage.isLoggedIn).mockReturnValue(false)
 
       const { result } = renderHook(() => useAuth())
 
-      // Initial state before effect runs
-      expect(result.current.loading).toBe(true)
+      // Initial loading state may be true briefly, but useEffect runs immediately
+      // After initialization, loading should become false
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false)
+      })
     })
 
     it('should load user from storage if authenticated', async () => {

@@ -1,432 +1,362 @@
-'use client';
+'use client'
 
-import { useState } from 'react';
-import axios from 'axios';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { useState } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import {
+  intelligentImportApi,
+  ImportSession,
+  ImportSessionStatus,
+  statusLabels,
+  domainLabels,
+  getStatusColor,
+} from '@/lib/intelligent-import-api'
+import { Button } from '@/components/ui/button'
+import { ImportWizard } from '@/components/import/ImportWizard'
+import {
+  Upload,
+  History,
+  FileText,
+  Trash2,
+  Eye,
+  Loader2,
+  Clock,
+  User,
+} from 'lucide-react'
+import { format, formatDistanceToNow } from 'date-fns'
+import { ru } from 'date-fns/locale'
+import { toast } from 'sonner'
 
-interface ImportResult {
-  success: boolean;
-  imported: number;
-  failed: number;
-  errors?: Array<{ row: any; error: string }>;
-  message?: string;
-}
+type Tab = 'import' | 'history'
 
-type ImportType = 'nomenclature' | 'counterparties' | 'locations' | 'machines' | 'opening-balances';
-
-export default function ImportPage() {
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [importType, setImportType] = useState<ImportType>('nomenclature');
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<ImportResult | null>(null);
-  const [dragActive, setDragActive] = useState(false);
-
-  const handleDrag = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === 'dragenter' || e.type === 'dragover') {
-      setDragActive(true);
-    } else if (e.type === 'dragleave') {
-      setDragActive(false);
-    }
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
-
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleFileSelect(e.dataTransfer.files[0]);
-    }
-  };
-
-  const handleFileSelect = (file: File) => {
-    // Validate file type
-    const validTypes = [
-      'text/csv',
-      'application/vnd.ms-excel',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    ];
-
-    if (!validTypes.includes(file.type) && !file.name.endsWith('.csv') && !file.name.endsWith('.xlsx')) {
-      alert('Неверный формат файла. Поддерживаются только CSV и Excel файлы.');
-      return;
-    }
-
-    setSelectedFile(file);
-    setResult(null);
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      handleFileSelect(e.target.files[0]);
-    }
-  };
-
-  const handleUpload = async () => {
-    if (!selectedFile) {
-      alert('Выберите файл для импорта');
-      return;
-    }
-
-    setLoading(true);
-    setResult(null);
-
-    try {
-      const token = localStorage.getItem('access_token');
-      const formData = new FormData();
-      formData.append('file', selectedFile);
-      formData.append('type', importType);
-
-      // Use intelligent-import endpoint
-      const response = await axios.post(
-        'http://localhost:3000/intelligent-import/upload',
-        formData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'multipart/form-data',
-          },
-        }
-      );
-
-      setResult({
-        success: true,
-        imported: response.data.imported || response.data.created || 0,
-        failed: response.data.failed || 0,
-        errors: response.data.errors || [],
-        message: response.data.message,
-      });
-    } catch (error: any) {
-      console.error('Failed to import:', error);
-      setResult({
-        success: false,
-        imported: 0,
-        failed: 1,
-        message: error.response?.data?.message || 'Ошибка при импорте файла',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const clearSelection = () => {
-    setSelectedFile(null);
-    setResult(null);
-  };
+function SessionCard({ session, onView, onDelete }: {
+  session: ImportSession
+  onView: () => void
+  onDelete: () => void
+}) {
+  const statusColor = getStatusColor(session.status)
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Импорт данных</h1>
-        <p className="text-gray-600 mt-1">
-          Загрузите CSV или Excel файл для массового импорта данных
-        </p>
-      </div>
-
-      {/* Import Type Selection */}
-      <div className="bg-white shadow-sm rounded-lg p-6 mb-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">
-          Тип импортируемых данных
-        </h2>
-
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-          <button
-            onClick={() => setImportType('nomenclature')}
-            className={`px-4 py-3 rounded-lg border-2 text-left transition-colors ${
-              importType === 'nomenclature'
-                ? 'border-blue-500 bg-blue-50'
-                : 'border-gray-200 hover:border-gray-300'
-            }`}
-          >
-            <div className="font-medium text-gray-900">Номенклатура</div>
-            <div className="text-xs text-gray-500 mt-1">Товары и ингредиенты</div>
-          </button>
-
-          <button
-            onClick={() => setImportType('counterparties')}
-            className={`px-4 py-3 rounded-lg border-2 text-left transition-colors ${
-              importType === 'counterparties'
-                ? 'border-blue-500 bg-blue-50'
-                : 'border-gray-200 hover:border-gray-300'
-            }`}
-          >
-            <div className="font-medium text-gray-900">Контрагенты</div>
-            <div className="text-xs text-gray-500 mt-1">Поставщики и клиенты</div>
-          </button>
-
-          <button
-            onClick={() => setImportType('locations')}
-            className={`px-4 py-3 rounded-lg border-2 text-left transition-colors ${
-              importType === 'locations'
-                ? 'border-blue-500 bg-blue-50'
-                : 'border-gray-200 hover:border-gray-300'
-            }`}
-          >
-            <div className="font-medium text-gray-900">Локации</div>
-            <div className="text-xs text-gray-500 mt-1">Точки размещения</div>
-          </button>
-
-          <button
-            onClick={() => setImportType('machines')}
-            className={`px-4 py-3 rounded-lg border-2 text-left transition-colors ${
-              importType === 'machines'
-                ? 'border-blue-500 bg-blue-50'
-                : 'border-gray-200 hover:border-gray-300'
-            }`}
-          >
-            <div className="font-medium text-gray-900">Аппараты</div>
-            <div className="text-xs text-gray-500 mt-1">Вендинговые аппараты</div>
-          </button>
-
-          <button
-            onClick={() => setImportType('opening-balances')}
-            className={`px-4 py-3 rounded-lg border-2 text-left transition-colors ${
-              importType === 'opening-balances'
-                ? 'border-blue-500 bg-blue-50'
-                : 'border-gray-200 hover:border-gray-300'
-            }`}
-          >
-            <div className="font-medium text-gray-900">Начальные остатки</div>
-            <div className="text-xs text-gray-500 mt-1">Opening balances</div>
-          </button>
-        </div>
-      </div>
-
-      {/* File Upload Area */}
-      <div className="bg-white shadow-sm rounded-lg p-6 mb-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">
-          Загрузка файла
-        </h2>
-
-        <div
-          onDragEnter={handleDrag}
-          onDragLeave={handleDrag}
-          onDragOver={handleDrag}
-          onDrop={handleDrop}
-          className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-            dragActive
-              ? 'border-blue-500 bg-blue-50'
-              : 'border-gray-300 hover:border-gray-400'
-          }`}
-        >
-          {selectedFile ? (
-            <div>
-              <svg
-                className="mx-auto h-12 w-12 text-green-500"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              <p className="mt-2 text-base font-medium text-gray-900">
-                {selectedFile.name}
-              </p>
-              <p className="text-sm text-gray-500">
-                {(selectedFile.size / 1024).toFixed(2)} KB
-              </p>
-              <Button
-                variant="secondary"
-                onClick={clearSelection}
-                className="mt-4"
-              >
-                Выбрать другой файл
-              </Button>
-            </div>
-          ) : (
-            <div>
-              <svg
-                className="mx-auto h-12 w-12 text-gray-400"
-                stroke="currentColor"
-                fill="none"
-                viewBox="0 0 48 48"
-                aria-hidden="true"
-              >
-                <path
-                  d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
-                  strokeWidth={2}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              <div className="mt-4">
-                <label htmlFor="file-upload" className="cursor-pointer">
-                  <span className="text-blue-600 hover:text-blue-700 font-medium">
-                    Выберите файл
-                  </span>
-                  <input
-                    id="file-upload"
-                    name="file-upload"
-                    type="file"
-                    accept=".csv,.xlsx,.xls"
-                    className="sr-only"
-                    onChange={handleFileChange}
-                  />
-                </label>
-                <span className="text-gray-600"> или перетащите сюда</span>
-              </div>
-              <p className="text-xs text-gray-500 mt-2">
-                CSV, XLS, XLSX до 10 MB
-              </p>
-            </div>
-          )}
-        </div>
-
-        {selectedFile && (
-          <div className="mt-6 flex justify-end">
-            <Button onClick={handleUpload} disabled={loading}>
-              {loading ? 'Импортируется...' : 'Начать импорт'}
-            </Button>
+    <div className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow">
+      <div className="flex items-start justify-between">
+        <div className="flex items-start gap-3">
+          <div className="p-2 bg-gray-100 rounded-lg">
+            <FileText className="h-5 w-5 text-gray-600" />
           </div>
+          <div>
+            <h3 className="font-medium text-gray-900">
+              {session.file_metadata?.filename || 'Неизвестный файл'}
+            </h3>
+            <div className="flex items-center gap-2 mt-1">
+              <span className={`px-2 py-0.5 text-xs rounded-full font-medium ${statusColor}`}>
+                {statusLabels[session.status]}
+              </span>
+              <span className="text-xs text-gray-500">
+                {domainLabels[session.domain]}
+              </span>
+            </div>
+          </div>
+        </div>
+        <div className="flex gap-1">
+          <Button variant="ghost" size="sm" onClick={onView}>
+            <Eye className="h-4 w-4" />
+          </Button>
+          <Button variant="ghost" size="sm" onClick={onDelete}>
+            <Trash2 className="h-4 w-4 text-red-500" />
+          </Button>
+        </div>
+      </div>
+
+      <div className="mt-4 flex items-center gap-4 text-xs text-gray-500">
+        <span className="flex items-center gap-1">
+          <Clock className="h-3.5 w-3.5" />
+          {formatDistanceToNow(new Date(session.created_at), {
+            addSuffix: true,
+            locale: ru,
+          })}
+        </span>
+        {session.uploaded_by && (
+          <span className="flex items-center gap-1">
+            <User className="h-3.5 w-3.5" />
+            {session.uploaded_by.first_name} {session.uploaded_by.last_name}
+          </span>
+        )}
+        {session.file_metadata?.rowCount && (
+          <span>{session.file_metadata.rowCount} строк</span>
         )}
       </div>
 
-      {/* Import Results */}
-      {result && (
-        <div className="bg-white shadow-sm rounded-lg p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">
-            Результаты импорта
-          </h2>
+      {session.execution_result && (
+        <div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-4">
+          <span className="text-sm text-green-600">
+            Успешно: {session.execution_result.successCount}
+          </span>
+          {session.execution_result.failureCount > 0 && (
+            <span className="text-sm text-red-600">
+              Ошибок: {session.execution_result.failureCount}
+            </span>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
 
-          {result.success ? (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <svg
-                  className="h-6 w-6 text-green-500"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-                <span className="text-lg font-medium text-green-700">
-                  Импорт завершен успешно
+function SessionDetail({ session, onClose }: {
+  session: ImportSession
+  onClose: () => void
+}) {
+  const statusColor = getStatusColor(session.status)
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="p-6 border-b border-gray-200">
+          <div className="flex items-start justify-between">
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900">
+                {session.file_metadata?.filename || 'Детали импорта'}
+              </h2>
+              <div className="flex items-center gap-2 mt-2">
+                <span className={`px-2 py-0.5 text-xs rounded-full font-medium ${statusColor}`}>
+                  {statusLabels[session.status]}
+                </span>
+                <span className="text-sm text-gray-500">
+                  {domainLabels[session.domain]}
                 </span>
               </div>
+            </div>
+            <Button variant="ghost" onClick={onClose}>
+              ×
+            </Button>
+          </div>
+        </div>
 
-              <div className="grid grid-cols-2 gap-4 mt-4">
-                <div className="p-4 bg-green-50 rounded-lg">
-                  <div className="text-sm text-gray-600">Импортировано</div>
-                  <div className="text-2xl font-bold text-green-600">
-                    {result.imported}
-                  </div>
+        <div className="p-6 space-y-6">
+          {/* File Metadata */}
+          {session.file_metadata && (
+            <div>
+              <h3 className="font-medium text-gray-900 mb-3">Информация о файле</h3>
+              <div className="grid grid-cols-2 gap-4 bg-gray-50 rounded-lg p-4">
+                <div>
+                  <span className="text-sm text-gray-500">Размер</span>
+                  <p className="font-medium">
+                    {(session.file_metadata.size / 1024).toFixed(2)} KB
+                  </p>
                 </div>
-
-                {result.failed > 0 && (
-                  <div className="p-4 bg-red-50 rounded-lg">
-                    <div className="text-sm text-gray-600">Ошибок</div>
-                    <div className="text-2xl font-bold text-red-600">
-                      {result.failed}
-                    </div>
-                  </div>
-                )}
+                <div>
+                  <span className="text-sm text-gray-500">Строк</span>
+                  <p className="font-medium">{session.file_metadata.rowCount}</p>
+                </div>
+                <div>
+                  <span className="text-sm text-gray-500">Колонок</span>
+                  <p className="font-medium">{session.file_metadata.columnCount}</p>
+                </div>
+                <div>
+                  <span className="text-sm text-gray-500">Тип</span>
+                  <p className="font-medium">{session.file_metadata.mimetype}</p>
+                </div>
               </div>
+            </div>
+          )}
 
-              {result.message && (
-                <div className="mt-4 p-4 bg-blue-50 rounded-lg">
-                  <p className="text-sm text-blue-800">{result.message}</p>
+          {/* Classification Result */}
+          {session.classification_result && (
+            <div>
+              <h3 className="font-medium text-gray-900 mb-3">Результат классификации</h3>
+              <div className="bg-indigo-50 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-indigo-700">
+                    Определён тип: <strong>{domainLabels[session.classification_result.domain]}</strong>
+                  </span>
+                  <span className="text-sm text-indigo-600">
+                    Уверенность: {Math.round(session.classification_result.confidence * 100)}%
+                  </span>
                 </div>
-              )}
+              </div>
+            </div>
+          )}
 
-              {result.errors && result.errors.length > 0 && (
-                <div className="mt-4">
-                  <h3 className="text-sm font-medium text-gray-700 mb-2">
-                    Детали ошибок:
-                  </h3>
-                  <div className="max-h-64 overflow-y-auto space-y-2">
-                    {result.errors.map((err, index) => (
-                      <div
-                        key={index}
-                        className="p-3 bg-red-50 rounded text-sm text-red-700"
-                      >
-                        <span className="font-medium">Строка {index + 1}:</span>{' '}
-                        {err.error}
-                      </div>
-                    ))}
-                  </div>
+          {/* Validation Report */}
+          {session.validation_report && (
+            <div>
+              <h3 className="font-medium text-gray-900 mb-3">Результаты валидации</h3>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="bg-green-50 rounded-lg p-4 text-center">
+                  <p className="text-2xl font-bold text-green-600">
+                    {session.validation_report.totalRows - session.validation_report.errorCount}
+                  </p>
+                  <p className="text-sm text-green-700">Валидных</p>
                 </div>
+                <div className={`rounded-lg p-4 text-center ${session.validation_report.errorCount > 0 ? 'bg-red-50' : 'bg-gray-50'}`}>
+                  <p className={`text-2xl font-bold ${session.validation_report.errorCount > 0 ? 'text-red-600' : 'text-gray-400'}`}>
+                    {session.validation_report.errorCount}
+                  </p>
+                  <p className="text-sm text-gray-600">Ошибок</p>
+                </div>
+                <div className={`rounded-lg p-4 text-center ${session.validation_report.warningCount > 0 ? 'bg-yellow-50' : 'bg-gray-50'}`}>
+                  <p className={`text-2xl font-bold ${session.validation_report.warningCount > 0 ? 'text-yellow-600' : 'text-gray-400'}`}>
+                    {session.validation_report.warningCount}
+                  </p>
+                  <p className="text-sm text-gray-600">Предупреждений</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Execution Result */}
+          {session.execution_result && (
+            <div>
+              <h3 className="font-medium text-gray-900 mb-3">Результат выполнения</h3>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="bg-green-50 rounded-lg p-4 text-center">
+                  <p className="text-2xl font-bold text-green-600">
+                    {session.execution_result.successCount}
+                  </p>
+                  <p className="text-sm text-green-700">Успешно</p>
+                </div>
+                <div className={`rounded-lg p-4 text-center ${session.execution_result.failureCount > 0 ? 'bg-red-50' : 'bg-gray-50'}`}>
+                  <p className={`text-2xl font-bold ${session.execution_result.failureCount > 0 ? 'text-red-600' : 'text-gray-400'}`}>
+                    {session.execution_result.failureCount}
+                  </p>
+                  <p className="text-sm text-gray-600">Ошибок</p>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-4 text-center">
+                  <p className="text-2xl font-bold text-gray-600">
+                    {(session.execution_result.duration / 1000).toFixed(1)}с
+                  </p>
+                  <p className="text-sm text-gray-600">Время</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Timestamps */}
+          <div className="text-sm text-gray-500 pt-4 border-t border-gray-200">
+            <div className="flex justify-between">
+              <span>Создано: {format(new Date(session.created_at), 'dd.MM.yyyy HH:mm', { locale: ru })}</span>
+              {session.completed_at && (
+                <span>Завершено: {format(new Date(session.completed_at), 'dd.MM.yyyy HH:mm', { locale: ru })}</span>
               )}
             </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <svg
-                  className="h-6 w-6 text-red-500"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-                <span className="text-lg font-medium text-red-700">
-                  Ошибка импорта
-                </span>
-              </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
 
-              {result.message && (
-                <div className="p-4 bg-red-50 rounded-lg">
-                  <p className="text-sm text-red-800">{result.message}</p>
-                </div>
-              )}
+export default function ImportPage() {
+  const [activeTab, setActiveTab] = useState<Tab>('import')
+  const [selectedSession, setSelectedSession] = useState<ImportSession | null>(null)
+  const queryClient = useQueryClient()
+
+  const { data: sessions, isLoading: sessionsLoading } = useQuery({
+    queryKey: ['import-sessions'],
+    queryFn: () => intelligentImportApi.getSessions(),
+    enabled: activeTab === 'history',
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => intelligentImportApi.deleteSession(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['import-sessions'] })
+      toast.success('Сессия удалена')
+    },
+    onError: () => {
+      toast.error('Ошибка при удалении')
+    },
+  })
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900">Импорт данных</h1>
+        <p className="mt-2 text-gray-600">
+          Интеллектуальный импорт с автоматическим определением типа данных
+        </p>
+      </div>
+
+      {/* Tabs */}
+      <div className="border-b border-gray-200">
+        <nav className="-mb-px flex gap-6">
+          <button
+            onClick={() => setActiveTab('import')}
+            className={`
+              pb-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2
+              ${activeTab === 'import'
+                ? 'border-indigo-500 text-indigo-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }
+            `}
+          >
+            <Upload className="h-4 w-4" />
+            Новый импорт
+          </button>
+          <button
+            onClick={() => setActiveTab('history')}
+            className={`
+              pb-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2
+              ${activeTab === 'history'
+                ? 'border-indigo-500 text-indigo-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }
+            `}
+          >
+            <History className="h-4 w-4" />
+            История импортов
+          </button>
+        </nav>
+      </div>
+
+      {/* Content */}
+      {activeTab === 'import' ? (
+        <ImportWizard onComplete={() => setActiveTab('history')} />
+      ) : (
+        <div className="space-y-4">
+          {sessionsLoading ? (
+            <div className="text-center py-12">
+              <Loader2 className="h-8 w-8 text-gray-400 animate-spin mx-auto" />
+              <p className="text-gray-500 mt-2">Загрузка истории...</p>
+            </div>
+          ) : sessions && sessions.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {sessions.map((session) => (
+                <SessionCard
+                  key={session.id}
+                  session={session}
+                  onView={() => setSelectedSession(session)}
+                  onDelete={() => {
+                    if (confirm('Удалить эту сессию импорта?')) {
+                      deleteMutation.mutate(session.id)
+                    }
+                  }}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
+              <History className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-500">История импортов пуста</p>
+              <Button
+                variant="outline"
+                onClick={() => setActiveTab('import')}
+                className="mt-4"
+              >
+                Создать первый импорт
+              </Button>
             </div>
           )}
         </div>
       )}
 
-      {/* Format Help */}
-      <div className="mt-6 bg-gray-50 rounded-lg p-6">
-        <h3 className="text-base font-semibold text-gray-900 mb-3">
-          Формат файла
-        </h3>
-
-        <div className="text-sm text-gray-600 space-y-2">
-          <p>
-            <strong>Номенклатура:</strong> SKU, Название, Категория, Единица измерения,
-            Цена закупки, Цена продажи, Ингредиент (да/нет)
-          </p>
-          <p>
-            <strong>Контрагенты:</strong> Название, ИНН, Телефон, Email, Адрес, Тип
-            (поставщик/клиент)
-          </p>
-          <p>
-            <strong>Локации:</strong> Название, Адрес, Контактное лицо, Телефон, Тип
-          </p>
-          <p>
-            <strong>Аппараты:</strong> Номер, Название, Локация, Модель, Статус
-          </p>
-          <p>
-            <strong>Начальные остатки:</strong> SKU номенклатуры, Количество, Цена за единицу,
-            Дата остатка
-          </p>
-        </div>
-
-        <div className="mt-4">
-          <Badge variant="warning">
-            AI-маппинг колонок включен
-          </Badge>
-          <p className="text-xs text-gray-500 mt-2">
-            Система автоматически определит соответствие колонок вашего файла
-          </p>
-        </div>
-      </div>
+      {/* Session Detail Modal */}
+      {selectedSession && (
+        <SessionDetail
+          session={selectedSession}
+          onClose={() => setSelectedSession(null)}
+        />
+      )}
     </div>
-  );
+  )
 }

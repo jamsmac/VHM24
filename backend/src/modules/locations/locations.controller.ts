@@ -78,6 +78,16 @@ export class LocationsController {
     return this.locationsService.getStats();
   }
 
+  @Get('map')
+  @ApiOperation({ summary: 'Получить данные для карты локаций' })
+  @ApiResponse({
+    status: 200,
+    description: 'Локации с координатами и статистикой аппаратов',
+  })
+  getMapData() {
+    return this.locationsService.getMapData();
+  }
+
   @Get('by-city/:city')
   @ApiOperation({ summary: 'Получить локации по городу' })
   @ApiParam({ name: 'city', description: 'Название города' })

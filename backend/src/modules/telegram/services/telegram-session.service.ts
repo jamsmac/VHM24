@@ -307,11 +307,15 @@ export class TelegramSessionService {
 
     try {
       const pattern = `${this.SESSION_PREFIX}*`;
-      const keys = [];
+      const keys: string[] = [];
 
-      // Scan for all session keys
-      for await (const key of this.redisClient.scanIterator({ MATCH: pattern, COUNT: 100 })) {
-        keys.push(key);
+      // Scan for all session keys (scanIterator may return string or string[])
+      for await (const scanResult of this.redisClient.scanIterator({ MATCH: pattern, COUNT: 100 })) {
+        if (Array.isArray(scanResult)) {
+          keys.push(...scanResult);
+        } else {
+          keys.push(scanResult as string);
+        }
       }
 
       this.logger.log(`Found ${keys.length} session keys to check`);

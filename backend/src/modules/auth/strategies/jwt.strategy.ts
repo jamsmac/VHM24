@@ -1,6 +1,6 @@
 import { Injectable, UnauthorizedException, Inject, forwardRef } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
-import { ExtractJwt, Strategy } from 'passport-jwt';
+import { Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
 import { Request } from 'express';
 import { UsersService } from '../../users/users.service';
@@ -21,19 +21,26 @@ export interface JwtPayload {
 }
 
 /**
- * Extract JWT from httpOnly cookie or Authorization header
- * SEC-1: Cookie-based auth with Bearer token fallback for API clients
+ * Extract JWT from cookie first, then fall back to Bearer header
+ *
+ * SEC-1: HttpOnly Cookie-based Authentication
+ *
+ * Priority:
+ * 1. HttpOnly cookie 'access_token' (most secure, XSS-immune)
+ * 2. Authorization: Bearer header (backward compatibility)
  */
-const cookieOrBearerExtractor = (req: Request): string | null => {
-  // Priority 1: httpOnly cookie (secure, XSS-proof)
-  if (req?.cookies?.access_token) {
+const extractJwtFromCookieOrHeader = (req: Request): string | null => {
+  // 1. Try to extract from httpOnly cookie first (most secure)
+  if (req.cookies && req.cookies.access_token) {
     return req.cookies.access_token;
   }
-  // Priority 2: Bearer token header (for API clients, mobile apps)
-  const authHeader = req?.headers?.authorization;
+
+  // 2. Fall back to Authorization header for backward compatibility
+  const authHeader = req.headers.authorization;
   if (authHeader && authHeader.startsWith('Bearer ')) {
     return authHeader.substring(7);
   }
+
   return null;
 };
 
@@ -42,9 +49,9 @@ const cookieOrBearerExtractor = (req: Request): string | null => {
  *
  * REQ-AUTH-10: JWT Authentication
  * REQ-AUTH-56: Token Blacklist Checking
- * SEC-1: httpOnly cookie support
+ * SEC-1: HttpOnly Cookie Support
  *
- * Validates JWT tokens from cookies or Bearer header and checks against blacklist.
+ * Validates JWT tokens from cookies or headers and checks against blacklist.
  */
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -55,7 +62,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     private readonly tokenBlacklistService: TokenBlacklistService,
   ) {
     super({
-      jwtFromRequest: cookieOrBearerExtractor,
+      jwtFromRequest: extractJwtFromCookieOrHeader,
       ignoreExpiration: false,
       secretOrKey: configService.get<string>('JWT_SECRET'),
     });

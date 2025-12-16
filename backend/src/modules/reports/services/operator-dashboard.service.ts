@@ -342,6 +342,10 @@ export class OperatorDashboardService {
 
   /**
    * Get operator's assigned machines
+   *
+   * PERF-2: Optimized to use bulk queries instead of N+1 pattern
+   * Previously: 3 queries per machine (last service, next collection, next refill)
+   * Now: 4 queries total regardless of machine count
    */
   private async getMyMachines(operatorId: string): Promise<OperatorDashboard['my_machines']> {
     // Get machines that have tasks assigned to this operator
@@ -366,66 +370,79 @@ export class OperatorDashboardService {
       };
     }
 
+    // 1. Get machines with locations (single query)
     const machines = await this.machineRepository.find({
       where: { id: In(machineIds) },
       relations: ['location'],
     });
 
-    const machinesList = await Promise.all(
-      machines.map(async (machine) => {
-        const [lastService, nextCollection, nextRefill] = await Promise.all([
-          this.getLastServiceDate(machine.id),
-          this.getNextDueDate(machine.id, operatorId, 'collection'),
-          this.getNextDueDate(machine.id, operatorId, 'refill'),
-        ]);
+    // 2. Get last service dates for all machines (single query with window function)
+    const lastServiceDates = await this.taskRepository
+      .createQueryBuilder('task')
+      .select('task.machine_id', 'machine_id')
+      .addSelect('MAX(task.completed_at)', 'last_service_date')
+      .where('task.machine_id IN (:...machineIds)', { machineIds })
+      .andWhere('task.status = :status', { status: TaskStatus.COMPLETED })
+      .groupBy('task.machine_id')
+      .getRawMany();
 
-        return {
-          machine_id: machine.id,
-          machine_number: machine.machine_number,
-          machine_name: machine.name,
-          location_name: machine.location?.name || 'Unknown',
-          status: machine.status,
-          last_service_date: lastService,
-          next_collection_due: nextCollection,
-          next_refill_due: nextRefill,
-        };
-      }),
+    // 3. Get next collection due dates for all machines (single query)
+    const nextCollections = await this.taskRepository
+      .createQueryBuilder('task')
+      .select('task.machine_id', 'machine_id')
+      .addSelect('MIN(task.due_date)', 'next_due_date')
+      .where('task.machine_id IN (:...machineIds)', { machineIds })
+      .andWhere('task.assigned_to_user_id = :operatorId', { operatorId })
+      .andWhere('task.type_code = :taskType', { taskType: 'collection' })
+      .andWhere('task.status = :status', { status: TaskStatus.PENDING })
+      .groupBy('task.machine_id')
+      .getRawMany();
+
+    // 4. Get next refill due dates for all machines (single query)
+    const nextRefills = await this.taskRepository
+      .createQueryBuilder('task')
+      .select('task.machine_id', 'machine_id')
+      .addSelect('MIN(task.due_date)', 'next_due_date')
+      .where('task.machine_id IN (:...machineIds)', { machineIds })
+      .andWhere('task.assigned_to_user_id = :operatorId', { operatorId })
+      .andWhere('task.type_code = :taskType', { taskType: 'refill' })
+      .andWhere('task.status = :status', { status: TaskStatus.PENDING })
+      .groupBy('task.machine_id')
+      .getRawMany();
+
+    // Create lookup maps for O(1) access
+    const lastServiceMap = new Map(
+      lastServiceDates.map((d) => [
+        d.machine_id,
+        d.last_service_date ? new Date(d.last_service_date) : null,
+      ]),
     );
+    const nextCollectionMap = new Map(
+      nextCollections.map((c) => [
+        c.machine_id,
+        c.next_due_date ? new Date(c.next_due_date) : null,
+      ]),
+    );
+    const nextRefillMap = new Map(
+      nextRefills.map((r) => [r.machine_id, r.next_due_date ? new Date(r.next_due_date) : null]),
+    );
+
+    // 5. Combine results in memory
+    const machinesList = machines.map((machine) => ({
+      machine_id: machine.id,
+      machine_number: machine.machine_number,
+      machine_name: machine.name,
+      location_name: machine.location?.name || 'Unknown',
+      status: machine.status,
+      last_service_date: lastServiceMap.get(machine.id) || null,
+      next_collection_due: nextCollectionMap.get(machine.id) || null,
+      next_refill_due: nextRefillMap.get(machine.id) || null,
+    }));
 
     return {
       total_assigned: machines.length,
       machines_list: machinesList,
     };
-  }
-
-  private async getLastServiceDate(machineId: string): Promise<Date | null> {
-    const lastTask = await this.taskRepository.findOne({
-      where: {
-        machine_id: machineId,
-        status: TaskStatus.COMPLETED,
-      },
-      order: { completed_at: 'DESC' },
-    });
-
-    return lastTask?.completed_at || null;
-  }
-
-  private async getNextDueDate(
-    machineId: string,
-    operatorId: string,
-    taskType: string,
-  ): Promise<Date | null> {
-    const nextTask = await this.taskRepository.findOne({
-      where: {
-        machine_id: machineId,
-        assigned_to_user_id: operatorId,
-        type_code: taskType as any,
-        status: TaskStatus.PENDING,
-      },
-      order: { due_date: 'ASC' },
-    });
-
-    return nextTask?.due_date || null;
   }
 
   /**

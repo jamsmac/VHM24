@@ -37,6 +37,7 @@ import { WarehouseModule } from './modules/warehouse/warehouse.module';
 import { HrModule } from './modules/hr/hr.module';
 import { IntegrationModule } from './modules/integration/integration.module';
 import { SecurityModule } from './modules/security/security.module';
+import { AlertsModule } from './modules/alerts/alerts.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { TelegramBotModule } from './modules/telegram-bot/telegram-bot.module';
 import { WebPushModule } from './modules/web-push/web-push.module';
@@ -52,6 +53,7 @@ import { WebsocketModule } from './modules/websocket/websocket.module';
 import { HealthModule } from './health/health.module';
 import { ScheduledTasksModule } from './scheduled-tasks/scheduled-tasks.module';
 import { CommonModule } from './common/common.module';
+import { RateLimitModule } from './common/modules/rate-limit.module';
 
 @Module({
   imports: [
@@ -68,29 +70,42 @@ import { CommonModule } from './common/common.module';
     // Database with connection pool
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        type: 'postgres',
-        host: configService.get('DATABASE_HOST'),
-        port: configService.get('DATABASE_PORT'),
-        username: configService.get('DATABASE_USER'),
-        password: configService.get('DATABASE_PASSWORD'),
-        database: configService.get('DATABASE_NAME'),
-        entities: [__dirname + '/**/*.entity{.ts,.js}'],
-        // NEVER use synchronize in production - always use migrations
-        synchronize:
-          configService.get('DATABASE_SYNCHRONIZE', 'false') === 'true' &&
-          configService.get('NODE_ENV') !== 'production',
-        logging: configService.get('NODE_ENV') === 'development',
-        migrations: [__dirname + '/database/migrations/*{.ts,.js}'],
-        migrationsRun: false,
-        // Connection pool configuration for better performance under load
-        extra: {
-          max: parseInt(configService.get('DB_POOL_MAX', '20')), // Maximum connections
-          min: parseInt(configService.get('DB_POOL_MIN', '5')), // Minimum connections
-          idleTimeoutMillis: 30000, // Close idle connections after 30s
-          connectionTimeoutMillis: 2000, // Wait max 2s for connection
-        },
-      }),
+      useFactory: (configService: ConfigService) => {
+        const databaseUrl = configService.get('DATABASE_URL');
+
+        // Support both DATABASE_URL and individual variables
+        const baseConfig = databaseUrl
+          ? { url: databaseUrl }
+          : {
+              host: configService.get('DATABASE_HOST'),
+              port: configService.get('DATABASE_PORT'),
+              username: configService.get('DATABASE_USER'),
+              password: configService.get('DATABASE_PASSWORD'),
+              database: configService.get('DATABASE_NAME'),
+            };
+
+        return {
+          type: 'postgres' as const,
+          ...baseConfig,
+          entities: [__dirname + '/**/*.entity{.ts,.js}'],
+          // NEVER use synchronize in production - always use migrations
+          // Exception: DATABASE_INITIAL_SYNC=true allows one-time initial schema creation
+          synchronize:
+            configService.get('DATABASE_INITIAL_SYNC', 'false') === 'true' ||
+            (configService.get('DATABASE_SYNCHRONIZE', 'false') === 'true' &&
+              configService.get('NODE_ENV') !== 'production'),
+          logging: configService.get('NODE_ENV') === 'development',
+          migrations: [__dirname + '/database/migrations/*{.ts,.js}'],
+          migrationsRun: false,
+          // Connection pool configuration for better performance under load
+          extra: {
+            max: parseInt(configService.get('DB_POOL_MAX', '20')), // Maximum connections
+            min: parseInt(configService.get('DB_POOL_MIN', '5')), // Minimum connections
+            idleTimeoutMillis: 30000, // Close idle connections after 30s
+            connectionTimeoutMillis: 2000, // Wait max 2s for connection
+          },
+        };
+      },
       inject: [ConfigService],
     }),
 
@@ -103,17 +118,26 @@ import { CommonModule } from './common/common.module';
     // Bull queue for background jobs
     BullModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        redis: {
-          host: configService.get('REDIS_HOST', 'localhost'),
-          port: configService.get('REDIS_PORT', 6379),
-          password: configService.get('REDIS_PASSWORD'),
-        },
-        defaultJobOptions: {
-          removeOnComplete: 100, // Keep last 100 completed jobs
-          removeOnFail: 200, // Keep last 200 failed jobs
-        },
-      }),
+      useFactory: (configService: ConfigService) => {
+        const redisUrl = configService.get('REDIS_URL');
+
+        // Support both REDIS_URL and individual variables
+        const redisConfig = redisUrl
+          ? { url: redisUrl }
+          : {
+              host: configService.get('REDIS_HOST', 'localhost'),
+              port: configService.get('REDIS_PORT', 6379),
+              password: configService.get('REDIS_PASSWORD'),
+            };
+
+        return {
+          redis: redisConfig,
+          defaultJobOptions: {
+            removeOnComplete: 100, // Keep last 100 completed jobs
+            removeOnFail: 200, // Keep last 200 failed jobs
+          },
+        };
+      },
       inject: [ConfigService],
     }),
 
@@ -177,8 +201,9 @@ import { CommonModule } from './common/common.module';
     HrModule,
     IntegrationModule,
     SecurityModule,
+    AlertsModule,
     ReportsModule,
-    TelegramBotModule,
+    // TelegramBotModule, // Removed - functionality merged into TelegramModule
     WebPushModule,
     SalesImportModule,
     RequestsModule,
@@ -187,6 +212,9 @@ import { CommonModule } from './common/common.module';
     WebsocketModule,
     HealthModule,
     ScheduledTasksModule,
+
+    // Enhanced Rate Limiting Module (Redis-based sliding window)
+    RateLimitModule,
   ],
   controllers: [AppController],
   providers: [

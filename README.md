@@ -589,16 +589,34 @@ MoneyHelper.parseUZS("1 234 567,89 сум"); // 1234567.89
 
 ## 🔐 Security Features
 
-- JWT authentication with refresh tokens
-- Password hashing with bcrypt
-- Role-Based Access Control (RBAC)
-- Request validation with DTOs
-- Rate limiting (100 requests/minute default)
-- CORS configuration
-- SQL injection protection (TypeORM)
-- XSS protection
-- Helmet security headers
-- Secure file upload validation
+### Authentication & Authorization
+- JWT authentication with refresh tokens (15min access / 7d refresh)
+- Password hashing with bcrypt (12 rounds)
+- Role-Based Access Control (RBAC): ADMIN, MANAGER, OPERATOR, TECHNICIAN
+- Session management with device tracking
+
+### API Security
+- Rate limiting: 100 requests/minute (configurable per endpoint)
+- Request validation with class-validator DTOs
+- SQL injection protection (TypeORM parameterized queries)
+- XSS protection via input sanitization
+- CORS configuration with whitelist
+- Helmet security headers (CSP, HSTS, etc.)
+
+### Infrastructure Security
+- HTTPS enforcement in production
+- Secure cookie settings (httpOnly, sameSite, secure)
+- File upload validation (type, size, content)
+- Environment variable validation on startup
+- Database connection encryption (SSL/TLS)
+
+### Monitoring & Auditing
+- Comprehensive audit logging for security events
+- Failed login attempt tracking and alerting
+- Session anomaly detection
+- Rate limit violation monitoring
+
+See `SECURITY.md` for detailed security documentation.
 
 ---
 
@@ -629,6 +647,36 @@ All endpoints are documented with:
 - telegram_bot
 
 **Migrations**: Automatic on startup (`migrationsRun: true`)
+
+---
+
+## 📊 Monitoring & Observability
+
+### Prometheus Metrics
+- HTTP request duration histograms
+- Request count by status code and endpoint
+- Database query performance
+- Cache hit/miss ratios
+- Queue job processing metrics
+- Business metrics (tasks, machines, inventory)
+
+### Grafana Dashboards
+Three pre-configured dashboards available:
+1. **Security Metrics** - Login failures, rate limits, sessions, 2FA success
+2. **API Performance** - Response times, error rates, cache performance
+3. **Business Metrics** - Tasks, machines status, inventory movements
+
+### Alerting
+Pre-configured alerts for:
+- Backend/Worker downtime
+- High error rates (>5%)
+- High response times (P95 > 1s)
+- Database connection issues
+- Redis memory usage
+- Security anomalies (login failures, rate limiting)
+- Business KPIs (task completion rate, machine offline rate)
+
+See `monitoring/` directory for Prometheus and Grafana configurations.
 
 ---
 
@@ -668,6 +716,12 @@ See `backend/.env.example` for all configuration options:
 ---
 
 ## 📚 Additional Documentation
+
+### For Operations
+
+- **Security Guide**: `SECURITY.md` - Security architecture and practices
+- **Deployment Guide**: `DEPLOYMENT.md` - Production deployment procedures
+- **Operations Runbook**: `RUNBOOK.md` - Incident response and operational procedures
 
 ### For Developers
 
@@ -805,7 +859,7 @@ npm run migration:revert
 
 ## 📝 License
 
-Proprietary - VendHub Manager © 2024
+Proprietary - VendHub Manager © 2024-2025
 
 ---
 

@@ -8,6 +8,13 @@ import { machinesApi } from '@/lib/machines-api'
 import { tasksApi } from '@/lib/tasks-api'
 import { commissionsApi } from '@/lib/commissions-api'
 import { StatCard } from '@/components/dashboard/StatCard'
+import { AlertsSummaryWidget } from '@/components/dashboard/AlertsSummaryWidget'
+import { RecentAlertsWidget } from '@/components/dashboard/RecentAlertsWidget'
+import { MapWidget } from '@/components/dashboard/MapWidget'
+import { SystemHealthWidget } from '@/components/monitoring/SystemHealthWidget'
+import { QuickActions } from '@/components/dashboard/QuickActions'
+import { RecentActivityWidget } from '@/components/dashboard/RecentActivityWidget'
+import { TodaySummary } from '@/components/dashboard/TodaySummary'
 import { TaskCard } from '@/components/tasks/TaskCard'
 import { IncidentCard } from '@/components/incidents/IncidentCard'
 import { CardSkeleton } from '@/components/ui/LoadingSkeleton'
@@ -203,10 +210,12 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">{t('dashboard.title')}</h1>
-        <p className="mt-2 text-muted-foreground">{t('dashboard.subtitle')}</p>
+      {/* Today Summary & Quick Actions */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          <TodaySummary />
+        </div>
+        <QuickActions compact />
       </div>
 
       {/* Commission Live Metrics */}
@@ -256,6 +265,20 @@ export default function DashboardPage() {
             </>
           )}
         </div>
+      </div>
+
+      {/* Alerts Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <AlertsSummaryWidget />
+        <RecentAlertsWidget />
+      </div>
+
+      {/* Map Widget & System Health */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          <MapWidget />
+        </div>
+        <SystemHealthWidget compact />
       </div>
 
       {/* Analytics Charts - Row 1 */}
@@ -320,8 +343,11 @@ export default function DashboardPage() {
         />
       )}
 
-      {/* Recent Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Recent Activity & Tasks */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Recent Activity */}
+        <RecentActivityWidget maxItems={8} />
+
         {/* Recent Tasks */}
         <div>
           <h2 className="text-xl font-semibold text-foreground mb-4">

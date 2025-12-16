@@ -2,8 +2,10 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Context, Telegraf } from 'telegraf';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { v4 as uuidv4 } from 'uuid';
 import { Material, MaterialCategory } from '../../requests/entities/material.entity';
 import { TelegramSessionService } from '../services/telegram-session.service';
+import { CartStorageService } from '../services/cart-storage.service';
 import { CatalogState, defaultSessionData } from './fsm-states';
 import {
   getCategoryKeyboard,
@@ -16,6 +18,8 @@ import {
 /**
  * Обработчик каталога материалов.
  * Портировано из Python vendhub-bot/handlers/catalog.py
+ *
+ * PERF-4: Now integrated with Redis-backed CartStorageService
  */
 @Injectable()
 export class CatalogHandler {
@@ -25,6 +29,7 @@ export class CatalogHandler {
     @InjectRepository(Material)
     private readonly materialRepository: Repository<Material>,
     private readonly sessionService: TelegramSessionService,
+    private readonly cartStorage: CartStorageService,
   ) {}
 
   /**
@@ -77,8 +82,8 @@ export class CatalogHandler {
     // Сбрасываем состояние
     await this.sessionService.setSessionData(userId, defaultSessionData);
 
-    // TODO: Получить количество в корзине
-    const cartCount = 0;
+    // Get cart count from Redis-backed storage
+    const cartCount = await this.cartStorage.getItemCount(userId);
 
     await ctx.reply('📦 <b>Создание заявки</b>\n\n' + 'Выберите категорию материалов:', {
       parse_mode: 'HTML',
@@ -98,7 +103,7 @@ export class CatalogHandler {
 
     if (action === 'back') {
       // Назад к категориям
-      const cartCount = 0; // TODO: Get from cart service
+      const cartCount = await this.cartStorage.getItemCount(userId);
       await ctx.editMessageText('📦 <b>Создание заявки</b>\n\n' + 'Выберите категорию:', {
         parse_mode: 'HTML',
         reply_markup: getCategoryKeyboard(cartCount).reply_markup,
@@ -330,11 +335,22 @@ export class CatalogHandler {
     const session = await this.sessionService.getSessionData(userId);
     const quantity = session?.currentQuantity || 1;
 
-    // TODO: Добавить в корзину через CartService
-    // await this.cartService.addToCart(userId, materialId, quantity);
-
     const material = await this.materialRepository.findOne({
       where: { id: materialId },
+    });
+
+    if (!material) {
+      await ctx.answerCbQuery('❌ Материал не найден', { show_alert: true });
+      return;
+    }
+
+    // Add to Redis-backed cart storage
+    await this.cartStorage.addItem(userId, {
+      id: uuidv4(),
+      materialId: material.id,
+      name: material.name,
+      quantity,
+      unit: material.unit,
     });
 
     // Сбрасываем сессию
@@ -342,16 +358,17 @@ export class CatalogHandler {
       ...defaultSessionData,
     });
 
-    const cartCount = 0; // TODO: Get from cart
+    const cartCount = await this.cartStorage.getItemCount(userId);
 
-    await ctx.answerCbQuery(`✅ Добавлено: ${material?.name} × ${quantity}`, {
+    await ctx.answerCbQuery(`✅ Добавлено: ${material.name} × ${quantity}`, {
       show_alert: true,
     });
 
     await ctx.editMessageText(
       `✅ <b>Добавлено в корзину!</b>\n\n` +
-        `📦 ${material?.name}\n` +
-        `📊 ${quantity} ${material?.unit}\n\n` +
+        `📦 ${material.name}\n` +
+        `📊 ${quantity} ${material.unit}\n\n` +
+        `🛒 В корзине: ${cartCount} поз.\n\n` +
         'Продолжите выбор или перейдите в корзину:',
       {
         parse_mode: 'HTML',
@@ -444,21 +461,33 @@ export class CatalogHandler {
         return;
       }
 
-      // TODO: Добавить в корзину
-      // await this.cartService.addToCart(userId, materialId, quantity);
-
       const material = await this.materialRepository.findOne({
         where: { id: materialId },
       });
 
+      if (!material) {
+        await ctx.reply('❌ Материал не найден. Начните заново.');
+        await this.sessionService.setSessionData(userId, defaultSessionData);
+        return;
+      }
+
+      // Add to Redis-backed cart storage
+      await this.cartStorage.addItem(userId, {
+        id: uuidv4(),
+        materialId: material.id,
+        name: material.name,
+        quantity,
+        unit: material.unit,
+      });
+
       await this.sessionService.setSessionData(userId, defaultSessionData);
 
-      const cartCount = 0; // TODO: Get from cart
+      const cartCount = await this.cartStorage.getItemCount(userId);
 
       await ctx.reply(
         `✅ <b>Добавлено в корзину!</b>\n\n` +
-          `📦 ${material?.name}\n` +
-          `📊 Количество: ${quantity} ${material?.unit}\n\n` +
+          `📦 ${material.name}\n` +
+          `📊 Количество: ${quantity} ${material.unit}\n\n` +
           `🛒 В корзине: ${cartCount} поз.`,
         {
           parse_mode: 'HTML',

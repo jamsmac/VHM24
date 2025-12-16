@@ -53,12 +53,13 @@ export function FormField({
 
       {React.Children.map(children, (child) => {
         if (React.isValidElement(child)) {
+          const childProps = child.props as Record<string, unknown>
           return React.cloneElement(child, {
             id,
             'aria-invalid': error ? true : undefined,
             'aria-describedby': describedBy || undefined,
             'aria-required': required ? true : undefined,
-            ...child.props,
+            ...childProps,
           } as any)
         }
         return child

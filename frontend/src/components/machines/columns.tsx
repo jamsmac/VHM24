@@ -4,8 +4,17 @@ import { ColumnDef } from '@tanstack/react-table'
 import { Machine, MachineStatus } from '@/types/machines'
 import { Badge } from '@/components/ui/badge'
 import { DataTableColumnHeader } from '@/components/ui/data-table'
-import { Eye, Edit } from 'lucide-react'
-import Link from 'next/link'
+import { DataTableRowActions, RowAction } from '@/components/ui/data-table-row-actions'
+import {
+  Eye,
+  Edit,
+  Trash2,
+  QrCode,
+  ClipboardList,
+  Wrench,
+  Power,
+  PowerOff,
+} from 'lucide-react'
 
 // Status badge mapping
 const statusConfig: Record<MachineStatus, { variant: 'success' | 'warning' | 'error' | 'default' | 'info', label: string }> = {
@@ -145,24 +154,96 @@ export const machineColumns: ColumnDef<Machine>[] = [
     cell: ({ row }) => {
       const machine = row.original
 
-      return (
-        <div className="flex items-center gap-2">
-          <Link
-            href={`/dashboard/machines/${machine.id}`}
-            className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-8 w-8"
-          >
-            <Eye className="h-4 w-4" />
-            <span className="sr-only">Просмотр</span>
-          </Link>
-          <Link
-            href={`/dashboard/machines/${machine.id}/edit`}
-            className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-8 w-8"
-          >
-            <Edit className="h-4 w-4" />
-            <span className="sr-only">Редактировать</span>
-          </Link>
-        </div>
-      )
+      return <MachineRowActions machine={machine} />
     },
   },
 ]
+
+export interface MachineActionCallbacks {
+  onView?: (machine: Machine) => void
+  onEdit?: (machine: Machine) => void
+  onCreateTask?: (machine: Machine) => void
+  onShowQrCode?: (machine: Machine) => void
+  onMaintenance?: (machine: Machine) => void
+  onEnable?: (machine: Machine) => void
+  onDisable?: (machine: Machine) => void
+  onDelete?: (machine: Machine) => void
+}
+
+interface MachineRowActionsProps {
+  machine: Machine
+  callbacks?: MachineActionCallbacks
+}
+
+export function MachineRowActions({ machine, callbacks }: MachineRowActionsProps) {
+  const actions: RowAction<Machine>[] = [
+    {
+      label: 'Просмотр',
+      icon: <Eye className="h-4 w-4" />,
+      onClick: (m) => {
+        if (callbacks?.onView) {
+          callbacks.onView(m)
+        } else {
+          window.location.href = `/dashboard/machines/${m.id}`
+        }
+      },
+    },
+    {
+      label: 'Редактировать',
+      icon: <Edit className="h-4 w-4" />,
+      onClick: (m) => {
+        if (callbacks?.onEdit) {
+          callbacks.onEdit(m)
+        } else {
+          window.location.href = `/dashboard/machines/${m.id}/edit`
+        }
+      },
+    },
+    {
+      label: 'QR-код',
+      icon: <QrCode className="h-4 w-4" />,
+      onClick: (m) => callbacks?.onShowQrCode?.(m),
+      hidden: !callbacks?.onShowQrCode,
+    },
+    {
+      label: 'Создать задачу',
+      icon: <ClipboardList className="h-4 w-4" />,
+      onClick: (m) => {
+        if (callbacks?.onCreateTask) {
+          callbacks.onCreateTask(m)
+        } else {
+          window.location.href = `/dashboard/tasks/new?machine_id=${m.id}`
+        }
+      },
+      hidden: (m) => m.status === MachineStatus.DISABLED,
+    },
+    {
+      label: 'Обслуживание',
+      icon: <Wrench className="h-4 w-4" />,
+      onClick: (m) => callbacks?.onMaintenance?.(m),
+      hidden: (m) => m.status === MachineStatus.DISABLED || !callbacks?.onMaintenance,
+    },
+    {
+      label: 'Включить',
+      icon: <Power className="h-4 w-4" />,
+      onClick: (m) => callbacks?.onEnable?.(m),
+      hidden: (m) => m.status !== MachineStatus.DISABLED || !callbacks?.onEnable,
+    },
+    {
+      label: 'Отключить',
+      icon: <PowerOff className="h-4 w-4" />,
+      onClick: (m) => callbacks?.onDisable?.(m),
+      hidden: (m) => m.status === MachineStatus.DISABLED || !callbacks?.onDisable,
+      variant: 'destructive',
+    },
+    {
+      label: 'Удалить',
+      icon: <Trash2 className="h-4 w-4" />,
+      onClick: (m) => callbacks?.onDelete?.(m),
+      hidden: !callbacks?.onDelete,
+      variant: 'destructive',
+    },
+  ]
+
+  return <DataTableRowActions row={machine} actions={actions} menuLabel="Действия" />
+}

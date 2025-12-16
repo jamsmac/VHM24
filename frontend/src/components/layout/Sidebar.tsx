@@ -11,17 +11,24 @@ import {
   DollarSign,
   Users,
   MapPin,
+  Map,
   Settings,
   Shield,
   Bell,
+  BellRing,
   BarChart3,
   Wrench,
   Send,
   Building2,
   FileText,
   Receipt,
+  FileUp,
+  Activity,
+  ScrollText,
+  Timer,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useActiveAlertsCount } from '@/hooks/useActiveAlertsCount'
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -36,13 +43,31 @@ const navigation = [
   { name: 'Инвентарь', href: '/dashboard/inventory', icon: Package },
   { name: 'Пользователи', href: '/dashboard/users', icon: Users },
   { name: 'Локации', href: '/dashboard/locations', icon: MapPin },
+  { name: 'Карта', href: '/dashboard/map', icon: Map },
   { name: 'Уведомления', href: '/dashboard/notifications', icon: Bell },
+  { name: 'Оповещения', href: '/dashboard/alerts', icon: BellRing, showBadge: true },
   { name: 'Отчеты', href: '/dashboard/reports', icon: BarChart3 },
+  { name: 'Импорт', href: '/dashboard/import', icon: FileUp },
+  { name: 'Мониторинг', href: '/dashboard/monitoring', icon: Activity },
   { name: 'Оборудование', href: '/dashboard/equipment', icon: Wrench },
   { name: 'Telegram', href: '/dashboard/telegram', icon: Send },
+  { name: 'Аудит', href: '/dashboard/audit', icon: ScrollText },
+  { name: 'Расписание', href: '/dashboard/scheduled-tasks', icon: Timer },
   { name: 'Безопасность', href: '/dashboard/security', icon: Shield },
   { name: 'Настройки', href: '/dashboard/settings', icon: Settings },
 ]
+
+function AlertsBadge() {
+  const { count } = useActiveAlertsCount()
+
+  if (count === 0) return null
+
+  return (
+    <span className="ml-auto inline-flex items-center justify-center px-2 py-0.5 text-xs font-medium rounded-full bg-red-100 text-red-700">
+      {count > 99 ? '99+' : count}
+    </span>
+  )
+}
 
 export function Sidebar() {
   const pathname = usePathname()
@@ -74,8 +99,9 @@ export function Sidebar() {
                   )}
                   aria-current={isActive ? 'page' : undefined}
                 >
-                  <Icon className="mr-3 h-5 w-5" aria-hidden="true" />
-                  {item.name}
+                  <Icon className="mr-3 h-5 w-5 flex-shrink-0" aria-hidden="true" />
+                  <span className="flex-1">{item.name}</span>
+                  {item.showBadge && <AlertsBadge />}
                 </Link>
               </li>
             )

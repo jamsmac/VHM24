@@ -23,6 +23,20 @@ export interface Location {
   updated_at: string
 }
 
+export interface MapLocationData {
+  id: string
+  name: string
+  address: string
+  city: string
+  latitude: number
+  longitude: number
+  status: string
+  machine_count: number
+  machines_active: number
+  machines_error: number
+  machines_low_stock: number
+}
+
 export interface CreateLocationDto {
   name: string
   address: string
@@ -72,6 +86,11 @@ export const locationsApi = {
 
   getStats: async (id: string) => {
     const response = await apiClient.get(`/locations/${id}/stats`)
+    return response.data
+  },
+
+  getMapData: async (): Promise<MapLocationData[]> => {
+    const response = await apiClient.get<MapLocationData[]>('/locations/map')
     return response.data
   },
 }

@@ -6,6 +6,7 @@ import { AuthController } from './auth.controller';
 import { AuthService, AuthResponse, AuthTokens } from './auth.service';
 import { TwoFactorAuthService } from './services/two-factor-auth.service';
 import { SessionService } from './services/session.service';
+import { CookieService } from './services/cookie.service';
 import { User, UserRole, UserStatus } from '../users/entities/user.entity';
 import { LocalAuthGuard } from './guards/local-auth.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
@@ -16,6 +17,7 @@ describe('AuthController', () => {
   let mockAuthService: jest.Mocked<AuthService>;
   let mockTwoFactorAuthService: jest.Mocked<TwoFactorAuthService>;
   let mockSessionService: jest.Mocked<SessionService>;
+  let mockCookieService: jest.Mocked<CookieService>;
 
   const mockUser: Partial<User> = {
     id: 'user-123',
@@ -37,7 +39,6 @@ describe('AuthController', () => {
     } as Request;
   };
 
-  // SEC-1: Mock Response for httpOnly cookie testing
   const mockResponse = (): Response => {
     return {
       cookie: jest.fn(),
@@ -72,12 +73,19 @@ describe('AuthController', () => {
       revokeOtherSessions: jest.fn(),
     } as any;
 
+    mockCookieService = {
+      setAuthCookies: jest.fn(),
+      setAccessTokenCookie: jest.fn(),
+      clearAuthCookies: jest.fn(),
+    } as any;
+
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AuthController],
       providers: [
         { provide: AuthService, useValue: mockAuthService },
         { provide: TwoFactorAuthService, useValue: mockTwoFactorAuthService },
         { provide: SessionService, useValue: mockSessionService },
+        { provide: CookieService, useValue: mockCookieService },
       ],
     })
       .overrideGuard(ThrottlerGuard)
@@ -121,7 +129,7 @@ describe('AuthController', () => {
 
       expect(result).toEqual(mockAuthResponse);
       expect(mockAuthService.login).toHaveBeenCalledWith(mockUser, '127.0.0.1', 'test-agent');
-      expect(res.cookie).toHaveBeenCalled(); // SEC-1: Verify cookies are set
+      expect(mockCookieService.setAuthCookies).toHaveBeenCalled();
     });
 
     it('should return requires_2fa when 2FA is enabled', async () => {
@@ -301,7 +309,22 @@ describe('AuthController', () => {
 
       expect(result).toEqual(mockTokens);
       expect(mockAuthService.refreshTokens).toHaveBeenCalledWith('old-refresh');
-      expect(res.cookie).toHaveBeenCalled(); // SEC-1: Verify cookies are set
+      expect(mockCookieService.setAuthCookies).toHaveBeenCalled();
+    });
+
+    it('should use refresh token from cookie if available', async () => {
+      const mockTokens: AuthTokens = {
+        access_token: 'new-access',
+        refresh_token: 'new-refresh',
+      };
+      mockAuthService.refreshTokens.mockResolvedValue(mockTokens);
+
+      const req = mockRequest({ cookies: { refresh_token: 'cookie-refresh' } } as any);
+      const res = mockResponse();
+
+      await controller.refresh({ refreshToken: 'body-refresh' }, req, res);
+
+      expect(mockAuthService.refreshTokens).toHaveBeenCalledWith('cookie-refresh');
     });
   });
 
@@ -313,7 +336,7 @@ describe('AuthController', () => {
       await controller.logout(mockUser as User, mockRequest(), res);
 
       expect(mockAuthService.logout).toHaveBeenCalledWith('user-123', '127.0.0.1');
-      expect(res.clearCookie).toHaveBeenCalled(); // SEC-1: Verify cookies are cleared
+      expect(mockCookieService.clearAuthCookies).toHaveBeenCalled();
     });
 
     it('should fallback to socket.remoteAddress when ip is undefined in logout', async () => {
@@ -479,7 +502,7 @@ describe('AuthController', () => {
         '127.0.0.1',
         'test-agent',
       );
-      expect(res.cookie).toHaveBeenCalled(); // SEC-1: Verify cookies are set
+      expect(mockCookieService.setAuthCookies).toHaveBeenCalled();
     });
 
     it('should use fallback IP in firstLoginChangePassword', async () => {
@@ -676,7 +699,7 @@ describe('AuthController', () => {
         '127.0.0.1',
         'test-agent',
       );
-      expect(res.cookie).toHaveBeenCalled(); // SEC-1: Verify cookies are set
+      expect(mockCookieService.setAuthCookies).toHaveBeenCalled();
     });
 
     it('should throw BadRequestException for invalid 2FA token', async () => {

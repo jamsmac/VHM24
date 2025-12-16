@@ -17,27 +17,40 @@ class EnvironmentVariables {
   @Max(65535)
   PORT: number = 3000;
 
-  // Database configuration
+  // Database configuration - support both DATABASE_URL and individual variables
   @IsString()
-  DATABASE_HOST: string;
+  @IsOptional()
+  DATABASE_URL?: string;
+
+  @IsString()
+  @IsOptional()
+  DATABASE_HOST?: string;
 
   @IsNumber()
+  @IsOptional()
   @Min(1)
   @Max(65535)
-  DATABASE_PORT: number;
+  DATABASE_PORT?: number;
 
   @IsString()
-  DATABASE_USER: string;
+  @IsOptional()
+  DATABASE_USER?: string;
 
   @IsString()
-  DATABASE_PASSWORD: string;
+  @IsOptional()
+  DATABASE_PASSWORD?: string;
 
   @IsString()
-  DATABASE_NAME: string;
+  @IsOptional()
+  DATABASE_NAME?: string;
 
   // JWT configuration (CRITICAL - must be present)
   @IsString()
   JWT_SECRET: string;
+
+  @IsString()
+  @IsOptional()
+  JWT_REFRESH_SECRET?: string;
 
   @IsString()
   @IsOptional()

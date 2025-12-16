@@ -17,7 +17,20 @@ const nextConfig = {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1',
   },
   images: {
-    domains: ['localhost'],
+    remotePatterns: [
+      {
+        protocol: 'http',
+        hostname: 'localhost',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.railway.app',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.supabase.co',
+      },
+    ],
     formats: ['image/avif', 'image/webp'],
   },
   // Security & PWA Headers Configuration

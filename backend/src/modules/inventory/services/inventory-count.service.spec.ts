@@ -6,6 +6,7 @@ import {
   InventoryActualCount,
   InventoryLevelType,
 } from '../entities/inventory-actual-count.entity';
+import { InventoryDifferenceService } from './inventory-difference.service';
 import { createMockRepository } from '@/test/helpers';
 
 /**
@@ -16,6 +17,7 @@ import { createMockRepository } from '@/test/helpers';
 describe('InventoryCountService', () => {
   let service: InventoryCountService;
   let actualCountRepo: any;
+  let _differenceService: jest.Mocked<InventoryDifferenceService>;
 
   // Test fixtures
   const testUserId = '11111111-1111-1111-1111-111111111111';
@@ -23,6 +25,15 @@ describe('InventoryCountService', () => {
   const testOperatorId = '33333333-3333-3333-3333-333333333333';
   const testMachineId = '44444444-4444-4444-4444-444444444444';
   const testSessionId = '55555555-5555-5555-5555-555555555555';
+
+  // Mock InventoryDifferenceService
+  const mockDifferenceService = {
+    executeThresholdActionsForCount: jest.fn().mockResolvedValue({
+      incidentId: undefined,
+      taskId: undefined,
+      notificationsSent: 0,
+    }),
+  };
 
   beforeEach(async () => {
     actualCountRepo = createMockRepository<InventoryActualCount>();
@@ -34,10 +45,15 @@ describe('InventoryCountService', () => {
           provide: getRepositoryToken(InventoryActualCount),
           useValue: actualCountRepo,
         },
+        {
+          provide: InventoryDifferenceService,
+          useValue: mockDifferenceService,
+        },
       ],
     }).compile();
 
     service = module.get<InventoryCountService>(InventoryCountService);
+    _differenceService = module.get(InventoryDifferenceService);
   });
 
   afterEach(() => {

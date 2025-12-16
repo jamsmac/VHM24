@@ -12,6 +12,10 @@ yarn-error.log*
 .env.staging
 .env.development
 *.env
+.env.secrets
+secrets.txt
+*_secrets.*
+*_credentials.*
 
 # Build outputs
 dist/

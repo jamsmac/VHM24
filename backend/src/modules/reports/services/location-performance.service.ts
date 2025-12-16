@@ -115,12 +115,17 @@ export class LocationPerformanceService {
 
   /**
    * Get machines data for location
+   *
+   * PERF-2: Optimized to use bulk queries instead of N+1 pattern
+   * Previously: 1 query per machine for stats
+   * Now: 2 queries total regardless of machine count
    */
   private async getMachinesData(
     locationId: string,
     startDate: Date,
     endDate: Date,
   ): Promise<LocationPerformanceReport['machines']> {
+    // 1. Get all machines for location (single query)
     const machines = await this.machineRepository.find({
       where: { location_id: locationId },
     });
@@ -131,29 +136,53 @@ export class LocationPerformanceService {
       (m) => m.status === 'offline' || m.status === 'disabled',
     ).length;
 
-    // Get performance for each machine
-    const performance = await Promise.all(
-      machines.map(async (machine) => {
-        const stats = await this.transactionRepository
-          .createQueryBuilder('t')
-          .select('SUM(t.amount)', 'revenue')
-          .addSelect('COUNT(t.id)', 'transactions')
-          .where('t.machine_id = :machineId', { machineId: machine.id })
-          .andWhere('t.transaction_date BETWEEN :startDate AND :endDate', {
-            startDate,
-            endDate,
-          })
-          .getRawOne();
+    if (machines.length === 0) {
+      return {
+        total,
+        active,
+        offline,
+        performance: [],
+      };
+    }
 
-        return {
-          machine_number: machine.machine_number,
-          machine_name: machine.name,
-          revenue: parseFloat(stats?.revenue || '0'),
-          transactions: parseInt(stats?.transactions || '0'),
-          status: machine.status,
-        };
-      }),
+    const machineIds = machines.map((m) => m.id);
+
+    // 2. Get stats for all machines in a single query
+    const statsRaw = await this.transactionRepository
+      .createQueryBuilder('t')
+      .select('t.machine_id', 'machine_id')
+      .addSelect('COALESCE(SUM(t.amount), 0)', 'revenue')
+      .addSelect('COUNT(t.id)', 'transactions')
+      .where('t.machine_id IN (:...machineIds)', { machineIds })
+      .andWhere('t.transaction_date BETWEEN :startDate AND :endDate', {
+        startDate,
+        endDate,
+      })
+      .groupBy('t.machine_id')
+      .getRawMany();
+
+    // Create lookup map for O(1) access
+    const statsMap = new Map(
+      statsRaw.map((s) => [
+        s.machine_id,
+        {
+          revenue: parseFloat(s.revenue || '0'),
+          transactions: parseInt(s.transactions || '0'),
+        },
+      ]),
     );
+
+    // 3. Combine results in memory
+    const performance = machines.map((machine) => {
+      const stats = statsMap.get(machine.id) || { revenue: 0, transactions: 0 };
+      return {
+        machine_number: machine.machine_number,
+        machine_name: machine.name,
+        revenue: stats.revenue,
+        transactions: stats.transactions,
+        status: machine.status,
+      };
+    });
 
     return {
       total,

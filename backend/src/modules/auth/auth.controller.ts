@@ -14,6 +14,7 @@ import {
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { Request, Response } from 'express';
 import { AuthService, AuthResponse, AuthTokens } from './auth.service';
+import { CookieService } from './services/cookie.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
@@ -31,8 +32,9 @@ import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { User } from '../users/entities/user.entity';
 import { TwoFactorAuthService } from './services/two-factor-auth.service';
+import { TwoFactorAuthService as SecurityTwoFactorAuthService } from '@modules/security/services/two-factor-auth.service';
 import { SessionService } from './services/session.service';
-import { setAuthCookies, clearAuthCookies, COOKIE_NAMES } from './utils/cookie.utils';
+import { VerifyBackupCodeDto } from './dto/verify-backup-code.dto';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -40,7 +42,9 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly twoFactorAuthService: TwoFactorAuthService,
+    private readonly securityTwoFactorAuthService: SecurityTwoFactorAuthService,
     private readonly sessionService: SessionService,
+    private readonly cookieService: CookieService,
   ) {}
 
   @Post('login')
@@ -51,7 +55,7 @@ export class AuthController {
   @ApiResponse({
     status: 200,
     description:
-      'Успешная аутентификация. Токены устанавливаются в httpOnly cookies (SEC-1). Может вернуть requires_password_change=true (REQ-AUTH-31) или requires_2fa=true (REQ-AUTH-42) если требуется дополнительная верификация.',
+      'Успешная аутентификация. Может вернуть requires_password_change=true (REQ-AUTH-31) или requires_2fa=true (REQ-AUTH-42) если требуется дополнительная верификация. SEC-1: Tokens are also set as httpOnly cookies.',
     type: AuthResponseDto,
   })
   @ApiResponse({ status: 401, description: 'Неверные учетные данные' })
@@ -75,7 +79,7 @@ export class AuthController {
 
     // SEC-1: Set httpOnly cookies for XSS protection
     if (authResponse.access_token && authResponse.refresh_token) {
-      setAuthCookies(res, authResponse.access_token, authResponse.refresh_token);
+      this.cookieService.setAuthCookies(res, authResponse.access_token, authResponse.refresh_token);
     }
 
     return authResponse;
@@ -109,7 +113,7 @@ export class AuthController {
 
     // SEC-1: Set httpOnly cookies for XSS protection
     if (authResponse.access_token && authResponse.refresh_token) {
-      setAuthCookies(res, authResponse.access_token, authResponse.refresh_token);
+      this.cookieService.setAuthCookies(res, authResponse.access_token, authResponse.refresh_token);
     }
 
     return authResponse;
@@ -122,7 +126,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Обновление токенов' })
   @ApiResponse({
     status: 200,
-    description: 'Токены успешно обновлены. Новые токены устанавливаются в httpOnly cookies (SEC-1).',
+    description: 'Токены успешно обновлены. SEC-1: Tokens are also set as httpOnly cookies.',
     type: AuthTokensDto,
   })
   @ApiResponse({ status: 401, description: 'Неверный refresh token' })
@@ -135,9 +139,8 @@ export class AuthController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ): Promise<AuthTokens> {
-    // SEC-1: Read refresh token from httpOnly cookie first, fallback to body for backward compatibility
-    const refreshToken =
-      req.cookies?.[COOKIE_NAMES.REFRESH_TOKEN] || refreshTokenDto.refreshToken;
+    // SEC-1: Try to get refresh token from cookie first, then from body
+    const refreshToken = req.cookies?.refresh_token || refreshTokenDto.refreshToken;
 
     if (!refreshToken) {
       throw new BadRequestException('Refresh token не предоставлен');
@@ -145,8 +148,8 @@ export class AuthController {
 
     const tokens = await this.authService.refreshTokens(refreshToken);
 
-    // SEC-1: Set new httpOnly cookies
-    setAuthCookies(res, tokens.access_token, tokens.refresh_token);
+    // SEC-1: Set httpOnly cookies for XSS protection
+    this.cookieService.setAuthCookies(res, tokens.access_token, tokens.refresh_token);
 
     return tokens;
   }
@@ -156,7 +159,7 @@ export class AuthController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Выход из системы (глобальный - отзывает все сессии)' })
-  @ApiResponse({ status: 204, description: 'Успешный выход. Cookies очищены (SEC-1).' })
+  @ApiResponse({ status: 204, description: 'Успешный выход. SEC-1: Cookies are cleared.' })
   @ApiResponse({ status: 401, description: 'Не авторизован' })
   async logout(
     @CurrentUser() user: User,
@@ -166,8 +169,8 @@ export class AuthController {
     const ip = req.ip || req.socket.remoteAddress;
     await this.authService.logout(user.id, ip);
 
-    // SEC-1: Clear httpOnly cookies
-    clearAuthCookies(res);
+    // SEC-1: Clear httpOnly cookies on logout
+    this.cookieService.clearAuthCookies(res);
   }
 
   @Get('profile')
@@ -276,7 +279,7 @@ export class AuthController {
   @ApiResponse({
     status: 200,
     description:
-      'Пароль успешно изменен, возвращаются новые токены в httpOnly cookies (SEC-1). Флаг requires_password_change снят.',
+      'Пароль успешно изменен, возвращаются новые токены. SEC-1: Tokens are also set as httpOnly cookies.',
     type: AuthResponseDto,
   })
   @ApiResponse({
@@ -303,7 +306,7 @@ export class AuthController {
 
     // SEC-1: Set httpOnly cookies for XSS protection
     if (authResponse.access_token && authResponse.refresh_token) {
-      setAuthCookies(res, authResponse.access_token, authResponse.refresh_token);
+      this.cookieService.setAuthCookies(res, authResponse.access_token, authResponse.refresh_token);
     }
 
     return authResponse;
@@ -423,7 +426,7 @@ export class AuthController {
   })
   @ApiResponse({
     status: 200,
-    description: 'Вход завершен, токены обновлены в httpOnly cookies (SEC-1)',
+    description: 'Вход завершен, токены обновлены. SEC-1: Tokens are also set as httpOnly cookies.',
   })
   @ApiResponse({ status: 400, description: 'Неверный код 2FA' })
   @ApiResponse({ status: 401, description: 'Не авторизован' })
@@ -452,7 +455,53 @@ export class AuthController {
 
     // SEC-1: Set httpOnly cookies for XSS protection
     if (authResponse.access_token && authResponse.refresh_token) {
-      setAuthCookies(res, authResponse.access_token, authResponse.refresh_token);
+      this.cookieService.setAuthCookies(res, authResponse.access_token, authResponse.refresh_token);
+    }
+
+    return authResponse;
+  }
+
+  @Post('2fa/login/backup')
+  @UseGuards(ThrottlerGuard, JwtAuthGuard, IpWhitelistGuard)
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 attempts per minute
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Завершить вход с резервным кодом 2FA',
+    description: 'Завершает процесс входа используя резервный код вместо TOTP',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Вход завершен, токены обновлены. SEC-1: Tokens are also set as httpOnly cookies.',
+  })
+  @ApiResponse({ status: 400, description: 'Неверный резервный код' })
+  @ApiResponse({ status: 401, description: 'Не авторизован' })
+  @ApiResponse({
+    status: 429,
+    description: 'Слишком много попыток входа с резервным кодом. Превышен лимит (5 попыток в минуту).',
+  })
+  async complete2FALoginWithBackupCode(
+    @CurrentUser() user: User,
+    @Body() dto: VerifyBackupCodeDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<AuthResponse> {
+    const ip = req.ip || req.socket.remoteAddress || '0.0.0.0';
+    const userAgent = req.headers['user-agent'];
+
+    // Verify backup code using security service
+    const isValid = await this.securityTwoFactorAuthService.verifyBackupCode(user.id, dto.code);
+
+    if (!isValid) {
+      throw new BadRequestException('Неверный резервный код двухфакторной аутентификации');
+    }
+
+    // Complete login (generates new tokens and creates session)
+    const authResponse = await this.authService.complete2FALogin(user.id, 'backup', ip, userAgent);
+
+    // SEC-1: Set httpOnly cookies for XSS protection
+    if (authResponse.access_token && authResponse.refresh_token) {
+      this.cookieService.setAuthCookies(res, authResponse.access_token, authResponse.refresh_token);
     }
 
     return authResponse;

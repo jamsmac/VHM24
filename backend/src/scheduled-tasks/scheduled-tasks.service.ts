@@ -21,6 +21,8 @@ import {
 } from '../modules/incidents/entities/incident.entity';
 import { InventoryService } from '../modules/inventory/inventory.service';
 import { InventoryCalculationService } from '../modules/inventory/services/inventory-calculation.service';
+import { InventoryDifferenceService } from '../modules/inventory/services/inventory-difference.service';
+import { SeverityLevel } from '../modules/inventory/entities/inventory-difference-threshold.entity';
 import { ComplaintsService } from '../modules/complaints/complaints.service';
 import { ComplaintStatus } from '../modules/complaints/entities/complaint.entity';
 import { InventoryBatchService } from '../modules/warehouse/services/inventory-batch.service';
@@ -33,6 +35,7 @@ import {
 import { Machine } from '../modules/machines/entities/machine.entity';
 import { CommissionSchedulerService } from '../modules/counterparty/services/commission-scheduler.service';
 import { OperatorRatingsService } from '../modules/operator-ratings/operator-ratings.service';
+import { AlertsService } from '../modules/alerts/alerts.service';
 import { Nomenclature } from '../modules/nomenclature/entities/nomenclature.entity';
 import { InventoryLevelType } from '../modules/inventory/entities/inventory-actual-count.entity';
 import { startOfDay, endOfDay, subDays } from 'date-fns';
@@ -70,12 +73,14 @@ export class ScheduledTasksService {
     private readonly incidentsService: IncidentsService,
     private readonly inventoryService: InventoryService,
     private readonly inventoryCalculationService: InventoryCalculationService,
+    private readonly inventoryDifferenceService: InventoryDifferenceService,
     private readonly complaintsService: ComplaintsService,
     private readonly inventoryBatchService: InventoryBatchService,
     private readonly warehouseService: WarehouseService,
     private readonly transactionsService: TransactionsService,
     private readonly commissionSchedulerService: CommissionSchedulerService,
     private readonly operatorRatingsService: OperatorRatingsService,
+    private readonly alertsService: AlertsService,
   ) {}
 
   /**
@@ -1135,6 +1140,238 @@ export class ScheduledTasksService {
       }
     } catch (error) {
       this.logger.error('Error pre-calculating inventory balances:', error.message);
+    }
+  }
+
+  /**
+   * Monitor inventory difference thresholds for recent counts
+   * Runs every 4 hours to check recent inventory counts for threshold violations
+   * Executes automatic actions (incidents, tasks, notifications) when thresholds exceeded
+   *
+   * REQ-STK-CALC-04, REQ-ANL-05: Automatic threshold monitoring and actions
+   */
+  @Cron('0 */4 * * *') // Every 4 hours
+  async monitorInventoryThresholds() {
+    if (process.env.ENABLE_SCHEDULED_TASKS !== 'true') return;
+
+    this.logger.log('Starting inventory threshold monitoring...');
+
+    try {
+      const startTime = Date.now();
+
+      // Get inventory counts from the last 4 hours that haven't triggered actions
+      const fourHoursAgo = new Date();
+      fourHoursAgo.setHours(fourHoursAgo.getHours() - 4);
+
+      // Get differences report for recent counts
+      const { data: differences } = await this.inventoryDifferenceService.getDifferencesReport({
+        date_from: fourHoursAgo.toISOString(),
+        threshold_exceeded_only: true,
+        limit: 500,
+      });
+
+      this.logger.log(`Found ${differences.length} threshold violations in the last 4 hours`);
+
+      if (differences.length === 0) {
+        this.logger.debug('No threshold violations found');
+        return;
+      }
+
+      // Group by severity for summary
+      const criticalCount = differences.filter((d) => d.severity === SeverityLevel.CRITICAL).length;
+      const warningCount = differences.filter((d) => d.severity === SeverityLevel.WARNING).length;
+      const infoCount = differences.filter((d) => d.severity === SeverityLevel.INFO).length;
+
+      this.logger.log(
+        `Threshold violations: ${criticalCount} critical, ${warningCount} warning, ${infoCount} info`,
+      );
+
+      // Send summary notification to admin if there are critical violations
+      if (criticalCount > 0) {
+        const topCritical = differences
+          .filter((d) => d.severity === SeverityLevel.CRITICAL)
+          .slice(0, 5)
+          .map(
+            (d) =>
+              `• ${d.nomenclature_name}: ${d.difference_abs.toFixed(2)} (${d.difference_rel.toFixed(1)}%)`,
+          )
+          .join('\n');
+
+        await this.notificationsService.create({
+          type: NotificationType.OTHER,
+          channel: NotificationChannel.IN_APP,
+          recipient_id: process.env.ADMIN_USER_ID || 'admin',
+          title: `🚨 Критические расхождения остатков: ${criticalCount}`,
+          message:
+            `Обнаружены критические расхождения инвентаря:\n\n` +
+            `Критических: ${criticalCount}\n` +
+            `Предупреждений: ${warningCount}\n\n` +
+            `Топ расхождений:\n${topCritical}\n\n` +
+            `Проверьте отчёт по расхождениям для деталей.`,
+          data: {
+            critical_count: criticalCount,
+            warning_count: warningCount,
+            info_count: infoCount,
+            total_count: differences.length,
+            auto_generated: true,
+            period_start: fourHoursAgo.toISOString(),
+          },
+          action_url: `/reports/inventory-differences?severity=CRITICAL`,
+        });
+      }
+
+      const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+      this.logger.log(`Inventory threshold monitoring completed in ${duration}s`);
+    } catch (error) {
+      this.logger.error('Error monitoring inventory thresholds:', error.message);
+    }
+  }
+
+  /**
+   * Process alert escalations - runs every 10 minutes
+   * Checks for active alerts that need to be escalated based on their rules
+   * Sends escalation notifications to higher-level users
+   */
+  @Cron(CronExpression.EVERY_10_MINUTES)
+  async processAlertEscalations() {
+    if (process.env.ENABLE_SCHEDULED_TASKS !== 'true') return;
+
+    this.logger.log('Processing alert escalations...');
+
+    try {
+      await this.alertsService.processEscalations();
+      this.logger.log('Alert escalation processing completed');
+    } catch (error) {
+      this.logger.error('Error processing alert escalations:', error.message);
+    }
+  }
+
+  /**
+   * Evaluate alert rules against current system metrics - runs every hour
+   * Checks configured alert rules and triggers alerts when conditions are met
+   * Integrates with inventory, machines, tasks, and incidents data
+   */
+  @Cron(CronExpression.EVERY_HOUR)
+  async evaluateAlertRules() {
+    if (process.env.ENABLE_SCHEDULED_TASKS !== 'true') return;
+
+    this.logger.log('Evaluating alert rules...');
+
+    try {
+      // Get all enabled rules
+      const rules = await this.alertsService.findAllRules({ is_enabled: true });
+      this.logger.log(`Found ${rules.length} enabled alert rules to evaluate`);
+
+      let triggeredCount = 0;
+
+      for (const rule of rules) {
+        try {
+          // Evaluate based on metric type
+          switch (rule.metric) {
+            case 'low_stock_percentage': {
+              // Check machine inventory levels
+              const machines = await this.machineRepository.find({
+                where: { deleted_at: IsNull() },
+              });
+
+              for (const machine of machines) {
+                // Skip if rule has scope filters that don't match this machine
+                if (rule.scope_filters?.machine_ids?.length &&
+                    !rule.scope_filters.machine_ids.includes(machine.id)) {
+                  continue;
+                }
+
+                // Get machine inventory and calculate fill percentage
+                const inventory = await this.machineInventoryRepository.find({
+                  where: { machine_id: machine.id },
+                });
+
+                if (inventory.length === 0) continue;
+
+                // Calculate average fill percentage
+                let totalCurrent = 0;
+                let totalMax = 0;
+
+                for (const item of inventory) {
+                  totalCurrent += Number(item.current_quantity || 0);
+                  totalMax += Number(item.max_capacity || item.current_quantity || 1);
+                }
+
+                const fillPercentage = totalMax > 0 ? (totalCurrent / totalMax) * 100 : 100;
+
+                // Evaluate the rule
+                const alert = await this.alertsService.evaluateRule(rule.id, fillPercentage, {
+                  machine_id: machine.id,
+                  additional_data: {
+                    machine_number: machine.machine_number,
+                    machine_name: machine.name,
+                    current_quantity: totalCurrent,
+                    max_quantity: totalMax,
+                  },
+                });
+
+                if (alert) {
+                  triggeredCount++;
+                  this.logger.log(
+                    `Alert triggered for machine ${machine.machine_number}: ${rule.name} (${fillPercentage.toFixed(1)}%)`,
+                  );
+                }
+              }
+              break;
+            }
+
+            case 'task_overdue_hours': {
+              // Check for overdue tasks
+              const overdueTasks = await this.taskRepository.find({
+                where: {
+                  due_date: LessThan(new Date()),
+                  status: TaskStatus.IN_PROGRESS,
+                },
+                relations: ['machine'],
+              });
+
+              for (const task of overdueTasks) {
+                if (!task.due_date) continue;
+
+                const overdueHours = Math.floor(
+                  (Date.now() - task.due_date.getTime()) / (1000 * 60 * 60),
+                );
+
+                const alert = await this.alertsService.evaluateRule(rule.id, overdueHours, {
+                  machine_id: task.machine_id,
+                  additional_data: {
+                    task_id: task.id,
+                    task_type: task.type_code,
+                    machine_number: task.machine?.machine_number,
+                    due_date: task.due_date,
+                  },
+                });
+
+                if (alert) {
+                  triggeredCount++;
+                }
+              }
+              break;
+            }
+
+            // Add more metric types as needed
+            default:
+              this.logger.debug(`Metric type ${rule.metric} evaluation not implemented yet`);
+          }
+        } catch (error) {
+          this.logger.error(
+            `Error evaluating rule ${rule.id} (${rule.name}): ${error.message}`,
+          );
+        }
+      }
+
+      if (triggeredCount > 0) {
+        this.logger.log(`Alert evaluation completed: ${triggeredCount} alert(s) triggered`);
+      } else {
+        this.logger.debug('Alert evaluation completed: no alerts triggered');
+      }
+    } catch (error) {
+      this.logger.error('Error evaluating alert rules:', error.message);
     }
   }
 }

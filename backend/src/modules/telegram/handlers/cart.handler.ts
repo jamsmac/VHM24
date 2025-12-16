@@ -1,32 +1,27 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Context, Telegraf } from 'telegraf';
 import { TelegramSessionService } from '../services/telegram-session.service';
+import { CartStorageService, CartItem } from '../services/cart-storage.service';
 import { CartState, defaultSessionData } from './fsm-states';
 import { getCartKeyboard, getCartEmptyKeyboard, getCheckoutKeyboard } from './keyboards';
 
 /**
- * Интерфейс элемента корзины.
- */
-interface CartItem {
-  id: string;
-  materialId: string;
-  name: string;
-  quantity: number;
-  unit: string;
-}
-
-/**
  * Обработчик корзины и оформления заказа.
  * Портировано из Python vendhub-bot/handlers/cart.py
+ *
+ * PERF-4: Cart storage migrated to Redis with 24h TTL
+ * - Survives server restarts
+ * - Shared across multiple instances
+ * - 24-hour cart persistence for better UX
  */
 @Injectable()
 export class CartHandler {
   private readonly logger = new Logger(CartHandler.name);
 
-  // Временное хранилище корзин (TODO: перенести в Redis или БД)
-  private carts: Map<string, CartItem[]> = new Map();
-
-  constructor(private readonly sessionService: TelegramSessionService) {}
+  constructor(
+    private readonly sessionService: TelegramSessionService,
+    private readonly cartStorage: CartStorageService,
+  ) {}
 
   /**
    * Регистрирует все обработчики корзины.
@@ -59,26 +54,11 @@ export class CartHandler {
   }
 
   /**
-   * Получить корзину пользователя.
-   */
-  private getCart(userId: string): CartItem[] {
-    return this.carts.get(userId) || [];
-  }
-
-  /**
    * Добавить в корзину (вызывается из CatalogHandler).
+   * Now uses Redis-backed storage with 24h TTL.
    */
-  addToCart(userId: string, item: CartItem) {
-    const cart = this.getCart(userId);
-    const existing = cart.find((i) => i.materialId === item.materialId);
-
-    if (existing) {
-      existing.quantity += item.quantity;
-    } else {
-      cart.push(item);
-    }
-
-    this.carts.set(userId, cart);
+  async addToCart(userId: string, item: CartItem): Promise<void> {
+    await this.cartStorage.addItem(userId, item);
   }
 
   /**
@@ -103,7 +83,7 @@ export class CartHandler {
     const userId = ctx.from?.id?.toString();
     if (!userId) return;
 
-    const cart = this.getCart(userId);
+    const cart = await this.cartStorage.getCart(userId);
 
     // Сбрасываем состояние
     await this.sessionService.setSessionData(userId, defaultSessionData);
@@ -164,15 +144,13 @@ export class CartHandler {
     // @ts-expect-error - ctx.match exists for action with regex
     const itemId = ctx.match[1];
 
-    const cart = this.getCart(userId);
-    const item = cart.find((i) => i.id === itemId);
+    const item = await this.cartStorage.updateItemQuantity(userId, itemId, 1);
 
     if (item) {
-      item.quantity += 1;
-      this.carts.set(userId, cart);
       await ctx.answerCbQuery(`➕ ${item.name}: ${item.quantity}`);
     }
 
+    const cart = await this.cartStorage.getCart(userId);
     await this.updateCartView(ctx, cart);
   }
 
@@ -186,20 +164,20 @@ export class CartHandler {
     // @ts-expect-error - ctx.match exists for action with regex
     const itemId = ctx.match[1];
 
-    let cart = this.getCart(userId);
-    const item = cart.find((i) => i.id === itemId);
+    // Get item before update to show name in callback
+    const existingItem = await this.cartStorage.getItem(userId, itemId);
+    const itemName = existingItem?.name || 'Товар';
+
+    const item = await this.cartStorage.updateItemQuantity(userId, itemId, -1);
 
     if (item) {
-      if (item.quantity <= 1) {
-        cart = cart.filter((i) => i.id !== itemId);
-        await ctx.answerCbQuery(`🗑 ${item.name} удалён`);
-      } else {
-        item.quantity -= 1;
-        await ctx.answerCbQuery(`➖ ${item.name}: ${item.quantity}`);
-      }
-      this.carts.set(userId, cart);
+      await ctx.answerCbQuery(`➖ ${item.name}: ${item.quantity}`);
+    } else if (existingItem) {
+      // Item was removed (quantity was 1)
+      await ctx.answerCbQuery(`🗑 ${itemName} удалён`);
     }
 
+    const cart = await this.cartStorage.getCart(userId);
     await this.updateCartView(ctx, cart);
   }
 
@@ -213,15 +191,13 @@ export class CartHandler {
     // @ts-expect-error - ctx.match exists for action with regex
     const itemId = ctx.match[1];
 
-    let cart = this.getCart(userId);
-    const item = cart.find((i) => i.id === itemId);
+    const item = await this.cartStorage.removeItem(userId, itemId);
 
     if (item) {
-      cart = cart.filter((i) => i.id !== itemId);
-      this.carts.set(userId, cart);
       await ctx.answerCbQuery(`🗑 Удалено: ${item.name}`);
     }
 
+    const cart = await this.cartStorage.getCart(userId);
     await this.updateCartView(ctx, cart);
   }
 
@@ -232,7 +208,7 @@ export class CartHandler {
     const userId = ctx.from?.id?.toString();
     if (!userId) return;
 
-    this.carts.delete(userId);
+    await this.cartStorage.clearCart(userId);
 
     await ctx.editMessageText('🗑 <b>Корзина очищена</b>', {
       parse_mode: 'HTML',
@@ -282,7 +258,7 @@ export class CartHandler {
     const userId = ctx.from?.id?.toString();
     if (!userId) return;
 
-    const cart = this.getCart(userId);
+    const cart = await this.cartStorage.getCart(userId);
 
     if (cart.length === 0) {
       await ctx.answerCbQuery('❌ Корзина пуста', { show_alert: true });
@@ -368,7 +344,7 @@ export class CartHandler {
     const userId = ctx.from?.id?.toString();
     if (!userId) return;
 
-    const cart = this.getCart(userId);
+    const cart = await this.cartStorage.getCart(userId);
 
     await this.sessionService.setSessionData(userId, defaultSessionData);
 
@@ -386,7 +362,7 @@ export class CartHandler {
     const userId = ctx.from?.id?.toString();
     if (!userId) return;
 
-    const cart = this.getCart(userId);
+    const cart = await this.cartStorage.getCart(userId);
 
     if (cart.length === 0) {
       await ctx.answerCbQuery('❌ Корзина пуста', { show_alert: true });
@@ -410,7 +386,7 @@ export class CartHandler {
     const requestId = Math.floor(Math.random() * 10000); // Temporary
 
     // Очищаем корзину и сессию
-    this.carts.delete(userId);
+    await this.cartStorage.clearCart(userId);
     await this.sessionService.setSessionData(userId, defaultSessionData);
 
     const priorityEmoji: Record<string, string> = {
@@ -489,7 +465,7 @@ export class CartHandler {
     if (session.state === CartState.ENTERING_COMMENT) {
       const comment = text === '/skip' ? undefined : text.slice(0, 500);
 
-      const cart = this.getCart(userId);
+      const cart = await this.cartStorage.getCart(userId);
 
       await this.sessionService.setSessionData(userId, {
         ...session,

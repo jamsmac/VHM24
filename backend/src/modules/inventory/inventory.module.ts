@@ -22,8 +22,10 @@ import { InventoryPdfService } from './services/inventory-pdf.service';
 import { InventoryAdjustmentService } from './services/inventory-adjustment.service';
 import { InventoryReportPresetsService } from './services/inventory-report-presets.service';
 import { InventoryReportPresetsController } from './controllers/inventory-report-presets.controller';
+import { InventoryThresholdsController } from './controllers/inventory-thresholds.controller';
 import { InventoryReportPreset } from './entities/inventory-report-preset.entity';
 import { InventoryConsumptionCalculatorService } from './services/inventory-consumption-calculator.service';
+import { InventoryThresholdService } from './services/inventory-threshold.service';
 import { StockOpeningBalance } from '../opening-balances/entities/opening-balance.entity';
 import { PurchaseHistory } from '../purchase-history/entities/purchase-history.entity';
 import { Transaction } from '../transactions/entities/transaction.entity';
@@ -66,6 +68,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
     InventoryDifferencesController,
     InventoryAdjustmentsController,
     InventoryReportPresetsController,
+    InventoryThresholdsController,
   ],
   providers: [
     InventoryService,
@@ -74,6 +77,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
     InventoryCountService,
     InventoryDifferenceService,
     InventoryThresholdActionsService,
+    InventoryThresholdService,
     InventoryExportService,
     InventoryPdfService,
     InventoryAdjustmentService,
@@ -86,6 +90,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
     InventoryCountService,
     InventoryDifferenceService,
     InventoryThresholdActionsService,
+    InventoryThresholdService,
     InventoryExportService,
     InventoryPdfService,
     InventoryAdjustmentService,

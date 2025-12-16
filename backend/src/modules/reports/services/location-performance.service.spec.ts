@@ -23,7 +23,9 @@ describe('LocationPerformanceService', () => {
       addSelect: jest.fn().mockReturnThis(),
       where: jest.fn().mockReturnThis(),
       andWhere: jest.fn().mockReturnThis(),
+      groupBy: jest.fn().mockReturnThis(),
       getRawOne: jest.fn().mockResolvedValue(null),
+      getRawMany: jest.fn().mockResolvedValue([]),
     };
 
     mockLocationRepository = {
@@ -133,11 +135,15 @@ describe('LocationPerformanceService', () => {
 
       mockLocationRepository.findOne.mockResolvedValue(mockLocation);
       mockMachineRepository.find.mockResolvedValue(mockMachines);
-      transactionQueryBuilder.getRawOne.mockResolvedValue({
-        revenue: '1000',
-        transactions: '10',
-        total_revenue: '10000',
-      });
+
+      // PERF-2: Now uses bulk query with getRawMany for machine stats
+      transactionQueryBuilder.getRawMany.mockResolvedValue([
+        { machine_id: 'm-1', revenue: '1000', transactions: '10' },
+        { machine_id: 'm-2', revenue: '2000', transactions: '20' },
+        { machine_id: 'm-3', revenue: '500', transactions: '5' },
+        { machine_id: 'm-4', revenue: '500', transactions: '5' },
+      ]);
+      transactionQueryBuilder.getRawOne.mockResolvedValue({ total_revenue: '10000' });
 
       const result = await service.generateReport(locationId, startDate, endDate);
 
@@ -214,15 +220,12 @@ describe('LocationPerformanceService', () => {
       mockLocationRepository.findOne.mockResolvedValue(mockLocation);
       mockMachineRepository.find.mockResolvedValue(mockMachines);
 
-      let callCount = 0;
-      transactionQueryBuilder.getRawOne.mockImplementation(() => {
-        callCount++;
-        // First 2 calls for machine performance, 3rd for total revenue
-        if (callCount <= 2) {
-          return Promise.resolve({ revenue: '5000', transactions: '50' });
-        }
-        return Promise.resolve({ total_revenue: '10000' });
-      });
+      // PERF-2: Now uses bulk query with getRawMany for machine stats
+      transactionQueryBuilder.getRawMany.mockResolvedValue([
+        { machine_id: 'm-1', revenue: '5000', transactions: '50' },
+        { machine_id: 'm-2', revenue: '5000', transactions: '50' },
+      ]);
+      transactionQueryBuilder.getRawOne.mockResolvedValue({ total_revenue: '10000' });
 
       const result = await service.generateReport(locationId, startDate, endDate);
 
@@ -251,14 +254,13 @@ describe('LocationPerformanceService', () => {
       mockLocationRepository.findOne.mockResolvedValue(mockLocation);
       mockMachineRepository.find.mockResolvedValue(mockMachines);
 
-      let callCount = 0;
-      transactionQueryBuilder.getRawOne.mockImplementation(() => {
-        callCount++;
-        if (callCount === 1) return Promise.resolve({ revenue: '3000', transactions: '30' });
-        if (callCount === 2) return Promise.resolve({ revenue: '5000', transactions: '50' });
-        if (callCount === 3) return Promise.resolve({ revenue: '2000', transactions: '20' });
-        return Promise.resolve({ total_revenue: '10000' });
-      });
+      // PERF-2: Now uses bulk query with getRawMany for machine stats
+      transactionQueryBuilder.getRawMany.mockResolvedValue([
+        { machine_id: 'm-1', revenue: '3000', transactions: '30' },
+        { machine_id: 'm-2', revenue: '5000', transactions: '50' },
+        { machine_id: 'm-3', revenue: '2000', transactions: '20' },
+      ]);
+      transactionQueryBuilder.getRawOne.mockResolvedValue({ total_revenue: '10000' });
 
       const result = await service.generateReport(locationId, startDate, endDate);
 
@@ -295,7 +297,16 @@ describe('LocationPerformanceService', () => {
 
       mockLocationRepository.findOne.mockResolvedValue(mockLocation);
       mockMachineRepository.find.mockResolvedValue(mockMachines);
-      transactionQueryBuilder.getRawOne.mockResolvedValue({ revenue: '1000', transactions: '10' });
+
+      // PERF-2: Now uses bulk query with getRawMany for machine stats
+      transactionQueryBuilder.getRawMany.mockResolvedValue(
+        Array.from({ length: 10 }, (_, i) => ({
+          machine_id: `m-${i}`,
+          revenue: '1000',
+          transactions: '10',
+        })),
+      );
+      transactionQueryBuilder.getRawOne.mockResolvedValue({ total_revenue: '10000' });
 
       const result = await service.generateReport(locationId, startDate, endDate);
 
@@ -317,7 +328,12 @@ describe('LocationPerformanceService', () => {
 
       mockLocationRepository.findOne.mockResolvedValue(mockLocation);
       mockMachineRepository.find.mockResolvedValue(mockMachines);
-      transactionQueryBuilder.getRawOne.mockResolvedValue({ revenue: '0', transactions: '0' });
+
+      // PERF-2: Now uses bulk query with getRawMany for machine stats
+      transactionQueryBuilder.getRawMany.mockResolvedValue([
+        { machine_id: 'm-1', revenue: '0', transactions: '0' },
+      ]);
+      transactionQueryBuilder.getRawOne.mockResolvedValue({ total_revenue: '0' });
 
       const result = await service.generateReport(locationId, startDate, endDate);
 
@@ -339,6 +355,9 @@ describe('LocationPerformanceService', () => {
 
       mockLocationRepository.findOne.mockResolvedValue(mockLocation);
       mockMachineRepository.find.mockResolvedValue(mockMachines);
+
+      // PERF-2: Now uses bulk query with getRawMany for machine stats
+      transactionQueryBuilder.getRawMany.mockResolvedValue([]);
       transactionQueryBuilder.getRawOne.mockResolvedValue({ total_revenue: '0' });
 
       const result = await service.generateReport(locationId, startDate, endDate);

@@ -4,8 +4,17 @@ import { ColumnDef } from '@tanstack/react-table'
 import { Task, TaskStatus, TaskType, TaskPriority } from '@/types/tasks'
 import { Badge } from '@/components/ui/badge'
 import { DataTableColumnHeader } from '@/components/ui/data-table'
-import { Eye, CheckCircle2, Clock } from 'lucide-react'
-import Link from 'next/link'
+import { DataTableRowActions, RowAction } from '@/components/ui/data-table-row-actions'
+import {
+  Eye,
+  CheckCircle2,
+  Clock,
+  Edit,
+  Trash2,
+  UserPlus,
+  CalendarClock,
+  XCircle,
+} from 'lucide-react'
 import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
 
@@ -192,25 +201,91 @@ export const taskColumns: ColumnDef<Task>[] = [
       const task = row.original
 
       return (
-        <div className="flex items-center gap-2">
-          <Link
-            href={`/dashboard/tasks/${task.id}`}
-            className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-8 w-8"
-          >
-            <Eye className="h-4 w-4" />
-            <span className="sr-only">Просмотр</span>
-          </Link>
-          {task.status !== TaskStatus.COMPLETED && (
-            <Link
-              href={`/dashboard/tasks/${task.id}/complete`}
-              className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-8 w-8"
-            >
-              <CheckCircle2 className="h-4 w-4" />
-              <span className="sr-only">Завершить</span>
-            </Link>
-          )}
-        </div>
+        <TaskRowActions task={task} />
       )
     },
   },
 ]
+
+export interface TaskActionCallbacks {
+  onView?: (task: Task) => void
+  onEdit?: (task: Task) => void
+  onComplete?: (task: Task) => void
+  onAssign?: (task: Task) => void
+  onPostpone?: (task: Task) => void
+  onCancel?: (task: Task) => void
+  onDelete?: (task: Task) => void
+}
+
+interface TaskRowActionsProps {
+  task: Task
+  callbacks?: TaskActionCallbacks
+}
+
+export function TaskRowActions({ task, callbacks }: TaskRowActionsProps) {
+  const actions: RowAction<Task>[] = [
+    {
+      label: 'Просмотр',
+      icon: <Eye className="h-4 w-4" />,
+      onClick: (t) => {
+        if (callbacks?.onView) {
+          callbacks.onView(t)
+        } else {
+          window.location.href = `/dashboard/tasks/${t.id}`
+        }
+      },
+    },
+    {
+      label: 'Редактировать',
+      icon: <Edit className="h-4 w-4" />,
+      onClick: (t) => {
+        if (callbacks?.onEdit) {
+          callbacks.onEdit(t)
+        } else {
+          window.location.href = `/dashboard/tasks/${t.id}/edit`
+        }
+      },
+      hidden: (t) => t.status === TaskStatus.COMPLETED || t.status === TaskStatus.CANCELLED,
+    },
+    {
+      label: 'Завершить',
+      icon: <CheckCircle2 className="h-4 w-4" />,
+      onClick: (t) => {
+        if (callbacks?.onComplete) {
+          callbacks.onComplete(t)
+        } else {
+          window.location.href = `/dashboard/tasks/${t.id}/complete`
+        }
+      },
+      hidden: (t) => t.status === TaskStatus.COMPLETED || t.status === TaskStatus.CANCELLED,
+    },
+    {
+      label: 'Назначить',
+      icon: <UserPlus className="h-4 w-4" />,
+      onClick: (t) => callbacks?.onAssign?.(t),
+      hidden: (t) => t.status === TaskStatus.COMPLETED || t.status === TaskStatus.CANCELLED || !callbacks?.onAssign,
+    },
+    {
+      label: 'Отложить',
+      icon: <CalendarClock className="h-4 w-4" />,
+      onClick: (t) => callbacks?.onPostpone?.(t),
+      hidden: (t) => t.status === TaskStatus.COMPLETED || t.status === TaskStatus.CANCELLED || t.status === TaskStatus.POSTPONED || !callbacks?.onPostpone,
+    },
+    {
+      label: 'Отменить',
+      icon: <XCircle className="h-4 w-4" />,
+      onClick: (t) => callbacks?.onCancel?.(t),
+      hidden: (t) => t.status === TaskStatus.COMPLETED || t.status === TaskStatus.CANCELLED || !callbacks?.onCancel,
+      variant: 'destructive',
+    },
+    {
+      label: 'Удалить',
+      icon: <Trash2 className="h-4 w-4" />,
+      onClick: (t) => callbacks?.onDelete?.(t),
+      hidden: !callbacks?.onDelete,
+      variant: 'destructive',
+    },
+  ]
+
+  return <DataTableRowActions row={task} actions={actions} menuLabel="Действия" />
+}

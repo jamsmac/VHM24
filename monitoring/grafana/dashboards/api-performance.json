@@ -1,0 +1,406 @@
+{
+  "dashboard": {
+    "id": null,
+    "uid": "vendhub-api-perf",
+    "title": "VendHub - API Performance",
+    "tags": ["vendhub", "performance", "api"],
+    "timezone": "Asia/Tashkent",
+    "schemaVersion": 38,
+    "version": 1,
+    "refresh": "30s",
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "annotations": {
+      "list": []
+    },
+    "templating": {
+      "list": []
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "Response Time P95",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(vendhub_http_request_duration_seconds_bucket[5m])) by (le))",
+            "legendFormat": "P95"
+          }
+        ],
+        "options": {
+          "colorMode": "background",
+          "graphMode": "area",
+          "justifyMode": "auto",
+          "textMode": "auto"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "color": "green", "value": null },
+                { "color": "yellow", "value": 0.5 },
+                { "color": "red", "value": 2 }
+              ]
+            },
+            "unit": "s"
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "Request Rate",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+        "targets": [
+          {
+            "expr": "sum(rate(vendhub_http_requests_total[5m])) * 60",
+            "legendFormat": "Requests/min"
+          }
+        ],
+        "options": {
+          "colorMode": "background",
+          "graphMode": "area"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "color": "blue", "value": null }
+              ]
+            },
+            "unit": "reqpm"
+          }
+        }
+      },
+      {
+        "id": 3,
+        "title": "Error Rate",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+        "targets": [
+          {
+            "expr": "sum(rate(vendhub_http_request_errors_total[5m])) / sum(rate(vendhub_http_requests_total[5m])) * 100",
+            "legendFormat": "Error %"
+          }
+        ],
+        "options": {
+          "colorMode": "background",
+          "graphMode": "area"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "color": "green", "value": null },
+                { "color": "yellow", "value": 1 },
+                { "color": "red", "value": 5 }
+              ]
+            },
+            "unit": "percent"
+          }
+        }
+      },
+      {
+        "id": 4,
+        "title": "Cache Hit Rate",
+        "type": "gauge",
+        "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+        "targets": [
+          {
+            "expr": "sum(rate(vendhub_cache_hits_total[5m])) / (sum(rate(vendhub_cache_hits_total[5m])) + sum(rate(vendhub_cache_misses_total[5m]))) * 100",
+            "legendFormat": "Hit Rate"
+          }
+        ],
+        "options": {
+          "reduceOptions": {
+            "calcs": ["lastNotNull"],
+            "fields": "",
+            "values": false
+          },
+          "showThresholdLabels": false,
+          "showThresholdMarkers": true
+        },
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "color": "red", "value": null },
+                { "color": "yellow", "value": 50 },
+                { "color": "green", "value": 80 }
+              ]
+            },
+            "min": 0,
+            "max": 100,
+            "unit": "percent"
+          }
+        }
+      },
+      {
+        "id": 5,
+        "title": "Response Time Distribution",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, sum(rate(vendhub_http_request_duration_seconds_bucket[5m])) by (le))",
+            "legendFormat": "P50"
+          },
+          {
+            "expr": "histogram_quantile(0.90, sum(rate(vendhub_http_request_duration_seconds_bucket[5m])) by (le))",
+            "legendFormat": "P90"
+          },
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(vendhub_http_request_duration_seconds_bucket[5m])) by (le))",
+            "legendFormat": "P95"
+          },
+          {
+            "expr": "histogram_quantile(0.99, sum(rate(vendhub_http_request_duration_seconds_bucket[5m])) by (le))",
+            "legendFormat": "P99"
+          }
+        ],
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom"
+          }
+        },
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 0
+            },
+            "unit": "s"
+          }
+        }
+      },
+      {
+        "id": 6,
+        "title": "Request Rate by Status",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+        "targets": [
+          {
+            "expr": "sum(rate(vendhub_http_requests_total{status=~\"2..\"}[5m])) * 60",
+            "legendFormat": "2xx Success"
+          },
+          {
+            "expr": "sum(rate(vendhub_http_requests_total{status=~\"4..\"}[5m])) * 60",
+            "legendFormat": "4xx Client Error"
+          },
+          {
+            "expr": "sum(rate(vendhub_http_requests_total{status=~\"5..\"}[5m])) * 60",
+            "legendFormat": "5xx Server Error"
+          }
+        ],
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom"
+          }
+        },
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 10
+            },
+            "unit": "reqpm"
+          },
+          "overrides": [
+            {
+              "matcher": { "id": "byName", "options": "2xx Success" },
+              "properties": [{ "id": "color", "value": { "fixedColor": "green", "mode": "fixed" } }]
+            },
+            {
+              "matcher": { "id": "byName", "options": "4xx Client Error" },
+              "properties": [{ "id": "color", "value": { "fixedColor": "yellow", "mode": "fixed" } }]
+            },
+            {
+              "matcher": { "id": "byName", "options": "5xx Server Error" },
+              "properties": [{ "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } }]
+            }
+          ]
+        }
+      },
+      {
+        "id": 7,
+        "title": "Slowest Endpoints (P95 > 500ms)",
+        "type": "table",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+        "targets": [
+          {
+            "expr": "topk(10, histogram_quantile(0.95, sum(rate(vendhub_http_request_duration_seconds_bucket[5m])) by (le, route, method)))",
+            "format": "table",
+            "instant": true
+          }
+        ],
+        "options": {
+          "showHeader": true,
+          "sortBy": [{ "desc": true, "displayName": "P95 Response Time" }]
+        },
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "align": "auto"
+            }
+          },
+          "overrides": [
+            {
+              "matcher": { "id": "byName", "options": "Value" },
+              "properties": [
+                { "id": "displayName", "value": "P95 Response Time" },
+                { "id": "unit", "value": "s" }
+              ]
+            }
+          ]
+        },
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": { "Time": true, "__name__": true, "job": true, "instance": true, "le": true },
+              "renameByName": { "route": "Endpoint", "method": "Method" }
+            }
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "Error Rate by Endpoint",
+        "type": "piechart",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+        "targets": [
+          {
+            "expr": "sum(increase(vendhub_http_request_errors_total[1h])) by (route)",
+            "legendFormat": "{{ route }}"
+          }
+        ],
+        "options": {
+          "legend": {
+            "displayMode": "table",
+            "placement": "right",
+            "values": ["value", "percent"]
+          },
+          "pieType": "donut"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short"
+          }
+        }
+      },
+      {
+        "id": 9,
+        "title": "Database Query Duration",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 20 },
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(vendhub_database_query_duration_seconds_bucket[5m])) by (le, operation))",
+            "legendFormat": "{{ operation }}"
+          }
+        ],
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom"
+          }
+        },
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 10
+            },
+            "unit": "s"
+          }
+        }
+      },
+      {
+        "id": 10,
+        "title": "Cache Performance",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 20 },
+        "targets": [
+          {
+            "expr": "sum(rate(vendhub_cache_hits_total[5m])) * 60",
+            "legendFormat": "Cache Hits"
+          },
+          {
+            "expr": "sum(rate(vendhub_cache_misses_total[5m])) * 60",
+            "legendFormat": "Cache Misses"
+          }
+        ],
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom"
+          }
+        },
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "drawStyle": "bars",
+              "fillOpacity": 80,
+              "stacking": { "mode": "normal" }
+            },
+            "unit": "reqpm"
+          },
+          "overrides": [
+            {
+              "matcher": { "id": "byName", "options": "Cache Hits" },
+              "properties": [{ "id": "color", "value": { "fixedColor": "green", "mode": "fixed" } }]
+            },
+            {
+              "matcher": { "id": "byName", "options": "Cache Misses" },
+              "properties": [{ "id": "color", "value": { "fixedColor": "orange", "mode": "fixed" } }]
+            }
+          ]
+        }
+      },
+      {
+        "id": 11,
+        "title": "Queue Job Processing",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 24, "x": 0, "y": 28 },
+        "targets": [
+          {
+            "expr": "sum(rate(vendhub_queue_jobs_processed_total{status=\"completed\"}[5m])) by (queue) * 60",
+            "legendFormat": "{{ queue }} - Completed"
+          },
+          {
+            "expr": "sum(rate(vendhub_queue_jobs_failed_total[5m])) by (queue) * 60",
+            "legendFormat": "{{ queue }} - Failed"
+          }
+        ],
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom"
+          }
+        },
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 10
+            },
+            "unit": "reqpm"
+          }
+        }
+      }
+    ]
+  }
+}
