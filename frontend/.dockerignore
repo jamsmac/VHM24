@@ -1,10 +1,31 @@
+# Local development
 node_modules
 .next
-npm-debug.log
+.env*.local
 .env
-.env.local
-.git
-.gitignore
-README.md
-.vscode
+
+# Build artifacts
+dist
+build
+coverage
+.turbo
+
+# IDE
 .idea
+.vscode
+*.swp
+*.swo
+
+# Logs
+*.log
+npm-debug.log*
+
+# Testing
+__tests__
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+
+# Storybook
+storybook-static
