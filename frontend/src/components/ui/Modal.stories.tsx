@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react'
 import { useState } from 'react'
-import { Modal } from './Modal'
+import { Modal, ModalContent, ModalFooter } from './Modal'
 import {
   ConfirmDialog,
   DeleteConfirmDialog,
@@ -51,20 +51,20 @@ export const WithFooter: Story = {
           isOpen={open}
           onClose={() => setOpen(false)}
           title="Confirm Action"
-          footer={
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={() => setOpen(false)}>
-                Confirm
-              </Button>
-            </div>
-          }
         >
-          <p className="text-gray-600">
-            Are you sure you want to perform this action?
-          </p>
+          <ModalContent>
+            <p className="text-gray-600">
+              Are you sure you want to perform this action?
+            </p>
+          </ModalContent>
+          <ModalFooter>
+            <Button variant="outline" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={() => setOpen(false)}>
+              Confirm
+            </Button>
+          </ModalFooter>
         </Modal>
       </>
     )
@@ -112,7 +112,7 @@ export const ConfirmDialogExample: Story = {
             setOpen(false)
           }}
           title="Подтверждение"
-          description="Вы уверены, что хотите выполнить это действие?"
+          message="Вы уверены, что хотите выполнить это действие?"
         />
       </>
     )
@@ -152,12 +152,8 @@ export const DiscardChangesExample: Story = {
         <DiscardChangesDialog
           isOpen={open}
           onClose={() => setOpen(false)}
-          onDiscard={() => {
+          onConfirm={() => {
             alert('Changes discarded!')
-            setOpen(false)
-          }}
-          onSave={() => {
-            alert('Changes saved!')
             setOpen(false)
           }}
         />
@@ -200,59 +196,59 @@ export const FormModal: Story = {
           onClose={() => setOpen(false)}
           title="Создать задачу"
           size="lg"
-          footer={
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setOpen(false)}>
-                Отмена
-              </Button>
-              <Button onClick={() => setOpen(false)}>
-                Создать
-              </Button>
-            </div>
-          }
         >
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Тип задачи
-              </label>
-              <select className="w-full px-3 py-2 border border-gray-300 rounded-md">
-                <option>Пополнение</option>
-                <option>Инкассация</option>
-                <option>Обслуживание</option>
-              </select>
+          <ModalContent>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Тип задачи
+                </label>
+                <select className="w-full px-3 py-2 border border-gray-300 rounded-md">
+                  <option>Пополнение</option>
+                  <option>Инкассация</option>
+                  <option>Обслуживание</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Аппарат
+                </label>
+                <select className="w-full px-3 py-2 border border-gray-300 rounded-md">
+                  <option>VM-001 - Центральный офис</option>
+                  <option>VM-002 - Торговый центр</option>
+                  <option>VM-003 - Бизнес-центр</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Исполнитель
+                </label>
+                <select className="w-full px-3 py-2 border border-gray-300 rounded-md">
+                  <option>Иванов И.И.</option>
+                  <option>Петров П.П.</option>
+                  <option>Сидоров С.С.</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Комментарий
+                </label>
+                <textarea
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  rows={3}
+                  placeholder="Введите комментарий..."
+                />
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Аппарат
-              </label>
-              <select className="w-full px-3 py-2 border border-gray-300 rounded-md">
-                <option>VM-001 - Центральный офис</option>
-                <option>VM-002 - Торговый центр</option>
-                <option>VM-003 - Бизнес-центр</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Исполнитель
-              </label>
-              <select className="w-full px-3 py-2 border border-gray-300 rounded-md">
-                <option>Иванов И.И.</option>
-                <option>Петров П.П.</option>
-                <option>Сидоров С.С.</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Комментарий
-              </label>
-              <textarea
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                rows={3}
-                placeholder="Введите комментарий..."
-              />
-            </div>
-          </div>
+          </ModalContent>
+          <ModalFooter>
+            <Button variant="outline" onClick={() => setOpen(false)}>
+              Отмена
+            </Button>
+            <Button onClick={() => setOpen(false)}>
+              Создать
+            </Button>
+          </ModalFooter>
         </Modal>
       </>
     )

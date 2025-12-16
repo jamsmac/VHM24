@@ -34,8 +34,10 @@ export const WithAction: Story = {
   args: {
     title: 'Нет данных',
     description: 'Создайте первую запись, чтобы начать работу.',
-    actionLabel: 'Создать',
-    onAction: () => alert('Action clicked!'),
+    action: {
+      label: 'Создать',
+      onClick: () => alert('Action clicked!'),
+    },
   },
 }
 
@@ -52,7 +54,7 @@ export const Incidents: Story = {
 }
 
 export const Users: Story = {
-  render: () => <EmptyUsers onInvite={() => alert('Invite user')} />,
+  render: () => <EmptyUsers onAdd={() => alert('Invite user')} />,
 }
 
 export const Notifications: Story = {
@@ -74,7 +76,7 @@ export const SearchResults: Story = {
 
 export const FilterResults: Story = {
   render: () => (
-    <EmptyFilterResults onReset={() => alert('Reset filters')} />
+    <EmptyFilterResults onClear={() => alert('Reset filters')} />
   ),
 }
 

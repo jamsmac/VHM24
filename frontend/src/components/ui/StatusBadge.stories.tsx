@@ -90,7 +90,6 @@ export const IncidentStatuses: Story = {
       <h3 className="text-sm font-medium text-gray-700">Incident Status Badges</h3>
       <div className="flex flex-wrap gap-2">
         <IncidentStatusBadge status="open" />
-        <IncidentStatusBadge status="investigating" />
         <IncidentStatusBadge status="in_progress" />
         <IncidentStatusBadge status="resolved" />
         <IncidentStatusBadge status="closed" />
@@ -104,10 +103,10 @@ export const Roles: Story = {
     <div className="space-y-4">
       <h3 className="text-sm font-medium text-gray-700">Role Badges</h3>
       <div className="flex flex-wrap gap-2">
-        <RoleBadge role="ADMIN" />
-        <RoleBadge role="MANAGER" />
-        <RoleBadge role="OPERATOR" />
-        <RoleBadge role="TECHNICIAN" />
+        <RoleBadge role="admin" />
+        <RoleBadge role="manager" />
+        <RoleBadge role="operator" />
+        <RoleBadge role="viewer" />
       </div>
     </div>
   ),
@@ -140,11 +139,11 @@ export const StatusDots: Story = {
           <span className="text-sm">Warning</span>
         </div>
         <div className="flex items-center gap-2">
-          <StatusDot status="error" />
+          <StatusDot status="danger" />
           <span className="text-sm">Error</span>
         </div>
         <div className="flex items-center gap-2">
-          <StatusDot status="inactive" />
+          <StatusDot status="default" />
           <span className="text-sm">Offline</span>
         </div>
       </div>
@@ -154,7 +153,7 @@ export const StatusDots: Story = {
           <span className="text-sm">Active (pulse)</span>
         </div>
         <div className="flex items-center gap-2">
-          <StatusDot status="error" pulse />
+          <StatusDot status="danger" pulse />
           <span className="text-sm">Error (pulse)</span>
         </div>
       </div>

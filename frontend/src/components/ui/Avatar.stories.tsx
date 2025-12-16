@@ -86,7 +86,7 @@ export const Group: Story = {
       <div>
         <p className="text-sm text-gray-500 mb-2">3 users</p>
         <AvatarGroup
-          users={[
+          avatars={[
             { name: 'Иван Иванов' },
             { name: 'Петр Петров' },
             { name: 'Анна Сидорова' },
@@ -96,7 +96,7 @@ export const Group: Story = {
       <div>
         <p className="text-sm text-gray-500 mb-2">6 users (max 4)</p>
         <AvatarGroup
-          users={[
+          avatars={[
             { name: 'Иван Иванов' },
             { name: 'Петр Петров' },
             { name: 'Анна Сидорова' },

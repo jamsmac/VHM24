@@ -52,7 +52,7 @@ export const TextTooltip: Story = {
     <div className="space-y-4">
       <p>
         Hover over the{' '}
-        <TooltipText content="This is additional information about the term">
+        <TooltipText text="This is additional information about the term">
           <span className="text-indigo-600 underline cursor-help">technical term</span>
         </TooltipText>{' '}
         to see more details.
@@ -85,15 +85,15 @@ export const TruncatedTextExample: Story = {
     <div className="w-48 space-y-2">
       <TruncatedText
         text="This is a very long text that will be truncated because it exceeds the container width"
-        maxWidth={180}
+        maxLength={40}
       />
       <TruncatedText
         text="Short text"
-        maxWidth={180}
+        maxLength={40}
       />
       <TruncatedText
         text="Another extremely long piece of text that definitely needs truncation to fit properly"
-        maxWidth={180}
+        maxLength={40}
       />
     </div>
   ),
