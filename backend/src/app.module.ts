@@ -89,9 +89,11 @@ import { RateLimitModule } from './common/modules/rate-limit.module';
           ...baseConfig,
           entities: [__dirname + '/**/*.entity{.ts,.js}'],
           // NEVER use synchronize in production - always use migrations
+          // Exception: DATABASE_INITIAL_SYNC=true allows one-time initial schema creation
           synchronize:
-            configService.get('DATABASE_SYNCHRONIZE', 'false') === 'true' &&
-            configService.get('NODE_ENV') !== 'production',
+            configService.get('DATABASE_INITIAL_SYNC', 'false') === 'true' ||
+            (configService.get('DATABASE_SYNCHRONIZE', 'false') === 'true' &&
+              configService.get('NODE_ENV') !== 'production'),
           logging: configService.get('NODE_ENV') === 'development',
           migrations: [__dirname + '/database/migrations/*{.ts,.js}'],
           migrationsRun: false,

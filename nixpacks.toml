@@ -8,4 +8,6 @@ cmds = ["cd backend && npm ci"]
 cmds = ["cd backend && npm run build"]
 
 [start]
-cmd = "cd backend && npm run migration:run && node dist/main"
+# First deploy: set DATABASE_INITIAL_SYNC=true to create schema
+# After schema created: remove DATABASE_INITIAL_SYNC and migrations will work
+cmd = "cd backend && node dist/main"
