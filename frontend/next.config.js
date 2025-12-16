@@ -2,17 +2,6 @@
 const nextConfig = {
   output: 'standalone', // Required for Docker deployment
   reactStrictMode: true,
-  // Allow ESLint warnings during build (errors still fail)
-  eslint: {
-    // Warning: This allows production builds to successfully complete even if
-    // your project has ESLint warnings.
-    // We treat warnings as non-blocking to enable gradual code quality improvements
-    ignoreDuringBuilds: false, // Keep false to show warnings
-  },
-  typescript: {
-    // Allow TypeScript errors during development but show them
-    ignoreBuildErrors: false,
-  },
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1',
   },
