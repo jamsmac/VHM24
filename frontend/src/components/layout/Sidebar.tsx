@@ -73,7 +73,7 @@ export function Sidebar() {
   const pathname = usePathname()
 
   return (
-    <aside className="w-64 bg-white border-r border-gray-200 h-screen overflow-y-auto" role="navigation" aria-label="Main navigation">
+    <aside className="hidden md:block w-64 bg-white border-r border-gray-200 h-screen overflow-y-auto" role="navigation" aria-label="Main navigation">
       <div className="p-6">
         <Link href="/dashboard" className="flex items-center space-x-2" aria-label="VendHub Home">
           <div className="w-8 h-8 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-lg" aria-hidden="true" />
