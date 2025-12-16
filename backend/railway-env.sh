@@ -36,6 +36,9 @@ railway variables set NODE_ENV="production"
 railway variables set API_PREFIX="api"
 railway variables set API_VERSION="v1"
 
+# Frontend URL (for CORS)
+railway variables set FRONTEND_URL="https://faithful-illumination-production.up.railway.app"
+
 # Features
 railway variables set ENABLE_SCHEDULED_TASKS="true"
 railway variables set ENABLE_PROMETHEUS="true"
