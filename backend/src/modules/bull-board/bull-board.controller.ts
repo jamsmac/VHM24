@@ -51,7 +51,7 @@ export class BullBoardController {
    * Handle all requests to /admin/queues/*
    * Delegates to Bull Board UI
    */
-  @All('*')
+  @All('{*path}')
   admin(@Req() req: Request, @Res() res: Response) {
     const handler = this.serverAdapter.getRouter();
     handler(req, res);
