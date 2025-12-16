@@ -1,7 +1,8 @@
 {
   "$schema": "https://railway.app/schema.json",
   "build": {
-    "builder": "nixpacks",
+    "builder": "DOCKERFILE",
+    "dockerfilePath": "backend/Dockerfile",
     "watchPatterns": ["backend/**"]
   },
   "deploy": {
