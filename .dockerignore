@@ -1,0 +1,53 @@
+# Root .dockerignore for Railway builds
+
+# Git
+.git
+.gitignore
+
+# Node modules (will be installed in container)
+**/node_modules
+
+# Build artifacts
+**/.next
+**/dist
+**/build
+**/coverage
+**/.turbo
+
+# Local env files (but NOT .env.production)
+**/.env
+**/.env*.local
+
+# IDE
+.idea
+.vscode
+**/*.swp
+**/*.swo
+
+# Logs
+**/*.log
+**/npm-debug.log*
+
+# Testing (not needed for production)
+**/__tests__
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+
+# Storybook
+**/storybook-static
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Backend (not needed for frontend build)
+backend/node_modules
+backend/dist
+backend/.env
+backend/.env*.local
+
+# Telegram bot (deprecated)
+telegram-bot/

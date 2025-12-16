@@ -15,14 +15,26 @@ RUN npm install
 
 FROM node:20-alpine AS builder
 WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+# Copy source files first (includes .env.production with defaults)
+COPY frontend/ .
+
+# Optional build-time args to override .env.production if provided
 ARG NEXT_PUBLIC_API_URL
 ARG NEXT_PUBLIC_WS_URL
-ARG NEXT_PUBLIC_APP_NAME="VendHub Manager"
-ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
-ENV NEXT_PUBLIC_WS_URL=$NEXT_PUBLIC_WS_URL
-ENV NEXT_PUBLIC_APP_NAME=$NEXT_PUBLIC_APP_NAME
-COPY --from=deps /app/node_modules ./node_modules
-COPY frontend/ .
+ARG NEXT_PUBLIC_APP_NAME
+
+# Only set ENV if ARG is provided (non-empty), otherwise use .env.production
+RUN if [ -n "$NEXT_PUBLIC_API_URL" ]; then \
+      echo "NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL" >> .env.production; \
+    fi && \
+    if [ -n "$NEXT_PUBLIC_WS_URL" ]; then \
+      echo "NEXT_PUBLIC_WS_URL=$NEXT_PUBLIC_WS_URL" >> .env.production; \
+    fi && \
+    if [ -n "$NEXT_PUBLIC_APP_NAME" ]; then \
+      echo "NEXT_PUBLIC_APP_NAME=$NEXT_PUBLIC_APP_NAME" >> .env.production; \
+    fi
+
 RUN npm run build
 
 FROM node:20-alpine AS runner
