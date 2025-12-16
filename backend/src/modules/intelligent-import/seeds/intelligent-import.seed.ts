@@ -1,8 +1,11 @@
 import { DataSource } from 'typeorm';
+import { Logger } from '@nestjs/common';
 import { SchemaRegistryService } from '../engines/schema-registry.service';
 import { RulesEngineService } from '../engines/rules-engine.service';
 import { SchemaDefinition } from '../entities/schema-definition.entity';
 import { ValidationRule } from '../entities/validation-rule.entity';
+
+const logger = new Logger('IntelligentImportSeed');
 
 /**
  * Seed Intelligent Import System
@@ -10,7 +13,7 @@ import { ValidationRule } from '../entities/validation-rule.entity';
  * Populates database with default schemas and validation rules
  */
 export async function seedIntelligentImport(dataSource: DataSource): Promise<void> {
-  console.log('🌱 Seeding Intelligent Import System...');
+  logger.log('🌱 Seeding Intelligent Import System...');
 
   const schemaRepo = dataSource.getRepository(SchemaDefinition);
   const rulesRepo = dataSource.getRepository(ValidationRule);
@@ -22,15 +25,15 @@ export async function seedIntelligentImport(dataSource: DataSource): Promise<voi
   try {
     // Seed schemas
     await schemaRegistry.seedDefaultSchemas();
-    console.log('✅ Default schemas seeded');
+    logger.log('✅ Default schemas seeded');
 
     // Seed rules
     await rulesEngine.seedDefaultRules();
-    console.log('✅ Default validation rules seeded');
+    logger.log('✅ Default validation rules seeded');
 
-    console.log('🎉 Intelligent Import System seeded successfully!');
+    logger.log('🎉 Intelligent Import System seeded successfully!');
   } catch (error) {
-    console.error('❌ Seeding failed:', error);
+    logger.error('❌ Seeding failed:', error);
     throw error;
   }
 }
@@ -47,7 +50,7 @@ if (require.main === module) {
       await dataSource.destroy();
       process.exit(0);
     } catch (error) {
-      console.error('Seed script failed:', error);
+      logger.error('Seed script failed:', error);
       process.exit(1);
     }
   });

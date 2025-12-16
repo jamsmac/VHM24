@@ -2,6 +2,7 @@
 
 import { DataSource } from 'typeorm';
 import { config } from 'dotenv';
+import { Logger } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { User, UserRole, UserStatus } from '../../modules/users/entities/user.entity';
 import { Role } from '../../modules/rbac/entities/role.entity';
@@ -9,6 +10,8 @@ import * as readline from 'readline';
 
 // Load environment variables
 config();
+
+const logger = new Logger('CreateSuperAdmin');
 
 const AppDataSource = new DataSource({
   type: 'postgres',
@@ -119,12 +122,12 @@ async function promptForInput(): Promise<CreateSuperAdminInput> {
 }
 
 async function createSuperAdmin(input: CreateSuperAdminInput): Promise<void> {
-  console.log('\n🚀 Создание SuperAdmin пользователя...\n');
+  logger.log('\n🚀 Создание SuperAdmin пользователя...\n');
 
   try {
     // Initialize connection
     await AppDataSource.initialize();
-    console.log('✅ Подключение к БД установлено');
+    logger.log('✅ Подключение к БД установлено');
 
     const userRepository = AppDataSource.getRepository(User);
     const roleRepository = AppDataSource.getRepository(Role);
@@ -135,8 +138,8 @@ async function createSuperAdmin(input: CreateSuperAdminInput): Promise<void> {
     });
 
     if (!superAdminRole) {
-      console.error('❌ Роль SuperAdmin не найдена в БД!');
-      console.log('⚠️  Сначала запустите: npm run seed');
+      logger.error('❌ Роль SuperAdmin не найдена в БД!');
+      logger.warn('⚠️  Сначала запустите: npm run seed');
       process.exit(1);
     }
 
@@ -146,7 +149,7 @@ async function createSuperAdmin(input: CreateSuperAdminInput): Promise<void> {
     });
 
     if (existingUser) {
-      console.error(`❌ Пользователь с email ${input.email} уже существует!`);
+      logger.error(`❌ Пользователь с email ${input.email} уже существует!`);
       process.exit(1);
     }
 
@@ -157,7 +160,7 @@ async function createSuperAdmin(input: CreateSuperAdminInput): Promise<void> {
       });
 
       if (existingTelegram) {
-        console.error(`❌ Пользователь с Telegram ID ${input.telegram_user_id} уже существует!`);
+        logger.error(`❌ Пользователь с Telegram ID ${input.telegram_user_id} уже существует!`);
         process.exit(1);
       }
     }
@@ -181,31 +184,31 @@ async function createSuperAdmin(input: CreateSuperAdminInput): Promise<void> {
 
     await userRepository.save(user);
 
-    console.log('\n✅ SuperAdmin успешно создан!');
-    console.log('\n📋 Данные пользователя:');
-    console.log(`   Email:             ${user.email}`);
-    console.log(`   Full Name:         ${user.full_name}`);
-    console.log(`   Role:              ${user.role}`);
-    console.log(`   Status:            ${user.status}`);
+    logger.log('\n✅ SuperAdmin успешно создан!');
+    logger.log('\n📋 Данные пользователя:');
+    logger.log(`   Email:             ${user.email}`);
+    logger.log(`   Full Name:         ${user.full_name}`);
+    logger.log(`   Role:              ${user.role}`);
+    logger.log(`   Status:            ${user.status}`);
     if (user.telegram_user_id) {
-      console.log(`   Telegram ID:       ${user.telegram_user_id}`);
+      logger.log(`   Telegram ID:       ${user.telegram_user_id}`);
     }
     if (user.telegram_username) {
-      console.log(`   Telegram Username: @${user.telegram_username}`);
+      logger.log(`   Telegram Username: @${user.telegram_username}`);
     }
-    console.log(`   User ID:           ${user.id}`);
-    console.log('\n🔐 Вход в систему:');
-    console.log(`   URL:      ${process.env.FRONTEND_URL || 'http://localhost:3001'}/login`);
-    console.log(`   Email:    ${user.email}`);
-    console.log(`   Password: [указанный при создании]`);
-    console.log('\n✨ SuperAdmin может:');
-    console.log('   - Управлять всеми пользователями');
-    console.log('   - Назначать любые роли (включая Admin)');
-    console.log('   - Просматривать audit logs');
-    console.log('   - Полный доступ ко всем функциям системы');
-    console.log('\n');
+    logger.log(`   User ID:           ${user.id}`);
+    logger.log('\n🔐 Вход в систему:');
+    logger.log(`   URL:      ${process.env.FRONTEND_URL || 'http://localhost:3001'}/login`);
+    logger.log(`   Email:    ${user.email}`);
+    logger.log(`   Password: [указанный при создании]`);
+    logger.log('\n✨ SuperAdmin может:');
+    logger.log('   - Управлять всеми пользователями');
+    logger.log('   - Назначать любые роли (включая Admin)');
+    logger.log('   - Просматривать audit logs');
+    logger.log('   - Полный доступ ко всем функциям системы');
+    logger.log('\n');
   } catch (error) {
-    console.error('❌ Ошибка при создании SuperAdmin:', error);
+    logger.error('❌ Ошибка при создании SuperAdmin:', error);
     throw error;
   } finally {
     await AppDataSource.destroy();
@@ -213,9 +216,9 @@ async function createSuperAdmin(input: CreateSuperAdminInput): Promise<void> {
 }
 
 async function main() {
-  console.log('═══════════════════════════════════════════════════════════');
-  console.log('   VendHub Manager - Create SuperAdmin User');
-  console.log('═══════════════════════════════════════════════════════════\n');
+  logger.log('═══════════════════════════════════════════════════════════');
+  logger.log('   VendHub Manager - Create SuperAdmin User');
+  logger.log('═══════════════════════════════════════════════════════════\n');
 
   try {
     // Parse command line arguments
@@ -226,26 +229,26 @@ async function main() {
     if (argsInput && argsInput.email && argsInput.password && argsInput.full_name) {
       // Use provided arguments
       input = argsInput as CreateSuperAdminInput;
-      console.log('📝 Используются параметры из командной строки\n');
+      logger.log('📝 Используются параметры из командной строки\n');
     } else {
       // Prompt for input
-      console.log('📝 Введите данные SuperAdmin пользователя:\n');
+      logger.log('📝 Введите данные SuperAdmin пользователя:\n');
       input = await promptForInput();
     }
 
     // Validate input
     if (!input.email || !input.email.includes('@')) {
-      console.error('❌ Некорректный email');
+      logger.error('❌ Некорректный email');
       process.exit(1);
     }
 
     if (!input.password || input.password.length < 8) {
-      console.error('❌ Пароль должен быть минимум 8 символов');
+      logger.error('❌ Пароль должен быть минимум 8 символов');
       process.exit(1);
     }
 
     if (!input.full_name || input.full_name.trim().length < 2) {
-      console.error('❌ Имя должно быть минимум 2 символа');
+      logger.error('❌ Имя должно быть минимум 2 символа');
       process.exit(1);
     }
 
@@ -254,7 +257,7 @@ async function main() {
 
     process.exit(0);
   } catch (error) {
-    console.error('❌ Критическая ошибка:', error);
+    logger.error('❌ Критическая ошибка:', error);
     process.exit(1);
   }
 }

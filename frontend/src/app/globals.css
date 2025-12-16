@@ -56,6 +56,42 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Improved focus styles for accessibility */
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-primary;
+  }
+
+  /* Skip link styles */
+  .skip-link {
+    @apply sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[9999];
+    @apply focus:bg-primary focus:text-primary-foreground focus:px-4 focus:py-2;
+    @apply focus:rounded-md focus:shadow-lg focus:font-medium;
+  }
+
+  /* Respect user's motion preferences */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  /* High contrast mode support */
+  @media (prefers-contrast: more) {
+    :root {
+      --muted-foreground: 215 20% 30%;
+      --border: 214 31% 70%;
+    }
+    .dark {
+      --muted-foreground: 215 20% 80%;
+      --border: 217 32% 40%;
+    }
+  }
 }
 
 @layer utilities {

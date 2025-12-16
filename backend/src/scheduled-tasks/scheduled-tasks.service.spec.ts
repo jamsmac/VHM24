@@ -23,6 +23,8 @@ import { WarehouseService } from '../modules/warehouse/services/warehouse.servic
 import { TransactionsService } from '../modules/transactions/transactions.service';
 import { CommissionSchedulerService } from '../modules/counterparty/services/commission-scheduler.service';
 import { OperatorRatingsService } from '../modules/operator-ratings/operator-ratings.service';
+import { AlertsService } from '../modules/alerts/alerts.service';
+import { UsersService } from '../modules/users/users.service';
 import {
   IncidentType,
   IncidentStatus,
@@ -49,6 +51,8 @@ describe('ScheduledTasksService', () => {
   let transactionsService: jest.Mocked<TransactionsService>;
   let commissionSchedulerService: jest.Mocked<CommissionSchedulerService>;
   let operatorRatingsService: jest.Mocked<OperatorRatingsService>;
+  let alertsService: jest.Mocked<AlertsService>;
+  let usersService: jest.Mocked<UsersService>;
 
   // Store original env
   const originalEnv = process.env;
@@ -188,6 +192,19 @@ describe('ScheduledTasksService', () => {
       ratingRepository: { save: jest.fn() },
     };
 
+    const mockAlertsService = {
+      checkThresholds: jest.fn(),
+      createAlert: jest.fn(),
+    };
+
+    const mockUsersService = {
+      findByRole: jest.fn().mockResolvedValue([]),
+      findByRoles: jest.fn().mockResolvedValue([]),
+      getAdminUserIds: jest.fn().mockResolvedValue(['admin-uuid']),
+      getManagerUserIds: jest.fn().mockResolvedValue(['manager-uuid']),
+      getFirstAdminId: jest.fn().mockResolvedValue('admin-uuid'),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ScheduledTasksService,
@@ -263,6 +280,14 @@ describe('ScheduledTasksService', () => {
           provide: OperatorRatingsService,
           useValue: mockOperatorRatingsService,
         },
+        {
+          provide: AlertsService,
+          useValue: mockAlertsService,
+        },
+        {
+          provide: UsersService,
+          useValue: mockUsersService,
+        },
       ],
     }).compile();
 
@@ -284,6 +309,8 @@ describe('ScheduledTasksService', () => {
     transactionsService = module.get(TransactionsService);
     commissionSchedulerService = module.get(CommissionSchedulerService);
     operatorRatingsService = module.get(OperatorRatingsService);
+    alertsService = module.get(AlertsService);
+    usersService = module.get(UsersService);
 
     jest.clearAllMocks();
   });

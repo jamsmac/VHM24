@@ -1,4 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
+import { Logger } from '@nestjs/common';
+
+const logger = new Logger('FixP1DatabaseIssues1732800000000');
 
 /**
  * Migration: Fix P1 Database Issues
@@ -13,12 +16,12 @@ export class FixP1DatabaseIssues1732800000000 implements MigrationInterface {
   name = 'FixP1DatabaseIssues1732800000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
-    console.log('🔧 Fixing P1 database issues...');
+    logger.log('🔧 Fixing P1 database issues...');
 
     // ============================================================================
     // 1. ADD MISSING ON DELETE BEHAVIORS TO FOREIGN KEYS
     // ============================================================================
-    console.log('  🔗 Adding ON DELETE behaviors to foreign keys...');
+    logger.log('  🔗 Adding ON DELETE behaviors to foreign keys...');
 
     // Helper to safely update FK constraint
     const updateForeignKey = async (
@@ -38,7 +41,7 @@ export class FixP1DatabaseIssues1732800000000 implements MigrationInterface {
       `);
 
       if (!tableExists[0]?.exists) {
-        console.log(`    ⚠️ Table ${table} does not exist, skipping`);
+        logger.log(`    ⚠️ Table ${table} does not exist, skipping`);
         return;
       }
 
@@ -51,7 +54,7 @@ export class FixP1DatabaseIssues1732800000000 implements MigrationInterface {
       `);
 
       if (!columnExists[0]?.exists) {
-        console.log(`    ⚠️ Column ${table}.${column} does not exist, skipping`);
+        logger.log(`    ⚠️ Column ${table}.${column} does not exist, skipping`);
         return;
       }
 
@@ -64,7 +67,7 @@ export class FixP1DatabaseIssues1732800000000 implements MigrationInterface {
       `);
 
       if (!refTableExists[0]?.exists) {
-        console.log(`    ⚠️ Reference table ${refTable} does not exist, skipping`);
+        logger.log(`    ⚠️ Reference table ${refTable} does not exist, skipping`);
         return;
       }
 
@@ -82,7 +85,7 @@ export class FixP1DatabaseIssues1732800000000 implements MigrationInterface {
         ON DELETE ${onDelete};
       `);
 
-      console.log(`    ✅ ${table}.${column} -> ON DELETE ${onDelete}`);
+      logger.log(`    ✅ ${table}.${column} -> ON DELETE ${onDelete}`);
     };
 
     // Routes: driver_id -> users (RESTRICT)
@@ -254,7 +257,7 @@ export class FixP1DatabaseIssues1732800000000 implements MigrationInterface {
     // ============================================================================
     // 2. ADD MISSING INDEXES FOR FK COLUMNS
     // ============================================================================
-    console.log('  📊 Adding missing indexes for FK columns...');
+    logger.log('  📊 Adding missing indexes for FK columns...');
 
     const createIndexIfNotExists = async (
       indexName: string,
@@ -270,7 +273,7 @@ export class FixP1DatabaseIssues1732800000000 implements MigrationInterface {
       `);
 
       if (!tableExists[0]?.exists) {
-        console.log(`    ⚠️ Table ${table} does not exist, skipping index`);
+        logger.log(`    ⚠️ Table ${table} does not exist, skipping index`);
         return;
       }
 
@@ -281,7 +284,7 @@ export class FixP1DatabaseIssues1732800000000 implements MigrationInterface {
         CREATE INDEX IF NOT EXISTS "${indexName}"
         ON "${table}" (${columnsStr})${whereClause};
       `);
-      console.log(`    ✅ Index ${indexName} on ${table}(${columns.join(', ')})`);
+      logger.log(`    ✅ Index ${indexName} on ${table}(${columns.join(', ')})`);
     };
 
     // Routes indexes
@@ -337,7 +340,7 @@ export class FixP1DatabaseIssues1732800000000 implements MigrationInterface {
     // ============================================================================
     // 3. ADD COMPOSITE INDEXES FOR COMMON QUERY PATTERNS
     // ============================================================================
-    console.log('  📈 Adding composite indexes for common queries...');
+    logger.log('  📈 Adding composite indexes for common queries...');
 
     // Employees: active employees by department
     await createIndexIfNotExists('idx_employees_status_dept', 'employees', [
@@ -372,7 +375,7 @@ export class FixP1DatabaseIssues1732800000000 implements MigrationInterface {
     // ============================================================================
     // 4. ADD MISSING UNIQUE CONSTRAINTS
     // ============================================================================
-    console.log('  🔒 Adding unique constraints...');
+    logger.log('  🔒 Adding unique constraints...');
 
     // Unique attendance per employee per day
     const attendanceConstraintExists = await queryRunner.query(`
@@ -397,7 +400,7 @@ export class FixP1DatabaseIssues1732800000000 implements MigrationInterface {
           ADD CONSTRAINT "uq_attendances_employee_date"
           UNIQUE ("employee_id", "date");
         `);
-        console.log('    ✅ Unique constraint on attendances(employee_id, date)');
+        logger.log('    ✅ Unique constraint on attendances(employee_id, date)');
       }
     }
 
@@ -434,25 +437,25 @@ export class FixP1DatabaseIssues1732800000000 implements MigrationInterface {
             ADD CONSTRAINT "uq_telegram_users_user_id"
             UNIQUE ("user_id");
           `);
-          console.log('    ✅ Unique constraint on telegram_users(user_id)');
+          logger.log('    ✅ Unique constraint on telegram_users(user_id)');
         } else {
-          console.log('    ⚠️ Cannot add unique constraint on telegram_users - duplicates exist');
+          logger.log('    ⚠️ Cannot add unique constraint on telegram_users - duplicates exist');
         }
       }
     }
 
-    console.log('');
-    console.log('✅ All P1 database issues fixed!');
-    console.log('');
-    console.log('📋 Summary:');
-    console.log('  - ON DELETE behaviors added to foreign keys');
-    console.log('  - Missing FK indexes created');
-    console.log('  - Composite indexes for common queries added');
-    console.log('  - Unique constraints added where applicable');
+    logger.log('');
+    logger.log('✅ All P1 database issues fixed!');
+    logger.log('');
+    logger.log('📋 Summary:');
+    logger.log('  - ON DELETE behaviors added to foreign keys');
+    logger.log('  - Missing FK indexes created');
+    logger.log('  - Composite indexes for common queries added');
+    logger.log('  - Unique constraints added where applicable');
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    console.log('🔄 Reverting P1 database fixes...');
+    logger.log('🔄 Reverting P1 database fixes...');
 
     // Drop unique constraints
     await queryRunner.query(`
@@ -491,6 +494,6 @@ export class FixP1DatabaseIssues1732800000000 implements MigrationInterface {
     // recreating all FK constraints without ON DELETE clauses.
     // The default NO ACTION is functionally similar to RESTRICT.
 
-    console.log('✅ P1 database fixes reverted (indexes and constraints only)');
+    logger.log('✅ P1 database fixes reverted (indexes and constraints only)');
   }
 }

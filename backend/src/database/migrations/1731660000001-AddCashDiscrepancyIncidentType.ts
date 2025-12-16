@@ -1,4 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
+import { Logger } from '@nestjs/common';
+
+const logger = new Logger('AddCashDiscrepancyIncidentType1731660000001');
 
 export class AddCashDiscrepancyIncidentType1731660000001 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
@@ -12,6 +15,6 @@ export class AddCashDiscrepancyIncidentType1731660000001 implements MigrationInt
     // Note: PostgreSQL doesn't support removing enum values directly
     // This would require recreating the enum type, which is complex
     // For now, we'll leave the value in the enum even on rollback
-    console.log('Rollback note: cash_discrepancy enum value will remain in database');
+    logger.log('Rollback note: cash_discrepancy enum value will remain in database');
   }
 }

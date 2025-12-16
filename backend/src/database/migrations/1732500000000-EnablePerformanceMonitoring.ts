@@ -1,4 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
+import { Logger } from '@nestjs/common';
+
+const logger = new Logger('EnablePerformanceMonitoring1732500000000');
 
 /**
  * Migration: Enable Performance Monitoring
@@ -26,7 +29,7 @@ export class EnablePerformanceMonitoring1732500000000 implements MigrationInterf
       CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
     `);
 
-    console.log('✅ pg_stat_statements extension enabled');
+    logger.log('✅ pg_stat_statements extension enabled');
 
     // ============================================================================
     // VIEW 1: Slow Queries (>100ms average)
@@ -304,7 +307,7 @@ export class EnablePerformanceMonitoring1732500000000 implements MigrationInterf
       COMMENT ON VIEW v_database_summary IS 'High-level database health summary';
     `);
 
-    console.log('✅ Performance monitoring views created successfully');
+    logger.log('✅ Performance monitoring views created successfully');
 
     // ============================================================================
     // GRANT PERMISSIONS
@@ -328,21 +331,21 @@ export class EnablePerformanceMonitoring1732500000000 implements MigrationInterf
       END $$;
     `);
 
-    console.log('✅ Performance monitoring enabled successfully!');
-    console.log('');
-    console.log('📊 Available monitoring views:');
-    console.log('  - v_slow_queries         : Queries >100ms');
-    console.log('  - v_table_sizes          : Table and index sizes');
-    console.log('  - v_unused_indexes       : Unused indexes');
-    console.log('  - v_index_usage          : Index effectiveness');
-    console.log('  - v_cache_hit_ratio      : Cache performance by table');
-    console.log('  - v_active_connections   : Current connections');
-    console.log('  - v_long_running_queries : Queries >1 minute');
-    console.log('  - v_table_bloat          : Dead tuple percentage');
-    console.log('  - v_sequential_scans     : Potential missing indexes');
-    console.log('  - v_database_summary     : Overall health');
-    console.log('');
-    console.log('Usage: SELECT * FROM v_database_summary;');
+    logger.log('✅ Performance monitoring enabled successfully!');
+    logger.log('');
+    logger.log('📊 Available monitoring views:');
+    logger.log('  - v_slow_queries         : Queries >100ms');
+    logger.log('  - v_table_sizes          : Table and index sizes');
+    logger.log('  - v_unused_indexes       : Unused indexes');
+    logger.log('  - v_index_usage          : Index effectiveness');
+    logger.log('  - v_cache_hit_ratio      : Cache performance by table');
+    logger.log('  - v_active_connections   : Current connections');
+    logger.log('  - v_long_running_queries : Queries >1 minute');
+    logger.log('  - v_table_bloat          : Dead tuple percentage');
+    logger.log('  - v_sequential_scans     : Potential missing indexes');
+    logger.log('  - v_database_summary     : Overall health');
+    logger.log('');
+    logger.log('Usage: SELECT * FROM v_database_summary;');
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
@@ -362,6 +365,6 @@ export class EnablePerformanceMonitoring1732500000000 implements MigrationInterf
     // If you really want to drop it:
     // await queryRunner.query(`DROP EXTENSION IF EXISTS pg_stat_statements;`);
 
-    console.log('✅ Performance monitoring views removed');
+    logger.log('✅ Performance monitoring views removed');
   }
 }

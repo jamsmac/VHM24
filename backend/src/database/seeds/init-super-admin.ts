@@ -1,6 +1,9 @@
 import { DataSource } from 'typeorm';
+import { Logger } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
+
+const logger = new Logger('InitSuperAdmin');
 
 /**
  * Initialize Super Admin User
@@ -20,7 +23,7 @@ export async function initSuperAdmin(dataSource: DataSource) {
     );
 
     if (existingAdmin.length > 0) {
-      console.log('✅ Super Admin already exists');
+      logger.log('✅ Super Admin already exists');
       await queryRunner.commitTransaction();
       return;
     }
@@ -67,16 +70,16 @@ export async function initSuperAdmin(dataSource: DataSource) {
       ],
     );
 
-    console.log('✅ Super Admin created successfully!');
-    console.log('📧 Email: admin@vendhub.com');
-    console.log('🔑 Password: [set via INITIAL_ADMIN_PASSWORD env var]');
-    console.log('🤖 Telegram: @Jamshiddin (ID: 42283329)');
-    console.log('⚠️  SECURITY: Change the password immediately after first login!');
+    logger.log('✅ Super Admin created successfully!');
+    logger.log('📧 Email: admin@vendhub.com');
+    logger.log('🔑 Password: [set via INITIAL_ADMIN_PASSWORD env var]');
+    logger.log('🤖 Telegram: @Jamshiddin (ID: 42283329)');
+    logger.warn('⚠️  SECURITY: Change the password immediately after first login!');
 
     await queryRunner.commitTransaction();
   } catch (error) {
     await queryRunner.rollbackTransaction();
-    console.error('❌ Failed to create super admin:', error);
+    logger.error('❌ Failed to create super admin:', error);
     throw error;
   } finally {
     await queryRunner.release();
@@ -122,7 +125,7 @@ if (require.main === module) {
       process.exit(0);
     })
     .catch((error: any) => {
-      console.error('Error:', error);
+      logger.error('Error:', error);
       process.exit(1);
     });
 }

@@ -651,15 +651,12 @@ describe('RecipesService', () => {
       });
       mockRecipeRepository.update.mockResolvedValue({ affected: 1 } as any);
 
-      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
-
       // Act
       const result = await service.recalculateCost(mockRecipeId);
 
       // Assert
       // Fallback: 500000 * 0.015 = 7500
       expect(result).toBe(7500);
-      consoleSpy.mockRestore();
     });
 
     it('should round cost to 2 decimal places', async () => {

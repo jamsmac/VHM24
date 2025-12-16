@@ -3,11 +3,14 @@ import 'tsconfig-paths/register';
 
 import { DataSource } from 'typeorm';
 import { config } from 'dotenv';
+import { Logger } from '@nestjs/common';
 import { seedDictionaries } from './dictionaries.seed';
 import { seedRBAC } from './rbac.seed';
 
 // Load environment variables
 config();
+
+const logger = new Logger('RunSeed');
 
 // Support both DATABASE_URL and individual variables
 const getDatabaseConfig = () => {
@@ -35,20 +38,20 @@ const AppDataSource = new DataSource({
 });
 
 async function runSeeds() {
-  console.log('🌱 Запуск seeding процесса...\n');
+  logger.log('🌱 Запуск seeding процесса...\n');
 
   try {
     // Initialize connection
     await AppDataSource.initialize();
-    console.log('✅ Подключение к БД установлено\n');
+    logger.log('✅ Подключение к БД установлено\n');
 
     // Run seeds
     await seedRBAC(AppDataSource);
     await seedDictionaries(AppDataSource);
 
-    console.log('\n🎉 Seeding успешно завершен!');
+    logger.log('\n🎉 Seeding успешно завершен!');
   } catch (error) {
-    console.error('❌ Ошибка при seeding:', error);
+    logger.error('❌ Ошибка при seeding:', error);
     process.exit(1);
   } finally {
     await AppDataSource.destroy();

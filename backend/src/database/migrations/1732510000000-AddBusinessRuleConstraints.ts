@@ -1,4 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
+import { Logger } from '@nestjs/common';
+
+const logger = new Logger('AddBusinessRuleConstraints1732510000000');
 
 /**
  * Migration: Add Business Rule CHECK Constraints
@@ -17,7 +20,7 @@ export class AddBusinessRuleConstraints1732510000000 implements MigrationInterfa
   name = 'AddBusinessRuleConstraints1732510000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
-    console.log('🔒 Adding business rule CHECK constraints...');
+    logger.log('🔒 Adding business rule CHECK constraints...');
 
     // ============================================================================
     // INVENTORY TABLES: Non-negative quantities
@@ -41,7 +44,7 @@ export class AddBusinessRuleConstraints1732510000000 implements MigrationInterfa
       CHECK (reserved_quantity <= current_quantity);
     `);
 
-    console.log('  ✅ Warehouse inventory constraints added');
+    logger.log('  ✅ Warehouse inventory constraints added');
 
     // Operator Inventory
     await queryRunner.query(`
@@ -59,7 +62,7 @@ export class AddBusinessRuleConstraints1732510000000 implements MigrationInterfa
       CHECK (reserved_quantity <= current_quantity);
     `);
 
-    console.log('  ✅ Operator inventory constraints added');
+    logger.log('  ✅ Operator inventory constraints added');
 
     // Machine Inventory
     await queryRunner.query(`
@@ -81,7 +84,7 @@ export class AddBusinessRuleConstraints1732510000000 implements MigrationInterfa
       );
     `);
 
-    console.log('  ✅ Machine inventory constraints added');
+    logger.log('  ✅ Machine inventory constraints added');
 
     // ============================================================================
     // NOMENCLATURE: Non-negative prices and valid stock levels
@@ -107,7 +110,7 @@ export class AddBusinessRuleConstraints1732510000000 implements MigrationInterfa
       );
     `);
 
-    console.log('  ✅ Nomenclature constraints added');
+    logger.log('  ✅ Nomenclature constraints added');
 
     // ============================================================================
     // MACHINES: Capacity and amounts validation
@@ -173,7 +176,7 @@ export class AddBusinessRuleConstraints1732510000000 implements MigrationInterfa
       );
     `);
 
-    console.log('  ✅ Machine constraints added');
+    logger.log('  ✅ Machine constraints added');
 
     // ============================================================================
     // TASKS: Cash amounts and dates validation
@@ -198,7 +201,7 @@ export class AddBusinessRuleConstraints1732510000000 implements MigrationInterfa
       );
     `);
 
-    console.log('  ✅ Task constraints added');
+    logger.log('  ✅ Task constraints added');
 
     // ============================================================================
     // TRANSACTIONS: Non-negative amounts
@@ -209,7 +212,7 @@ export class AddBusinessRuleConstraints1732510000000 implements MigrationInterfa
       CHECK (amount >= 0);
     `);
 
-    console.log('  ✅ Transaction constraints added');
+    logger.log('  ✅ Transaction constraints added');
 
     // ============================================================================
     // STOCK MOVEMENTS: Non-zero quantities and valid costs
@@ -229,7 +232,7 @@ export class AddBusinessRuleConstraints1732510000000 implements MigrationInterfa
       );
     `);
 
-    console.log('  ✅ Stock movement constraints added');
+    logger.log('  ✅ Stock movement constraints added');
 
     // ============================================================================
     // FILES: Non-negative size and valid dimensions
@@ -249,7 +252,7 @@ export class AddBusinessRuleConstraints1732510000000 implements MigrationInterfa
       );
     `);
 
-    console.log('  ✅ File constraints added');
+    logger.log('  ✅ File constraints added');
 
     // ============================================================================
     // INCIDENTS: Valid priority and dates
@@ -262,7 +265,7 @@ export class AddBusinessRuleConstraints1732510000000 implements MigrationInterfa
       );
     `);
 
-    console.log('  ✅ Incident constraints added');
+    logger.log('  ✅ Incident constraints added');
 
     // ============================================================================
     // COMPLAINTS: Valid rating and dates
@@ -281,7 +284,7 @@ export class AddBusinessRuleConstraints1732510000000 implements MigrationInterfa
       );
     `);
 
-    console.log('  ✅ Complaint constraints added');
+    logger.log('  ✅ Complaint constraints added');
 
     // ============================================================================
     // RECIPES: Valid quantities
@@ -292,7 +295,7 @@ export class AddBusinessRuleConstraints1732510000000 implements MigrationInterfa
       CHECK (quantity > 0);
     `);
 
-    console.log('  ✅ Recipe constraints added');
+    logger.log('  ✅ Recipe constraints added');
 
     // ============================================================================
     // LOCATIONS: Valid coordinates
@@ -306,7 +309,7 @@ export class AddBusinessRuleConstraints1732510000000 implements MigrationInterfa
       );
     `);
 
-    console.log('  ✅ Location constraints added');
+    logger.log('  ✅ Location constraints added');
 
     // ============================================================================
     // WAREHOUSE: Non-negative capacity
@@ -330,7 +333,7 @@ export class AddBusinessRuleConstraints1732510000000 implements MigrationInterfa
       );
     `);
 
-    console.log('  ✅ Warehouse constraints added');
+    logger.log('  ✅ Warehouse constraints added');
 
     // ============================================================================
     // EQUIPMENT COMPONENTS: Valid dates
@@ -357,7 +360,7 @@ export class AddBusinessRuleConstraints1732510000000 implements MigrationInterfa
       );
     `);
 
-    console.log('  ✅ Equipment component constraints added');
+    logger.log('  ✅ Equipment component constraints added');
 
     // ============================================================================
     // CONTRACTS: Valid dates and amounts
@@ -380,7 +383,7 @@ export class AddBusinessRuleConstraints1732510000000 implements MigrationInterfa
       );
     `);
 
-    console.log('  ✅ Contract constraints added');
+    logger.log('  ✅ Contract constraints added');
 
     // ============================================================================
     // USERS: Valid security settings
@@ -391,26 +394,26 @@ export class AddBusinessRuleConstraints1732510000000 implements MigrationInterfa
       CHECK (failed_login_attempts >= 0);
     `);
 
-    console.log('  ✅ User constraints added');
+    logger.log('  ✅ User constraints added');
 
-    console.log('');
-    console.log('✅ All business rule CHECK constraints added successfully!');
-    console.log('');
-    console.log('📋 Summary of constraints added:');
-    console.log('  - Inventory: Non-negative quantities, reserved <= current');
-    console.log('  - Prices: Non-negative amounts');
-    console.log('  - Machines: Capacity validation, logical dates');
-    console.log('  - Tasks: Cash amounts, date logic');
-    console.log('  - Files: Positive sizes, valid dimensions');
-    console.log('  - Locations: Valid GPS coordinates');
-    console.log('  - Contracts: Date ranges, valid percentages');
-    console.log('  - And more...');
-    console.log('');
-    console.log('🔒 Database integrity is now enforced at the DB level!');
+    logger.log('');
+    logger.log('✅ All business rule CHECK constraints added successfully!');
+    logger.log('');
+    logger.log('📋 Summary of constraints added:');
+    logger.log('  - Inventory: Non-negative quantities, reserved <= current');
+    logger.log('  - Prices: Non-negative amounts');
+    logger.log('  - Machines: Capacity validation, logical dates');
+    logger.log('  - Tasks: Cash amounts, date logic');
+    logger.log('  - Files: Positive sizes, valid dimensions');
+    logger.log('  - Locations: Valid GPS coordinates');
+    logger.log('  - Contracts: Date ranges, valid percentages');
+    logger.log('  - And more...');
+    logger.log('');
+    logger.log('🔒 Database integrity is now enforced at the DB level!');
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    console.log('🔓 Removing business rule CHECK constraints...');
+    logger.log('🔓 Removing business rule CHECK constraints...');
 
     // Drop all constraints in reverse order
     await queryRunner.query(
@@ -513,6 +516,6 @@ export class AddBusinessRuleConstraints1732510000000 implements MigrationInterfa
       `ALTER TABLE warehouse_inventory DROP CONSTRAINT IF EXISTS check_warehouse_qty_non_negative;`,
     );
 
-    console.log('✅ Business rule CHECK constraints removed');
+    logger.log('✅ Business rule CHECK constraints removed');
   }
 }

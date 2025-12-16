@@ -1,4 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
+import { Logger } from '@nestjs/common';
+
+const logger = new Logger('AddPerformanceIndexes1731750000000');
 
 /**
  * Migration: Add Performance Optimization Indexes
@@ -222,7 +225,7 @@ export class AddPerformanceIndexes1731750000000 implements MigrationInterface {
        ON "financial_operations" ("amount")`,
     );
 
-    console.log('✅ Performance optimization indexes created successfully');
+    logger.log('✅ Performance optimization indexes created successfully');
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
@@ -256,6 +259,6 @@ export class AddPerformanceIndexes1731750000000 implements MigrationInterface {
     await queryRunner.query(`DROP INDEX IF EXISTS "IDX_transactions_amount"`);
     await queryRunner.query(`DROP INDEX IF EXISTS "IDX_transactions_date_machine"`);
 
-    console.log('✅ Performance optimization indexes removed successfully');
+    logger.log('✅ Performance optimization indexes removed successfully');
   }
 }

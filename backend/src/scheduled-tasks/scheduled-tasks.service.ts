@@ -39,6 +39,7 @@ import { AlertsService } from '../modules/alerts/alerts.service';
 import { Nomenclature } from '../modules/nomenclature/entities/nomenclature.entity';
 import { InventoryLevelType } from '../modules/inventory/entities/inventory-actual-count.entity';
 import { startOfDay, endOfDay, subDays } from 'date-fns';
+import { UsersService } from '../modules/users/users.service';
 
 /**
  * Scheduled Tasks Service
@@ -81,6 +82,7 @@ export class ScheduledTasksService {
     private readonly commissionSchedulerService: CommissionSchedulerService,
     private readonly operatorRatingsService: OperatorRatingsService,
     private readonly alertsService: AlertsService,
+    private readonly usersService: UsersService,
   ) {}
 
   /**
@@ -223,19 +225,25 @@ export class ScheduledTasksService {
         .join('\n');
 
       try {
-        // TODO: Notify assigned operator or manager
-        // For now, we'll log it
         this.logger.warn(`Low stock in machine ${machine.machine_number}:\n${itemsList}`);
 
-        // Create notification (would need to determine recipient)
-        // await this.notificationsService.create({
-        //   type: NotificationType.LOW_STOCK_MACHINE,
-        //   channel: NotificationChannel.IN_APP,
-        //   recipient_id: machine.assigned_operator_id || 'admin_id',
-        //   title: '📦 Низкий запас товара',
-        //   message: `Аппарат ${machine.machine_number}: необходимо пополнение`,
-        //   data: { machine_id: machineId, items_count: items.length },
-        // });
+        // Determine recipient: assigned operator or fallback to manager/admin
+        const recipientId = machine.assigned_operator_id
+          || (await this.usersService.getManagerUserIds())[0]
+          || await this.usersService.getFirstAdminId();
+
+        if (recipientId) {
+          await this.notificationsService.create({
+            type: NotificationType.LOW_STOCK_MACHINE,
+            channel: NotificationChannel.IN_APP,
+            recipient_id: recipientId,
+            title: '📦 Низкий запас товара',
+            message: `Аппарат ${machine.machine_number}: необходимо пополнение\n\n${itemsList}`,
+            data: { machine_id: machineId, items_count: items.length },
+          });
+        } else {
+          this.logger.warn('No recipient found for low stock notification');
+        }
       } catch (error) {
         this.logger.error(
           `Failed to send low stock notification for machine ${machineId}:`,
@@ -270,15 +278,26 @@ export class ScheduledTasksService {
 
       this.logger.warn(`Low stock in warehouse:\n${itemsList}`);
 
-      // TODO: Notify purchasing manager
-      // await this.notificationsService.create({
-      //   type: NotificationType.LOW_STOCK_WAREHOUSE,
-      //   channel: NotificationChannel.IN_APP,
-      //   recipient_id: 'purchasing_manager_id',
-      //   title: '📦 Низкий запас на складе',
-      //   message: `Требуется закупка ${lowStockItems.length} позиций`,
-      //   data: { items_count: lowStockItems.length },
-      // });
+      // Notify purchasing manager or admin
+      const managerIds = await this.usersService.getManagerUserIds();
+      const recipientId = managerIds[0] || await this.usersService.getFirstAdminId();
+
+      if (recipientId) {
+        try {
+          await this.notificationsService.create({
+            type: NotificationType.LOW_STOCK_WAREHOUSE,
+            channel: NotificationChannel.IN_APP,
+            recipient_id: recipientId,
+            title: '📦 Низкий запас на складе',
+            message: `Требуется закупка ${lowStockItems.length} позиций:\n\n${itemsList}`,
+            data: { items_count: lowStockItems.length },
+          });
+        } catch (error) {
+          this.logger.error('Failed to send warehouse low stock notification:', error.message);
+        }
+      } else {
+        this.logger.warn('No recipient found for warehouse low stock notification');
+      }
     }
   }
 
@@ -453,12 +472,17 @@ export class ScheduledTasksService {
 
           // Send escalation notification to managers/admins
           try {
-            // Get all admin/manager user IDs
-            // For now, we'll send to the system - in production this should go to specific managers
+            // Get actual admin user IDs
+            const adminId = await this.usersService.getFirstAdminId();
+            if (!adminId) {
+              this.logger.warn('No admin users found for SLA violation notification');
+              continue;
+            }
+
             await this.notificationsService.create({
               type: NotificationType.OTHER,
               channel: NotificationChannel.IN_APP,
-              recipient_id: process.env.ADMIN_USER_ID || 'system', // TODO: Get actual admin users
+              recipient_id: adminId,
               title: '🚨 SLA нарушен: Жалоба без реакции',
               message:
                 `Жалоба от клиента не обработана ${hoursOverdue} часов!\n` +
@@ -551,7 +575,14 @@ export class ScheduledTasksService {
             );
 
             // Send notification to warehouse manager
-            // TODO: Get actual warehouse manager user ID
+            const managerIds = await this.usersService.getManagerUserIds();
+            const warehouseManagerId = managerIds[0] || await this.usersService.getFirstAdminId();
+
+            if (!warehouseManagerId) {
+              this.logger.warn('No manager or admin users found for expiring stock notification');
+              continue;
+            }
+
             const message =
               `Складе "${warehouse.name}" имеются товары с истекающим сроком годности:\n\n` +
               `🔴 Срочно (≤7 дней): ${urgent.length} партий\n` +
@@ -561,7 +592,7 @@ export class ScheduledTasksService {
             await this.notificationsService.create({
               type: NotificationType.OTHER,
               channel: NotificationChannel.IN_APP,
-              recipient_id: process.env.WAREHOUSE_MANAGER_ID || 'admin', // TODO: Get actual manager
+              recipient_id: warehouseManagerId,
               title: `⏰ Истекает срок годности - ${warehouse.name}`,
               message,
               data: {
@@ -628,11 +659,15 @@ export class ScheduledTasksService {
             );
 
             // Send notification about automatic write-off
-            await this.notificationsService.create({
-              type: NotificationType.OTHER,
-              channel: NotificationChannel.IN_APP,
-              recipient_id: process.env.WAREHOUSE_MANAGER_ID || 'admin', // TODO: Get actual manager
-              title: `📦 Автоматическое списание - ${warehouse.name}`,
+            const writeOffManagerIds = await this.usersService.getManagerUserIds();
+            const writeOffManagerId = writeOffManagerIds[0] || await this.usersService.getFirstAdminId();
+
+            if (writeOffManagerId) {
+              await this.notificationsService.create({
+                type: NotificationType.OTHER,
+                channel: NotificationChannel.IN_APP,
+                recipient_id: writeOffManagerId,
+                title: `📦 Автоматическое списание - ${warehouse.name}`,
               message:
                 `Автоматически списано ${writeOffResult.batches_processed} партий с истекшим сроком годности.\n\n` +
                 `Склад: ${warehouse.name}\n` +
@@ -650,6 +685,7 @@ export class ScheduledTasksService {
               },
               action_url: `/warehouses/${warehouse.id}/writeoffs`,
             });
+            }
           }
         } catch (error) {
           this.logger.error(
@@ -780,25 +816,30 @@ export class ScheduledTasksService {
         );
 
         // Send summary notification to financial manager
-        await this.notificationsService.create({
-          type: NotificationType.OTHER,
-          channel: NotificationChannel.IN_APP,
-          recipient_id: process.env.FINANCE_MANAGER_ID || 'admin', // TODO: Get actual finance manager
-          title: `📊 Амортизация за ${currentDate.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' })}`,
-          message:
-            `Автоматически начислена амортизация оборудования:\n\n` +
-            `Аппаратов: ${machinesDepreciated}\n` +
-            `Общая сумма: ${totalDepreciated.toFixed(2)} UZS\n` +
-            `Дата: ${currentDate.toLocaleDateString('ru-RU')}\n\n` +
-            `Проверьте финансовые отчеты.`,
-          data: {
-            month: currentMonth,
-            machines_count: machinesDepreciated,
-            total_amount: totalDepreciated,
-            auto_generated: true,
-          },
-          action_url: `/transactions?type=expense&category=depreciation&month=${currentMonth}`,
-        });
+        const financeManagerIds = await this.usersService.getManagerUserIds();
+        const financeManagerId = financeManagerIds[0] || await this.usersService.getFirstAdminId();
+
+        if (financeManagerId) {
+          await this.notificationsService.create({
+            type: NotificationType.OTHER,
+            channel: NotificationChannel.IN_APP,
+            recipient_id: financeManagerId,
+            title: `📊 Амортизация за ${currentDate.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' })}`,
+            message:
+              `Автоматически начислена амортизация оборудования:\n\n` +
+              `Аппаратов: ${machinesDepreciated}\n` +
+              `Общая сумма: ${totalDepreciated.toFixed(2)} UZS\n` +
+              `Дата: ${currentDate.toLocaleDateString('ru-RU')}\n\n` +
+              `Проверьте финансовые отчеты.`,
+            data: {
+              month: currentMonth,
+              machines_count: machinesDepreciated,
+              total_amount: totalDepreciated,
+              auto_generated: true,
+            },
+            action_url: `/transactions?type=expense&category=depreciation&month=${currentMonth}`,
+          });
+        }
       } else {
         this.logger.debug('No machines required depreciation this month');
       }
@@ -827,22 +868,27 @@ export class ScheduledTasksService {
         );
 
         // Send notification to financial manager
-        await this.notificationsService.create({
-          type: NotificationType.OTHER,
-          channel: NotificationChannel.IN_APP,
-          recipient_id: process.env.FINANCE_MANAGER_ID || 'admin', // TODO: Get actual finance manager
-          title: '📊 Комиссии за предыдущий месяц рассчитаны',
-          message:
-            `Автоматически рассчитаны комиссии владельцам локаций:\n\n` +
-            `Договоров обработано: ${calculatedCount}\n` +
-            `Период: предыдущий месяц\n\n` +
-            `Проверьте детали расчета и сроки оплаты.`,
-          data: {
-            calculated_count: calculatedCount,
-            auto_generated: true,
-          },
-          action_url: `/commissions?status=pending`,
-        });
+        const commissionManagerIds = await this.usersService.getManagerUserIds();
+        const commissionManagerId = commissionManagerIds[0] || await this.usersService.getFirstAdminId();
+
+        if (commissionManagerId) {
+          await this.notificationsService.create({
+            type: NotificationType.OTHER,
+            channel: NotificationChannel.IN_APP,
+            recipient_id: commissionManagerId,
+            title: '📊 Комиссии за предыдущий месяц рассчитаны',
+            message:
+              `Автоматически рассчитаны комиссии владельцам локаций:\n\n` +
+              `Договоров обработано: ${calculatedCount}\n` +
+              `Период: предыдущий месяц\n\n` +
+              `Проверьте детали расчета и сроки оплаты.`,
+            data: {
+              calculated_count: calculatedCount,
+              auto_generated: true,
+            },
+            action_url: `/commissions?status=pending`,
+          });
+        }
       } else {
         this.logger.debug('No contracts required commission calculation');
       }
@@ -881,21 +927,26 @@ export class ScheduledTasksService {
         const summary = summaryLines.join('\n') + (moreCount > 0 ? `\n... и еще ${moreCount}` : '');
 
         // Send notification to financial manager
-        await this.notificationsService.create({
-          type: NotificationType.OTHER,
-          channel: NotificationChannel.IN_APP,
-          recipient_id: process.env.FINANCE_MANAGER_ID || 'admin', // TODO: Get actual finance manager
-          title: `🚨 Просроченные комиссионные платежи: ${overdueCount}`,
-          message:
-            `Обнаружены просроченные платежи по комиссиям:\n\n` +
-            `${summary}\n\n` +
-            `Требуется немедленная оплата.`,
-          data: {
-            overdue_count: overdueCount,
-            auto_generated: true,
-          },
-          action_url: `/commissions?status=overdue`,
-        });
+        const overdueManagerIds = await this.usersService.getManagerUserIds();
+        const overdueManagerId = overdueManagerIds[0] || await this.usersService.getFirstAdminId();
+
+        if (overdueManagerId) {
+          await this.notificationsService.create({
+            type: NotificationType.OTHER,
+            channel: NotificationChannel.IN_APP,
+            recipient_id: overdueManagerId,
+            title: `🚨 Просроченные комиссионные платежи: ${overdueCount}`,
+            message:
+              `Обнаружены просроченные платежи по комиссиям:\n\n` +
+              `${summary}\n\n` +
+              `Требуется немедленная оплата.`,
+            data: {
+              overdue_count: overdueCount,
+              auto_generated: true,
+            },
+            action_url: `/commissions?status=overdue`,
+          });
+        }
       } else {
         this.logger.debug('No overdue commission payments found');
       }

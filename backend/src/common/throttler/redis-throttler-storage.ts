@@ -10,6 +10,8 @@ import Redis from 'ioredis';
 interface ThrottlerStorageRecord {
   totalHits: number;
   timeToExpire: number;
+  isBlocked: boolean;
+  timeToBlockExpire: number;
 }
 
 /**
@@ -64,10 +66,31 @@ export class RedisThrottlerStorage implements ThrottlerStorage, OnModuleInit, On
    * Increment the rate limit counter
    * @param key - Throttler key (includes IP, route, etc.)
    * @param ttl - Time to live in milliseconds
-   * @returns ThrottlerStorageRecord with totalHits and timeToExpire
+   * @param limit - Rate limit threshold
+   * @param blockDuration - Duration to block if limit exceeded (ms)
+   * @param throttlerName - Name of the throttler
+   * @returns ThrottlerStorageRecord with totalHits, timeToExpire, isBlocked, timeToBlockExpire
    */
-  async increment(key: string, ttl: number): Promise<ThrottlerStorageRecord> {
+  async increment(
+    key: string,
+    ttl: number,
+    limit: number,
+    blockDuration: number,
+    _throttlerName: string,
+  ): Promise<ThrottlerStorageRecord> {
     const fullKey = `${this.keyPrefix}${key}`;
+    const blockKey = `${this.keyPrefix}blocked:${key}`;
+
+    // Check if currently blocked
+    const blockedTtl = await this.redis.pttl(blockKey);
+    if (blockedTtl > 0) {
+      return {
+        totalHits: limit + 1,
+        timeToExpire: 0,
+        isBlocked: true,
+        timeToBlockExpire: blockedTtl,
+      };
+    }
 
     // Use Redis MULTI for atomic increment and TTL check
     const multi = this.redis.multi();
@@ -84,9 +107,20 @@ export class RedisThrottlerStorage implements ThrottlerStorage, OnModuleInit, On
       timeToExpire = ttl;
     }
 
+    // Check if limit exceeded and block if necessary
+    const isBlocked = totalHits > limit;
+    let timeToBlockExpire = 0;
+
+    if (isBlocked && blockDuration > 0) {
+      await this.redis.set(blockKey, '1', 'PX', blockDuration);
+      timeToBlockExpire = blockDuration;
+    }
+
     return {
       totalHits,
       timeToExpire: Math.max(0, timeToExpire),
+      isBlocked,
+      timeToBlockExpire,
     };
   }
 }

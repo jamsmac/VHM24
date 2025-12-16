@@ -1,6 +1,9 @@
 import { DataSource } from 'typeorm';
+import { Logger } from '@nestjs/common';
 import { Dictionary } from '../../modules/dictionaries/entities/dictionary.entity';
 import { DictionaryItem } from '../../modules/dictionaries/entities/dictionary-item.entity';
+
+const logger = new Logger('DictionariesSeed');
 
 /**
  * Seed данные для всех системных справочников VendHub Manager
@@ -10,7 +13,7 @@ export async function seedDictionaries(dataSource: DataSource): Promise<void> {
   const dictionaryRepo = dataSource.getRepository(Dictionary);
   const itemRepo = dataSource.getRepository(DictionaryItem);
 
-  console.log('🌱 Начинается загрузка справочников...');
+  logger.log('🌱 Начинается загрузка справочников...');
 
   const dictionaries = [
     // БЛОК 1: Номенклатура и товары
@@ -1326,9 +1329,9 @@ export async function seedDictionaries(dataSource: DataSource): Promise<void> {
     if (!dictionary) {
       dictionary = dictionaryRepo.create(dictionaryFields);
       dictionary = await dictionaryRepo.save(dictionary);
-      console.log(`  ✅ Справочник создан: ${dictionary.code}`);
+      logger.log(`  ✅ Справочник создан: ${dictionary.code}`);
     } else {
-      console.log(`  ⏭️  Справочник уже существует: ${dictionary.code}`);
+      logger.log(`  ⏭️  Справочник уже существует: ${dictionary.code}`);
     }
 
     // Создать элементы
@@ -1346,11 +1349,11 @@ export async function seedDictionaries(dataSource: DataSource): Promise<void> {
           dictionary_id: dictionary.id,
         });
         await itemRepo.save(item);
-        console.log(`    ➕ Элемент создан: ${itemData.code}`);
+        logger.log(`    ➕ Элемент создан: ${itemData.code}`);
       }
     }
   }
 
-  console.log('✅ Загрузка справочников завершена!');
-  console.log(`📊 Всего справочников: ${dictionaries.length}`);
+  logger.log('✅ Загрузка справочников завершена!');
+  logger.log(`📊 Всего справочников: ${dictionaries.length}`);
 }

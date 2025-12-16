@@ -154,11 +154,13 @@ describe('RedisThrottlerStorage', () => {
       };
       mockRedis.multi.mockReturnValue(multiMock);
 
-      const result = await storage.increment('test-key', 60000);
+      const result = await storage.increment('test-key', 60000, 10, 0, 'default');
 
       expect(result).toEqual({
         totalHits: 5,
         timeToExpire: 30000,
+        isBlocked: false,
+        timeToBlockExpire: 0,
       });
     });
 
@@ -173,7 +175,7 @@ describe('RedisThrottlerStorage', () => {
       };
       mockRedis.multi.mockReturnValue(multiMock);
 
-      await storage.increment('user:123:route', 60000);
+      await storage.increment('user:123:route', 60000, 10, 0, 'default');
 
       expect(multiMock.incr).toHaveBeenCalled();
     });
@@ -189,7 +191,7 @@ describe('RedisThrottlerStorage', () => {
       };
       mockRedis.multi.mockReturnValue(multiMock);
 
-      await storage.increment('new-key', 60000);
+      await storage.increment('new-key', 60000, 10, 0, 'default');
 
       expect(mockRedis.pexpire).toHaveBeenCalledWith('vendhub:throttle:new-key', 60000);
     });
@@ -205,7 +207,7 @@ describe('RedisThrottlerStorage', () => {
       };
       mockRedis.multi.mockReturnValue(multiMock);
 
-      await storage.increment('existing-key', 60000);
+      await storage.increment('existing-key', 60000, 10, 0, 'default');
 
       expect(mockRedis.pexpire).toHaveBeenCalled();
     });
@@ -221,7 +223,7 @@ describe('RedisThrottlerStorage', () => {
       };
       mockRedis.multi.mockReturnValue(multiMock);
 
-      await storage.increment('existing-key', 60000);
+      await storage.increment('existing-key', 60000, 10, 0, 'default');
 
       expect(mockRedis.pexpire).not.toHaveBeenCalled();
     });
@@ -238,7 +240,7 @@ describe('RedisThrottlerStorage', () => {
       mockRedis.multi.mockReturnValue(multiMock);
       mockRedis.pexpire.mockResolvedValue(1);
 
-      const result = await storage.increment('key', 60000);
+      const result = await storage.increment('key', 60000, 10, 0, 'default');
 
       expect(result.timeToExpire).toBe(60000); // Should be the new TTL
     });
@@ -251,7 +253,7 @@ describe('RedisThrottlerStorage', () => {
       };
       mockRedis.multi.mockReturnValue(multiMock);
 
-      const result = await storage.increment('key', 60000);
+      const result = await storage.increment('key', 60000, 10, 0, 'default');
 
       expect(result.totalHits).toBe(1);
     });

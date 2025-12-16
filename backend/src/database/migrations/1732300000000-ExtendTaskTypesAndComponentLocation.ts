@@ -1,4 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
+import { Logger } from '@nestjs/common';
+
+const logger = new Logger('ExtendTaskTypesAndComponentLocation1732300000000');
 
 export class ExtendTaskTypesAndComponentLocation1732300000000 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
@@ -117,7 +120,7 @@ export class ExtendTaskTypesAndComponentLocation1732300000000 implements Migrati
 
     // 5. Откат расширения TaskType enum невозможен в PostgreSQL
     // Новые значения останутся в enum, но не будут использоваться
-    console.log(
+    logger.log(
       'WARNING: Cannot remove values from task_type_enum. ' +
         'New values will remain but will not be used.',
     );

@@ -1,8 +1,11 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
+import { Logger } from '@nestjs/common';
+
+const logger = new Logger('RemoveTestTableAndCleanup1733000000000');
 
 /**
  * Remove test_table and cleanup unnecessary tables
- * 
+ *
  * This migration removes:
  * - test_table (test/demo table)
  * - Any other test or temporary tables
@@ -21,13 +24,13 @@ export class RemoveTestTableAndCleanup1733000000000 implements MigrationInterfac
     `);
 
     if (testTableExists[0].exists) {
-      console.log('🗑️  Dropping test_table...');
-      
+      logger.log('🗑️  Dropping test_table...');
+
       // Drop indexes first
       await queryRunner.query(`
         DROP INDEX IF EXISTS "IDX_test_table_created_at";
       `);
-      
+
       await queryRunner.query(`
         DROP INDEX IF EXISTS "IDX_test_table_name";
       `);
@@ -37,9 +40,9 @@ export class RemoveTestTableAndCleanup1733000000000 implements MigrationInterfac
         DROP TABLE IF EXISTS "test_table" CASCADE;
       `);
 
-      console.log('✅ test_table dropped successfully');
+      logger.log('✅ test_table dropped successfully');
     } else {
-      console.log('ℹ️  test_table does not exist, skipping...');
+      logger.log('ℹ️  test_table does not exist, skipping...');
     }
 
     // Remove any other test/temporary tables if they exist
@@ -57,10 +60,10 @@ export class RemoveTestTableAndCleanup1733000000000 implements MigrationInterfac
     `);
 
     if (tempTables.length > 0) {
-      console.log(`🗑️  Found ${tempTables.length} additional test/temp tables to remove...`);
+      logger.log(`🗑️  Found ${tempTables.length} additional test/temp tables to remove...`);
       for (const table of tempTables) {
         await queryRunner.query(`DROP TABLE IF EXISTS "${table.table_name}" CASCADE;`);
-        console.log(`✅ Dropped ${table.table_name}`);
+        logger.log(`✅ Dropped ${table.table_name}`);
       }
     }
   }

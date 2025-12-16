@@ -1,4 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
+import { Logger } from '@nestjs/common';
+
+const logger = new Logger('AddAuditFieldsToRemainingTables1732900000000');
 
 /**
  * Migration: Add Audit Fields to Remaining Tables
@@ -10,7 +13,7 @@ export class AddAuditFieldsToRemainingTables1732900000000 implements MigrationIn
   name = 'AddAuditFieldsToRemainingTables1732900000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
-    console.log('🔧 Adding audit fields to remaining tables...');
+    logger.log('🔧 Adding audit fields to remaining tables...');
 
     // Tables that need audit fields added
     const tablesNeedingAuditFields = [
@@ -73,25 +76,25 @@ export class AddAuditFieldsToRemainingTables1732900000000 implements MigrationIn
         `);
 
         if (!createdByExists[0]?.exists) {
-          console.log(`    Adding audit fields to ${table}...`);
+          logger.log(`    Adding audit fields to ${table}...`);
           await queryRunner.query(`
             ALTER TABLE "${table}"
             ADD COLUMN IF NOT EXISTS "created_by_id" uuid NULL,
             ADD COLUMN IF NOT EXISTS "updated_by_id" uuid NULL;
           `);
         } else {
-          console.log(`    Skipping ${table} - audit fields already exist`);
+          logger.log(`    Skipping ${table} - audit fields already exist`);
         }
       } else {
-        console.log(`    Skipping ${table} - table does not exist`);
+        logger.log(`    Skipping ${table} - table does not exist`);
       }
     }
 
-    console.log('✅ Audit fields added to remaining tables');
+    logger.log('✅ Audit fields added to remaining tables');
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    console.log('🔄 Removing audit fields from tables...');
+    logger.log('🔄 Removing audit fields from tables...');
 
     const tables = [
       'users',
@@ -149,6 +152,6 @@ export class AddAuditFieldsToRemainingTables1732900000000 implements MigrationIn
       }
     }
 
-    console.log('✅ Audit fields removed');
+    logger.log('✅ Audit fields removed');
   }
 }

@@ -1,6 +1,9 @@
 import { DataSource } from 'typeorm';
+import { Logger } from '@nestjs/common';
 import { Role } from '../../modules/rbac/entities/role.entity';
 import { Permission } from '../../modules/rbac/entities/permission.entity';
+
+const logger = new Logger('RBACSeed');
 
 /**
  * RBAC Seeder
@@ -23,7 +26,7 @@ interface RoleData {
 }
 
 export async function seedRBAC(dataSource: DataSource): Promise<void> {
-  console.log('🔐 Seeding RBAC (Roles & Permissions)...');
+  logger.log('🔐 Seeding RBAC (Roles & Permissions)...');
 
   const roleRepository = dataSource.getRepository(Role);
   const permissionRepository = dataSource.getRepository(Permission);
@@ -579,12 +582,12 @@ export async function seedRBAC(dataSource: DataSource): Promise<void> {
     // Check if already seeded
     const existingRoles = await roleRepository.count();
     if (existingRoles > 0) {
-      console.log('⚠️  RBAC уже заполнен. Пропускаем...');
+      logger.warn('⚠️  RBAC уже заполнен. Пропускаем...');
       return;
     }
 
     // Create permissions
-    console.log('   📝 Создание permissions...');
+    logger.log('   📝 Создание permissions...');
     const createdPermissions = new Map<string, Permission>();
 
     for (const permData of permissionsData) {
@@ -593,10 +596,10 @@ export async function seedRBAC(dataSource: DataSource): Promise<void> {
       createdPermissions.set(permData.name, saved);
     }
 
-    console.log(`   ✅ Создано ${createdPermissions.size} permissions`);
+    logger.log(`   ✅ Создано ${createdPermissions.size} permissions`);
 
     // Create roles with permissions
-    console.log('   👥 Создание roles...');
+    logger.log('   👥 Создание roles...');
     let rolesCreated = 0;
 
     for (const roleData of rolesData) {
@@ -616,13 +619,13 @@ export async function seedRBAC(dataSource: DataSource): Promise<void> {
       await roleRepository.save(role);
       rolesCreated++;
 
-      console.log(`   ✅ ${roleData.name}: ${rolePermissions.length} permissions`);
+      logger.log(`   ✅ ${roleData.name}: ${rolePermissions.length} permissions`);
     }
 
-    console.log(`   ✅ Создано ${rolesCreated} roles`);
-    console.log('✅ RBAC seeding завершен\n');
+    logger.log(`   ✅ Создано ${rolesCreated} roles`);
+    logger.log('✅ RBAC seeding завершен\n');
   } catch (error) {
-    console.error('❌ Ошибка при seeding RBAC:', error);
+    logger.error('❌ Ошибка при seeding RBAC:', error);
     throw error;
   }
 }

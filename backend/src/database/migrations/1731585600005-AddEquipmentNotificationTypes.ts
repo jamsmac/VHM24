@@ -1,4 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
+import { Logger } from '@nestjs/common';
+
+const logger = new Logger('AddEquipmentNotificationTypes1731585600005');
 
 export class AddEquipmentNotificationTypes1731585600005 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
@@ -61,7 +64,7 @@ export class AddEquipmentNotificationTypes1731585600005 implements MigrationInte
     // 3. Drop the old enum
     // 4. Rename the new enum
 
-    console.log(
+    logger.log(
       'Rollback note: Equipment notification types remain in enum. Manual cleanup required if needed.',
     );
   }

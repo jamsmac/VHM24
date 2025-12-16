@@ -1,4 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
+import { Logger } from '@nestjs/common';
+
+const logger = new Logger('FixCriticalDatabaseIssues1732700000000');
 
 /**
  * Migration: Fix Critical Database Issues (P0)
@@ -13,12 +16,12 @@ export class FixCriticalDatabaseIssues1732700000000 implements MigrationInterfac
   name = 'FixCriticalDatabaseIssues1732700000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
-    console.log('🔧 Fixing critical database issues (P0)...');
+    logger.log('🔧 Fixing critical database issues (P0)...');
 
     // ============================================================================
     // 1. ADD AUDIT FIELDS TO KEY TABLES
     // ============================================================================
-    console.log('  📝 Adding audit fields (created_by_id, updated_by_id)...');
+    logger.log('  📝 Adding audit fields (created_by_id, updated_by_id)...');
 
     // Tables that should have audit fields for tracking who made changes
     const tablesNeedingAuditFields = [
@@ -101,19 +104,19 @@ export class FixCriticalDatabaseIssues1732700000000 implements MigrationInterfac
             `);
           }
 
-          console.log(`    ✅ Added audit fields to ${table}`);
+          logger.log(`    ✅ Added audit fields to ${table}`);
         } else {
-          console.log(`    ⏭️ Audit fields already exist on ${table}`);
+          logger.log(`    ⏭️ Audit fields already exist on ${table}`);
         }
       } else {
-        console.log(`    ⚠️ Table ${table} does not exist, skipping`);
+        logger.log(`    ⚠️ Table ${table} does not exist, skipping`);
       }
     }
 
     // ============================================================================
     // 2. FIX TRANSACTION AMOUNT CONSTRAINT
     // ============================================================================
-    console.log('  💰 Fixing transaction amount constraint...');
+    logger.log('  💰 Fixing transaction amount constraint...');
 
     // First drop the old constraint that allows zero amounts
     await queryRunner.query(`
@@ -129,12 +132,12 @@ export class FixCriticalDatabaseIssues1732700000000 implements MigrationInterfac
       CHECK (amount > 0);
     `);
 
-    console.log('    ✅ Transaction amount constraint updated to require amount > 0');
+    logger.log('    ✅ Transaction amount constraint updated to require amount > 0');
 
     // ============================================================================
     // 3. ADD FOREIGN KEY FOR recipe_snapshot_id
     // ============================================================================
-    console.log('  🔗 Adding foreign key for recipe_snapshot_id...');
+    logger.log('  🔗 Adding foreign key for recipe_snapshot_id...');
 
     // Check if recipe_snapshots table exists
     const snapshotsTableExists = await queryRunner.query(`
@@ -163,9 +166,9 @@ export class FixCriticalDatabaseIssues1732700000000 implements MigrationInterfac
           REFERENCES "recipe_snapshots"("id")
           ON DELETE SET NULL;
         `);
-        console.log('    ✅ Foreign key for recipe_snapshot_id added');
+        logger.log('    ✅ Foreign key for recipe_snapshot_id added');
       } else {
-        console.log('    ⏭️ Foreign key for recipe_snapshot_id already exists');
+        logger.log('    ⏭️ Foreign key for recipe_snapshot_id already exists');
       }
 
       // Add index for the foreign key
@@ -174,15 +177,15 @@ export class FixCriticalDatabaseIssues1732700000000 implements MigrationInterfac
         ON "transactions" ("recipe_snapshot_id")
         WHERE "recipe_snapshot_id" IS NOT NULL;
       `);
-      console.log('    ✅ Index for recipe_snapshot_id added');
+      logger.log('    ✅ Index for recipe_snapshot_id added');
     } else {
-      console.log('    ⚠️ recipe_snapshots table does not exist, skipping FK');
+      logger.log('    ⚠️ recipe_snapshots table does not exist, skipping FK');
     }
 
     // ============================================================================
     // 4. CLEAN UP DUPLICATE/REDUNDANT INDEXES
     // ============================================================================
-    console.log('  🧹 Cleaning up duplicate indexes...');
+    logger.log('  🧹 Cleaning up duplicate indexes...');
 
     // Drop lowercase duplicate indexes (keep the uppercase ones from first migration)
     const duplicateIndexes = [
@@ -191,13 +194,13 @@ export class FixCriticalDatabaseIssues1732700000000 implements MigrationInterfac
 
     for (const indexName of duplicateIndexes) {
       await queryRunner.query(`DROP INDEX IF EXISTS "${indexName}";`);
-      console.log(`    ✅ Dropped duplicate index: ${indexName}`);
+      logger.log(`    ✅ Dropped duplicate index: ${indexName}`);
     }
 
     // ============================================================================
     // 5. ADD INDEX ON AUDIT FIELDS
     // ============================================================================
-    console.log('  📊 Adding indexes on audit fields...');
+    logger.log('  📊 Adding indexes on audit fields...');
 
     // Add indexes for efficient queries on who created/modified records
     await queryRunner.query(`
@@ -212,21 +215,21 @@ export class FixCriticalDatabaseIssues1732700000000 implements MigrationInterfac
       WHERE "created_by_id" IS NOT NULL;
     `);
 
-    console.log('    ✅ Audit field indexes added');
+    logger.log('    ✅ Audit field indexes added');
 
-    console.log('');
-    console.log('✅ All P0 critical issues fixed!');
-    console.log('');
-    console.log('📋 Summary:');
-    console.log('  1. Audit fields (created_by_id, updated_by_id) added to key tables');
-    console.log('  2. Transaction amount constraint fixed (must be > 0)');
-    console.log('  3. Foreign key for recipe_snapshot_id added');
-    console.log('  4. Duplicate indexes cleaned up');
-    console.log('  5. Audit field indexes added for query performance');
+    logger.log('');
+    logger.log('✅ All P0 critical issues fixed!');
+    logger.log('');
+    logger.log('📋 Summary:');
+    logger.log('  1. Audit fields (created_by_id, updated_by_id) added to key tables');
+    logger.log('  2. Transaction amount constraint fixed (must be > 0)');
+    logger.log('  3. Foreign key for recipe_snapshot_id added');
+    logger.log('  4. Duplicate indexes cleaned up');
+    logger.log('  5. Audit field indexes added for query performance');
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    console.log('🔄 Reverting critical database fixes...');
+    logger.log('🔄 Reverting critical database fixes...');
 
     // Drop audit field indexes
     await queryRunner.query(`DROP INDEX IF EXISTS "IDX_transactions_created_by_id";`);
@@ -295,6 +298,6 @@ export class FixCriticalDatabaseIssues1732700000000 implements MigrationInterfac
       }
     }
 
-    console.log('✅ Critical database fixes reverted');
+    logger.log('✅ Critical database fixes reverted');
   }
 }

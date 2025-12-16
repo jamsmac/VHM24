@@ -8,7 +8,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
 import * as bcrypt from 'bcrypt';
-import { User, UserStatus } from './entities/user.entity';
+import { User, UserStatus, UserRole } from './entities/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UpdateIpWhitelistDto } from './dto/update-ip-whitelist.dto';
@@ -486,5 +486,81 @@ export class UsersService {
     user.rejected_at = new Date();
 
     return this.userRepository.save(user);
+  }
+
+  /**
+   * Find users by role
+   * Used to get users for notifications (admin, manager, etc.)
+   *
+   * @param role - User role to filter by
+   * @param activeOnly - Only return active users (default: true)
+   * @returns Array of users with the specified role
+   */
+  async findByRole(role: UserRole, activeOnly: boolean = true): Promise<User[]> {
+    const whereCondition: any = { role };
+
+    if (activeOnly) {
+      whereCondition.status = UserStatus.ACTIVE;
+    }
+
+    return this.userRepository.find({
+      where: whereCondition,
+      order: { created_at: 'DESC' },
+    });
+  }
+
+  /**
+   * Find users by multiple roles
+   * Used to get admins and managers for notifications
+   *
+   * @param roles - Array of user roles to filter by
+   * @param activeOnly - Only return active users (default: true)
+   * @returns Array of users with any of the specified roles
+   */
+  async findByRoles(roles: UserRole[], activeOnly: boolean = true): Promise<User[]> {
+    const query = this.userRepository.createQueryBuilder('user').whereInIds([]);
+
+    if (roles.length > 0) {
+      query.where('user.role IN (:...roles)', { roles });
+    }
+
+    if (activeOnly) {
+      query.andWhere('user.status = :status', { status: UserStatus.ACTIVE });
+    }
+
+    return query.orderBy('user.created_at', 'DESC').getMany();
+  }
+
+  /**
+   * Get admin user IDs for notifications
+   * Returns IDs of all active SuperAdmin and Admin users
+   *
+   * @returns Array of admin user IDs
+   */
+  async getAdminUserIds(): Promise<string[]> {
+    const admins = await this.findByRoles([UserRole.SUPER_ADMIN, UserRole.ADMIN]);
+    return admins.map((user) => user.id);
+  }
+
+  /**
+   * Get manager user IDs for notifications
+   * Returns IDs of all active Manager users
+   *
+   * @returns Array of manager user IDs
+   */
+  async getManagerUserIds(): Promise<string[]> {
+    const managers = await this.findByRole(UserRole.MANAGER);
+    return managers.map((user) => user.id);
+  }
+
+  /**
+   * Get first admin user ID for fallback notifications
+   * Used when a specific admin ID is not configured
+   *
+   * @returns First admin user ID or null
+   */
+  async getFirstAdminId(): Promise<string | null> {
+    const admins = await this.findByRoles([UserRole.SUPER_ADMIN, UserRole.ADMIN]);
+    return admins.length > 0 ? admins[0].id : null;
   }
 }

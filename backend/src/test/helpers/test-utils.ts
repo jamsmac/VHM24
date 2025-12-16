@@ -1,8 +1,12 @@
+import { Logger } from '@nestjs/common';
+
 /**
  * Test Utilities
  *
  * General-purpose testing helper functions
  */
+
+const logger = new Logger('TestUtils');
 
 /**
  * Sleep for a specified duration
@@ -231,6 +235,7 @@ export async function flushPromises(): Promise<void> {
 
 /**
  * Mock console methods to suppress output during tests
+ * Note: This mocks console methods but NestJS Logger should be used in actual code
  */
 export function suppressConsole(): {
   restore: () => void;
