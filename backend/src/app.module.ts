@@ -37,6 +37,7 @@ import { WarehouseModule } from './modules/warehouse/warehouse.module';
 import { HrModule } from './modules/hr/hr.module';
 import { IntegrationModule } from './modules/integration/integration.module';
 import { SecurityModule } from './modules/security/security.module';
+import { AlertsModule } from './modules/alerts/alerts.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { TelegramBotModule } from './modules/telegram-bot/telegram-bot.module';
 import { WebPushModule } from './modules/web-push/web-push.module';
@@ -52,6 +53,7 @@ import { WebsocketModule } from './modules/websocket/websocket.module';
 import { HealthModule } from './health/health.module';
 import { ScheduledTasksModule } from './scheduled-tasks/scheduled-tasks.module';
 import { CommonModule } from './common/common.module';
+import { RateLimitModule } from './common/modules/rate-limit.module';
 
 @Module({
   imports: [
@@ -177,6 +179,7 @@ import { CommonModule } from './common/common.module';
     HrModule,
     IntegrationModule,
     SecurityModule,
+    AlertsModule,
     ReportsModule,
     // TelegramBotModule, // Removed - functionality merged into TelegramModule
     WebPushModule,
@@ -187,6 +190,9 @@ import { CommonModule } from './common/common.module';
     WebsocketModule,
     HealthModule,
     ScheduledTasksModule,
+
+    // Enhanced Rate Limiting Module (Redis-based sliding window)
+    RateLimitModule,
   ],
   controllers: [AppController],
   providers: [

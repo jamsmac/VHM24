@@ -35,6 +35,7 @@ import {
 import { Machine } from '../modules/machines/entities/machine.entity';
 import { CommissionSchedulerService } from '../modules/counterparty/services/commission-scheduler.service';
 import { OperatorRatingsService } from '../modules/operator-ratings/operator-ratings.service';
+import { AlertsService } from '../modules/alerts/alerts.service';
 import { Nomenclature } from '../modules/nomenclature/entities/nomenclature.entity';
 import { InventoryLevelType } from '../modules/inventory/entities/inventory-actual-count.entity';
 import { startOfDay, endOfDay, subDays } from 'date-fns';
@@ -79,6 +80,7 @@ export class ScheduledTasksService {
     private readonly transactionsService: TransactionsService,
     private readonly commissionSchedulerService: CommissionSchedulerService,
     private readonly operatorRatingsService: OperatorRatingsService,
+    private readonly alertsService: AlertsService,
   ) {}
 
   /**
@@ -1222,6 +1224,154 @@ export class ScheduledTasksService {
       this.logger.log(`Inventory threshold monitoring completed in ${duration}s`);
     } catch (error) {
       this.logger.error('Error monitoring inventory thresholds:', error.message);
+    }
+  }
+
+  /**
+   * Process alert escalations - runs every 10 minutes
+   * Checks for active alerts that need to be escalated based on their rules
+   * Sends escalation notifications to higher-level users
+   */
+  @Cron(CronExpression.EVERY_10_MINUTES)
+  async processAlertEscalations() {
+    if (process.env.ENABLE_SCHEDULED_TASKS !== 'true') return;
+
+    this.logger.log('Processing alert escalations...');
+
+    try {
+      await this.alertsService.processEscalations();
+      this.logger.log('Alert escalation processing completed');
+    } catch (error) {
+      this.logger.error('Error processing alert escalations:', error.message);
+    }
+  }
+
+  /**
+   * Evaluate alert rules against current system metrics - runs every hour
+   * Checks configured alert rules and triggers alerts when conditions are met
+   * Integrates with inventory, machines, tasks, and incidents data
+   */
+  @Cron(CronExpression.EVERY_HOUR)
+  async evaluateAlertRules() {
+    if (process.env.ENABLE_SCHEDULED_TASKS !== 'true') return;
+
+    this.logger.log('Evaluating alert rules...');
+
+    try {
+      // Get all enabled rules
+      const rules = await this.alertsService.findAllRules({ is_enabled: true });
+      this.logger.log(`Found ${rules.length} enabled alert rules to evaluate`);
+
+      let triggeredCount = 0;
+
+      for (const rule of rules) {
+        try {
+          // Evaluate based on metric type
+          switch (rule.metric) {
+            case 'low_stock_percentage': {
+              // Check machine inventory levels
+              const machines = await this.machineRepository.find({
+                where: { deleted_at: IsNull() },
+              });
+
+              for (const machine of machines) {
+                // Skip if rule has scope filters that don't match this machine
+                if (rule.scope_filters?.machine_ids?.length &&
+                    !rule.scope_filters.machine_ids.includes(machine.id)) {
+                  continue;
+                }
+
+                // Get machine inventory and calculate fill percentage
+                const inventory = await this.machineInventoryRepository.find({
+                  where: { machine_id: machine.id },
+                });
+
+                if (inventory.length === 0) continue;
+
+                // Calculate average fill percentage
+                let totalCurrent = 0;
+                let totalMax = 0;
+
+                for (const item of inventory) {
+                  totalCurrent += Number(item.current_quantity || 0);
+                  totalMax += Number(item.max_stock_level || item.current_quantity || 1);
+                }
+
+                const fillPercentage = totalMax > 0 ? (totalCurrent / totalMax) * 100 : 100;
+
+                // Evaluate the rule
+                const alert = await this.alertsService.evaluateRule(rule.id, fillPercentage, {
+                  machine_id: machine.id,
+                  additional_data: {
+                    machine_number: machine.machine_number,
+                    machine_name: machine.name,
+                    current_quantity: totalCurrent,
+                    max_quantity: totalMax,
+                  },
+                });
+
+                if (alert) {
+                  triggeredCount++;
+                  this.logger.log(
+                    `Alert triggered for machine ${machine.machine_number}: ${rule.name} (${fillPercentage.toFixed(1)}%)`,
+                  );
+                }
+              }
+              break;
+            }
+
+            case 'task_overdue_hours': {
+              // Check for overdue tasks
+              const overdueTasks = await this.taskRepository.find({
+                where: {
+                  due_date: LessThan(new Date()),
+                  status: TaskStatus.IN_PROGRESS,
+                },
+                relations: ['machine'],
+              });
+
+              for (const task of overdueTasks) {
+                if (!task.due_date) continue;
+
+                const overdueHours = Math.floor(
+                  (Date.now() - task.due_date.getTime()) / (1000 * 60 * 60),
+                );
+
+                const alert = await this.alertsService.evaluateRule(rule.id, overdueHours, {
+                  machine_id: task.machine_id,
+                  additional_data: {
+                    task_id: task.id,
+                    task_type: task.type_code,
+                    machine_number: task.machine?.machine_number,
+                    due_date: task.due_date,
+                  },
+                });
+
+                if (alert) {
+                  triggeredCount++;
+                }
+              }
+              break;
+            }
+
+            // Add more metric types as needed
+            default:
+              this.logger.debug(`Metric type ${rule.metric} evaluation not implemented yet`);
+          }
+        } catch (error) {
+          this.logger.error(
+            `Error evaluating rule ${rule.id} (${rule.name}): ${error.message}`,
+          );
+        }
+      }
+
+      if (triggeredCount > 0) {
+        this.logger.log(`Alert evaluation completed: ${triggeredCount} alert(s) triggered`);
+      } else {
+        this.logger.debug('Alert evaluation completed: no alerts triggered');
+      }
+    } catch (error) {
+      this.logger.error('Error evaluating alert rules:', error.message);
     }
   }
 }

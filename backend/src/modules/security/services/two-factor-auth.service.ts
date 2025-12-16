@@ -205,6 +205,31 @@ export class TwoFactorAuthService {
   }
 
   /**
+   * Get detailed 2FA status for a user
+   */
+  async getStatus(userId: string): Promise<{
+    enabled: boolean;
+    method?: string;
+    enabledAt?: Date;
+    backupCodesRemaining?: number;
+  }> {
+    const twoFactor = await this.twoFactorRepository.findOne({
+      where: { user_id: userId },
+    });
+
+    if (!twoFactor) {
+      return { enabled: false };
+    }
+
+    return {
+      enabled: twoFactor.is_enabled,
+      method: twoFactor.method,
+      enabledAt: twoFactor.enabled_at || undefined,
+      backupCodesRemaining: twoFactor.backup_codes?.length || 0,
+    };
+  }
+
+  /**
    * Encrypt 2FA secret using AES-256-GCM
    * Format: iv:authTag:encryptedData (all in hex)
    */

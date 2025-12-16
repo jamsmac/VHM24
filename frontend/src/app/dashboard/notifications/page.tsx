@@ -1,184 +1,324 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { MobileHeader } from '@/components/layout/MobileHeader'
-import { MobileNav } from '@/components/layout/MobileNav'
-import { Bell, BellOff, CheckCheck, Trash2, Settings } from 'lucide-react'
-import { toast } from 'react-toastify'
-import { formatDateTime } from '@/lib/utils'
+import { useState } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import {
+  notificationsApi,
+  NotificationStatus,
+  NotificationPriority,
+  notificationTypeLabels,
+  statusLabels,
+  priorityLabels,
+  isUnread,
+} from '@/lib/notifications-api'
+import { NotificationList } from '@/components/notifications/NotificationList'
+import { Button } from '@/components/ui/button'
+import {
+  Bell,
+  BellOff,
+  CheckCheck,
+  Trash2,
+  Settings,
+  RefreshCw,
+  Filter,
+  X,
+  Inbox,
+} from 'lucide-react'
+import { toast } from 'sonner'
 
-interface Notification {
-  id: string
-  title: string
-  body: string
-  type: 'task' | 'system' | 'alert' | 'info'
-  read: boolean
-  created_at: Date
-  data?: { url?: string }
-}
+type FilterTab = 'all' | 'unread' | 'urgent'
 
 export default function NotificationsPage() {
-  const [notifications, setNotifications] = useState<Notification[]>([])
-  const [filter, setFilter] = useState<'all' | 'unread'>('all')
-  const [isPushEnabled, setIsPushEnabled] = useState(false)
+  const [activeTab, setActiveTab] = useState<FilterTab>('all')
+  const [showFilters, setShowFilters] = useState(false)
+  const [statusFilter, setStatusFilter] = useState<NotificationStatus | ''>('')
+  const [priorityFilter, setPriorityFilter] = useState<NotificationPriority | ''>('')
 
-  useEffect(() => {
-    checkPushPermission()
-    setNotifications([
-      {
-        id: '1',
-        title: 'Новая задача назначена',
-        body: 'Пополнение аппарата M-001',
-        type: 'task',
-        read: false,
-        created_at: new Date(Date.now() - 30 * 60 * 1000),
-        data: { url: '/dashboard/tasks/1' },
-      },
-      {
-        id: '2',
-        title: 'Задача завершена',
-        body: 'Обслуживание M-003 завершено',
-        type: 'info',
-        read: true,
-        created_at: new Date(Date.now() - 24 * 60 * 60 * 1000),
-      },
-    ])
-  }, [])
+  const queryClient = useQueryClient()
 
-  const checkPushPermission = () => {
-    if (typeof window !== 'undefined' && 'Notification' in window) {
-      setIsPushEnabled(Notification.permission === 'granted')
-    }
-  }
+  const { data: notifications, isLoading, refetch, isFetching } = useQuery({
+    queryKey: ['notifications', 'my'],
+    queryFn: () => notificationsApi.getMyNotifications(),
+    staleTime: 30000,
+  })
 
-  const requestPushPermission = async () => {
-    if (typeof window === 'undefined' || !('Notification' in window)) {
-      toast.error('Push уведомления не поддерживаются')
-      return
-    }
-    const permission = await Notification.requestPermission()
-    if (permission === 'granted') {
-      setIsPushEnabled(true)
-      toast.success('Push уведомления включены!')
-    }
-  }
+  const { data: stats } = useQuery({
+    queryKey: ['notifications', 'stats'],
+    queryFn: () => notificationsApi.getStats(),
+    staleTime: 30000,
+  })
 
-  const markAllAsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })))
-    toast.success('Все отмечены как прочитанные')
-  }
+  const markAllReadMutation = useMutation({
+    mutationFn: notificationsApi.markAllAsRead,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] })
+      toast.success('Все уведомления отмечены как прочитанные')
+    },
+    onError: () => {
+      toast.error('Ошибка при обновлении')
+    },
+  })
 
-  const clearAll = () => {
-    if (confirm('Удалить все уведомления?')) {
-      setNotifications([])
-      toast.success('Все удалены')
-    }
-  }
+  // Filter notifications based on tab and filters
+  const filteredNotifications = notifications?.filter((n) => {
+    // Tab filter
+    if (activeTab === 'unread' && !isUnread(n)) return false
+    if (activeTab === 'urgent' && n.priority !== NotificationPriority.URGENT && n.priority !== NotificationPriority.HIGH) return false
 
-  const filtered = notifications.filter(n => filter === 'all' ? true : !n.read)
-  const unreadCount = notifications.filter(n => !n.read).length
+    // Status filter
+    if (statusFilter && n.status !== statusFilter) return false
+
+    // Priority filter
+    if (priorityFilter && n.priority !== priorityFilter) return false
+
+    return true
+  }) || []
+
+  const unreadCount = stats?.unread || (notifications?.filter(isUnread).length ?? 0)
+  const urgentCount = notifications?.filter(
+    (n) => (n.priority === NotificationPriority.URGENT || n.priority === NotificationPriority.HIGH) && isUnread(n)
+  ).length ?? 0
+
+  const hasActiveFilters = statusFilter || priorityFilter
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
-      <MobileHeader title="Уведомления" actions={
-        <button onClick={requestPushPermission} className="p-2 rounded-lg active:bg-gray-100 touch-manipulation">
-          <Settings className="h-6 w-6 text-gray-700" />
-        </button>
-      } />
-
-      <div className="p-4 space-y-4">
-        {!isPushEnabled && (
-          <div className="bg-indigo-50 rounded-xl p-4 border border-indigo-200">
-            <div className="flex items-start gap-3">
-              <Bell className="h-8 w-8 text-indigo-600" />
-              <div className="flex-1">
-                <h3 className="font-semibold text-indigo-900 mb-2">Включите Push уведомления</h3>
-                <p className="text-sm text-indigo-700 mb-3">Получайте уведомления о новых задачах</p>
-                <button onClick={requestPushPermission}
-                  className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium active:bg-indigo-700 touch-manipulation">
-                  Включить уведомления
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        <div className="flex items-center justify-between">
-          <div className="flex gap-2">
-            <button onClick={() => setFilter('all')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium touch-manipulation ${
-                filter === 'all' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-700 border'
-              }`}>
-              Все ({notifications.length})
-            </button>
-            <button onClick={() => setFilter('unread')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium touch-manipulation ${
-                filter === 'unread' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-700 border'
-              }`}>
-              Непрочитанные ({unreadCount})
-            </button>
-          </div>
-          {notifications.length > 0 && (
-            <button onClick={markAllAsRead} className="p-2 rounded-lg bg-white border active:bg-gray-50 touch-manipulation">
-              <CheckCheck className="h-5 w-5 text-gray-600" />
-            </button>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Уведомления</h1>
+          <p className="mt-2 text-gray-600">
+            Управление уведомлениями и настройками
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setShowFilters(!showFilters)}
+          >
+            <Filter className="h-4 w-4 mr-2" />
+            Фильтры
+            {hasActiveFilters && (
+              <span className="ml-2 bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full text-xs">
+                Активны
+              </span>
+            )}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => refetch()}
+            disabled={isFetching}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? 'animate-spin' : ''}`} />
+            Обновить
+          </Button>
+          {unreadCount > 0 && (
+            <Button
+              variant="outline"
+              onClick={() => markAllReadMutation.mutate()}
+              disabled={markAllReadMutation.isPending}
+            >
+              <CheckCheck className="h-4 w-4 mr-2" />
+              Прочитать все
+            </Button>
           )}
         </div>
+      </div>
 
-        {filtered.length === 0 ? (
-          <div className="bg-white rounded-xl p-12 text-center">
-            <BellOff className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+      {/* Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-indigo-100 rounded-lg">
+              <Inbox className="h-5 w-5 text-indigo-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-gray-900">{stats?.total || notifications?.length || 0}</p>
+              <p className="text-sm text-gray-500">Всего</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <Bell className="h-5 w-5 text-blue-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-gray-900">{unreadCount}</p>
+              <p className="text-sm text-gray-500">Непрочитанных</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-red-100 rounded-lg">
+              <Bell className="h-5 w-5 text-red-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-gray-900">{urgentCount}</p>
+              <p className="text-sm text-gray-500">Срочных</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-green-100 rounded-lg">
+              <CheckCheck className="h-5 w-5 text-green-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-gray-900">
+                {(stats?.total || notifications?.length || 0) - unreadCount}
+              </p>
+              <p className="text-sm text-gray-500">Прочитанных</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Filters Panel */}
+      {showFilters && (
+        <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-medium text-gray-900">Фильтры</h3>
+            {hasActiveFilters && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setStatusFilter('')
+                  setPriorityFilter('')
+                }}
+              >
+                <X className="h-4 w-4 mr-1" />
+                Сбросить
+              </Button>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Статус
+              </label>
+              <select
+                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as NotificationStatus)}
+              >
+                <option value="">Все статусы</option>
+                {Object.entries(statusLabels).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Приоритет
+              </label>
+              <select
+                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                value={priorityFilter}
+                onChange={(e) => setPriorityFilter(e.target.value as NotificationPriority)}
+              >
+                <option value="">Все приоритеты</option>
+                {Object.entries(priorityLabels).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tabs */}
+      <div className="border-b border-gray-200">
+        <nav className="-mb-px flex gap-6">
+          <button
+            onClick={() => setActiveTab('all')}
+            className={`
+              pb-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2
+              ${activeTab === 'all'
+                ? 'border-indigo-500 text-indigo-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }
+            `}
+          >
+            <Inbox className="h-4 w-4" />
+            Все
+            <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full text-xs">
+              {notifications?.length || 0}
+            </span>
+          </button>
+          <button
+            onClick={() => setActiveTab('unread')}
+            className={`
+              pb-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2
+              ${activeTab === 'unread'
+                ? 'border-indigo-500 text-indigo-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }
+            `}
+          >
+            <Bell className="h-4 w-4" />
+            Непрочитанные
+            {unreadCount > 0 && (
+              <span className="bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full text-xs">
+                {unreadCount}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab('urgent')}
+            className={`
+              pb-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2
+              ${activeTab === 'urgent'
+                ? 'border-indigo-500 text-indigo-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }
+            `}
+          >
+            <Bell className="h-4 w-4" />
+            Срочные
+            {urgentCount > 0 && (
+              <span className="bg-red-100 text-red-600 px-2 py-0.5 rounded-full text-xs">
+                {urgentCount}
+              </span>
+            )}
+          </button>
+        </nav>
+      </div>
+
+      {/* Notifications List */}
+      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+        {filteredNotifications.length === 0 && !isLoading ? (
+          <div className="p-12 text-center">
+            <BellOff className="h-12 w-12 text-gray-300 mx-auto mb-4" />
             <p className="text-gray-500 font-medium">Нет уведомлений</p>
             <p className="text-sm text-gray-400 mt-1">
-              {filter === 'unread' ? 'Все прочитаны' : 'Уведомления появятся здесь'}
+              {activeTab === 'unread'
+                ? 'Все уведомления прочитаны'
+                : activeTab === 'urgent'
+                ? 'Нет срочных уведомлений'
+                : 'Уведомления появятся здесь'}
             </p>
           </div>
         ) : (
-          <div className="space-y-3">
-            {filtered.map(n => (
-              <div key={n.id} className={`bg-white rounded-xl p-4 border transition-all touch-manipulation ${
-                n.read ? 'border-gray-200' : 'border-indigo-300 shadow-sm'
-              }`}>
-                <div className="flex items-start gap-3">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xl ${
-                    n.type === 'task' ? 'bg-blue-100' :
-                    n.type === 'alert' ? 'bg-red-100' :
-                    n.type === 'info' ? 'bg-green-100' : 'bg-gray-100'
-                  }`}>
-                    {n.type === 'task' ? '📋' : n.type === 'alert' ? '⚠️' : 'ℹ️'}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2 mb-1">
-                      <h3 className={`font-semibold ${n.read ? 'text-gray-700' : 'text-gray-900'}`}>
-                        {n.title}
-                      </h3>
-                      {!n.read && <div className="w-2 h-2 bg-indigo-600 rounded-full mt-1.5" />}
-                    </div>
-                    <p className="text-sm text-gray-600 mb-2">{n.body}</p>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-gray-400">{formatDateTime(n.created_at)}</span>
-                      <button onClick={() => setNotifications(prev => prev.filter(x => x.id !== n.id))}
-                        className="p-1.5 rounded-lg active:bg-gray-100 touch-manipulation">
-                        <Trash2 className="h-4 w-4 text-gray-400" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
+          <div className="p-4">
+            <NotificationList
+              notifications={filteredNotifications}
+              isLoading={isLoading}
+            />
           </div>
         )}
-
-        {notifications.length > 0 && (
-          <button onClick={clearAll}
-            className="w-full bg-red-50 text-red-700 px-4 py-3 rounded-lg font-medium border border-red-200 active:bg-red-100 touch-manipulation">
-            <Trash2 className="h-5 w-5 inline-block mr-2" />
-            Очистить все уведомления
-          </button>
-        )}
       </div>
-
-      <MobileNav />
     </div>
   )
 }
