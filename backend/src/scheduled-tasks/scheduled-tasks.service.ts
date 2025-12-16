@@ -1294,7 +1294,7 @@ export class ScheduledTasksService {
 
                 for (const item of inventory) {
                   totalCurrent += Number(item.current_quantity || 0);
-                  totalMax += Number(item.max_stock_level || item.current_quantity || 1);
+                  totalMax += Number(item.max_capacity || item.current_quantity || 1);
                 }
 
                 const fillPercentage = totalMax > 0 ? (totalCurrent / totalMax) * 100 : 100;
