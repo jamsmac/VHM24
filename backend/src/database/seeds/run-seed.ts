@@ -9,13 +9,27 @@ import { seedRBAC } from './rbac.seed';
 // Load environment variables
 config();
 
+// Support both DATABASE_URL and individual variables
+const getDatabaseConfig = () => {
+  if (process.env.DATABASE_URL) {
+    return {
+      type: 'postgres' as const,
+      url: process.env.DATABASE_URL,
+      ssl: process.env.DATABASE_SSL === 'true' ? { rejectUnauthorized: false } : false,
+    };
+  }
+  return {
+    type: 'postgres' as const,
+    host: process.env.DATABASE_HOST || 'localhost',
+    port: parseInt(process.env.DATABASE_PORT || '5432'),
+    username: process.env.DATABASE_USER || 'vendhub',
+    password: process.env.DATABASE_PASSWORD || 'vendhub_password_dev',
+    database: process.env.DATABASE_NAME || 'vendhub',
+  };
+};
+
 const AppDataSource = new DataSource({
-  type: 'postgres',
-  host: process.env.DATABASE_HOST || 'localhost',
-  port: parseInt(process.env.DATABASE_PORT || '5432'),
-  username: process.env.DATABASE_USER || 'vendhub',
-  password: process.env.DATABASE_PASSWORD || 'vendhub_password_dev',
-  database: process.env.DATABASE_NAME || 'vendhub',
+  ...getDatabaseConfig(),
   entities: [__dirname + '/../../**/*.entity{.ts,.js}'],
   synchronize: false,
 });

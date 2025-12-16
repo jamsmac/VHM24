@@ -61,6 +61,10 @@ COPY --chown=nestjs:nodejs --from=build /app/node_modules ./node_modules
 # Copy built application
 COPY --chown=nestjs:nodejs --from=build /app/dist ./dist
 
+# Copy startup script
+COPY --chown=nestjs:nodejs backend/startup.sh ./startup.sh
+RUN chmod +x ./startup.sh
+
 # Create necessary directories with proper permissions
 RUN mkdir -p /app/uploads /app/temp/voice && \
     chown -R nestjs:nodejs /app/uploads /app/temp
@@ -78,5 +82,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
 # Use dumb-init to handle signals properly
 ENTRYPOINT ["dumb-init", "--"]
 
-# Start the application
-CMD ["node", "dist/main"]
+# Start the application via startup script
+CMD ["./startup.sh"]
