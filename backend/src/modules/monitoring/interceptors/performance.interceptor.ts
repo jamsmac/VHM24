@@ -63,7 +63,7 @@ export class PerformanceInterceptor implements NestInterceptor {
    * Extract the route pattern from the request
    * Replaces dynamic segments with placeholders
    */
-  private extractRoute(request: any): string {
+  private extractRoute(request: { route?: { path?: string }; url: string }): string {
     // Get the route from the matched route
     const route = request.route?.path || request.url;
 

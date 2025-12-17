@@ -249,7 +249,7 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection, OnGa
   /**
    * Emit job completed
    */
-  emitJobCompleted(data: { jobId: string; type: string; result: any; duration?: number }) {
+  emitJobCompleted(data: { jobId: string; type: string; result: unknown; duration?: number }) {
     this.server.to('queue').emit('queue:job-completed', data);
     this.logger.debug(`Emitted job completed: ${data.jobId}`);
   }

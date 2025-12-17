@@ -8,10 +8,17 @@ import {
   Query,
   HttpCode,
   HttpStatus,
-  Request,
+  Req,
   UseGuards,
   ParseUUIDPipe,
 } from '@nestjs/common';
+import { Request as ExpressRequest } from 'express';
+
+interface AuthenticatedRequest extends ExpressRequest {
+  user: {
+    id: string;
+  };
+}
 import {
   ApiTags,
   ApiOperation,
@@ -156,7 +163,7 @@ export class ComplaintsController {
     description: 'Жалоба взята в обработку',
     type: Complaint,
   })
-  takeInReview(@Param('id', ParseUUIDPipe) id: string, @Request() req: any): Promise<Complaint> {
+  takeInReview(@Param('id', ParseUUIDPipe) id: string, @Req() req: AuthenticatedRequest): Promise<Complaint> {
     const userId = req.user.id;
     return this.complaintsService.takeInReview(id, userId);
   }
@@ -174,7 +181,7 @@ export class ComplaintsController {
   resolve(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: HandleComplaintDto,
-    @Request() req: any,
+    @Req() req: AuthenticatedRequest,
   ): Promise<Complaint> {
     const userId = req.user.id;
     return this.complaintsService.resolve(id, userId, dto);
@@ -193,7 +200,7 @@ export class ComplaintsController {
   reject(
     @Param('id', ParseUUIDPipe) id: string,
     @Body('reason') reason: string,
-    @Request() req: any,
+    @Req() req: AuthenticatedRequest,
   ): Promise<Complaint> {
     const userId = req.user.id;
     return this.complaintsService.reject(id, userId, reason);

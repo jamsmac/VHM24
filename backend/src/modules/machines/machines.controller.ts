@@ -34,7 +34,7 @@ import { Machine, MachineStatus } from './entities/machine.entity';
 import { JwtAuthGuard } from '@modules/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '@modules/auth/guards/roles.guard';
 import { Roles } from '@modules/auth/decorators/roles.decorator';
-import { UserRole } from '@modules/users/entities/user.entity';
+import { User, UserRole } from '@modules/users/entities/user.entity';
 import { CurrentUser } from '@modules/auth/decorators/current-user.decorator';
 // import { MoveMachineDto } from './dto/move-machine.dto';
 import { MachineLocationHistory } from './entities/machine-location-history.entity';
@@ -238,9 +238,9 @@ export class MachinesController {
   writeOff(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() writeoffDto: WriteoffMachineDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: User,
   ): Promise<WriteoffJobResponseDto> {
-    return this.machinesService.writeOffMachine(id, writeoffDto, user?.userId);
+    return this.machinesService.writeOffMachine(id, writeoffDto, user?.id);
   }
 
   @Post('writeoff/bulk')
@@ -291,9 +291,9 @@ export class MachinesController {
   bulkWriteOff(
     @Body('machineIds') machineIds: string[],
     @Body('writeoffData') writeoffDto: WriteoffMachineDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: User,
   ): Promise<BulkWriteoffResponseDto> {
-    return this.machinesService.bulkWriteOffMachines(machineIds, writeoffDto, user?.userId);
+    return this.machinesService.bulkWriteOffMachines(machineIds, writeoffDto, user?.id);
   }
 
   @Get('writeoff/job/:jobId')

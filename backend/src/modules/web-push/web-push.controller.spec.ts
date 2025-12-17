@@ -4,12 +4,14 @@ import { WebPushService } from './web-push.service';
 import { PushSubscription } from './entities/push-subscription.entity';
 import { SubscribePushDto, SendPushNotificationDto } from './dto/push-subscription.dto';
 
+type MockAuthRequest = Parameters<typeof WebPushController.prototype.subscribe>[1];
+
 describe('WebPushController', () => {
   let controller: WebPushController;
   let mockWebPushService: jest.Mocked<WebPushService>;
 
   const mockUser = { id: 'user-123', username: 'testuser' };
-  const mockRequest = { user: mockUser };
+  const mockRequest = { user: mockUser } as unknown as MockAuthRequest;
 
   beforeEach(async () => {
     mockWebPushService = {

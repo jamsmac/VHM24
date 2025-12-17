@@ -3,6 +3,8 @@ import { DashboardController } from './dashboard.controller';
 import { DashboardService } from '../services/dashboard.service';
 import { CreateWidgetDto } from '../dto/create-widget.dto';
 
+type MockAuthRequest = Parameters<typeof DashboardController.prototype.getWidgets>[0];
+
 describe('DashboardController', () => {
   let controller: DashboardController;
   let mockDashboardService: jest.Mocked<DashboardService>;
@@ -19,7 +21,7 @@ describe('DashboardController', () => {
     user: {
       userId: 'user-1',
     },
-  };
+  } as MockAuthRequest;
 
   beforeEach(async () => {
     mockDashboardService = {

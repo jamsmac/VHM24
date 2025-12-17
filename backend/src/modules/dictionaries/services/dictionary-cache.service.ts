@@ -2,6 +2,15 @@ import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import { DictionariesService } from '../dictionaries.service';
 import { Dictionary } from '../entities/dictionary.entity';
 import { DictionaryItem } from '../entities/dictionary-item.entity';
+import { CreateDictionaryDto } from '../dto/create-dictionary.dto';
+import { UpdateDictionaryDto } from '../dto/update-dictionary.dto';
+import { CreateDictionaryItemDto } from '../dto/create-dictionary-item.dto';
+import { UpdateDictionaryItemDto } from '../dto/update-dictionary-item.dto';
+
+interface CacheEntry {
+  data: unknown;
+  expiresAt: number;
+}
 
 /**
  * Dictionary Cache Service
@@ -26,7 +35,7 @@ export class DictionaryCacheService implements OnModuleInit {
   private readonly logger = new Logger(DictionaryCacheService.name);
 
   // Cache storage
-  private dictionariesCache = new Map<string, { data: any; expiresAt: number }>();
+  private dictionariesCache = new Map<string, CacheEntry>();
 
   // Cache TTL in seconds
   private readonly DEFAULT_TTL = 3600; // 1 hour
@@ -175,7 +184,7 @@ export class DictionaryCacheService implements OnModuleInit {
   /**
    * Create dictionary and invalidate cache
    */
-  async createDictionary(createDictionaryDto: any): Promise<Dictionary> {
+  async createDictionary(createDictionaryDto: CreateDictionaryDto): Promise<Dictionary> {
     const dictionary = await this.dictionariesService.createDictionary(createDictionaryDto);
 
     // Invalidate all dictionaries cache
@@ -191,7 +200,7 @@ export class DictionaryCacheService implements OnModuleInit {
   /**
    * Update dictionary and invalidate cache
    */
-  async updateDictionary(id: string, updateDictionaryDto: any): Promise<Dictionary> {
+  async updateDictionary(id: string, updateDictionaryDto: UpdateDictionaryDto): Promise<Dictionary> {
     const dictionary = await this.dictionariesService.updateDictionary(id, updateDictionaryDto);
 
     // Invalidate all related caches
@@ -224,7 +233,7 @@ export class DictionaryCacheService implements OnModuleInit {
    */
   async createDictionaryItem(
     dictionaryId: string,
-    createDictionaryItemDto: any,
+    createDictionaryItemDto: CreateDictionaryItemDto,
   ): Promise<DictionaryItem> {
     const item = await this.dictionariesService.createDictionaryItem(
       dictionaryId,
@@ -240,7 +249,7 @@ export class DictionaryCacheService implements OnModuleInit {
   /**
    * Update dictionary item and invalidate parent dictionary cache
    */
-  async updateDictionaryItem(id: string, updateDictionaryItemDto: any): Promise<DictionaryItem> {
+  async updateDictionaryItem(id: string, updateDictionaryItemDto: UpdateDictionaryItemDto): Promise<DictionaryItem> {
     const item = await this.dictionariesService.updateDictionaryItem(id, updateDictionaryItemDto);
 
     // Invalidate parent dictionary caches
@@ -288,7 +297,7 @@ export class DictionaryCacheService implements OnModuleInit {
   /**
    * Set value in cache
    */
-  private set(key: string, data: any, ttl: number = this.DEFAULT_TTL): void {
+  private set(key: string, data: unknown, ttl: number = this.DEFAULT_TTL): void {
     this.dictionariesCache.set(key, {
       data,
       expiresAt: Date.now() + ttl * 1000,

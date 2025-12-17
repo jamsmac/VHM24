@@ -6,6 +6,7 @@ import { WashingSchedulesService } from './washing-schedules.service';
 import { EquipmentNotificationsService } from './equipment-notifications.service';
 import { TasksService } from '../../tasks/tasks.service';
 import { TaskType, TaskPriority } from '../../tasks/entities/task.entity';
+import { WashingSchedule } from '../entities/washing-schedule.entity';
 
 /**
  * Equipment Scheduled Tasks Service
@@ -323,7 +324,7 @@ export class EquipmentScheduledTasksService {
   /**
    * Build checklist from washing schedule instructions
    */
-  private buildWashingChecklist(schedule: any): Array<{ item: string; completed: boolean }> {
+  private buildWashingChecklist(schedule: WashingSchedule): Array<{ item: string; completed: boolean }> {
     const checklist: Array<{ item: string; completed: boolean }> = [];
 
     // Add component-specific items

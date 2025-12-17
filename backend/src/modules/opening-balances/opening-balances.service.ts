@@ -6,6 +6,30 @@ import { CreateOpeningBalanceDto } from './dto/create-opening-balance.dto';
 import { UpdateOpeningBalanceDto } from './dto/update-opening-balance.dto';
 import { WarehouseInventory } from '@/modules/inventory/entities/warehouse-inventory.entity';
 
+interface BalanceWhereCondition {
+  nomenclature_id?: string;
+  balance_date?: Date;
+  warehouse_id?: string;
+  is_applied?: boolean;
+}
+
+export interface BulkError {
+  nomenclature_id: string;
+  error: string;
+}
+
+export interface ImportError {
+  row: CreateOpeningBalanceDto;
+  error: string;
+}
+
+export interface WarehouseStats {
+  warehouse_id: string;
+  warehouse_name: string;
+  item_count: string;
+  total_value: string;
+}
+
 @Injectable()
 export class OpeningBalancesService {
   private readonly logger = new Logger(OpeningBalancesService.name);
@@ -23,9 +47,9 @@ export class OpeningBalancesService {
    */
   async create(dto: CreateOpeningBalanceDto): Promise<StockOpeningBalance> {
     // Check if balance already exists for this nomenclature/warehouse/date
-    const whereCondition: any = {
+    const whereCondition: BalanceWhereCondition = {
       nomenclature_id: dto.nomenclature_id,
-      balance_date: dto.balance_date,
+      balance_date: new Date(dto.balance_date),
     };
 
     if (dto.warehouse_id) {
@@ -159,18 +183,16 @@ export class OpeningBalancesService {
     warehouse_id: string,
     user_id: string,
   ): Promise<{ applied: number; skipped: number }> {
-    const whereCondition: any = {
-      balance_date,
-      is_applied: false,
-    };
+    // Use query builder for flexible where clause
+    const query = this.balanceRepository.createQueryBuilder('balance')
+      .where('balance.balance_date = :balance_date', { balance_date })
+      .andWhere('balance.is_applied = :is_applied', { is_applied: false });
 
     if (warehouse_id) {
-      whereCondition.warehouse_id = warehouse_id;
+      query.andWhere('balance.warehouse_id = :warehouse_id', { warehouse_id });
     }
 
-    const balances = await this.balanceRepository.find({
-      where: whereCondition,
-    });
+    const balances = await query.getMany();
 
     let applied = 0;
     let skipped = 0;
@@ -225,7 +247,7 @@ export class OpeningBalancesService {
    */
   async bulkCreate(
     balances: CreateOpeningBalanceDto[],
-  ): Promise<{ created: number; failed: number; errors: any[] }> {
+  ): Promise<{ created: number; failed: number; errors: BulkError[] }> {
     let created = 0;
     let failed = 0;
     const errors = [];
@@ -253,7 +275,7 @@ export class OpeningBalancesService {
   async importBalances(
     data: CreateOpeningBalanceDto[],
     import_session_id: string,
-  ): Promise<{ imported: number; failed: number; errors: any[] }> {
+  ): Promise<{ imported: number; failed: number; errors: ImportError[] }> {
     let imported = 0;
     let failed = 0;
     const errors = [];
@@ -286,7 +308,7 @@ export class OpeningBalancesService {
     total_value: number;
     applied_count: number;
     pending_count: number;
-    by_warehouse: any[];
+    by_warehouse: WarehouseStats[];
   }> {
     const query = this.balanceRepository.createQueryBuilder('balance');
 

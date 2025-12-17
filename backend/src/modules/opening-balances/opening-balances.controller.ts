@@ -8,11 +8,18 @@ import {
   Delete,
   Query,
   UseGuards,
-  Request,
+  Req,
   ParseUUIDPipe,
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
+import { Request as ExpressRequest } from 'express';
+
+interface AuthenticatedRequest extends ExpressRequest {
+  user: {
+    sub: string;
+  };
+}
 import { OpeningBalancesService } from './opening-balances.service';
 import { CreateOpeningBalanceDto } from './dto/create-opening-balance.dto';
 import { UpdateOpeningBalanceDto } from './dto/update-opening-balance.dto';
@@ -96,7 +103,7 @@ export class OpeningBalancesController {
   @ApiResponse({ status: 200, description: 'Остатки успешно применены' })
   async applyBalances(
     @Body() body: { balance_date: string; warehouse_id: string },
-    @Request() req: any,
+    @Req() req: AuthenticatedRequest,
   ) {
     const userId = req.user.sub;
     return this.balancesService.applyBalances(body.balance_date, body.warehouse_id, userId);

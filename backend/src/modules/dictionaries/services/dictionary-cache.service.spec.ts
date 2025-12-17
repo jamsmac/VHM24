@@ -3,6 +3,8 @@ import { DictionaryCacheService } from './dictionary-cache.service';
 import { DictionariesService } from '../dictionaries.service';
 import { Dictionary } from '../entities/dictionary.entity';
 import { DictionaryItem } from '../entities/dictionary-item.entity';
+import { CreateDictionaryDto } from '../dto/create-dictionary.dto';
+import { CreateDictionaryItemDto } from '../dto/create-dictionary-item.dto';
 
 describe('DictionaryCacheService', () => {
   let service: DictionaryCacheService;
@@ -162,7 +164,7 @@ describe('DictionaryCacheService', () => {
       await service.findAllDictionaries(true);
 
       // Create new dictionary
-      const result = await service.createDictionary({ code: 'new_dict' });
+      const result = await service.createDictionary({ code: 'new_dict' } as CreateDictionaryDto);
       expect(result).toEqual(newDict);
 
       // Cache should be invalidated for 'dict:all'
@@ -213,7 +215,7 @@ describe('DictionaryCacheService', () => {
       await service.findAllDictionaryItems('dict-1');
 
       // Create new item
-      const result = await service.createDictionaryItem('dict-1', { code: 'new_item' });
+      const result = await service.createDictionaryItem('dict-1', { code: 'new_item' } as CreateDictionaryItemDto);
       expect(result).toEqual(newItem);
 
       // Cache should be invalidated

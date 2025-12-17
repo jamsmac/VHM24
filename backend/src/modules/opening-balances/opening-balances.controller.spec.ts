@@ -8,6 +8,8 @@ import { UpdateOpeningBalanceDto } from './dto/update-opening-balance.dto';
 import { JwtAuthGuard } from '@/modules/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '@/modules/auth/guards/roles.guard';
 
+type MockAuthRequest = Parameters<typeof OpeningBalancesController.prototype.applyBalances>[1];
+
 describe('OpeningBalancesController', () => {
   let controller: OpeningBalancesController;
   let mockService: jest.Mocked<OpeningBalancesService>;
@@ -367,7 +369,7 @@ describe('OpeningBalancesController', () => {
       balance_date: '2024-01-01',
       warehouse_id: 'warehouse-123',
     };
-    const mockRequest = { user: { sub: 'user-123' } };
+    const mockRequest = { user: { sub: 'user-123' } } as MockAuthRequest;
 
     it('should apply balances successfully', async () => {
       // Arrange

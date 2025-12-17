@@ -226,7 +226,7 @@ export class CommissionService {
     const sortedTiers = [...tiers].sort((a, b) => a.from - b.from);
 
     let totalCommission = 0;
-    const tierBreakdown: any[] = [];
+    const tierBreakdown: Array<{ tier: string; rate: number; revenue_in_tier: number; commission: number; calculation: string }> = [];
 
     for (const tier of sortedTiers) {
       const tierStart = tier.from;

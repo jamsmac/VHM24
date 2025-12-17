@@ -136,7 +136,7 @@ export class RecipeSnapshotHelper {
   /**
    * Calculate checksum for snapshot data
    */
-  private calculateChecksum(data: any): string {
+  private calculateChecksum(data: Record<string, unknown>): string {
     const json = JSON.stringify(data, Object.keys(data).sort());
     return crypto.createHash('sha256').update(json).digest('hex');
   }

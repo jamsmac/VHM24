@@ -7,11 +7,35 @@ import { JwtAuthGuard } from '@modules/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '@modules/auth/guards/roles.guard';
 import { Machine, MachineStatus } from './entities/machine.entity';
 import { MachineLocationHistory } from './entities/machine-location-history.entity';
+type MockUser = Parameters<typeof MachinesController.prototype.writeOff>[2];
+
+interface MockMachinesService {
+  create: jest.Mock;
+  findAll: jest.Mock;
+  findOne: jest.Mock;
+  findByMachineNumber: jest.Mock;
+  findByQrCode: jest.Mock;
+  update: jest.Mock;
+  remove: jest.Mock;
+  writeOffMachine: jest.Mock;
+  bulkWriteOffMachines: jest.Mock;
+  getWriteoffJobStatus: jest.Mock;
+  cancelWriteoffJob: jest.Mock;
+  getWriteoffJobs: jest.Mock;
+  getLocationHistory: jest.Mock;
+  updateOnlineStatus: jest.Mock;
+}
+
+interface MockQrCodeService {
+  generateQrCodeImage: jest.Mock;
+  generateQrCodeBuffer: jest.Mock;
+  regenerateQrCode: jest.Mock;
+}
 
 describe('MachinesController', () => {
   let controller: MachinesController;
-  let mockMachinesService: any;
-  let mockQrCodeService: any;
+  let mockMachinesService: MockMachinesService;
+  let mockQrCodeService: MockQrCodeService;
 
   const mockMachine: Partial<Machine> = {
     id: '123e4567-e89b-12d3-a456-426614174001',
@@ -34,7 +58,7 @@ describe('MachinesController', () => {
     moved_at: new Date(),
   };
 
-  const mockUser = { userId: 'user-123', role: 'ADMIN' };
+  const mockUser = { id: 'user-123', role: 'ADMIN' } as unknown as MockUser;
 
   beforeEach(async () => {
     mockMachinesService = {
@@ -404,7 +428,7 @@ describe('MachinesController', () => {
 
   describe('getConnectivityStatus', () => {
     it('should return connectivity status', async () => {
-      const mockStats = { total: 100, online: 85, offline: 15 };
+      const mockStats = { total: 100, online: 85, offline: 15, updated: 5 };
       mockMachinesService.updateOnlineStatus.mockResolvedValue(mockStats);
 
       const result = await controller.getConnectivityStatus();

@@ -10,8 +10,15 @@ import {
   HttpStatus,
   UseGuards,
   ParseUUIDPipe,
-  Request,
+  Req,
 } from '@nestjs/common';
+import { Request as ExpressRequest } from 'express';
+
+interface AuthenticatedRequest extends ExpressRequest {
+  user?: {
+    userId: string;
+  };
+}
 import {
   ApiTags,
   ApiOperation,
@@ -239,7 +246,7 @@ export class TransactionsController {
   @ApiParam({ name: 'id', description: 'UUID транзакции' })
   @ApiResponse({ status: 204, description: 'Транзакция удалена' })
   @ApiResponse({ status: 404, description: 'Транзакция не найдена' })
-  remove(@Param('id', ParseUUIDPipe) id: string, @Request() req: any): Promise<void> {
+  remove(@Param('id', ParseUUIDPipe) id: string, @Req() req: AuthenticatedRequest): Promise<void> {
     return this.transactionsService.remove(id, req.user?.userId);
   }
 }

@@ -7,8 +7,15 @@ import {
   Body,
   Param,
   UseGuards,
-  Request,
+  Req,
 } from '@nestjs/common';
+import { Request as ExpressRequest } from 'express';
+
+interface AuthenticatedRequest extends ExpressRequest {
+  user: {
+    userId: string;
+  };
+}
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { DashboardService } from '../services/dashboard.service';
@@ -23,13 +30,13 @@ export class DashboardController {
 
   @Get('widgets')
   @ApiOperation({ summary: 'Get user dashboard widgets' })
-  async getWidgets(@Request() req: any) {
+  async getWidgets(@Req() req: AuthenticatedRequest) {
     return this.dashboardService.getUserWidgets(req.user.userId);
   }
 
   @Post('widgets')
   @ApiOperation({ summary: 'Create dashboard widget' })
-  async createWidget(@Request() req: any, @Body() dto: CreateWidgetDto) {
+  async createWidget(@Req() req: AuthenticatedRequest, @Body() dto: CreateWidgetDto) {
     return this.dashboardService.createWidget(req.user.userId, dto);
   }
 
@@ -48,7 +55,7 @@ export class DashboardController {
 
   @Post('widgets/reorder')
   @ApiOperation({ summary: 'Reorder dashboard widgets' })
-  async reorderWidgets(@Request() req: any, @Body() body: { widgetIds: string[] }) {
+  async reorderWidgets(@Req() req: AuthenticatedRequest, @Body() body: { widgetIds: string[] }) {
     await this.dashboardService.reorderWidgets(req.user.userId, body.widgetIds);
     return { message: 'Widgets reordered successfully' };
   }

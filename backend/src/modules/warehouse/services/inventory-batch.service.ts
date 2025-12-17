@@ -15,7 +15,7 @@ export class InventoryBatchService {
   ) {}
 
   async findAll(warehouseId?: string, productId?: string): Promise<InventoryBatch[]> {
-    const where: any = { is_active: true };
+    const where: { is_active: boolean; warehouse_id?: string; product_id?: string } = { is_active: true };
 
     if (warehouseId) {
       where.warehouse_id = warehouseId;

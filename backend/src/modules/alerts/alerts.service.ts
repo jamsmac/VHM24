@@ -65,7 +65,7 @@ export class AlertsService {
     metric?: AlertMetric;
     severity?: AlertSeverity;
   }): Promise<AlertRule[]> {
-    const where: any = {};
+    const where: { is_enabled?: boolean; metric?: AlertMetric; severity?: AlertSeverity } = {};
 
     if (filters?.is_enabled !== undefined) {
       where.is_enabled = filters.is_enabled;

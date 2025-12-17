@@ -4,12 +4,19 @@ import {
   Get,
   Delete,
   Body,
-  Request,
+  Req,
   Param,
   HttpCode,
   HttpStatus,
   UseGuards,
 } from '@nestjs/common';
+import { Request as ExpressRequest } from 'express';
+
+interface AuthenticatedRequest extends ExpressRequest {
+  user: {
+    id: string;
+  };
+}
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 import { WebPushService } from './web-push.service';
 import { PushSubscription } from './entities/push-subscription.entity';
@@ -51,7 +58,7 @@ export class WebPushController {
     description: 'Subscription created/updated',
     type: PushSubscription,
   })
-  subscribe(@Body() dto: SubscribePushDto, @Request() req: any): Promise<PushSubscription> {
+  subscribe(@Body() dto: SubscribePushDto, @Req() req: AuthenticatedRequest): Promise<PushSubscription> {
     const userId = req.user.id;
     return this.webPushService.subscribe(userId, dto);
   }
@@ -66,7 +73,7 @@ export class WebPushController {
   @ApiResponse({ status: 204, description: 'Unsubscribed successfully' })
   async unsubscribe(
     @Param('endpoint') encodedEndpoint: string,
-    @Request() req: any,
+    @Req() req: AuthenticatedRequest,
   ): Promise<void> {
     const userId = req.user.id;
     const endpoint = Buffer.from(encodedEndpoint, 'base64').toString('utf-8');
@@ -80,7 +87,7 @@ export class WebPushController {
     description: 'List of active subscriptions',
     type: [PushSubscription],
   })
-  getSubscriptions(@Request() req: any): Promise<PushSubscription[]> {
+  getSubscriptions(@Req() req: AuthenticatedRequest): Promise<PushSubscription[]> {
     const userId = req.user.id;
     return this.webPushService.getUserSubscriptions(userId);
   }
@@ -117,7 +124,7 @@ export class WebPushController {
       },
     },
   })
-  async sendTestNotification(@Request() req: any): Promise<{ sent: number }> {
+  async sendTestNotification(@Req() req: AuthenticatedRequest): Promise<{ sent: number }> {
     const userId = req.user.id;
     const sent = await this.webPushService.sendTestNotification(userId);
     return { sent };

@@ -65,7 +65,7 @@ export class AlertsController {
     @Query('metric') metric?: AlertMetric,
     @Query('severity') severity?: AlertSeverity,
   ) {
-    const filters: any = {};
+    const filters: { is_enabled?: boolean; metric?: AlertMetric; severity?: AlertSeverity } = {};
     if (isEnabled !== undefined) {
       filters.is_enabled = isEnabled === 'true';
     }

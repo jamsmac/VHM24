@@ -216,7 +216,7 @@ describe('OpeningBalancesService', () => {
       expect(balanceRepository.findOne).toHaveBeenCalledWith({
         where: {
           nomenclature_id: dtoWithoutWarehouse.nomenclature_id,
-          balance_date: dtoWithoutWarehouse.balance_date,
+          balance_date: new Date(dtoWithoutWarehouse.balance_date),
         },
       });
     });
@@ -245,7 +245,7 @@ describe('OpeningBalancesService', () => {
       expect(balanceRepository.findOne).toHaveBeenCalledWith({
         where: {
           nomenclature_id: createDto.nomenclature_id,
-          balance_date: createDto.balance_date,
+          balance_date: new Date(createDto.balance_date),
           warehouse_id: createDto.warehouse_id,
         },
       });
@@ -606,8 +606,10 @@ describe('OpeningBalancesService', () => {
         { ...mockBalance, is_applied: false },
         { ...mockBalance, id: 'balance-456', is_applied: false },
       ];
+      const mockQb = createMockQueryBuilder();
+      (mockQb.getMany as jest.Mock).mockResolvedValue(unappliedBalances);
+      (balanceRepository.createQueryBuilder as jest.Mock).mockReturnValue(mockQb);
 
-      balanceRepository.find.mockResolvedValue(unappliedBalances as any);
       warehouseInventoryRepository.findOne.mockResolvedValue(mockWarehouseInventory as any);
       warehouseInventoryRepository.update.mockResolvedValue({ affected: 1 } as any);
       balanceRepository.update.mockResolvedValue({ affected: 1 } as any);
@@ -625,8 +627,10 @@ describe('OpeningBalancesService', () => {
     it('should create new warehouse inventory when item does not exist', async () => {
       // Arrange
       const unappliedBalance = [{ ...mockBalance, is_applied: false }];
+      const mockQb = createMockQueryBuilder();
+      (mockQb.getMany as jest.Mock).mockResolvedValue(unappliedBalance);
+      (balanceRepository.createQueryBuilder as jest.Mock).mockReturnValue(mockQb);
 
-      balanceRepository.find.mockResolvedValue(unappliedBalance as any);
       warehouseInventoryRepository.findOne.mockResolvedValue(null);
       warehouseInventoryRepository.save.mockResolvedValue(mockWarehouseInventory as any);
       balanceRepository.update.mockResolvedValue({ affected: 1 } as any);
@@ -651,8 +655,10 @@ describe('OpeningBalancesService', () => {
     it('should mark balance as applied with user info', async () => {
       // Arrange
       const unappliedBalance = [{ ...mockBalance, is_applied: false }];
+      const mockQb = createMockQueryBuilder();
+      (mockQb.getMany as jest.Mock).mockResolvedValue(unappliedBalance);
+      (balanceRepository.createQueryBuilder as jest.Mock).mockReturnValue(mockQb);
 
-      balanceRepository.find.mockResolvedValue(unappliedBalance as any);
       warehouseInventoryRepository.findOne.mockResolvedValue(null);
       warehouseInventoryRepository.save.mockResolvedValue(mockWarehouseInventory as any);
       balanceRepository.update.mockResolvedValue({ affected: 1 } as any);
@@ -679,8 +685,10 @@ describe('OpeningBalancesService', () => {
         current_quantity: 50,
       };
       const unappliedBalance = [{ ...mockBalance, quantity: 100, is_applied: false }];
+      const mockQb = createMockQueryBuilder();
+      (mockQb.getMany as jest.Mock).mockResolvedValue(unappliedBalance);
+      (balanceRepository.createQueryBuilder as jest.Mock).mockReturnValue(mockQb);
 
-      balanceRepository.find.mockResolvedValue(unappliedBalance as any);
       warehouseInventoryRepository.findOne.mockResolvedValue(existingInventory as any);
       warehouseInventoryRepository.update.mockResolvedValue({ affected: 1 } as any);
       balanceRepository.update.mockResolvedValue({ affected: 1 } as any);
@@ -704,8 +712,10 @@ describe('OpeningBalancesService', () => {
         { ...mockBalance, id: 'balance-1', is_applied: false },
         { ...mockBalance, id: 'balance-2', is_applied: false },
       ];
+      const mockQb = createMockQueryBuilder();
+      (mockQb.getMany as jest.Mock).mockResolvedValue(unappliedBalances);
+      (balanceRepository.createQueryBuilder as jest.Mock).mockReturnValue(mockQb);
 
-      balanceRepository.find.mockResolvedValue(unappliedBalances as any);
       warehouseInventoryRepository.findOne
         .mockResolvedValueOnce(null) // First balance - success
         .mockRejectedValueOnce(new Error('Database error')); // Second balance - fail
@@ -722,7 +732,9 @@ describe('OpeningBalancesService', () => {
 
     it('should return zero counts when no unapplied balances exist', async () => {
       // Arrange
-      balanceRepository.find.mockResolvedValue([]);
+      const mockQb = createMockQueryBuilder();
+      (mockQb.getMany as jest.Mock).mockResolvedValue([]);
+      (balanceRepository.createQueryBuilder as jest.Mock).mockReturnValue(mockQb);
 
       // Act
       const result = await service.applyBalances(balanceDate, warehouseId, userId);
@@ -734,35 +746,36 @@ describe('OpeningBalancesService', () => {
 
     it('should filter balances by warehouse_id when provided', async () => {
       // Arrange
-      balanceRepository.find.mockResolvedValue([]);
+      const mockQb = createMockQueryBuilder();
+      (mockQb.getMany as jest.Mock).mockResolvedValue([]);
+      (balanceRepository.createQueryBuilder as jest.Mock).mockReturnValue(mockQb);
 
       // Act
       await service.applyBalances(balanceDate, warehouseId, userId);
 
       // Assert
-      expect(balanceRepository.find).toHaveBeenCalledWith({
-        where: {
-          balance_date: balanceDate,
-          is_applied: false,
-          warehouse_id: warehouseId,
-        },
-      });
+      expect(balanceRepository.createQueryBuilder).toHaveBeenCalledWith('balance');
+      expect(mockQb.where).toHaveBeenCalledWith('balance.balance_date = :balance_date', { balance_date: balanceDate });
+      expect(mockQb.andWhere).toHaveBeenCalledWith('balance.is_applied = :is_applied', { is_applied: false });
+      expect(mockQb.andWhere).toHaveBeenCalledWith('balance.warehouse_id = :warehouse_id', { warehouse_id: warehouseId });
     });
 
     it('should not filter by warehouse_id when empty string provided', async () => {
       // Arrange
-      balanceRepository.find.mockResolvedValue([]);
+      const mockQb = createMockQueryBuilder();
+      (mockQb.getMany as jest.Mock).mockResolvedValue([]);
+      (mockQb.andWhere as jest.Mock).mockClear(); // Clear previous calls
+      (balanceRepository.createQueryBuilder as jest.Mock).mockReturnValue(mockQb);
 
       // Act
       await service.applyBalances(balanceDate, '', userId);
 
       // Assert
-      expect(balanceRepository.find).toHaveBeenCalledWith({
-        where: {
-          balance_date: balanceDate,
-          is_applied: false,
-        },
-      });
+      expect(balanceRepository.createQueryBuilder).toHaveBeenCalledWith('balance');
+      expect(mockQb.where).toHaveBeenCalledWith('balance.balance_date = :balance_date', { balance_date: balanceDate });
+      // Should only have one andWhere call for is_applied, not for warehouse_id
+      expect(mockQb.andWhere).toHaveBeenCalledTimes(1);
+      expect(mockQb.andWhere).toHaveBeenCalledWith('balance.is_applied = :is_applied', { is_applied: false });
     });
   });
 

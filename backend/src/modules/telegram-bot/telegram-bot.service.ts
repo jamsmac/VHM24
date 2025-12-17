@@ -569,15 +569,18 @@ export class TelegramBotService implements OnModuleInit, OnModuleDestroy {
   /**
    * Handle callback queries from inline keyboards
    */
-  private async handleCallbackQuery(ctx: any) {
+  private async handleCallbackQuery(ctx: BotContext) {
     try {
-      const callbackData = ctx.callbackQuery?.data;
+      const callbackQuery = ctx.callbackQuery;
+      if (!callbackQuery || !('data' in callbackQuery)) return;
+      const callbackData = callbackQuery.data;
 
       if (!callbackData) return;
 
       await ctx.answerCbQuery();
 
-      const telegramUserId = ctx.from.id;
+      const telegramUserId = ctx.from?.id;
+      if (!telegramUserId) return;
 
       switch (callbackData) {
         case 'refresh_commissions':
@@ -630,7 +633,7 @@ export class TelegramBotService implements OnModuleInit, OnModuleDestroy {
   /**
    * Trigger commission calculation via BullMQ
    */
-  private async triggerCalculation(ctx: any, period: string) {
+  private async triggerCalculation(ctx: BotContext, period: string) {
     try {
       const job = await this.commissionQueue.add('calculate-manual', {
         period,
