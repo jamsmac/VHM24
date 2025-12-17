@@ -18,7 +18,7 @@ import { authStorage } from '@/lib/auth-storage'
  * Logs all authentication events to console and displays them
  */
 export function AuthEventLogger() {
-  const [events, setEvents] = useState<Array<{ time: string; event: string; data?: any }>>([])
+  const [events, setEvents] = useState<Array<{ time: string; event: string; data?: unknown }>>([])
 
   useAuthEvents((event, data) => {
     const logEntry = {
@@ -41,9 +41,9 @@ export function AuthEventLogger() {
             <div key={index} className="text-sm font-mono border-b border-gray-100 pb-1">
               <span className="text-gray-500">[{event.time}]</span>{' '}
               <span className="font-semibold text-blue-600">{event.event}</span>
-              {event.data && (
+              {event.data !== undefined && (
                 <span className="text-gray-600 ml-2">
-                  {JSON.stringify(event.data, null, 2)}
+                  {JSON.stringify(event.data)}
                 </span>
               )}
             </div>
@@ -142,9 +142,10 @@ export function UserProfileSync() {
   }, [])
 
   useAuthEvent('user-updated', (data) => {
-    if (data?.user) {
-      setUserName(data.user.full_name)
-      console.log('User profile updated:', data.user)
+    const userData = data as { user?: { full_name: string } } | undefined
+    if (userData?.user) {
+      setUserName(userData.user.full_name)
+      console.log('User profile updated:', userData.user)
     }
   })
 
@@ -249,8 +250,8 @@ export function ComprehensiveAuthHandler() {
 export function AuthAnalytics() {
   useAuthEvents((event, data) => {
     // Send to analytics service
-    if (typeof window !== 'undefined' && (window as any).gtag) {
-      ;(window as any).gtag('event', 'auth_event', {
+    if (typeof window !== 'undefined' && (window as Window & { gtag?: (...args: unknown[]) => void }).gtag) {
+      ;(window as Window & { gtag?: (...args: unknown[]) => void }).gtag?.('event', 'auth_event', {
         event_category: 'Authentication',
         event_label: event,
         value: data ? JSON.stringify(data) : undefined,

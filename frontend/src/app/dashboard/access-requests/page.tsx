@@ -10,6 +10,7 @@ import { TableSkeleton } from '@/components/ui/LoadingSkeleton'
 import { formatDistanceToNow } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import { toast } from 'react-toastify'
+import { getErrorMessage } from '@/lib/utils'
 
 export default function AccessRequestsPage() {
   const [statusFilter, setStatusFilter] = useState<'new' | 'approved' | 'rejected' | undefined>()
@@ -39,8 +40,8 @@ export default function AccessRequestsPage() {
       setSelectedRequest(null)
       setApproveData({ role: 'Operator', note: '' })
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Ошибка при одобрении заявки')
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error, 'Ошибка при одобрении заявки'))
     },
   })
 
@@ -54,8 +55,8 @@ export default function AccessRequestsPage() {
       setSelectedRequest(null)
       setRejectReason('')
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Ошибка при отклонении заявки')
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error, 'Ошибка при отклонении заявки'))
     },
   })
 

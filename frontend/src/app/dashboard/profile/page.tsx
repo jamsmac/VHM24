@@ -9,6 +9,9 @@ import {
   getStatusColor,
   formatUserAgent,
   getDeviceIcon,
+  type TwoFactorSetup,
+  type UserProfile,
+  type Session,
 } from '@/lib/profile-api'
 import {
   notificationsApi,
@@ -176,7 +179,7 @@ export default function ProfilePage() {
 }
 
 // Profile Tab Component
-function ProfileTab({ profile, isLoading }: { profile: any; isLoading: boolean }) {
+function ProfileTab({ profile, isLoading }: { profile: UserProfile | undefined; isLoading: boolean }) {
   if (isLoading) {
     return <LoadingSkeleton />
   }
@@ -278,13 +281,13 @@ function SecurityTab({
   sessions,
   isLoading,
 }: {
-  profile: any
-  sessions: any[]
+  profile: UserProfile | undefined
+  sessions: Session[]
   isLoading: boolean
 }) {
   const queryClient = useQueryClient()
   const [showSetup2FA, setShowSetup2FA] = useState(false)
-  const [setup2FAData, setSetup2FAData] = useState<any>(null)
+  const [setup2FAData, setSetup2FAData] = useState<TwoFactorSetup | null>(null)
   const [verificationCode, setVerificationCode] = useState('')
 
   const setup2FAMutation = useMutation({

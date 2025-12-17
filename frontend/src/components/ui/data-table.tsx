@@ -12,6 +12,7 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
+  Column,
 } from '@tanstack/react-table'
 import { ArrowUpDown } from 'lucide-react'
 
@@ -160,11 +161,11 @@ export function DataTable<TData, TValue>({
 }
 
 // Helper function for sortable column headers
-export function DataTableColumnHeader({
+export function DataTableColumnHeader<TData, TValue>({
   column,
   title,
 }: {
-  column: any
+  column: Column<TData, TValue>
   title: string
 }) {
   if (!column.getCanSort()) {

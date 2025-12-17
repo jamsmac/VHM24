@@ -4,15 +4,30 @@ import { useEffect, useState } from 'react'
 import { useWebSocket } from '@/hooks/useWebSocket'
 import { CheckCircle, XCircle, Loader2, AlertCircle } from 'lucide-react'
 
+interface JobResult {
+  processed?: number
+  updated?: number
+  [key: string]: unknown
+}
+
 interface JobProgress {
   jobId: string
   type: string
   progress: number
   message?: string
   status: 'running' | 'completed' | 'failed'
-  result?: any
+  result?: JobResult
   error?: string
   timestamp: string
+}
+
+interface JobEventData {
+  jobId: string
+  type: string
+  progress?: number
+  message?: string
+  result?: JobResult
+  error?: string
 }
 
 interface JobProgressIndicatorProps {
@@ -57,13 +72,14 @@ export function JobProgressIndicator({
     if (!socket) {return}
 
     // Job progress update
-    const handleJobProgress = (data: any) => {
+    const handleJobProgress = (rawData: unknown) => {
+      const data = rawData as JobEventData
       setJobs((prev) => {
         const newJobs = new Map(prev)
         newJobs.set(data.jobId, {
           jobId: data.jobId,
           type: data.type,
-          progress: data.progress,
+          progress: data.progress ?? 0,
           message: data.message,
           status: 'running',
           timestamp: new Date().toISOString(),
@@ -73,7 +89,8 @@ export function JobProgressIndicator({
     }
 
     // Job completed
-    const handleJobCompleted = (data: any) => {
+    const handleJobCompleted = (rawData: unknown) => {
+      const data = rawData as JobEventData
       setJobs((prev) => {
         const newJobs = new Map(prev)
         newJobs.set(data.jobId, {
@@ -98,7 +115,8 @@ export function JobProgressIndicator({
     }
 
     // Job failed
-    const handleJobFailed = (data: any) => {
+    const handleJobFailed = (rawData: unknown) => {
+      const data = rawData as JobEventData
       setJobs((prev) => {
         const newJobs = new Map(prev)
         newJobs.set(data.jobId, {

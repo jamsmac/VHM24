@@ -1,4 +1,5 @@
 import apiClient from './axios'
+import { Machine } from '@/types/machines'
 
 export interface Location {
   id: string
@@ -17,7 +18,7 @@ export interface Location {
   contact_phone?: string
   notes?: string
   is_active: boolean
-  machines?: any[]
+  machines?: Machine[]
   machine_count?: number
   created_at: string
   updated_at: string

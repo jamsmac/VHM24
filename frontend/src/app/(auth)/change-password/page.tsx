@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
 import { Lock, Eye, EyeOff } from 'lucide-react'
 import { toast } from 'react-toastify'
+import { getErrorMessage } from '@/lib/utils'
 import apiClient from '@/lib/axios'
 
 export default function ChangePasswordPage() {
@@ -101,12 +102,9 @@ export default function ChangePasswordPage() {
           router.push('/dashboard')
         }, 1500)
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Change password error:', error)
-      toast.error(
-        error.response?.data?.message ||
-        'Ошибка при изменении пароля. Попробуйте еще раз.'
-      )
+      toast.error(getErrorMessage(error, 'Ошибка при изменении пароля. Попробуйте еще раз.'))
     } finally {
       setLoading(false)
     }

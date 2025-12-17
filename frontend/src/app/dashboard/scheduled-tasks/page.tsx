@@ -60,19 +60,17 @@ export default function ScheduledTasksPage() {
   }, [categoryFilter, frequencyFilter])
 
   const tasksByCategory = useMemo(() => {
-    const grouped: Record<TaskCategory, typeof scheduledTasks> = {} as any
-    for (const category of Object.values(TaskCategory)) {
-      grouped[category] = filteredTasks.filter((t) => t.category === category)
-    }
-    return grouped
+    return Object.values(TaskCategory).reduce((acc, category) => {
+      acc[category] = filteredTasks.filter((t) => t.category === category)
+      return acc
+    }, {} as Record<TaskCategory, typeof scheduledTasks>)
   }, [filteredTasks])
 
   const tasksByFrequency = useMemo(() => {
-    const grouped: Record<TaskFrequency, typeof scheduledTasks> = {} as any
-    for (const frequency of Object.values(TaskFrequency)) {
-      grouped[frequency] = filteredTasks.filter((t) => t.frequency === frequency)
-    }
-    return grouped
+    return Object.values(TaskFrequency).reduce((acc, frequency) => {
+      acc[frequency] = filteredTasks.filter((t) => t.frequency === frequency)
+      return acc
+    }, {} as Record<TaskFrequency, typeof scheduledTasks>)
   }, [filteredTasks])
 
   const hasActiveFilters = categoryFilter || frequencyFilter

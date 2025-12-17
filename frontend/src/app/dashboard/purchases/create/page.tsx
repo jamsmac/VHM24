@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
+import { getErrorMessage } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { FormInput, FormSelect, FormTextarea } from '@/components/ui/form-field';
 
@@ -13,6 +14,8 @@ interface Nomenclature {
   unit_of_measure_code: string;
   purchase_price?: number;
 }
+
+type PurchaseStatus = 'ordered' | 'received' | 'cancelled'
 
 export default function CreatePurchasePage() {
   const router = useRouter();
@@ -91,9 +94,9 @@ export default function CreatePurchasePage() {
       );
 
       router.push('/purchases');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to create purchase:', error);
-      alert(error.response?.data?.message || 'Ошибка при создании закупки');
+      alert(getErrorMessage(error, 'Ошибка при создании закупки'));
     } finally {
       setLoading(false);
     }
@@ -209,7 +212,7 @@ export default function CreatePurchasePage() {
           id="status"
           required
           value={formData.status}
-          onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
+          onChange={(e) => setFormData({ ...formData, status: e.target.value as PurchaseStatus })}
           options={[
             { value: 'ordered', label: 'Заказано' },
             { value: 'received', label: 'Получено' },

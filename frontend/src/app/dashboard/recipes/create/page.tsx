@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
+import { getErrorMessage } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { FormInput, FormSelect, FormTextarea } from '@/components/ui/form-field';
 
@@ -21,6 +22,8 @@ interface RecipeIngredient {
   cost_per_serving?: number;
   nomenclature?: Nomenclature;
 }
+
+type RecipeType = 'primary' | 'alternative' | 'test'
 
 export default function CreateRecipePage() {
   const router = useRouter();
@@ -72,7 +75,7 @@ export default function CreateRecipePage() {
     setRecipeIngredients(recipeIngredients.filter((_, i) => i !== index));
   };
 
-  const updateIngredient = (index: number, field: string, value: any) => {
+  const updateIngredient = (index: number, field: string, value: string | number) => {
     const updated = [...recipeIngredients];
     updated[index] = { ...updated[index], [field]: value };
 
@@ -142,9 +145,9 @@ export default function CreateRecipePage() {
       );
 
       router.push('/recipes');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to create recipe:', error);
-      alert(error.response?.data?.message || 'Ошибка при создании рецепта');
+      alert(getErrorMessage(error, 'Ошибка при создании рецепта'));
     } finally {
       setLoading(false);
     }
@@ -193,7 +196,7 @@ export default function CreateRecipePage() {
           id="recipe_type"
           required
           value={formData.recipe_type}
-          onChange={(e) => setFormData({ ...formData, recipe_type: e.target.value as any })}
+          onChange={(e) => setFormData({ ...formData, recipe_type: e.target.value as RecipeType })}
           options={[
             { value: 'primary', label: 'Основной' },
             { value: 'alternative', label: 'Альтернативный' },

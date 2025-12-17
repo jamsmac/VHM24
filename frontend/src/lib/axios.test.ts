@@ -46,11 +46,12 @@ describe('Axios Client - Phase 2', () => {
     it('should not add Authorization header for protected endpoints', async () => {
       const { apiClient } = await import('./axios')
 
-      const config: any = {
+      const config = {
         url: '/api/users',
-        headers: {},
+        headers: {} as Record<string, string>,
       }
-      const interceptor = (apiClient.interceptors.request as any).handlers[0]
+      type ConfigType = typeof config
+      const interceptor = (apiClient.interceptors.request as unknown as { handlers: Array<{ fulfilled: (config: ConfigType) => Promise<ConfigType> }> }).handlers[0]
 
       const result = await interceptor.fulfilled(config)
 
@@ -61,11 +62,12 @@ describe('Axios Client - Phase 2', () => {
     it('should pass through config for public endpoints', async () => {
       const { apiClient } = await import('./axios')
 
-      const config: any = {
+      const config = {
         url: '/auth/login',
-        headers: {},
+        headers: {} as Record<string, string>,
       }
-      const interceptor = (apiClient.interceptors.request as any).handlers[0]
+      type ConfigType = typeof config
+      const interceptor = (apiClient.interceptors.request as unknown as { handlers: Array<{ fulfilled: (config: ConfigType) => Promise<ConfigType> }> }).handlers[0]
 
       const result = await interceptor.fulfilled(config)
 
@@ -84,7 +86,7 @@ describe('Axios Client - Phase 2', () => {
       }
 
       const { apiClient } = await import('./axios')
-      const interceptor = (apiClient.interceptors.response as any).handlers[0]
+      const interceptor = (apiClient.interceptors.response as unknown as { handlers: Array<{ fulfilled: (response: typeof mockResponse) => typeof mockResponse; rejected: (error: unknown) => Promise<never> }> }).handlers[0]
 
       const result = interceptor.fulfilled(mockResponse)
 
@@ -107,7 +109,7 @@ describe('Axios Client - Phase 2', () => {
       }
 
       const { apiClient } = await import('./axios')
-      const interceptor = (apiClient.interceptors.response as any).handlers[0]
+      const interceptor = (apiClient.interceptors.response as unknown as { handlers: Array<{ fulfilled: (response: unknown) => unknown; rejected: (error: unknown) => Promise<never> }> }).handlers[0]
 
       await expect(interceptor.rejected(mockError)).rejects.toEqual(mockError)
     })
@@ -125,7 +127,7 @@ describe('Axios Client - Phase 2', () => {
       }
 
       const { apiClient } = await import('./axios')
-      const interceptor = (apiClient.interceptors.response as any).handlers[0]
+      const interceptor = (apiClient.interceptors.response as unknown as { handlers: Array<{ fulfilled: (response: unknown) => unknown; rejected: (error: unknown) => Promise<never> }> }).handlers[0]
 
       await expect(interceptor.rejected(mockError)).rejects.toEqual(mockError)
     })
@@ -138,6 +140,11 @@ describe('Axios Client - Phase 2', () => {
         writable: true,
       })
 
+      const { apiClient } = await import('./axios')
+
+      // Mock the refresh endpoint to fail
+      const postSpy = vi.spyOn(apiClient, 'post').mockRejectedValueOnce(new Error('Refresh failed'))
+
       const mockError = {
         response: {
           status: 401,
@@ -146,12 +153,11 @@ describe('Axios Client - Phase 2', () => {
         config: {
           url: '/api/test',
           headers: {},
-          _retry: true, // Already retried, so will clear and redirect
+          // No _retry - this is a fresh 401, interceptor will try to refresh
         },
       }
 
-      const { apiClient } = await import('./axios')
-      const interceptor = (apiClient.interceptors.response as any).handlers[0]
+      const interceptor = (apiClient.interceptors.response as unknown as { handlers: Array<{ fulfilled: (response: unknown) => unknown; rejected: (error: unknown) => Promise<never> }> }).handlers[0]
 
       try {
         await interceptor.rejected(mockError)
@@ -159,9 +165,11 @@ describe('Axios Client - Phase 2', () => {
         // Expected to reject
       }
 
-      // After failed retry, should clear storage
+      // After failed refresh, should clear storage and redirect
       expect(authStorage.clearStorage).toHaveBeenCalled()
       expect(mockLocation.href).toBe('/login')
+
+      postSpy.mockRestore()
     })
   })
 
@@ -178,7 +186,7 @@ describe('Axios Client - Phase 2', () => {
       }
 
       const { apiClient } = await import('./axios')
-      const interceptor = (apiClient.interceptors.response as any).handlers[0]
+      const interceptor = (apiClient.interceptors.response as unknown as { handlers: Array<{ fulfilled: (response: unknown) => unknown; rejected: (error: unknown) => Promise<never> }> }).handlers[0]
 
       await expect(interceptor.rejected(mockError)).rejects.toEqual(mockError)
     })
@@ -190,7 +198,7 @@ describe('Axios Client - Phase 2', () => {
       }
 
       const { apiClient } = await import('./axios')
-      const interceptor = (apiClient.interceptors.response as any).handlers[0]
+      const interceptor = (apiClient.interceptors.response as unknown as { handlers: Array<{ fulfilled: (response: unknown) => unknown; rejected: (error: unknown) => Promise<never> }> }).handlers[0]
 
       await expect(interceptor.rejected(mockError)).rejects.toEqual(mockError)
     })
@@ -204,7 +212,7 @@ describe('Axios Client - Phase 2', () => {
       }
 
       const { apiClient } = await import('./axios')
-      const interceptor = (apiClient.interceptors.response as any).handlers[0]
+      const interceptor = (apiClient.interceptors.response as unknown as { handlers: Array<{ fulfilled: (response: unknown) => unknown; rejected: (error: unknown) => Promise<never> }> }).handlers[0]
 
       await expect(interceptor.rejected(mockError)).rejects.toEqual(mockError)
     })

@@ -5,6 +5,7 @@ import { MoveRight, Download, Upload, Loader2 } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog'
 import { FormSelect, FormTextarea } from '../ui/form-field'
 import { componentsApi } from '@/lib/equipment-api'
+import { getErrorMessage } from '@/lib/utils'
 import type {
   EquipmentComponent,
 } from '@/types/equipment'
@@ -77,9 +78,9 @@ export function ComponentMovementModal({
       }
 
       onSuccess()
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error moving component:', err)
-      setError(err.response?.data?.message || 'Ошибка при перемещении компонента')
+      setError(getErrorMessage(err, 'Ошибка при перемещении компонента'))
     } finally {
       setLoading(false)
     }
@@ -133,7 +134,7 @@ export function ComponentMovementModal({
     return options.filter(opt => opt.value !== component.current_location_type)
   }
 
-  const handleChange = (field: string, value: any) => {
+  const handleChange = (field: string, value: string) => {
     if (field === 'toLocation') {
       setToLocation(value as ComponentLocationType)
     } else if (field === 'machineId') {

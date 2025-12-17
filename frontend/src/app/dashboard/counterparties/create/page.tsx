@@ -10,6 +10,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { CounterpartyType, CreateCounterpartyDto } from '@/types/counterparty'
 import { toast } from 'react-toastify'
+import { getErrorMessage } from '@/lib/utils'
 
 export default function CreateCounterpartyPage() {
   const router = useRouter()
@@ -31,8 +32,8 @@ export default function CreateCounterpartyPage() {
       queryClient.invalidateQueries({ queryKey: ['counterparties'] })
       router.push(`/dashboard/counterparties/${data.id}`)
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Ошибка при создании контрагента')
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error, 'Ошибка при создании контрагента'))
     },
   })
 
@@ -41,7 +42,7 @@ export default function CreateCounterpartyPage() {
     createMutation.mutate(formData)
   }
 
-  const handleChange = (field: keyof CreateCounterpartyDto, value: any) => {
+  const handleChange = (field: keyof CreateCounterpartyDto, value: CreateCounterpartyDto[keyof CreateCounterpartyDto]) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 

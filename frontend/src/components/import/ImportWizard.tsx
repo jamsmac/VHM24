@@ -29,6 +29,7 @@ import {
   X,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { getErrorMessage } from '@/lib/utils'
 import { ColumnMappingPreview } from './ColumnMappingPreview'
 import { ValidationPreview } from './ValidationPreview'
 import { ActionPlanPreview } from './ActionPlanPreview'
@@ -75,8 +76,8 @@ export function ImportWizard({ onComplete }: ImportWizardProps) {
       setSessionId(data.sessionId)
       toast.success('Файл загружен, начинается обработка...')
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Ошибка при загрузке файла')
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error, 'Ошибка при загрузке файла'))
     },
   })
 
@@ -87,8 +88,8 @@ export function ImportWizard({ onComplete }: ImportWizardProps) {
       queryClient.invalidateQueries({ queryKey: ['import-session', sessionId] })
       toast.success('Импорт подтвержден, выполняется...')
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Ошибка при подтверждении')
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error, 'Ошибка при подтверждении'))
     },
   })
 
@@ -99,8 +100,8 @@ export function ImportWizard({ onComplete }: ImportWizardProps) {
       queryClient.invalidateQueries({ queryKey: ['import-session', sessionId] })
       toast.info('Импорт отклонен')
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Ошибка при отклонении')
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error, 'Ошибка при отклонении'))
     },
   })
 

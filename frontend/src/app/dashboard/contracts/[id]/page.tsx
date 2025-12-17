@@ -10,6 +10,9 @@ import { ArrowLeft, Edit2, Trash2, Calendar, DollarSign, FileText, Receipt } fro
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { toast } from 'react-toastify'
+import { getErrorMessage } from '@/lib/utils'
+import type { Machine } from '@/types/machines'
+import type { CommissionCalculation } from '@/types/commission'
 
 export default function ContractDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter()
@@ -39,8 +42,8 @@ export default function ContractDetailPage({ params }: { params: { id: string } 
       queryClient.invalidateQueries({ queryKey: ['contracts'] })
       router.push('/dashboard/contracts')
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Ошибка при удалении договора')
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error, 'Ошибка при удалении договора'))
     },
   })
 
@@ -210,7 +213,7 @@ export default function ContractDetailPage({ params }: { params: { id: string } 
         <h3 className="text-lg font-medium text-gray-900 mb-4">Привязанные аппараты</h3>
         {machines && machines.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {machines.map((machine: any) => (
+            {machines.map((machine: Machine) => (
               <Link
                 key={machine.id}
                 href={`/dashboard/machines/${machine.id}`}
@@ -239,7 +242,7 @@ export default function ContractDetailPage({ params }: { params: { id: string } 
         </div>
         {calculations && calculations.length > 0 ? (
           <div className="space-y-2">
-            {calculations.slice(0, 5).map((calc: any) => (
+            {calculations.slice(0, 5).map((calc: CommissionCalculation) => (
               <Link
                 key={calc.id}
                 href={`/dashboard/commissions/${calc.id}`}

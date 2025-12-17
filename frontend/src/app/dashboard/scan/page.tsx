@@ -11,11 +11,12 @@ import { toast } from 'react-toastify'
 import { QrCode, MapPin, Clock, Package, Zap, CheckCircle2 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { TaskStatus } from '@/types/tasks'
+import { Machine } from '@/types/machines'
 
 export default function ScanPage() {
   const router = useRouter()
   const [showScanner, setShowScanner] = useState(false)
-  const [scannedMachine, setScannedMachine] = useState<any>(null)
+  const [scannedMachine, setScannedMachine] = useState<Machine | null>(null)
   const [isOnline, setIsOnline] = useState(true)
   const [location, setLocation] = useState<GeolocationPosition | null>(null)
 

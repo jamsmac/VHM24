@@ -70,7 +70,16 @@ export function PaymentStatusChart({
     }).format(value)
   }
 
-  const CustomTooltip = ({ active, payload }: any) => {
+  interface TooltipPayloadItem {
+    payload: {
+      name: string
+      value: number
+      amount: number
+      color: string
+    }
+  }
+
+  const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: TooltipPayloadItem[] }) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload
       return (
@@ -96,7 +105,17 @@ export function PaymentStatusChart({
     innerRadius,
     outerRadius,
     percent,
-  }: any) => {
+  }: {
+    cx?: number
+    cy?: number
+    midAngle?: number
+    innerRadius?: number
+    outerRadius?: number
+    percent?: number
+  }) => {
+    if (cx === undefined || cy === undefined || midAngle === undefined || innerRadius === undefined || outerRadius === undefined || percent === undefined) {
+      return null
+    }
     const radius = innerRadius + (outerRadius - innerRadius) * 0.5
     const x = cx + radius * Math.cos(-midAngle * RADIAN)
     const y = cy + radius * Math.sin(-midAngle * RADIAN)

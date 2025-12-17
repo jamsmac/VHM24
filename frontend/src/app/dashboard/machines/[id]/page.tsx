@@ -8,6 +8,7 @@ import { ArrowLeft, MapPin, Calendar, DollarSign, Package, Settings, AlertCircle
 import Link from 'next/link'
 import { formatDateTime, formatCurrency, getStatusColor } from '@/lib/utils'
 import { LoadingSkeleton } from '@/components/ui/LoadingSkeleton'
+import type { InventoryItem } from '@/types/inventory'
 
 interface MachineDetailPageProps {
   params: {
@@ -137,7 +138,7 @@ export default function MachineDetailPage({ params }: MachineDetailPageProps) {
               </p>
               {inventory && (
                 <p className="text-sm text-gray-500">
-                  {inventory.filter((i: any) => i.quantity < i.min_stock).length} с низким запасом
+                  {inventory.filter((i: InventoryItem) => i.quantity < (i.min_stock ?? 0)).length} с низким запасом
                 </p>
               )}
             </div>
@@ -212,8 +213,8 @@ export default function MachineDetailPage({ params }: MachineDetailPageProps) {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {inventory && inventory.length > 0 ? (
-                inventory.map((item: any) => {
-                  const isLowStock = item.quantity < item.min_stock
+                inventory.map((item: InventoryItem) => {
+                  const isLowStock = item.quantity < (item.min_stock ?? 0)
                   return (
                     <tr key={item.id} className={isLowStock ? 'bg-orange-50' : ''}>
                       <td className="px-6 py-4 whitespace-nowrap">

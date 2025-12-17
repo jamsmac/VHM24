@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { CardSkeleton } from '@/components/ui/LoadingSkeleton'
+import type { Task } from '@/types/tasks'
 
 interface MachineTasksPageProps {
   params: {
@@ -52,19 +53,19 @@ export default function MachineTasksPage({ params }: MachineTasksPageProps) {
           <div className="bg-white rounded-lg border border-gray-200 p-4">
             <p className="text-sm text-gray-600">Завершено</p>
             <p className="text-2xl font-bold text-green-600">
-              {tasks.filter((t: any) => t.status === 'completed').length}
+              {tasks.filter((t: Task) => t.status === 'completed').length}
             </p>
           </div>
           <div className="bg-white rounded-lg border border-gray-200 p-4">
             <p className="text-sm text-gray-600">В работе</p>
             <p className="text-2xl font-bold text-blue-600">
-              {tasks.filter((t: any) => t.status === 'in_progress').length}
+              {tasks.filter((t: Task) => t.status === 'in_progress').length}
             </p>
           </div>
           <div className="bg-white rounded-lg border border-gray-200 p-4">
             <p className="text-sm text-gray-600">Просрочено</p>
             <p className="text-2xl font-bold text-red-600">
-              {tasks.filter((t: any) => t.is_overdue).length}
+              {tasks.filter((t: Task & { is_overdue?: boolean }) => t.is_overdue).length}
             </p>
           </div>
         </div>
@@ -73,9 +74,9 @@ export default function MachineTasksPage({ params }: MachineTasksPageProps) {
       {/* Tasks List */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {isLoading ? (
-          Array.from({ length: 6 }).map((_: any, i: number) => <CardSkeleton key={i} />)
+          Array.from({ length: 6 }).map((_, i: number) => <CardSkeleton key={i} />)
         ) : tasks && tasks.length > 0 ? (
-          tasks.map((task: any) => <TaskCard key={task.id} task={task} />)
+          tasks.map((task: Task) => <TaskCard key={task.id} task={task} />)
         ) : (
           <div className="col-span-full">
             <p className="text-gray-500 text-center py-12">Задачи не найдены</p>

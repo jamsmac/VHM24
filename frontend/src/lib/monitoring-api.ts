@@ -5,9 +5,9 @@ export interface HealthCheck {
   timestamp: string
   info?: {
     database?: { status: string }
-    [key: string]: any
+    [key: string]: { status: string } | undefined
   }
-  error?: any
+  error?: Record<string, unknown>
 }
 
 export interface ReadinessCheck {

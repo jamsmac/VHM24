@@ -61,13 +61,13 @@ export default function MobileTasksPage() {
     const container = document.getElementById('tasks-container')
     if (!container) {return}
 
-    container.addEventListener('touchstart', handleTouchStart as any)
-    container.addEventListener('touchmove', handleTouchMove as any)
+    container.addEventListener('touchstart', handleTouchStart as EventListener)
+    container.addEventListener('touchmove', handleTouchMove as EventListener)
     container.addEventListener('touchend', handleTouchEnd)
 
     return () => {
-      container.removeEventListener('touchstart', handleTouchStart as any)
-      container.removeEventListener('touchmove', handleTouchMove as any)
+      container.removeEventListener('touchstart', handleTouchStart as EventListener)
+      container.removeEventListener('touchmove', handleTouchMove as EventListener)
       container.removeEventListener('touchend', handleTouchEnd)
     }
   }, [handleTouchStart, handleTouchMove, handleTouchEnd])

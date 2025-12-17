@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
+import { getErrorMessage } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
@@ -104,9 +105,9 @@ export default function PurchaseDetailPage({ params }: { params: { id: string } 
 
       setPurchase({ ...purchase, status: newStatus });
       alert('Статус закупки обновлен');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to update status:', error);
-      alert(error.response?.data?.message || 'Ошибка при обновлении статуса');
+      alert(getErrorMessage(error, 'Ошибка при обновлении статуса'));
     } finally {
       setLoading(false);
     }
@@ -121,9 +122,9 @@ export default function PurchaseDetailPage({ params }: { params: { id: string } 
         headers: { Authorization: `Bearer ${token}` },
       });
       router.push('/purchases');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to delete purchase:', error);
-      alert(error.response?.data?.message || 'Ошибка при удалении');
+      alert(getErrorMessage(error, 'Ошибка при удалении'));
     }
   };
 

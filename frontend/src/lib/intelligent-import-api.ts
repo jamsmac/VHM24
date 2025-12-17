@@ -95,8 +95,17 @@ export interface ActionPlanSummary {
   deleteCount: number
 }
 
+export interface ImportAction {
+  type: 'insert' | 'update' | 'merge' | 'skip' | 'delete'
+  rowIndex: number
+  data: Record<string, unknown>
+  existingId?: string
+  changes?: Record<string, { from: unknown; to: unknown }>
+  table?: string
+}
+
 export interface ActionPlan {
-  actions: any[]
+  actions: ImportAction[]
   summary: ActionPlanSummary
   estimatedDuration: number
   risks: string[]

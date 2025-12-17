@@ -110,7 +110,7 @@ describe('AuthStorage - Phase 2 (httpOnly Cookies)', () => {
       const unsubscribe = authStorage.subscribe(listener)
       authStorage.clearStorage()
 
-      expect(listener).toHaveBeenCalledWith('logout')
+      expect(listener).toHaveBeenCalledWith('logout', undefined)
 
       unsubscribe()
     })
@@ -135,7 +135,7 @@ describe('AuthStorage - Phase 2 (httpOnly Cookies)', () => {
 
       authStorage.handleTokenRefresh()
 
-      expect(listener).toHaveBeenCalledWith('token-refreshed')
+      expect(listener).toHaveBeenCalledWith('token-refreshed', undefined)
 
       unsubscribe()
     })
@@ -147,7 +147,9 @@ describe('AuthStorage - Phase 2 (httpOnly Cookies)', () => {
       const unsubscribe = authStorage.subscribe(listener)
       authStorage.handleAuthFailure()
 
-      expect(listener).toHaveBeenCalledWith('token-expired')
+      // handleAuthFailure calls clearStorage() first (which fires 'logout'), then fires 'token-expired'
+      expect(listener).toHaveBeenCalledWith('logout', undefined)
+      expect(listener).toHaveBeenLastCalledWith('token-expired', undefined)
 
       unsubscribe()
     })

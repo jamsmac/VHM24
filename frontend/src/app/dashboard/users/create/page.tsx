@@ -9,6 +9,7 @@ import { FormInput, FormSelect } from '@/components/ui/form-field'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'react-toastify'
+import { getErrorMessage } from '@/lib/utils'
 import { UserRole } from '@/types/users'
 
 export default function CreateUserPage() {
@@ -28,8 +29,8 @@ export default function CreateUserPage() {
       toast.success('Пользователь создан успешно')
       router.push('/users')
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.detail || 'Ошибка при создании пользователя')
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error, 'Ошибка при создании пользователя'))
     },
   })
 
@@ -38,7 +39,7 @@ export default function CreateUserPage() {
     createMutation.mutate(formData)
   }
 
-  const handleChange = (field: string, value: any) => {
+  const handleChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }))
   }
 

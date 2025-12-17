@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
+import { getErrorMessage } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { FormInput, FormSelect, FormTextarea } from '@/components/ui/form-field';
 
@@ -43,9 +44,9 @@ export default function CreateProductPage() {
         }
       );
       router.push('/products');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to create product:', error);
-      alert(error.response?.data?.message || 'Ошибка при создании');
+      alert(getErrorMessage(error, 'Ошибка при создании'));
     } finally {
       setLoading(false);
     }

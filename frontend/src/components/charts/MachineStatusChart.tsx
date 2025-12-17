@@ -74,7 +74,7 @@ export const MachineStatusChart = memo(function MachineStatusChart({
             <Legend
               verticalAlign="bottom"
               height={36}
-              formatter={(value, entry: any) => entry.payload.label}
+              formatter={(value, entry) => (entry.payload as MachineStatusData)?.label ?? value}
             />
           </PieChart>
         </ResponsiveContainer>

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
+import { getErrorMessage } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
 export default function EditProductPage({ params }: { params: { id: string } }) {
@@ -74,9 +75,9 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
         }
       );
       router.push('/products');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to update product:', error);
-      alert(error.response?.data?.message || 'Ошибка при обновлении');
+      alert(getErrorMessage(error, 'Ошибка при обновлении'));
     } finally {
       setLoading(false);
     }
@@ -91,9 +92,9 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
         headers: { Authorization: `Bearer ${token}` },
       });
       router.push('/products');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to delete product:', error);
-      alert(error.response?.data?.message || 'Ошибка при удалении');
+      alert(getErrorMessage(error, 'Ошибка при удалении'));
     }
   };
 

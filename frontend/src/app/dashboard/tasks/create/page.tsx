@@ -13,6 +13,7 @@ import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { TaskType, TaskPriority } from '@/types/tasks'
 import { toast } from 'react-toastify'
+import { getErrorMessage } from '@/lib/utils'
 import { TaskComponentsSelector, type TaskComponent } from '@/components/tasks/TaskComponentsSelector'
 
 export default function CreateTaskPage() {
@@ -44,8 +45,8 @@ export default function CreateTaskPage() {
       toast.success('Задача создана успешно')
       router.push('/tasks')
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.detail || 'Ошибка при создании задачи')
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error, 'Ошибка при создании задачи'))
     },
   })
 
@@ -91,7 +92,7 @@ export default function CreateTaskPage() {
     })
   }
 
-  const handleChange = (field: string, value: any) => {
+  const handleChange = (field: string, value: string | TaskComponent[]) => {
     setFormData(prev => ({ ...prev, [field]: value }))
   }
 

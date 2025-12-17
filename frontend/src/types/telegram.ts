@@ -46,6 +46,13 @@ export interface NotificationPreferences {
   custom?: boolean
 }
 
+export interface TelegramLinkedUser {
+  id: string
+  full_name: string
+  email: string
+  role: string
+}
+
 export interface TelegramUser {
   id: string
   telegram_id: string
@@ -60,10 +67,10 @@ export interface TelegramUser {
   last_interaction_at: string | null
   verification_code: string | null
   is_verified: boolean
-  metadata: Record<string, any>
+  metadata: Record<string, unknown>
   created_at: string
   updated_at: string
-  user?: any
+  user?: TelegramLinkedUser
 }
 
 export interface TelegramSettings {
@@ -76,7 +83,7 @@ export interface TelegramSettings {
   is_active: boolean
   send_notifications: boolean
   default_notification_preferences: NotificationPreferences
-  metadata: Record<string, any>
+  metadata: Record<string, unknown>
   created_at: string
   updated_at: string
 }
@@ -91,7 +98,7 @@ export interface TelegramMessageLog {
   telegram_message_id: number | null
   status: TelegramMessageStatus
   error_message: string | null
-  metadata: Record<string, any>
+  metadata: Record<string, unknown>
   created_at: string
 }
 
@@ -137,10 +144,16 @@ export interface UpdateTelegramSettingsDto {
   default_notification_preferences?: NotificationPreferences
 }
 
+export interface TelegramInlineKeyboardButton {
+  text: string
+  url?: string
+  callback_data?: string
+}
+
 export interface SendTelegramMessageDto {
   user_id: string
   message: string
-  inline_keyboard?: any
+  inline_keyboard?: TelegramInlineKeyboardButton[][]
 }
 
 // Labels

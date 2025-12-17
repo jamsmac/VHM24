@@ -11,6 +11,7 @@ import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { CommissionType, ContractStatus, CreateContractDto, TieredCommissionTier } from '@/types/contract'
 import { toast } from 'react-toastify'
+import { getErrorMessage } from '@/lib/utils'
 
 export default function CreateContractPage() {
   const router = useRouter()
@@ -69,8 +70,8 @@ export default function CreateContractPage() {
       queryClient.invalidateQueries({ queryKey: ['contracts'] })
       router.push(`/dashboard/contracts/${data.id}`)
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Ошибка при создании договора')
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error, 'Ошибка при создании договора'))
     },
   })
 
@@ -79,7 +80,7 @@ export default function CreateContractPage() {
     createMutation.mutate(formData)
   }
 
-  const handleChange = (field: keyof CreateContractDto, value: any) => {
+  const handleChange = (field: keyof CreateContractDto, value: CreateContractDto[keyof CreateContractDto]) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
@@ -94,7 +95,7 @@ export default function CreateContractPage() {
     handleChange('commission_tiers', [...tiers, newTier])
   }
 
-  const updateTier = (index: number, field: keyof TieredCommissionTier, value: any) => {
+  const updateTier = (index: number, field: keyof TieredCommissionTier, value: number | null) => {
     const tiers = [...(formData.commission_tiers || [])]
     tiers[index] = { ...tiers[index], [field]: value }
     handleChange('commission_tiers', tiers)

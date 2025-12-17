@@ -1,7 +1,10 @@
 'use client'
 
 import { cn } from '@/lib/utils'
-import { Badge } from './badge'
+import { Badge, type BadgeProps } from './badge'
+
+// Badge variant type
+type BadgeVariant = NonNullable<BadgeProps['variant']>
 import {
   CheckCircle,
   Clock,
@@ -23,7 +26,7 @@ import {
 // Machine Status Badge
 type MachineStatus = 'active' | 'low_stock' | 'error' | 'maintenance' | 'offline' | 'disabled'
 
-const machineStatusConfig: Record<MachineStatus, { label: string; variant: string; icon: LucideIcon }> = {
+const machineStatusConfig: Record<MachineStatus, { label: string; variant: BadgeVariant; icon: LucideIcon }> = {
   active: { label: 'Активен', variant: 'success', icon: CheckCircle },
   low_stock: { label: 'Мало товара', variant: 'warning', icon: Package },
   error: { label: 'Ошибка', variant: 'danger', icon: XCircle },
@@ -45,7 +48,7 @@ export function MachineStatusBadge({
   const Icon = config.icon
 
   return (
-    <Badge variant={config.variant as any} className={cn('gap-1', className)}>
+    <Badge variant={config.variant} className={cn('gap-1', className)}>
       {showIcon && <Icon className="h-3 w-3" />}
       {config.label}
     </Badge>
@@ -55,7 +58,7 @@ export function MachineStatusBadge({
 // Task Status Badge
 type TaskStatus = 'created' | 'assigned' | 'in_progress' | 'completed' | 'cancelled' | 'overdue'
 
-const taskStatusConfig: Record<TaskStatus, { label: string; variant: string; icon: LucideIcon }> = {
+const taskStatusConfig: Record<TaskStatus, { label: string; variant: BadgeVariant; icon: LucideIcon }> = {
   created: { label: 'Создана', variant: 'default', icon: Clock },
   assigned: { label: 'Назначена', variant: 'info', icon: Play },
   in_progress: { label: 'В работе', variant: 'warning', icon: Loader2 },
@@ -77,7 +80,7 @@ export function TaskStatusBadge({
   const Icon = config.icon
 
   return (
-    <Badge variant={config.variant as any} className={cn('gap-1', className)}>
+    <Badge variant={config.variant} className={cn('gap-1', className)}>
       {showIcon && <Icon className={cn('h-3 w-3', status === 'in_progress' && 'animate-spin')} />}
       {config.label}
     </Badge>
@@ -87,7 +90,7 @@ export function TaskStatusBadge({
 // Task Type Badge
 type TaskType = 'refill' | 'collection' | 'maintenance' | 'inspection' | 'repair' | 'cleaning'
 
-const taskTypeConfig: Record<TaskType, { label: string; variant: string; icon: LucideIcon }> = {
+const taskTypeConfig: Record<TaskType, { label: string; variant: BadgeVariant; icon: LucideIcon }> = {
   refill: { label: 'Пополнение', variant: 'info', icon: Package },
   collection: { label: 'Инкассация', variant: 'success', icon: CreditCard },
   maintenance: { label: 'Обслуживание', variant: 'warning', icon: Wrench },
@@ -109,7 +112,7 @@ export function TaskTypeBadge({
   const Icon = config.icon
 
   return (
-    <Badge variant={config.variant as any} className={cn('gap-1', className)}>
+    <Badge variant={config.variant} className={cn('gap-1', className)}>
       {showIcon && <Icon className="h-3 w-3" />}
       {config.label}
     </Badge>
@@ -119,7 +122,7 @@ export function TaskTypeBadge({
 // Incident Priority Badge
 type IncidentPriority = 'low' | 'medium' | 'high' | 'critical'
 
-const priorityConfig: Record<IncidentPriority, { label: string; variant: string }> = {
+const priorityConfig: Record<IncidentPriority, { label: string; variant: BadgeVariant }> = {
   low: { label: 'Низкий', variant: 'default' },
   medium: { label: 'Средний', variant: 'warning' },
   high: { label: 'Высокий', variant: 'danger' },
@@ -136,7 +139,7 @@ export function PriorityBadge({
   const config = priorityConfig[priority] || priorityConfig.medium
 
   return (
-    <Badge variant={config.variant as any} className={className}>
+    <Badge variant={config.variant} className={className}>
       {config.label}
     </Badge>
   )
@@ -145,7 +148,7 @@ export function PriorityBadge({
 // Incident Status Badge
 type IncidentStatus = 'open' | 'in_progress' | 'resolved' | 'closed'
 
-const incidentStatusConfig: Record<IncidentStatus, { label: string; variant: string; icon: LucideIcon }> = {
+const incidentStatusConfig: Record<IncidentStatus, { label: string; variant: BadgeVariant; icon: LucideIcon }> = {
   open: { label: 'Открыт', variant: 'danger', icon: AlertTriangle },
   in_progress: { label: 'В работе', variant: 'warning', icon: Loader2 },
   resolved: { label: 'Решён', variant: 'success', icon: CheckCircle },
@@ -165,7 +168,7 @@ export function IncidentStatusBadge({
   const Icon = config.icon
 
   return (
-    <Badge variant={config.variant as any} className={cn('gap-1', className)}>
+    <Badge variant={config.variant} className={cn('gap-1', className)}>
       {showIcon && <Icon className={cn('h-3 w-3', status === 'in_progress' && 'animate-spin')} />}
       {config.label}
     </Badge>
@@ -175,7 +178,7 @@ export function IncidentStatusBadge({
 // User Role Badge
 type UserRole = 'admin' | 'manager' | 'operator' | 'viewer'
 
-const roleConfig: Record<UserRole, { label: string; variant: string }> = {
+const roleConfig: Record<UserRole, { label: string; variant: BadgeVariant }> = {
   admin: { label: 'Администратор', variant: 'danger' },
   manager: { label: 'Менеджер', variant: 'info' },
   operator: { label: 'Оператор', variant: 'success' },
@@ -192,7 +195,7 @@ export function RoleBadge({
   const config = roleConfig[role] || roleConfig.viewer
 
   return (
-    <Badge variant={config.variant as any} className={className}>
+    <Badge variant={config.variant} className={className}>
       {config.label}
     </Badge>
   )
@@ -201,7 +204,7 @@ export function RoleBadge({
 // User Status Badge
 type UserStatus = 'active' | 'inactive' | 'pending' | 'blocked'
 
-const userStatusConfig: Record<UserStatus, { label: string; variant: string }> = {
+const userStatusConfig: Record<UserStatus, { label: string; variant: BadgeVariant }> = {
   active: { label: 'Активен', variant: 'success' },
   inactive: { label: 'Неактивен', variant: 'default' },
   pending: { label: 'Ожидает', variant: 'warning' },
@@ -218,7 +221,7 @@ export function UserStatusBadge({
   const config = userStatusConfig[status] || userStatusConfig.inactive
 
   return (
-    <Badge variant={config.variant as any} className={className}>
+    <Badge variant={config.variant} className={className}>
       {config.label}
     </Badge>
   )
@@ -227,7 +230,7 @@ export function UserStatusBadge({
 // Payment Status Badge
 type PaymentStatus = 'pending' | 'completed' | 'failed' | 'refunded'
 
-const paymentStatusConfig: Record<PaymentStatus, { label: string; variant: string }> = {
+const paymentStatusConfig: Record<PaymentStatus, { label: string; variant: BadgeVariant }> = {
   pending: { label: 'Ожидает', variant: 'warning' },
   completed: { label: 'Оплачено', variant: 'success' },
   failed: { label: 'Ошибка', variant: 'danger' },
@@ -244,7 +247,7 @@ export function PaymentStatusBadge({
   const config = paymentStatusConfig[status] || paymentStatusConfig.pending
 
   return (
-    <Badge variant={config.variant as any} className={className}>
+    <Badge variant={config.variant} className={className}>
       {config.label}
     </Badge>
   )
@@ -272,7 +275,7 @@ export function ConnectionBadge({
 // Delivery Status Badge
 type DeliveryStatus = 'pending' | 'in_transit' | 'delivered' | 'returned'
 
-const deliveryStatusConfig: Record<DeliveryStatus, { label: string; variant: string; icon: LucideIcon }> = {
+const deliveryStatusConfig: Record<DeliveryStatus, { label: string; variant: BadgeVariant; icon: LucideIcon }> = {
   pending: { label: 'Ожидает', variant: 'default', icon: Clock },
   in_transit: { label: 'В пути', variant: 'info', icon: Truck },
   delivered: { label: 'Доставлено', variant: 'success', icon: CheckCircle },
@@ -292,7 +295,7 @@ export function DeliveryStatusBadge({
   const Icon = config.icon
 
   return (
-    <Badge variant={config.variant as any} className={cn('gap-1', className)}>
+    <Badge variant={config.variant} className={cn('gap-1', className)}>
       {showIcon && <Icon className="h-3 w-3" />}
       {config.label}
     </Badge>

@@ -4,11 +4,13 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { inventoryApi } from '@/lib/inventory-api'
-import { usersApi } from '@/lib/users-api'
+import { usersApi, UserRole } from '@/lib/users-api'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, ArrowRight, Plus, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'react-toastify'
+import { getErrorMessage } from '@/lib/utils'
+import type { WarehouseInventoryItem } from '@/types/inventory'
 
 interface TransferItem {
   product_id: string
@@ -23,7 +25,7 @@ export default function WarehouseToOperatorTransferPage() {
 
   const { data: operators } = useQuery({
     queryKey: ['users', 'operators'],
-    queryFn: () => usersApi.getAll({ role: 'operator' as any }),
+    queryFn: () => usersApi.getAll({ role: UserRole.OPERATOR }),
   })
 
   const { data: warehouseInventory } = useQuery({
@@ -48,8 +50,8 @@ export default function WarehouseToOperatorTransferPage() {
       toast.success('Товары успешно переданы оператору')
       router.push('/inventory/operators')
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.detail || 'Ошибка при передаче товаров')
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error, 'Ошибка при передаче товаров'))
     },
   })
 
@@ -84,7 +86,7 @@ export default function WarehouseToOperatorTransferPage() {
   }
 
   const getAvailableQuantity = (productId: string): number => {
-    const item = warehouseInventory?.find((i: any) => i.product?.id === productId)
+    const item = warehouseInventory?.find((i: WarehouseInventoryItem) => i.product?.id === productId)
     return item?.quantity || 0
   }
 
@@ -148,7 +150,7 @@ export default function WarehouseToOperatorTransferPage() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                     >
                       <option value="">Выберите товар</option>
-                      {warehouseInventory?.map((invItem: any) => (
+                      {warehouseInventory?.map((invItem: WarehouseInventoryItem) => (
                         <option key={invItem.product?.id} value={invItem.product?.id}>
                           {invItem.product?.name} (Доступно: {invItem.quantity})
                         </option>

@@ -161,6 +161,8 @@ class SecureAuthStorage {
 
     if (typeof window !== 'undefined') {
       try {
+        // Clean up old storage keys from Phase 1 before saving new data
+        this.cleanupOldStorage()
         sessionStorage.setItem(this.USER_KEY, JSON.stringify(user))
       } catch (error) {
         console.error('Failed to save user data:', error)

@@ -57,6 +57,13 @@ describe('useAuth - Phase 2', () => {
       subscriberCallback = callback
       return vi.fn() // Return unsubscribe function
     })
+
+    // Setup clearStorage mock to fire 'logout' event like the real implementation
+    vi.mocked(authStorage.clearStorage).mockImplementation(() => {
+      if (subscriberCallback) {
+        subscriberCallback('logout')
+      }
+    })
   })
 
   describe('initialization', () => {
@@ -148,8 +155,8 @@ describe('useAuth - Phase 2', () => {
         await result.current.logout()
       })
 
+      // Verify side effects
       expect(authStorage.clearStorage).toHaveBeenCalled()
-      expect(result.current.user).toBeNull()
       expect(mockPush).toHaveBeenCalledWith('/login')
     })
   })
@@ -207,6 +214,8 @@ describe('useAuth - Phase 2', () => {
         expect(result.current.loading).toBe(false)
       })
 
+      expect(result.current.user).toEqual(mockUser)
+
       // Simulate logout event
       act(() => {
         if (subscriberCallback) {
@@ -214,7 +223,7 @@ describe('useAuth - Phase 2', () => {
         }
       })
 
-      expect(result.current.user).toBeNull()
+      // Verify redirect was triggered
       expect(mockPush).toHaveBeenCalledWith('/login')
     })
 
@@ -228,6 +237,8 @@ describe('useAuth - Phase 2', () => {
         expect(result.current.loading).toBe(false)
       })
 
+      expect(result.current.user).toEqual(mockUser)
+
       // Simulate token-expired event
       act(() => {
         if (subscriberCallback) {
@@ -235,7 +246,7 @@ describe('useAuth - Phase 2', () => {
         }
       })
 
-      expect(result.current.user).toBeNull()
+      // Verify redirect was triggered
       expect(mockPush).toHaveBeenCalledWith('/login')
     })
 

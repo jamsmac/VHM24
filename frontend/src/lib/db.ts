@@ -3,6 +3,9 @@
  * Stores pending tasks, photos, and cached data
  */
 
+import { Task } from '@/types/tasks'
+import { Machine } from '@/types/machines'
+
 const DB_NAME = 'vendhub-offline'
 const DB_VERSION = 1
 
@@ -17,7 +20,7 @@ export const STORES = {
 
 export interface PendingTask {
   id: string
-  data: any
+  data: Record<string, unknown>
   created_at: number
   retries: number
   last_error?: string
@@ -38,7 +41,7 @@ export interface SyncQueueItem {
   id: string
   type: 'task' | 'photo' | 'update'
   action: 'create' | 'update' | 'delete'
-  data: any
+  data: Record<string, unknown>
   created_at: number
   retries: number
   last_error?: string
@@ -226,7 +229,7 @@ class VendHubDB {
   /**
    * Get items by index
    */
-  async getByIndex<T>(storeName: string, indexName: string, value: any): Promise<T[]> {
+  async getByIndex<T>(storeName: string, indexName: string, value: IDBValidKey): Promise<T[]> {
     const db = this.getDB()
     return new Promise((resolve, reject) => {
       const transaction = db.transaction([storeName], 'readonly')
@@ -303,29 +306,29 @@ class VendHubDB {
   /**
    * Cache task for offline access
    */
-  async cacheTask(task: any): Promise<void> {
+  async cacheTask(task: Task): Promise<void> {
     await this.put(STORES.CACHED_TASKS, { ...task, updated_at: Date.now() })
   }
 
   /**
    * Cache machine for offline access
    */
-  async cacheMachine(machine: any): Promise<void> {
+  async cacheMachine(machine: Machine): Promise<void> {
     await this.put(STORES.CACHED_MACHINES, { ...machine, updated_at: Date.now() })
   }
 
   /**
    * Get cached tasks
    */
-  async getCachedTasks(): Promise<any[]> {
+  async getCachedTasks(): Promise<Task[]> {
     return this.getAll(STORES.CACHED_TASKS)
   }
 
   /**
    * Get cached machine by QR code (machine_number)
    */
-  async getMachineByQR(machineNumber: string): Promise<any | undefined> {
-    const machines = await this.getByIndex(STORES.CACHED_MACHINES, 'machine_number', machineNumber)
+  async getMachineByQR(machineNumber: string): Promise<Machine | undefined> {
+    const machines = await this.getByIndex<Machine>(STORES.CACHED_MACHINES, 'machine_number', machineNumber)
     return machines[0]
   }
 

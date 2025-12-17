@@ -14,6 +14,7 @@ import {
   Percent,
   BarChart3,
   LineChart,
+  type LucideIcon,
 } from 'lucide-react'
 
 export default function AnalyticsPage() {
@@ -359,7 +360,7 @@ interface KPICardProps {
   title: string
   value: string
   change?: number
-  icon: any
+  icon: LucideIcon
   color: 'green' | 'blue' | 'purple' | 'indigo' | 'cyan' | 'orange'
   loading?: boolean
 }

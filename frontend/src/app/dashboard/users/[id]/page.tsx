@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ArrowLeft, User, Phone, Mail, Calendar, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
-import { formatDateTime } from '@/lib/utils'
+import { formatDateTime, getErrorMessage } from '@/lib/utils'
 import { LoadingSkeleton } from '@/components/ui/LoadingSkeleton'
 import { toast } from 'react-toastify'
 import { queryClient } from '@/lib/query-client'
@@ -30,8 +30,8 @@ export default function UserDetailPage({ params }: UserDetailPageProps) {
       toast.success('Пользователь активирован')
       queryClient.invalidateQueries({ queryKey: ['users', params.id] })
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.detail || 'Ошибка при активации')
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error, 'Ошибка при активации'))
     },
   })
 
@@ -41,8 +41,8 @@ export default function UserDetailPage({ params }: UserDetailPageProps) {
       toast.success('Пользователь деактивирован')
       queryClient.invalidateQueries({ queryKey: ['users', params.id] })
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.detail || 'Ошибка при деактивации')
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error, 'Ошибка при деактивации'))
     },
   })
 

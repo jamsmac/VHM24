@@ -70,6 +70,30 @@ export interface MachineStatusSummary {
   low_stock: number
 }
 
+export interface DashboardWidget {
+  id: string
+  type: string
+  title: string
+  config: Record<string, unknown>
+  position: number
+  size: 'small' | 'medium' | 'large'
+  created_at: string
+  updated_at: string
+}
+
+export interface CreateWidgetDto {
+  type: string
+  title: string
+  config?: Record<string, unknown>
+  size?: 'small' | 'medium' | 'large'
+}
+
+export interface UpdateWidgetDto {
+  title?: string
+  config?: Record<string, unknown>
+  size?: 'small' | 'medium' | 'large'
+}
+
 export const analyticsApi = {
   /**
    * Get analytics metrics with filters
@@ -110,7 +134,7 @@ export const analyticsApi = {
   /**
    * Get user dashboard widgets
    */
-  async getWidgets(): Promise<any[]> {
+  async getWidgets(): Promise<DashboardWidget[]> {
     const response = await apiClient.get('/analytics/dashboard/widgets')
     return response.data
   },
@@ -118,7 +142,7 @@ export const analyticsApi = {
   /**
    * Create dashboard widget
    */
-  async createWidget(widget: any): Promise<any> {
+  async createWidget(widget: CreateWidgetDto): Promise<DashboardWidget> {
     const response = await apiClient.post('/analytics/dashboard/widgets', widget)
     return response.data
   },
@@ -126,7 +150,7 @@ export const analyticsApi = {
   /**
    * Update dashboard widget
    */
-  async updateWidget(id: string, widget: any): Promise<any> {
+  async updateWidget(id: string, widget: UpdateWidgetDto): Promise<DashboardWidget> {
     const response = await apiClient.put(`/analytics/dashboard/widgets/${id}`, widget)
     return response.data
   },

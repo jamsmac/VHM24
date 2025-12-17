@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog'
 import { FormInput, FormSelect, FormTextarea } from '../ui/form-field'
 import { componentsApi } from '@/lib/equipment-api'
+import { getErrorMessage } from '@/lib/utils'
 import {
   ComponentType,
   ComponentStatus,
@@ -84,14 +85,14 @@ export function ComponentModal({
       }
       onSuccess()
       onClose()
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Ошибка при сохранении компонента')
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Ошибка при сохранении компонента'))
     } finally {
       setLoading(false)
     }
   }
 
-  const handleChange = (field: string, value: any, type?: string) => {
+  const handleChange = (field: string, value: string | number, type?: string) => {
     if (type === 'number') {
       setFormData((prev) => ({
         ...prev,
@@ -100,7 +101,7 @@ export function ComponentModal({
     } else if (type === 'date') {
       setFormData((prev) => ({
         ...prev,
-        [field]: value ? new Date(value) : undefined,
+        [field]: value ? new Date(value as string) : undefined,
       }))
     } else {
       setFormData((prev) => ({

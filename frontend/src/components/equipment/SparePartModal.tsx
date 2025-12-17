@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog'
 import { FormInput, FormSelect, FormTextarea } from '../ui/form-field'
 import { sparePartsApi } from '@/lib/equipment-api'
+import { getErrorMessage } from '@/lib/utils'
 import {
   ComponentType,
   ComponentTypeLabels,
@@ -80,14 +81,14 @@ export function SparePartModal({
       }
       onSuccess()
       onClose()
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Ошибка при сохранении запчасти')
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Ошибка при сохранении запчасти'))
     } finally {
       setLoading(false)
     }
   }
 
-  const handleChange = (field: string, value: any, type?: string) => {
+  const handleChange = (field: string, value: string | number, type?: string) => {
     if (type === 'number') {
       setFormData((prev) => ({
         ...prev,

@@ -10,7 +10,9 @@ import { ArrowLeft, Edit2, Trash2, Building2, Phone, Mail, CheckCircle, XCircle 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { UpdateCounterpartyDto, CounterpartyType, Counterparty } from '@/types/counterparty'
+import type { Contract } from '@/types/contract'
 import { toast } from 'react-toastify'
+import { getErrorMessage } from '@/lib/utils'
 
 export default function CounterpartyDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter()
@@ -61,8 +63,8 @@ export default function CounterpartyDetailPage({ params }: { params: { id: strin
       queryClient.invalidateQueries({ queryKey: ['counterparties'] })
       setIsEditing(false)
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Ошибка при обновлении контрагента')
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error, 'Ошибка при обновлении контрагента'))
     },
   })
 
@@ -73,8 +75,8 @@ export default function CounterpartyDetailPage({ params }: { params: { id: strin
       queryClient.invalidateQueries({ queryKey: ['counterparties'] })
       router.push('/dashboard/counterparties')
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Ошибка при удалении контрагента')
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error, 'Ошибка при удалении контрагента'))
     },
   })
 
@@ -89,7 +91,7 @@ export default function CounterpartyDetailPage({ params }: { params: { id: strin
     }
   }
 
-  const handleChange = (field: keyof UpdateCounterpartyDto, value: any) => {
+  const handleChange = (field: keyof UpdateCounterpartyDto, value: UpdateCounterpartyDto[keyof UpdateCounterpartyDto]) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
@@ -320,7 +322,7 @@ export default function CounterpartyDetailPage({ params }: { params: { id: strin
             </div>
             {contracts && contracts.length > 0 ? (
               <div className="space-y-2">
-                {contracts.map((contract: any) => (
+                {contracts.map((contract: Contract) => (
                   <Link
                     key={contract.id}
                     href={`/dashboard/contracts/${contract.id}`}

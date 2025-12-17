@@ -10,6 +10,7 @@ import { FormInput, FormSelect, FormTextarea } from '@/components/ui/form-field'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'react-toastify'
+import { getErrorMessage } from '@/lib/utils'
 import { MachineStatus } from '@/types/machines'
 
 export default function CreateMachinePage() {
@@ -42,8 +43,8 @@ export default function CreateMachinePage() {
       toast.success('Аппарат создан успешно')
       router.push('/machines')
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.detail || 'Ошибка при создании аппарата')
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error, 'Ошибка при создании аппарата'))
     },
   })
 
@@ -57,7 +58,7 @@ export default function CreateMachinePage() {
       model: formData.model,
       serial_number: formData.serial_number,
       max_product_slots: formData.max_product_slots,
-      cash_capacity: parseFloat(formData.cash_capacity as any) || 0,
+      cash_capacity: parseFloat(formData.cash_capacity) || 0,
       accepts_cash: formData.accepts_cash,
       accepts_card: formData.accepts_card,
       accepts_qr: formData.accepts_qr,
@@ -65,7 +66,7 @@ export default function CreateMachinePage() {
     })
   }
 
-  const handleChange = (field: string, value: any) => {
+  const handleChange = (field: string, value: string | number | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }))
   }
 

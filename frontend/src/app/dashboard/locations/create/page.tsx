@@ -9,6 +9,7 @@ import { FormInput, FormSelect, FormTextarea } from '@/components/ui/form-field'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'react-toastify'
+import { getErrorMessage } from '@/lib/utils'
 
 export default function CreateLocationPage() {
   const router = useRouter()
@@ -28,8 +29,8 @@ export default function CreateLocationPage() {
       toast.success('Локация создана успешно')
       router.push('/locations')
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.detail || 'Ошибка при создании локации')
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error, 'Ошибка при создании локации'))
     },
   })
 
@@ -41,7 +42,7 @@ export default function CreateLocationPage() {
     })
   }
 
-  const handleChange = (field: string, value: any) => {
+  const handleChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }))
   }
 

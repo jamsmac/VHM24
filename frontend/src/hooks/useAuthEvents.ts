@@ -44,7 +44,7 @@ export function useAuthEvents(callback: AuthEventListener) {
  */
 export function useAuthEvent(
   event: AuthEvent,
-  callback: (data?: any) => void
+  callback: (data?: unknown) => void
 ) {
   useEffect(() => {
     const listener: AuthEventListener = (e, data) => {

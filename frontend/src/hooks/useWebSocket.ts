@@ -3,7 +3,7 @@ import { io, Socket } from 'socket.io-client'
 
 interface WebSocketEvent {
   event: string
-  data: any
+  data: unknown
 }
 
 interface UseWebSocketOptions {
@@ -130,7 +130,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
   /**
    * Emit a custom event to the server
    */
-  const emit = (event: string, data?: any) => {
+  const emit = (event: string, data?: unknown) => {
     if (!socketRef.current) {return}
     socketRef.current.emit(event, data)
   }
@@ -138,7 +138,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
   /**
    * Listen to a specific event
    */
-  const on = (event: string, callback: (data: any) => void) => {
+  const on = (event: string, callback: (data: unknown) => void) => {
     if (!socketRef.current) {return}
     socketRef.current.on(event, callback)
   }
@@ -146,7 +146,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
   /**
    * Remove event listener
    */
-  const off = (event: string, callback?: (data: any) => void) => {
+  const off = (event: string, callback?: (data: unknown) => void) => {
     if (!socketRef.current) {return}
     if (callback) {
       socketRef.current.off(event, callback)

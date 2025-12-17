@@ -51,7 +51,7 @@ export function TaskComponentsSelector({
     try {
       setLoading(true)
       const componentType = getComponentTypeForTask()
-      const params: any = {}
+      const params: { componentType?: ComponentType; machineId?: string } = {}
 
       if (componentType) {
         params.componentType = componentType

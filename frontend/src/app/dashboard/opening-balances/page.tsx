@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import { getErrorMessage } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
@@ -91,7 +92,7 @@ export default function OpeningBalancesPage() {
     setBalanceRows(balanceRows.filter((_, i) => i !== index));
   };
 
-  const updateRow = (index: number, field: string, value: any) => {
+  const updateRow = (index: number, field: string, value: string | number) => {
     const updated = [...balanceRows];
     updated[index] = { ...updated[index], [field]: value };
     setBalanceRows(updated);
@@ -154,12 +155,9 @@ export default function OpeningBalancesPage() {
         alert(`Успешно создано начальных остатков: ${result.created}`);
         setBalanceRows([]);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to create opening balances:', error);
-      alert(
-        error.response?.data?.message ||
-          'Ошибка при создании начальных остатков'
-      );
+      alert(getErrorMessage(error, 'Ошибка при создании начальных остатков'));
     } finally {
       setLoading(false);
     }

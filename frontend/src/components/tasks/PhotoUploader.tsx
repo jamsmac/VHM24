@@ -6,6 +6,7 @@ import { Camera, Upload, X, CheckCircle, AlertCircle } from 'lucide-react'
 import { filesApi, type FileUploadParams } from '@/lib/files-api'
 import { compressImage } from '@/lib/image-utils'
 import { toast } from 'react-toastify'
+import { getErrorMessage } from '@/lib/utils'
 
 interface PhotoUploaderProps {
   taskId: string
@@ -142,7 +143,7 @@ export function PhotoUploader({
           )
 
           uploadedIds.push(uploadedFile.id)
-        } catch (error: any) {
+        } catch (error: unknown) {
           console.error('Upload error:', error)
 
           setUploadingFiles((prev) =>
@@ -151,7 +152,7 @@ export function PhotoUploader({
                 ? {
                     ...f,
                     status: 'error',
-                    error: error.response?.data?.message || 'Ошибка загрузки',
+                    error: getErrorMessage(error, 'Ошибка загрузки'),
                   }
                 : f
             )

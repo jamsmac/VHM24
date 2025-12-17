@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import { QrCode, X, Camera } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog'
 import { componentsApi } from '@/lib/equipment-api'
+import { getErrorMessage } from '@/lib/utils'
 import type { EquipmentComponent } from '@/types/equipment'
 
 interface QRScannerProps {
@@ -59,8 +60,8 @@ export function QRScanner({ isOpen, onClose, onScanSuccess }: QRScannerProps) {
       const component = await componentsApi.getById(manualCode.trim())
       onScanSuccess(component)
       onClose()
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Компонент не найден')
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Компонент не найден'))
     }
   }
 

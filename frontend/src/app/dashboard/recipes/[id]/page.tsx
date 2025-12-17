@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
+import { getErrorMessage } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
 interface Nomenclature {
@@ -21,6 +22,16 @@ interface RecipeIngredient {
   cost_per_serving?: number;
   nomenclature?: Nomenclature;
 }
+
+interface ApiRecipeIngredient {
+  id: string;
+  nomenclature_id: string;
+  quantity_per_serving: number;
+  unit_of_measure: string;
+  nomenclature?: Nomenclature;
+}
+
+type RecipeType = 'primary' | 'alternative' | 'test'
 
 export default function EditRecipePage({ params }: { params: { id: string } }) {
   const router = useRouter();
@@ -76,7 +87,7 @@ export default function EditRecipePage({ params }: { params: { id: string } }) {
       // Load existing ingredients
       if (data.ingredients && data.ingredients.length > 0) {
         setRecipeIngredients(
-          data.ingredients.map((ing: any) => ({
+          data.ingredients.map((ing: ApiRecipeIngredient) => ({
             id: ing.id,
             nomenclature_id: ing.nomenclature_id,
             quantity_per_serving: ing.quantity_per_serving,
@@ -113,7 +124,7 @@ export default function EditRecipePage({ params }: { params: { id: string } }) {
     setRecipeIngredients(recipeIngredients.filter((_, i) => i !== index));
   };
 
-  const updateIngredient = (index: number, field: string, value: any) => {
+  const updateIngredient = (index: number, field: string, value: string | number) => {
     const updated = [...recipeIngredients];
     updated[index] = { ...updated[index], [field]: value };
 
@@ -183,9 +194,9 @@ export default function EditRecipePage({ params }: { params: { id: string } }) {
       );
 
       router.push('/recipes');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to update recipe:', error);
-      alert(error.response?.data?.message || 'Ошибка при обновлении рецепта');
+      alert(getErrorMessage(error, 'Ошибка при обновлении рецепта'));
     } finally {
       setLoading(false);
     }
@@ -200,9 +211,9 @@ export default function EditRecipePage({ params }: { params: { id: string } }) {
         headers: { Authorization: `Bearer ${token}` },
       });
       router.push('/recipes');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to delete recipe:', error);
-      alert(error.response?.data?.message || 'Ошибка при удалении');
+      alert(getErrorMessage(error, 'Ошибка при удалении'));
     }
   };
 
@@ -268,7 +279,7 @@ export default function EditRecipePage({ params }: { params: { id: string } }) {
           </label>
           <select
             value={formData.recipe_type}
-            onChange={(e) => setFormData({ ...formData, recipe_type: e.target.value as any })}
+            onChange={(e) => setFormData({ ...formData, recipe_type: e.target.value as RecipeType })}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
           >
             <option value="primary">Основной</option>

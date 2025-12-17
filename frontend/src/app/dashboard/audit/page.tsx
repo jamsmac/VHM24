@@ -43,7 +43,7 @@ export default function AuditLogPage() {
     staleTime: 30000,
   })
 
-  const handleFilterChange = (key: keyof AuditLogQueryParams, value: any) => {
+  const handleFilterChange = (key: keyof AuditLogQueryParams, value: string | number | undefined) => {
     setFilters((prev) => ({
       ...prev,
       [key]: value || undefined,

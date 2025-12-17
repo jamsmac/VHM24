@@ -9,6 +9,7 @@ import { DollarSign, AlertCircle, CheckCircle, Clock, Filter, Calculator, Trendi
 import Link from 'next/link'
 import { PaymentStatus } from '@/types/commission'
 import { toast } from 'react-toastify'
+import { getErrorMessage } from '@/lib/utils'
 
 export default function CommissionsPage() {
   const queryClient = useQueryClient()
@@ -30,8 +31,8 @@ export default function CommissionsPage() {
       toast.success(`Расчет запущен! Job ID: ${data.job_id}`)
       setTimeout(() => queryClient.invalidateQueries({ queryKey: ['commissions'] }), 5000)
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Ошибка при запуске расчета')
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error, 'Ошибка при запуске расчета'))
     },
   })
 

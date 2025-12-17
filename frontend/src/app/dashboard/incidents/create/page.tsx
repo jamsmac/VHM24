@@ -10,6 +10,7 @@ import { FormSelect, FormTextarea } from '@/components/ui/form-field'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'react-toastify'
+import { getErrorMessage } from '@/lib/utils'
 import { IncidentType, IncidentPriority } from '@/types/incidents'
 
 export default function CreateIncidentPage() {
@@ -33,8 +34,8 @@ export default function CreateIncidentPage() {
       toast.success('Инцидент создан успешно')
       router.push('/incidents')
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.detail || 'Ошибка при создании инцидента')
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error, 'Ошибка при создании инцидента'))
     },
   })
 
@@ -43,7 +44,7 @@ export default function CreateIncidentPage() {
     createMutation.mutate(formData)
   }
 
-  const handleChange = (field: string, value: any) => {
+  const handleChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }))
   }
 

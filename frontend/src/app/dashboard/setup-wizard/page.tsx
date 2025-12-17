@@ -10,7 +10,7 @@ type WizardStep = 1 | 2 | 3 | 4 | 5 | 6;
 interface StepStatus {
   completed: boolean;
   skipped: boolean;
-  data?: any;
+  data?: Record<string, unknown>;
 }
 
 export default function SetupWizardPage() {

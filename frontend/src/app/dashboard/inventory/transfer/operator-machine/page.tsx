@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { ArrowLeft, ArrowRight, Plus, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'react-toastify'
+import { getErrorMessage } from '@/lib/utils'
 
 interface TransferItem {
   product_id: string
@@ -57,8 +58,8 @@ export default function OperatorToMachineTransferPage() {
       toast.success('Товары успешно загружены в аппарат')
       router.push('/inventory/machines')
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.detail || 'Ошибка при загрузке товаров')
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error, 'Ошибка при загрузке товаров'))
     },
   })
 

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog'
 import { FormInput, FormTextarea } from '../ui/form-field'
 import { sparePartsApi } from '@/lib/equipment-api'
+import { getErrorMessage } from '@/lib/utils'
 import type { SparePart, AdjustStockDto } from '@/types/equipment'
 
 interface StockAdjustmentModalProps {
@@ -39,14 +40,14 @@ export function StockAdjustmentModal({
       onClose()
       // Reset form
       setFormData({ quantity: 0, reason: '' })
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Ошибка при изменении остатка')
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Ошибка при изменении остатка'))
     } finally {
       setLoading(false)
     }
   }
 
-  const handleChange = (field: string, value: any, type?: string) => {
+  const handleChange = (field: string, value: string | number, type?: string) => {
     if (type === 'number') {
       setFormData((prev) => ({
         ...prev,

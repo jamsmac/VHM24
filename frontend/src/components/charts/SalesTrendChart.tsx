@@ -85,7 +85,16 @@ export function SalesTrendChart({
     }))
   }, [data])
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  interface TooltipPayloadItem {
+    payload: {
+      fullDate: string
+      revenue: number
+      transactions: number
+      average_check?: number
+    }
+  }
+
+  const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: TooltipPayloadItem[] }) => {
     if (!active || !payload || !payload.length) return null
 
     const data = payload[0].payload
