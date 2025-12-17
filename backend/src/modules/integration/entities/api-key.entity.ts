@@ -45,6 +45,6 @@ export class ApiKey extends BaseEntity {
     ip_whitelist?: string[];
     allowed_origins?: string[];
     description?: string;
-    [key: string]: any;
+    [key: string]: unknown;
   };
 }

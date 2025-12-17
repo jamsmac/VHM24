@@ -75,8 +75,8 @@ export class Integration extends BaseEntity {
     retry_attempts?: number;
     rate_limit?: number;
     custom_headers?: Record<string, string>;
-    mapping?: Record<string, any>;
-    [key: string]: any;
+    mapping?: Record<string, unknown>;
+    [key: string]: unknown;
   };
 
   @Column({ type: 'jsonb', default: {} })
@@ -88,7 +88,7 @@ export class Integration extends BaseEntity {
       successful_calls?: number;
       failed_calls?: number;
     };
-    [key: string]: any;
+    [key: string]: unknown;
   };
 
   @OneToMany(() => IntegrationLog, (log) => log.integration)

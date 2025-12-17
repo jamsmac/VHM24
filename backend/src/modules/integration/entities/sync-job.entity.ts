@@ -66,10 +66,10 @@ export class SyncJob extends BaseEntity {
 
   @Column({ type: 'jsonb', default: {} })
   config: {
-    filters?: Record<string, any>;
-    mapping?: Record<string, any>;
+    filters?: Record<string, unknown>;
+    mapping?: Record<string, unknown>;
     batch_size?: number;
-    [key: string]: any;
+    [key: string]: unknown;
   };
 
   @Column({ type: 'jsonb', default: {} })
@@ -79,8 +79,8 @@ export class SyncJob extends BaseEntity {
       error?: string;
     }>;
     warnings?: string[];
-    summary?: Record<string, any>;
-    [key: string]: any;
+    summary?: Record<string, unknown>;
+    [key: string]: unknown;
   };
 
   @Column({ type: 'uuid', nullable: true })

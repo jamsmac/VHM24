@@ -70,6 +70,6 @@ export class IntegrationLog extends BaseEntity {
     ip_address?: string;
     user_agent?: string;
     correlation_id?: string;
-    [key: string]: any;
+    [key: string]: unknown;
   };
 }

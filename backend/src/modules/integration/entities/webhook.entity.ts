@@ -55,6 +55,6 @@ export class Webhook extends BaseEntity {
     ip_address?: string;
     user_agent?: string;
     processed_by?: string;
-    [key: string]: any;
+    [key: string]: unknown;
   };
 }

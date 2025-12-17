@@ -12,7 +12,7 @@ export class IntegrationService {
   ) {}
 
   async findAll(type?: IntegrationType): Promise<Integration[]> {
-    const where: any = {};
+    const where: { type?: IntegrationType } = {};
 
     if (type) {
       where.type = type;
