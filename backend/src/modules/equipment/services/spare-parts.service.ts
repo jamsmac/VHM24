@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, LessThanOrEqual } from 'typeorm';
+import { Repository } from 'typeorm';
 import { SparePart } from '../entities/spare-part.entity';
 import { ComponentType } from '../entities/equipment-component.entity';
 import { CreateSparePartDto, UpdateSparePartDto, AdjustStockDto } from '../dto/spare-part.dto';
@@ -136,12 +136,12 @@ export class SparePartsService {
       .groupBy('part.component_type')
       .getRawMany();
 
-    const lowStock = await this.sparePartRepository.count({
-      where: {
-        quantity_in_stock: LessThanOrEqual(() => 'min_stock_level') as any,
-        is_active: true,
-      },
-    });
+    // Use query builder for column-to-column comparison
+    const lowStock = await this.sparePartRepository
+      .createQueryBuilder('part')
+      .where('part.quantity_in_stock <= part.min_stock_level')
+      .andWhere('part.is_active = :active', { active: true })
+      .getCount();
 
     const totalValue = await this.sparePartRepository
       .createQueryBuilder('part')

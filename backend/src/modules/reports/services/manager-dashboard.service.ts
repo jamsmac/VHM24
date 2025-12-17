@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
+import { Repository, In, FindOperator } from 'typeorm';
 import { Machine } from '@modules/machines/entities/machine.entity';
 import { Transaction } from '@modules/transactions/entities/transaction.entity';
 import { Task, TaskStatus } from '@modules/tasks/entities/task.entity';
@@ -214,7 +214,7 @@ export class ManagerDashboardService {
         .andWhere('task.completed_at >= :todayStart', { todayStart })
         .getCount(),
       locationIds && locationIds.length > 0
-        ? this.locationRepository.count({ where: { id: In(locationIds) as any } })
+        ? this.locationRepository.count({ where: { id: In(locationIds) as FindOperator<string> } })
         : this.locationRepository.count(),
     ]);
 
@@ -274,7 +274,7 @@ export class ManagerDashboardService {
         .getRawOne(),
       locationIds && locationIds.length > 0
         ? this.machineRepository.count({
-            where: { location_id: In(locationIds) as any },
+            where: { location_id: In(locationIds) as FindOperator<string> },
           })
         : this.machineRepository.count(),
     ]);

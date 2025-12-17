@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, MoreThanOrEqual } from 'typeorm';
+import { Repository, MoreThanOrEqual, FindOperator } from 'typeorm';
 import { Machine, MachineStatus } from '@modules/machines/entities/machine.entity';
 import { Transaction } from '@modules/transactions/entities/transaction.entity';
 import { Task, TaskStatus } from '@modules/tasks/entities/task.entity';
@@ -521,7 +521,7 @@ export class AdminDashboardService {
       this.taskRepository.count({
         where: {
           status: TaskStatus.COMPLETED,
-          completed_at: MoreThanOrEqual(todayStart) as any,
+          completed_at: MoreThanOrEqual(todayStart) as FindOperator<Date>,
         },
       }),
       this.taskRepository.find(),
@@ -575,7 +575,7 @@ export class AdminDashboardService {
       this.incidentRepository.count({
         where: {
           status: IncidentStatus.RESOLVED,
-          resolved_at: MoreThanOrEqual(todayStart) as any,
+          resolved_at: MoreThanOrEqual(todayStart) as FindOperator<Date>,
         },
       }),
       this.getAvgIncidentResolutionTime(),
@@ -614,7 +614,7 @@ export class AdminDashboardService {
       this.complaintRepository.count({
         where: {
           status: ComplaintStatus.RESOLVED,
-          resolved_at: MoreThanOrEqual(todayStart) as any,
+          resolved_at: MoreThanOrEqual(todayStart) as FindOperator<Date>,
         },
       }),
       this.calculateRecentNPS(),
@@ -633,7 +633,7 @@ export class AdminDashboardService {
 
     const complaints = await this.complaintRepository.find({
       where: {
-        submitted_at: MoreThanOrEqual(thirtyDaysAgo) as any,
+        submitted_at: MoreThanOrEqual(thirtyDaysAgo) as FindOperator<Date>,
       },
     });
 

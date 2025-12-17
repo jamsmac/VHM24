@@ -20,6 +20,7 @@ describe('SparePartsService', () => {
       getMany: jest.fn().mockResolvedValue([]),
       getRawMany: jest.fn().mockResolvedValue([]),
       getRawOne: jest.fn().mockResolvedValue({}),
+      getCount: jest.fn().mockResolvedValue(0),
     };
 
     mockRepository = {
@@ -331,13 +332,14 @@ describe('SparePartsService', () => {
 
   describe('getStats', () => {
     it('should return comprehensive statistics', async () => {
-      mockRepository.count.mockResolvedValueOnce(100).mockResolvedValueOnce(15);
+      mockRepository.count.mockResolvedValue(100);
 
       mockRepository.createQueryBuilder().getRawMany.mockResolvedValue([
         { type: ComponentType.GRINDER, count: '50', total_quantity: '250' },
         { type: ComponentType.PUMP, count: '50', total_quantity: '200' },
       ]);
 
+      mockRepository.createQueryBuilder().getCount.mockResolvedValue(15);
       mockRepository.createQueryBuilder().getRawOne.mockResolvedValue({ total: '25000.50' });
 
       const result = await service.getStats();
