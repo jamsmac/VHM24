@@ -104,7 +104,11 @@ export class RedisCacheService {
   async delByPattern(pattern: string): Promise<number> {
     try {
       // Get underlying Redis client from cache manager
-      const store = this.cacheManager.store as any;
+      // Cache manager store type doesn't expose Redis client directly
+      const store = this.cacheManager.store as unknown as {
+        client?: { keys: (pattern: string) => Promise<string[]> };
+        getClient?: () => { keys: (pattern: string) => Promise<string[]> };
+      };
       const client = store.client || store.getClient?.();
 
       if (!client || typeof client.keys !== 'function') {

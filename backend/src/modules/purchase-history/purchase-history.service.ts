@@ -29,6 +29,12 @@ export interface ImportError {
   error: string;
 }
 
+/** Extended DTO for import operations with metadata fields */
+interface ImportPurchaseData extends CreatePurchaseDto {
+  import_source: string;
+  import_session_id: string;
+}
+
 export interface PriceHistoryItem {
   date: string;
   price: number;
@@ -48,11 +54,17 @@ export class PurchaseHistoryService {
    * Create new purchase record
    * REQ-STK-04: История закупок с датой, поставщиком, ценой
    */
-  async create(dto: CreatePurchaseDto, userId?: string): Promise<PurchaseHistory> {
+  async create(
+    dto: CreatePurchaseDto | ImportPurchaseData,
+    userId?: string,
+  ): Promise<PurchaseHistory> {
     // Calculate VAT and total
     const vatRate = dto.vat_rate ?? 15; // Default 15% VAT in Uzbekistan
     const vatAmount = (dto.quantity * dto.unit_price * vatRate) / 100;
     const totalAmount = dto.quantity * dto.unit_price + vatAmount;
+
+    // Extract import fields if present
+    const importData = dto as Partial<ImportPurchaseData>;
 
     const purchase = this.purchaseRepository.create({
       ...dto,
@@ -63,7 +75,8 @@ export class PurchaseHistoryService {
       exchange_rate: dto.exchange_rate || 1,
       status: dto.status || PurchaseStatus.RECEIVED,
       created_by_id: userId,
-      import_source: 'manual',
+      import_source: importData.import_source ?? 'manual',
+      import_session_id: importData.import_session_id,
     });
 
     return await this.purchaseRepository.save(purchase);
@@ -314,14 +327,12 @@ export class PurchaseHistoryService {
 
     for (const item of data) {
       try {
-        await this.create(
-          {
-            ...item,
-            import_source: 'csv',
-            import_session_id,
-          } as any,
-          userId,
-        );
+        const importData: ImportPurchaseData = {
+          ...item,
+          import_source: 'csv',
+          import_session_id,
+        };
+        await this.create(importData, userId);
         imported++;
       } catch (error) {
         failed++;

@@ -226,7 +226,8 @@ export class ReconciliationService {
     }
 
     for (const primaryRecord of primaryRecords) {
-      const sourcesData: Record<ReconciliationSource, SourceData> = {} as any;
+      // Initialize as empty, will be populated with source keys dynamically
+      const sourcesData = {} as Record<ReconciliationSource, SourceData>;
       let totalScore = 0;
       let allSourcesFound = true;
 
@@ -336,7 +337,8 @@ export class ReconciliationService {
         if (used.has(i)) continue;
 
         const record = records[i];
-        const sourcesData: Record<ReconciliationSource, SourceData> = {} as any;
+        // Initialize as empty, will be populated with source keys dynamically
+        const sourcesData = {} as Record<ReconciliationSource, SourceData>;
 
         // Отмечаем что в основном источнике не найдено
         sourcesData[primarySource] = {

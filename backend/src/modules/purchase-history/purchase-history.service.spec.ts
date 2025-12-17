@@ -1202,18 +1202,17 @@ describe('PurchaseHistoryService', () => {
     });
 
     it('should pass import_session_id through create', async () => {
-      // Note: The create() method always sets import_source to 'manual'
-      // The import_session_id is passed through the DTO
+      // The create() method preserves import_source and import_session_id when provided
       purchaseRepository.create.mockImplementation((data) => data as PurchaseHistory);
       purchaseRepository.save.mockResolvedValue(mockPurchase as PurchaseHistory);
 
       await service.importPurchases([importData[0]], 'session-uuid', 'user-uuid');
 
-      // Verify that create() was called with import_source='manual' (as per create() implementation)
-      // and import_session_id passed through
+      // Verify that create() was called with import_source='csv' and import_session_id
       expect(purchaseRepository.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          import_source: 'manual', // create() always sets this to 'manual'
+          import_source: 'csv', // preserves the import source from importPurchases
+          import_session_id: 'session-uuid',
         }),
       );
     });

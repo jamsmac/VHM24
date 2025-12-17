@@ -23,6 +23,12 @@ export interface ImportError {
   error: string;
 }
 
+/** Extended DTO for import operations with metadata fields */
+interface ImportBalanceData extends CreateOpeningBalanceDto {
+  import_source: string;
+  import_session_id: string;
+}
+
 export interface WarehouseStats {
   warehouse_id: string;
   warehouse_name: string;
@@ -45,7 +51,7 @@ export class OpeningBalancesService {
    * Create new opening balance
    * REQ-STK-01: Начальные остатки для каждой номенклатуры
    */
-  async create(dto: CreateOpeningBalanceDto): Promise<StockOpeningBalance> {
+  async create(dto: CreateOpeningBalanceDto | ImportBalanceData): Promise<StockOpeningBalance> {
     // Check if balance already exists for this nomenclature/warehouse/date
     const whereCondition: BalanceWhereCondition = {
       nomenclature_id: dto.nomenclature_id,
@@ -69,10 +75,14 @@ export class OpeningBalancesService {
     // Calculate total cost
     const totalCost = dto.quantity * dto.unit_cost;
 
+    // Extract import fields if present
+    const importData = dto as Partial<ImportBalanceData>;
+
     const balance = this.balanceRepository.create({
       ...dto,
       total_cost: totalCost,
-      import_source: 'manual',
+      import_source: importData.import_source ?? 'manual',
+      import_session_id: importData.import_session_id,
     });
 
     return await this.balanceRepository.save(balance);
@@ -282,11 +292,12 @@ export class OpeningBalancesService {
 
     for (const item of data) {
       try {
-        await this.create({
+        const importData: ImportBalanceData = {
           ...item,
           import_source: 'csv',
           import_session_id,
-        } as any);
+        };
+        await this.create(importData);
         imported++;
       } catch (error) {
         failed++;
