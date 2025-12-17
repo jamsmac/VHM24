@@ -1,7 +1,7 @@
 # ============================================================================
 # VendHub Manager Backend - Production Dockerfile
 # ============================================================================
-# Build context: backend/ directory
+# Build context: repository root (Railway monorepo)
 
 # ----------------------------------------------------------------------------
 # Stage 1: Dependencies
@@ -10,8 +10,8 @@ FROM node:20-alpine AS dependencies
 
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
+# Copy only backend package files
+COPY backend/package*.json ./
 
 # Install all dependencies (including dev dependencies for build)
 RUN npm install --legacy-peer-deps
@@ -26,8 +26,8 @@ WORKDIR /app
 # Copy dependencies from previous stage
 COPY --from=dependencies /app/node_modules ./node_modules
 
-# Copy source code
-COPY . .
+# Copy only backend source code
+COPY backend/ .
 
 # Build the application using nest CLI directly
 RUN ./node_modules/.bin/nest build
@@ -53,7 +53,7 @@ RUN addgroup -g 1001 -S nodejs && \
     adduser -S nestjs -u 1001
 
 # Copy package files
-COPY --chown=nestjs:nodejs package*.json ./
+COPY --chown=nestjs:nodejs backend/package*.json ./
 
 # Copy production dependencies
 COPY --chown=nestjs:nodejs --from=build /app/node_modules ./node_modules
