@@ -18,6 +18,7 @@ export interface AnalyticsResult {
 
 export interface TopMachineResult {
   machine_id: string;
+  /** Returns as string from getRawMany, parse with Number() if needed */
   total_revenue: string;
   total_transactions: string;
   avg_availability: string;
@@ -25,6 +26,7 @@ export interface TopMachineResult {
 
 export interface TopProductResult {
   product_id: string;
+  /** Returns as string from getRawMany, parse with Number() if needed */
   total_units: string;
   total_revenue: string;
 }

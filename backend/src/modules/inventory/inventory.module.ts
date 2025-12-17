@@ -13,6 +13,14 @@ import { InventoryReservation } from './entities/inventory-reservation.entity';
 import { InventoryActualCount } from './entities/inventory-actual-count.entity';
 import { InventoryDifferenceThreshold } from './entities/inventory-difference-threshold.entity';
 import { InventoryAdjustment } from './entities/inventory-adjustment.entity';
+// Refactored core services
+import { WarehouseInventoryService } from './services/warehouse-inventory.service';
+import { OperatorInventoryService } from './services/operator-inventory.service';
+import { MachineInventoryService } from './services/machine-inventory.service';
+import { InventoryTransferService } from './services/inventory-transfer.service';
+import { InventoryMovementService } from './services/inventory-movement.service';
+import { InventoryReservationService } from './services/inventory-reservation.service';
+// Sprint 4 services
 import { InventoryCalculationService } from './services/inventory-calculation.service';
 import { InventoryCountService } from './services/inventory-count.service';
 import { InventoryDifferenceService } from './services/inventory-difference.service';
@@ -71,7 +79,15 @@ import { NotificationsModule } from '../notifications/notifications.module';
     InventoryThresholdsController,
   ],
   providers: [
+    // Core inventory services (refactored)
     InventoryService,
+    WarehouseInventoryService,
+    OperatorInventoryService,
+    MachineInventoryService,
+    InventoryTransferService,
+    InventoryMovementService,
+    InventoryReservationService,
+    // Sprint 4 services
     InventoryCalculationService,
     InventoryConsumptionCalculatorService,
     InventoryCountService,
@@ -84,7 +100,15 @@ import { NotificationsModule } from '../notifications/notifications.module';
     InventoryReportPresetsService,
   ],
   exports: [
+    // Core inventory services (refactored)
     InventoryService,
+    WarehouseInventoryService,
+    OperatorInventoryService,
+    MachineInventoryService,
+    InventoryTransferService,
+    InventoryMovementService,
+    InventoryReservationService,
+    // Sprint 4 services
     InventoryCalculationService,
     InventoryConsumptionCalculatorService,
     InventoryCountService,

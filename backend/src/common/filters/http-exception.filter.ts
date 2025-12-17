@@ -9,23 +9,23 @@ import {
 import { Request, Response } from 'express';
 
 /**
- * Structure of the exception response from HttpException
+ * Exception response structure from HttpException
  */
-interface HttpExceptionResponse {
+interface ExceptionResponse {
   message?: string | string[];
   error?: string;
   statusCode?: number;
 }
 
 /**
- * Error response returned to the client
+ * Error response returned to client
  */
 interface ErrorResponse {
   statusCode: number;
   timestamp: string;
   path: string;
   method: string;
-  message?: string | string[] | HttpExceptionResponse;
+  message?: string | string[] | ExceptionResponse;
   error?: string;
   stack?: string;
 }
@@ -74,9 +74,9 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
     // Extract message from exception
     if (typeof message === 'object' && message !== null) {
-      const exceptionResponse = message as HttpExceptionResponse;
-      errorResponse.message = exceptionResponse.message || message;
-      errorResponse.error = exceptionResponse.error;
+      const messageObj = message as ExceptionResponse;
+      errorResponse.message = messageObj.message || message;
+      errorResponse.error = messageObj.error;
     } else {
       errorResponse.message = message;
     }

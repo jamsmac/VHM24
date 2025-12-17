@@ -11,18 +11,18 @@ import { RateLimiterService, RateLimitResult } from '../services/rate-limiter.se
 import { Request, Response } from 'express';
 
 /**
- * Authenticated user info attached to request by JWT guard
+ * User payload attached to request by auth guard
  */
-export interface RequestUser {
+interface RequestUser {
   id?: string;
   userId?: string;
   role?: string;
 }
 
 /**
- * Express Request extended with authenticated user
+ * Express request with user property
  */
-export interface AuthenticatedRequest extends Request {
+interface AuthenticatedRequest extends Request {
   user?: RequestUser;
 }
 

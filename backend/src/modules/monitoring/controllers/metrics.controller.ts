@@ -6,7 +6,7 @@ import { MetricsService } from '../services/metrics.service';
  * Health check response
  */
 interface HealthResponse {
-  status: string;
+  status: 'healthy';
   timestamp: string;
   uptime: number;
   memory: NodeJS.MemoryUsage;
@@ -17,7 +17,7 @@ interface HealthResponse {
  * Readiness check response
  */
 interface ReadinessResponse {
-  status: string;
+  status: 'ready';
   timestamp: string;
   checks: {
     database: string;
@@ -30,14 +30,14 @@ interface ReadinessResponse {
  * Liveness check response
  */
 interface LivenessResponse {
-  status: string;
+  status: 'alive';
   timestamp: string;
 }
 
 /**
  * Metrics collection response
  */
-interface CollectMetricsResponse {
+interface MetricsCollectionResponse {
   message: string;
   timestamp: string;
 }
@@ -107,7 +107,7 @@ export class MetricsController {
    */
   @Get('collect-metrics')
   @ApiExcludeEndpoint()
-  async collectMetrics(): Promise<CollectMetricsResponse> {
+  async collectMetrics(): Promise<MetricsCollectionResponse> {
     await this.metricsService.collectBusinessMetrics();
     return {
       message: 'Metrics collection triggered',

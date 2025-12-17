@@ -1,6 +1,7 @@
 import { Entity, Column, OneToMany } from 'typeorm';
 import { BaseEntity } from '../../../common/entities/base.entity';
 import { IntegrationLog } from './integration-log.entity';
+import { encryptedColumnTransformer } from '../../../common/utils/crypto.util';
 
 export enum IntegrationType {
   PAYMENT_GATEWAY = 'payment_gateway',
@@ -45,16 +46,43 @@ export class Integration extends BaseEntity {
   @Column({ type: 'varchar', length: 500, nullable: true })
   api_endpoint: string | null;
 
-  @Column({ type: 'varchar', length: 500, nullable: true })
-  api_key: string | null; // Should be encrypted in production
+  /**
+   * API key - encrypted at rest using AES-256-GCM
+   * SEC-CRYPTO-01: Sensitive credentials encryption
+   */
+  @Column({
+    type: 'varchar',
+    length: 500,
+    nullable: true,
+    transformer: encryptedColumnTransformer,
+  })
+  api_key: string | null;
 
-  @Column({ type: 'varchar', length: 500, nullable: true })
-  api_secret: string | null; // Should be encrypted in production
+  /**
+   * API secret - encrypted at rest using AES-256-GCM
+   * SEC-CRYPTO-01: Sensitive credentials encryption
+   */
+  @Column({
+    type: 'varchar',
+    length: 500,
+    nullable: true,
+    transformer: encryptedColumnTransformer,
+  })
+  api_secret: string | null;
 
   @Column({ type: 'varchar', length: 500, nullable: true })
   webhook_url: string | null;
 
-  @Column({ type: 'varchar', length: 500, nullable: true })
+  /**
+   * Webhook secret - encrypted at rest using AES-256-GCM
+   * SEC-CRYPTO-01: Sensitive credentials encryption
+   */
+  @Column({
+    type: 'varchar',
+    length: 500,
+    nullable: true,
+    transformer: encryptedColumnTransformer,
+  })
   webhook_secret: string | null;
 
   @Column({ type: 'integer', default: 0 })

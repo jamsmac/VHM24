@@ -3,6 +3,21 @@ import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 
 /**
+ * Redis client interface for pattern-based operations
+ */
+interface RedisClient {
+  keys(pattern: string): Promise<string[]>;
+}
+
+/**
+ * Redis store with client accessor
+ */
+interface RedisStore {
+  client?: RedisClient;
+  getClient?: () => RedisClient;
+}
+
+/**
  * Redis Cache Service
  *
  * Provides high-level caching operations with Redis backend.
@@ -104,11 +119,7 @@ export class RedisCacheService {
   async delByPattern(pattern: string): Promise<number> {
     try {
       // Get underlying Redis client from cache manager
-      // Cache manager store type doesn't expose Redis client directly
-      const store = this.cacheManager.store as unknown as {
-        client?: { keys: (pattern: string) => Promise<string[]> };
-        getClient?: () => { keys: (pattern: string) => Promise<string[]> };
-      };
+      const store = this.cacheManager.store as unknown as RedisStore;
       const client = store.client || store.getClient?.();
 
       if (!client || typeof client.keys !== 'function') {
@@ -139,7 +150,7 @@ export class RedisCacheService {
   /**
    * Build report cache key
    */
-  buildReportKey(reportType: string, params: Record<string, any>): string {
+  buildReportKey(reportType: string, params: Record<string, unknown>): string {
     const paramsHash = this.hashParams(params);
     return `report:${reportType}:${paramsHash}`;
   }
@@ -147,7 +158,7 @@ export class RedisCacheService {
   /**
    * Build dashboard cache key
    */
-  buildDashboardKey(role: string, userId: string, params?: Record<string, any>): string {
+  buildDashboardKey(role: string, userId: string, params?: Record<string, unknown>): string {
     const paramsHash = params ? this.hashParams(params) : 'default';
     return `dashboard:${role}:${userId}:${paramsHash}`;
   }
@@ -162,7 +173,7 @@ export class RedisCacheService {
   /**
    * Build list cache key
    */
-  buildListKey(entityType: string, params?: Record<string, any>): string {
+  buildListKey(entityType: string, params?: Record<string, unknown>): string {
     const paramsHash = params ? this.hashParams(params) : 'all';
     return `list:${entityType}:${paramsHash}`;
   }
@@ -170,7 +181,7 @@ export class RedisCacheService {
   /**
    * Simple hash function for params object
    */
-  private hashParams(params: Record<string, any>): string {
+  private hashParams(params: Record<string, unknown>): string {
     const sortedParams = Object.keys(params)
       .sort()
       .reduce(
@@ -178,7 +189,7 @@ export class RedisCacheService {
           acc[key] = params[key];
           return acc;
         },
-        {} as Record<string, any>,
+        {} as Record<string, unknown>,
       );
 
     const str = JSON.stringify(sortedParams);
