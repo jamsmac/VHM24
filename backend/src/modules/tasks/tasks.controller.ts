@@ -9,10 +9,11 @@ import {
   Query,
   HttpCode,
   HttpStatus,
-  Request,
+  Req,
   UseGuards,
   ParseUUIDPipe,
 } from '@nestjs/common';
+import { Request as ExpressRequest } from 'express';
 import {
   ApiTags,
   ApiOperation,
@@ -30,6 +31,14 @@ import { TaskComment } from './entities/task-comment.entity';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+
+/** Request with authenticated user from JWT */
+interface AuthenticatedRequest extends ExpressRequest {
+  user: {
+    id: string;
+    role?: string;
+  };
+}
 
 @ApiTags('Tasks')
 @ApiBearerAuth('JWT-auth')
@@ -213,7 +222,7 @@ export class TasksController {
   })
   @ApiResponse({ status: 403, description: 'Доступ запрещен' })
   @ApiResponse({ status: 400, description: 'Невозможно начать задачу' })
-  startTask(@Param('id', ParseUUIDPipe) id: string, @Request() req: any): Promise<Task> {
+  startTask(@Param('id', ParseUUIDPipe) id: string, @Req() req: AuthenticatedRequest): Promise<Task> {
     const userId = req.user.id; // Из JWT токена
     return this.tasksService.startTask(id, userId);
   }
@@ -242,7 +251,7 @@ export class TasksController {
   completeTask(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() completeTaskDto: CompleteTaskDto,
-    @Request() req: any,
+    @Req() req: AuthenticatedRequest,
   ): Promise<Task> {
     const userId = req.user.id; // Из JWT токена
     return this.tasksService.completeTask(id, userId, completeTaskDto);
@@ -284,7 +293,7 @@ export class TasksController {
     status: 400,
     description: 'Фото еще не загружены или задача не требует фото',
   })
-  uploadPendingPhotos(@Param('id', ParseUUIDPipe) id: string, @Request() req: any): Promise<Task> {
+  uploadPendingPhotos(@Param('id', ParseUUIDPipe) id: string, @Req() req: AuthenticatedRequest): Promise<Task> {
     const userId = req.user.id;
     return this.tasksService.uploadPendingPhotos(id, userId);
   }
@@ -301,7 +310,7 @@ export class TasksController {
     description: 'Список задач с ожидающими фото',
     type: [Task],
   })
-  getPendingPhotosTasks(@Request() req: any): Promise<Task[]> {
+  getPendingPhotosTasks(@Req() req: AuthenticatedRequest): Promise<Task[]> {
     // Операторы видят только свои задачи, админы - все
     const userId = req.user.role === 'operator' ? req.user.id : undefined;
     return this.tasksService.getPendingPhotosTasks(userId);
@@ -319,7 +328,7 @@ export class TasksController {
   cancelTask(
     @Param('id', ParseUUIDPipe) id: string,
     @Body('reason') reason: string,
-    @Request() req: any,
+    @Req() req: AuthenticatedRequest,
   ): Promise<Task> {
     const userId = req.user.id;
     return this.tasksService.cancelTask(id, reason, userId);
@@ -351,7 +360,7 @@ export class TasksController {
   rejectTask(
     @Param('id', ParseUUIDPipe) id: string,
     @Body('reason') reason: string,
-    @Request() req: any,
+    @Req() req: AuthenticatedRequest,
   ): Promise<Task> {
     const userId = req.user.id;
     return this.tasksService.rejectTask(id, userId, reason);
@@ -369,7 +378,7 @@ export class TasksController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body('newScheduledDate') newScheduledDate: string,
     @Body('reason') reason: string,
-    @Request() req: any,
+    @Req() req: AuthenticatedRequest,
   ): Promise<Task> {
     const userId = req.user.id;
     return this.tasksService.postponeTask(id, new Date(newScheduledDate), reason, userId);
@@ -387,7 +396,7 @@ export class TasksController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body('comment') comment: string,
     @Body('isInternal') isInternal: boolean,
-    @Request() req: any,
+    @Req() req: AuthenticatedRequest,
   ): Promise<TaskComment> {
     const userId = req.user.id;
     return this.tasksService.addComment(id, userId, comment, isInternal);
