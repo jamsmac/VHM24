@@ -40,7 +40,7 @@ export class Position extends BaseEntity {
   metadata: {
     requirements?: string[];
     responsibilities?: string[];
-    [key: string]: any;
+    [key: string]: unknown;
   };
 
   @OneToMany(() => Employee, (employee) => employee.position)

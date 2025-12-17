@@ -27,7 +27,7 @@ export class Department extends BaseEntity {
     cost_center?: string;
     location?: string;
     budget?: number;
-    [key: string]: any;
+    [key: string]: unknown;
   };
 
   @OneToMany(() => Employee, (employee) => employee.department)

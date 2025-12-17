@@ -51,6 +51,6 @@ export class Attendance extends BaseEntity {
     ip_address?: string;
     device?: string;
     geo_coordinates?: { lat: number; lng: number };
-    [key: string]: any;
+    [key: string]: unknown;
   };
 }

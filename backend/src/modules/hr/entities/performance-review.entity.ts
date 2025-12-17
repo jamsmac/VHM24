@@ -71,7 +71,7 @@ export class PerformanceReview extends BaseEntity {
   @Column({ type: 'jsonb', default: {} })
   metadata: {
     competencies?: Record<string, number>;
-    kpis?: Record<string, any>;
-    [key: string]: any;
+    kpis?: Record<string, unknown>;
+    [key: string]: unknown;
   };
 }

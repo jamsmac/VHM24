@@ -99,7 +99,7 @@ export class Employee extends BaseEntity {
     name?: string;
     relationship?: string;
     phone?: string;
-    [key: string]: any;
+    [key: string]: unknown;
   };
 
   @Column({ type: 'jsonb', default: {} })
@@ -108,7 +108,7 @@ export class Employee extends BaseEntity {
     certifications?: string[];
     skills?: string[];
     languages?: string[];
-    [key: string]: any;
+    [key: string]: unknown;
   };
 
   @OneToMany(() => Attendance, (attendance) => attendance.employee)

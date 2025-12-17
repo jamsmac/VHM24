@@ -71,6 +71,6 @@ export class Payroll extends BaseEntity {
       deduction_type?: string;
       amount?: number;
     }[];
-    [key: string]: any;
+    [key: string]: unknown;
   };
 }

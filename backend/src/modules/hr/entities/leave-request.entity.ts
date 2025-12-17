@@ -60,6 +60,6 @@ export class LeaveRequest extends BaseEntity {
   metadata: {
     attachments?: string[];
     handover_notes?: string;
-    [key: string]: any;
+    [key: string]: unknown;
   };
 }
