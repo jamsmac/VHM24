@@ -121,7 +121,8 @@ export class TelegramI18nService implements OnModuleInit {
   getFixedT(language: TelegramLanguage | string): TFunction {
     if (!this.isInitialized) {
       this.logger.warn('i18next not initialized yet');
-      return ((key: string) => key) as any as TFunction;
+      // Return fallback function that returns the key itself
+      return ((key: string) => key) as unknown as TFunction;
     }
 
     return i18next.getFixedT(language);

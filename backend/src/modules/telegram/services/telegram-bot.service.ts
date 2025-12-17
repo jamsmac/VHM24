@@ -125,7 +125,7 @@ export class TelegramBotService implements OnModuleInit {
                 telegramId: ctx.from.id.toString(),
                 state: ConversationState.IDLE,
                 context: {},
-              } as any);
+              });
 
               session = await this.sessionService.getSession(telegramUser.user_id);
             }
@@ -2177,12 +2177,14 @@ export class TelegramBotService implements OnModuleInit {
   private async toggleNotification(ctx: BotContext, notificationType: string): Promise<void> {
     if (!ctx.telegramUser) return;
 
-    const prefs = (ctx.telegramUser.notification_preferences || {}) as Record<
-      string,
-      boolean | undefined
-    >;
-    prefs[notificationType] = !prefs[notificationType];
-    ctx.telegramUser.notification_preferences = prefs as any;
+    // Get current preferences or empty object
+    const currentPrefs = ctx.telegramUser.notification_preferences || {};
+    // Toggle the specific notification type
+    const updatedPrefs = {
+      ...currentPrefs,
+      [notificationType]: !currentPrefs[notificationType as keyof typeof currentPrefs],
+    };
+    ctx.telegramUser.notification_preferences = updatedPrefs;
 
     await this.telegramUserRepository.save(ctx.telegramUser);
 
