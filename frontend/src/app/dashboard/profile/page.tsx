@@ -19,6 +19,7 @@ import {
   NotificationChannel,
   notificationTypeLabels,
   channelLabels,
+  type NotificationPreference,
 } from '@/lib/notifications-api'
 import { Button } from '@/components/ui/button'
 import {
@@ -567,7 +568,7 @@ function NotificationsTab({
   preferences,
   isLoading,
 }: {
-  preferences: any[]
+  preferences: NotificationPreference[]
   isLoading: boolean
 }) {
   const queryClient = useQueryClient()
