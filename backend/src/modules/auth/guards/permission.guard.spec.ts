@@ -5,12 +5,18 @@ import { PermissionGuard } from './permission.guard';
 import { RbacService } from '@modules/rbac/rbac.service';
 import { PERMISSION_KEY } from '../decorators/permission.decorator';
 
+// Type for mock user in execution context
+interface MockRequestUser {
+  sub?: string;
+  email?: string;
+}
+
 describe('PermissionGuard', () => {
   let guard: PermissionGuard;
   let reflector: jest.Mocked<Reflector>;
   let rbacService: jest.Mocked<RbacService>;
 
-  const mockExecutionContext = (user?: any): ExecutionContext => {
+  const mockExecutionContext = (user?: MockRequestUser | null): ExecutionContext => {
     return {
       switchToHttp: () => ({
         getRequest: () => ({ user }),

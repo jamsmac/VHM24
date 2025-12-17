@@ -14,8 +14,11 @@ import { EmailService } from '../email/email.service';
 import { SessionService } from './services/session.service';
 import { TokenBlacklistService } from './services/token-blacklist.service';
 import { AuditLogService } from '../security/services/audit-log.service';
-// Repository type imported for potential future use in type annotations
-import type { Repository as _Repository } from 'typeorm';
+// Repository type imported for type annotations
+import type { Repository } from 'typeorm';
+
+// Note: Test files use Record<string, jest.Mock> pattern for mock services
+// This provides flexibility in mock return values, which is standard Jest practice
 
 /**
  * Integration tests for Auth and Users modules
@@ -23,10 +26,10 @@ import type { Repository as _Repository } from 'typeorm';
  */
 describe('Auth + Users Integration', () => {
   let authService: AuthService;
-  let usersService: any;
-  let _userRepository: any;
-  let jwtService: any;
-  let _configService: any;
+  let usersService: Record<string, jest.Mock>;
+  let _userRepository: Record<string, jest.Mock>;
+  let jwtService: Record<string, jest.Mock>;
+  let _configService: { get: jest.Mock };
   let module: TestingModule;
 
   const mockUser: User = {
@@ -74,7 +77,7 @@ describe('Auth + Users Integration', () => {
     };
 
     const mockConfigService = {
-      get: jest.fn().mockImplementation((key: string, defaultValue?: any) => {
+      get: jest.fn().mockImplementation((key: string, defaultValue?: string | number | boolean) => {
         if (key === 'JWT_ACCESS_EXPIRATION') return '15m';
         if (key === 'JWT_REFRESH_EXPIRATION') return '7d';
         if (key === 'JWT_SECRET') return 'secret_key';
@@ -181,10 +184,10 @@ describe('Auth + Users Integration', () => {
 
     module = moduleRef;
     authService = moduleRef.get<AuthService>(AuthService);
-    usersService = moduleRef.get(UsersService);
-    jwtService = moduleRef.get(JwtService);
-    _configService = moduleRef.get(ConfigService);
-    _userRepository = moduleRef.get(getRepositoryToken(User));
+    usersService = moduleRef.get(UsersService) as unknown as Record<string, jest.Mock>;
+    jwtService = moduleRef.get(JwtService) as unknown as Record<string, jest.Mock>;
+    _configService = moduleRef.get(ConfigService) as { get: jest.Mock };
+    _userRepository = moduleRef.get(getRepositoryToken(User)) as unknown as Record<string, jest.Mock>;
   });
 
   afterEach(() => {

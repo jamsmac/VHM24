@@ -7,8 +7,11 @@ describe('PasswordPolicyService', () => {
   let service: PasswordPolicyService;
   let _configService: ConfigService;
 
+  // Config value type
+  type ConfigValue = string | number | boolean;
+
   // Default config values
-  const defaultConfig = {
+  const defaultConfig: Record<string, ConfigValue> = {
     PASSWORD_MIN_LENGTH: 8,
     PASSWORD_MAX_LENGTH: 128,
     PASSWORD_REQUIRE_UPPERCASE: true,
@@ -18,10 +21,10 @@ describe('PasswordPolicyService', () => {
     PASSWORD_SPECIAL_CHARS: '@$!%*?&#',
   };
 
-  const createConfigService = (overrides: Record<string, any> = {}) => {
-    const config: Record<string, any> = { ...defaultConfig, ...overrides };
+  const createConfigService = (overrides: Record<string, ConfigValue> = {}) => {
+    const config: Record<string, ConfigValue> = { ...defaultConfig, ...overrides };
     return {
-      get: jest.fn((key: string, defaultValue?: any) => {
+      get: jest.fn((key: string, defaultValue?: ConfigValue) => {
         return key in config ? config[key] : defaultValue;
       }),
     };

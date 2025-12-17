@@ -56,11 +56,11 @@ describe('TwoFactorAuthService', () => {
     mockUsersService = {
       findOne: jest.fn(),
       update: jest.fn(),
-    } as any;
+    } as jest.Mocked<Pick<UsersService, 'findOne' | 'update'>> as jest.Mocked<UsersService>;
 
     mockAuditLogService = {
       log: jest.fn().mockResolvedValue({}),
-    } as any;
+    } as jest.Mocked<Pick<AuditLogService, 'log'>> as jest.Mocked<AuditLogService>;
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -76,8 +76,8 @@ describe('TwoFactorAuthService', () => {
         {
           provide: ConfigService,
           useValue: {
-            get: jest.fn((key: string, defaultValue?: any) => {
-              const config: Record<string, any> = {
+            get: jest.fn((key: string, defaultValue?: string) => {
+              const config: Record<string, string> = {
                 ENCRYPTION_KEY: '0'.repeat(64),
                 APP_NAME: 'VendHub',
               };
@@ -528,7 +528,7 @@ describe('TwoFactorAuthService', () => {
             {
               provide: ConfigService,
               useValue: {
-                get: jest.fn((key: string, defaultValue?: any) => {
+                get: jest.fn((key: string, defaultValue?: string) => {
                   if (key === 'ENCRYPTION_KEY') {
                     return undefined;
                   }
@@ -539,7 +539,7 @@ describe('TwoFactorAuthService', () => {
           ],
         }).compile();
       } catch (error) {
-        expect(error.message).toContain('ENCRYPTION_KEY must be set');
+        expect((error as Error).message).toContain('ENCRYPTION_KEY must be set');
       }
     });
 
@@ -561,7 +561,7 @@ describe('TwoFactorAuthService', () => {
             {
               provide: ConfigService,
               useValue: {
-                get: jest.fn((key: string, defaultValue?: any) => {
+                get: jest.fn((key: string, defaultValue?: string) => {
                   if (key === 'ENCRYPTION_KEY') {
                     return 'generate_32_byte_key_with_command_above_64_hex_characters';
                   }
@@ -572,7 +572,7 @@ describe('TwoFactorAuthService', () => {
           ],
         }).compile();
       } catch (error) {
-        expect(error.message).toContain('ENCRYPTION_KEY must be set');
+        expect((error as Error).message).toContain('ENCRYPTION_KEY must be set');
       }
     });
   });

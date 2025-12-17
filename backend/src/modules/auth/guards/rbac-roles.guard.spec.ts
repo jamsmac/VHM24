@@ -4,12 +4,18 @@ import { Reflector } from '@nestjs/core';
 import { RbacRolesGuard } from './rbac-roles.guard';
 import { UsersService } from '@modules/users/users.service';
 
+// Type for mock user in execution context
+interface MockRequestUser {
+  id?: string;
+  email?: string;
+}
+
 describe('RbacRolesGuard', () => {
   let guard: RbacRolesGuard;
   let reflector: jest.Mocked<Reflector>;
   let usersService: jest.Mocked<UsersService>;
 
-  const mockExecutionContext = (user?: any): ExecutionContext => {
+  const mockExecutionContext = (user?: MockRequestUser | null): ExecutionContext => {
     return {
       switchToHttp: () => ({
         getRequest: () => ({ user }),

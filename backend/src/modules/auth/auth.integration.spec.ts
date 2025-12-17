@@ -4,6 +4,29 @@ import * as request from 'supertest';
 import { AppModule } from '@/app.module';
 import { DataSource } from 'typeorm';
 
+// Types for API response objects
+interface UserListItem {
+  id: string;
+  email: string;
+  full_name: string;
+  role: string;
+  status: string;
+}
+
+interface MachineListItem {
+  id: string;
+  machine_number: string;
+  name: string;
+  status: string;
+}
+
+interface InventoryMovementItem {
+  id: string;
+  movement_type: string;
+  quantity: number;
+  nomenclature_id: string;
+}
+
 /**
  * Integration tests for authentication flow
  *
@@ -124,7 +147,7 @@ describe.skip('Auth Integration Tests (Critical Security Flow)', () => {
       expect(Array.isArray(response.body)).toBe(true);
 
       // Check each user in the list
-      response.body.forEach((user: any) => {
+      response.body.forEach((user: UserListItem) => {
         expect(user).not.toHaveProperty('password_hash');
         expect(user).not.toHaveProperty('two_fa_secret');
         expect(user).not.toHaveProperty('refresh_token');
@@ -247,7 +270,7 @@ describe.skip('Auth Integration Tests (Critical Security Flow)', () => {
         .set('Authorization', `Bearer ${adminToken}`)
         .expect(200);
 
-      const deletedMachine = listResponse.body.find((m: any) => m.id === machineId);
+      const deletedMachine = listResponse.body.find((m: MachineListItem) => m.id === machineId);
       expect(deletedMachine).toBeUndefined();
     });
   });
@@ -279,7 +302,7 @@ describe.skip('Auth Integration Tests (Critical Security Flow)', () => {
         .expect(200);
 
       if (response.body.data && response.body.data.length > 0) {
-        response.body.data.forEach((movement: any) => {
+        response.body.data.forEach((movement: InventoryMovementItem & { performed_by?: UserListItem }) => {
           // Check if performed_by user data doesn't contain sensitive fields
           if (movement.performed_by) {
             expect(movement.performed_by).not.toHaveProperty('password_hash');

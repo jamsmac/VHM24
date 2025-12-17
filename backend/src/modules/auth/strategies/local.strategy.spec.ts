@@ -4,6 +4,14 @@ import { LocalStrategy } from './local.strategy';
 import { AuthService } from '../auth.service';
 import { UserRole, UserStatus } from '../../users/entities/user.entity';
 
+// Local interface matching the one in local.strategy.ts for test typing
+interface LocalStrategyRequest {
+  body: {
+    email?: string;
+    username?: string;
+  };
+}
+
 describe('LocalStrategy', () => {
   let strategy: LocalStrategy;
   let authService: jest.Mocked<AuthService>;
@@ -75,7 +83,8 @@ describe('LocalStrategy', () => {
     });
 
     it('should fallback to email parameter when body fields are empty', async () => {
-      const req = { body: { password: 'password123' } };
+      // Cast to unknown to allow testing edge case where body has no email/username
+      const req = { body: { password: 'password123' } } as unknown as LocalStrategyRequest;
       authService.validateUser.mockResolvedValue(mockUser as any);
 
       await strategy.validate(req, 'param@example.com', 'password123');

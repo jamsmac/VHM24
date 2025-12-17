@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { UnauthorizedException, BadRequestException, NotFoundException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
@@ -14,6 +15,17 @@ import { AuditLogService } from '../security/services/audit-log.service';
 import { EmailService } from '../email/email.service';
 import { SessionService } from './services/session.service';
 import { TokenBlacklistService } from './services/token-blacklist.service';
+
+// Note: Test files use simplified mock types with 'unknown' casting for flexibility
+// This is a standard Jest pattern that prioritizes test maintainability over strict typing
+
+// Simplified mock types for test flexibility
+type MockUsersService = Partial<jest.Mocked<UsersService>>;
+type MockAuditLogService = Partial<jest.Mocked<AuditLogService>>;
+type MockSessionService = Partial<jest.Mocked<SessionService>>;
+type MockEmailService = Partial<jest.Mocked<EmailService>>;
+type MockPasswordResetTokenRepository = Record<string, jest.Mock>;
+type MockTokenBlacklistService = Partial<jest.Mocked<TokenBlacklistService>>;
 
 // Mock bcrypt
 jest.mock('bcrypt');
@@ -71,7 +83,7 @@ describe('AuthService', () => {
   };
 
   beforeEach(async () => {
-    const mockUsersService: any = {
+    const mockUsersService: MockUsersService = {
       findByEmail: jest.fn(),
       findOne: jest.fn(),
       findOneEntity: jest.fn(),
@@ -84,26 +96,25 @@ describe('AuthService', () => {
       save: jest.fn(),
     };
 
-    const mockAuditLogService: any = {
+    const mockAuditLogService: MockAuditLogService = {
       log: jest.fn().mockResolvedValue({}),
     };
 
-    const mockSessionService: any = {
+    const mockSessionService: MockSessionService = {
       createSession: jest.fn(),
-      findActiveSessionsByUserId: jest.fn(),
-      terminateSession: jest.fn(),
+      getActiveSessions: jest.fn(),
+      revokeSession: jest.fn(),
       revokeAllUserSessions: jest.fn(),
-      validateRefreshToken: jest.fn(),
       findSessionByRefreshToken: jest.fn(),
       verifyRefreshToken: jest.fn(),
       rotateRefreshToken: jest.fn(),
     };
 
-    const mockEmailService: any = {
+    const mockEmailService: MockEmailService = {
       sendPasswordResetEmail: jest.fn(),
     };
 
-    const mockPasswordResetTokenRepository: any = {
+    const mockPasswordResetTokenRepository: MockPasswordResetTokenRepository = {
       findOne: jest.fn(),
       create: jest.fn(),
       save: jest.fn(),
@@ -111,11 +122,11 @@ describe('AuthService', () => {
       softDelete: jest.fn(),
     };
 
-    const mockTokenBlacklistService: any = {
-      isTokenBlacklisted: jest.fn().mockResolvedValue(false),
+    const mockTokenBlacklistService: MockTokenBlacklistService = {
+      isBlacklisted: jest.fn().mockResolvedValue(false),
       blacklistToken: jest.fn().mockResolvedValue(undefined),
-      blacklistAllUserTokens: jest.fn().mockResolvedValue(undefined),
       blacklistUserTokens: jest.fn().mockResolvedValue(undefined),
+      shouldRejectToken: jest.fn().mockResolvedValue(false),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -713,10 +724,12 @@ describe('AuthService', () => {
   // ============================================================================
 
   describe('requestPasswordReset', () => {
-    let passwordResetTokenRepository: any;
+    let passwordResetTokenRepository: MockPasswordResetTokenRepository;
 
     beforeEach(() => {
-      passwordResetTokenRepository = (service as any).passwordResetTokenRepository;
+      passwordResetTokenRepository = (
+        service as unknown as { passwordResetTokenRepository: MockPasswordResetTokenRepository }
+      ).passwordResetTokenRepository;
     });
 
     it('should return success even when user not found (prevent enumeration)', async () => {
@@ -828,10 +841,12 @@ describe('AuthService', () => {
   });
 
   describe('validateResetToken', () => {
-    let passwordResetTokenRepository: any;
+    let passwordResetTokenRepository: MockPasswordResetTokenRepository;
 
     beforeEach(() => {
-      passwordResetTokenRepository = (service as any).passwordResetTokenRepository;
+      passwordResetTokenRepository = (
+        service as unknown as { passwordResetTokenRepository: MockPasswordResetTokenRepository }
+      ).passwordResetTokenRepository;
     });
 
     it('should return invalid for non-existent token', async () => {
@@ -934,13 +949,15 @@ describe('AuthService', () => {
   });
 
   describe('resetPassword', () => {
-    let passwordResetTokenRepository: any;
+    let passwordResetTokenRepository: MockPasswordResetTokenRepository;
     const newPassword = 'NewSecure123!';
     const ip = '192.168.1.100';
     const userAgent = 'Mozilla/5.0';
 
     beforeEach(() => {
-      passwordResetTokenRepository = (service as any).passwordResetTokenRepository;
+      passwordResetTokenRepository = (
+        service as unknown as { passwordResetTokenRepository: MockPasswordResetTokenRepository }
+      ).passwordResetTokenRepository;
     });
 
     it('should throw BadRequestException for invalid token', async () => {
@@ -1028,10 +1045,12 @@ describe('AuthService', () => {
   });
 
   describe('cleanupExpiredResetTokens', () => {
-    let passwordResetTokenRepository: any;
+    let passwordResetTokenRepository: MockPasswordResetTokenRepository;
 
     beforeEach(() => {
-      passwordResetTokenRepository = (service as any).passwordResetTokenRepository;
+      passwordResetTokenRepository = (
+        service as unknown as { passwordResetTokenRepository: MockPasswordResetTokenRepository }
+      ).passwordResetTokenRepository;
     });
 
     it('should soft delete expired tokens and return count', async () => {

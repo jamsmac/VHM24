@@ -54,17 +54,19 @@ describe('SessionService', () => {
       find: jest.fn(),
       update: jest.fn(),
       softDelete: jest.fn(),
-    } as any;
+    } as jest.Mocked<
+      Pick<Repository<UserSession>, 'create' | 'save' | 'findOne' | 'find' | 'update' | 'softDelete'>
+    > as jest.Mocked<Repository<UserSession>>;
 
     mockConfigService = {
-      get: jest.fn((key: string, defaultValue?: any) => {
-        const config: Record<string, any> = {
+      get: jest.fn((key: string, defaultValue?: string | number) => {
+        const config: Record<string, string | number> = {
           MAX_SESSIONS_PER_USER: 5,
           SESSION_EXPIRATION_DAYS: 7,
         };
         return config[key] ?? defaultValue;
       }),
-    } as any;
+    } as unknown as jest.Mocked<ConfigService>;
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [

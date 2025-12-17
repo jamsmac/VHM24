@@ -48,8 +48,8 @@ describe('TokenBlacklistService', () => {
         {
           provide: ConfigService,
           useValue: {
-            get: jest.fn((key: string, defaultValue?: any) => {
-              const config: Record<string, any> = {
+            get: jest.fn((key: string, defaultValue?: string | number | undefined) => {
+              const config: Record<string, string | number | undefined> = {
                 REDIS_HOST: 'localhost',
                 REDIS_PORT: 6379,
                 REDIS_PASSWORD: undefined,
@@ -260,7 +260,12 @@ describe('TokenBlacklistService', () => {
   });
 
   describe('shouldRejectToken', () => {
-    let mockPipeline: any;
+    interface MockRedisPipeline {
+      exists: jest.Mock;
+      exec: jest.Mock;
+    }
+
+    let mockPipeline: MockRedisPipeline;
 
     beforeEach(() => {
       mockPipeline = {
@@ -376,23 +381,27 @@ describe('TokenBlacklistService', () => {
 
     it('should handle connect event callback', async () => {
       // Find the connect event callback
-      const connectCall = mockRedis.on.mock.calls.find((call: any[]) => call[0] === 'connect');
+      type RedisEventCall = [string, (...args: unknown[]) => void];
+      const connectCall = mockRedis.on.mock.calls.find(
+        (call: RedisEventCall) => call[0] === 'connect',
+      );
       expect(connectCall).toBeDefined();
       // Invoke the callback - should not throw
-      expect(() => connectCall[1]()).not.toThrow();
+      expect(() => connectCall![1]()).not.toThrow();
     });
 
     it('should handle error event callback', async () => {
       // Find the error event callback
-      const errorCall = mockRedis.on.mock.calls.find((call: any[]) => call[0] === 'error');
+      type RedisEventCall = [string, (...args: unknown[]) => void];
+      const errorCall = mockRedis.on.mock.calls.find((call: RedisEventCall) => call[0] === 'error');
       expect(errorCall).toBeDefined();
       // Invoke the callback with an error - should not throw
-      expect(() => errorCall[1](new Error('Redis connection error'))).not.toThrow();
+      expect(() => errorCall![1](new Error('Redis connection error'))).not.toThrow();
     });
 
     it('should not throw when redis is not initialized on destroy', async () => {
       // Access private redis property and set to undefined
-      (service as any).redis = undefined;
+      (service as unknown as { redis: undefined }).redis = undefined;
 
       await expect(service.onModuleDestroy()).resolves.not.toThrow();
     });

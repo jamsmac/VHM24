@@ -5,6 +5,7 @@ import { ThrottlerGuard } from '@nestjs/throttler';
 import { AuthController } from './auth.controller';
 import { AuthService, AuthResponse, AuthTokens } from './auth.service';
 import { TwoFactorAuthService } from './services/two-factor-auth.service';
+import { TwoFactorAuthService as SecurityTwoFactorAuthService } from '../security/services/two-factor-auth.service';
 import { SessionService } from './services/session.service';
 import { CookieService } from './services/cookie.service';
 import { User, UserRole, UserStatus } from '../users/entities/user.entity';
@@ -16,6 +17,7 @@ describe('AuthController', () => {
   let controller: AuthController;
   let mockAuthService: jest.Mocked<AuthService>;
   let mockTwoFactorAuthService: jest.Mocked<TwoFactorAuthService>;
+  let mockSecurityTwoFactorAuthService: jest.Mocked<SecurityTwoFactorAuthService>;
   let mockSessionService: jest.Mocked<SessionService>;
   let mockCookieService: jest.Mocked<CookieService>;
 
@@ -66,6 +68,15 @@ describe('AuthController', () => {
       verifyToken: jest.fn(),
     } as any;
 
+    mockSecurityTwoFactorAuthService = {
+      generateSecret: jest.fn(),
+      verifyToken: jest.fn(),
+      enable2FA: jest.fn(),
+      disable2FA: jest.fn(),
+      generateBackupCodes: jest.fn(),
+      verifyBackupCode: jest.fn(),
+    } as any;
+
     mockSessionService = {
       getActiveSessions: jest.fn(),
       getAllSessions: jest.fn(),
@@ -84,6 +95,7 @@ describe('AuthController', () => {
       providers: [
         { provide: AuthService, useValue: mockAuthService },
         { provide: TwoFactorAuthService, useValue: mockTwoFactorAuthService },
+        { provide: SecurityTwoFactorAuthService, useValue: mockSecurityTwoFactorAuthService },
         { provide: SessionService, useValue: mockSessionService },
         { provide: CookieService, useValue: mockCookieService },
       ],

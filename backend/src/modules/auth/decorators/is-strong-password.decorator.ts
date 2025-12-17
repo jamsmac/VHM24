@@ -24,7 +24,7 @@ export class IsStrongPasswordConstraint implements ValidatorConstraintInterface 
    * @param value - Password value
    * @returns true if valid, false otherwise
    */
-  validate(value: any): boolean {
+  validate(value: unknown): boolean {
     if (typeof value !== 'string') {
       return false;
     }
