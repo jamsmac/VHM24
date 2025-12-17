@@ -37,18 +37,27 @@ export class TokenBlacklistService implements OnModuleInit, OnModuleDestroy {
   }
 
   async onModuleInit(): Promise<void> {
-    this.redis = new Redis({
-      host: this.configService.get<string>('REDIS_HOST', 'localhost'),
-      port: this.configService.get<number>('REDIS_PORT', 6379),
-      password: this.configService.get<string>('REDIS_PASSWORD'),
-      retryStrategy: (times) => {
-        if (times > 3) {
-          this.logger.error('Redis blacklist connection failed after 3 retries');
-          return null;
-        }
-        return Math.min(times * 200, 1000);
-      },
-    });
+    const redisUrl = this.configService.get<string>('REDIS_URL');
+
+    const retryStrategy = (times: number) => {
+      if (times > 3) {
+        this.logger.error('Redis blacklist connection failed after 3 retries');
+        return null;
+      }
+      return Math.min(times * 200, 1000);
+    };
+
+    // Support both REDIS_URL and individual variables
+    if (redisUrl) {
+      this.redis = new Redis(redisUrl, { retryStrategy });
+    } else {
+      this.redis = new Redis({
+        host: this.configService.get<string>('REDIS_HOST', 'localhost'),
+        port: this.configService.get<number>('REDIS_PORT', 6379),
+        password: this.configService.get<string>('REDIS_PASSWORD'),
+        retryStrategy,
+      });
+    }
 
     this.redis.on('connect', () => {
       this.logger.log('Token blacklist Redis connected');

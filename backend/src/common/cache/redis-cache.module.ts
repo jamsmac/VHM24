@@ -27,20 +27,26 @@ import { redisStore } from 'cache-manager-ioredis-yet';
     CacheModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => {
-        const redisHost = configService.get<string>('REDIS_HOST', 'localhost');
-        const redisPort = configService.get<number>('REDIS_PORT', 6379);
-        const redisPassword = configService.get<string>('REDIS_PASSWORD');
+        const redisUrl = configService.get<string>('REDIS_URL');
         const ttl = configService.get<number>('CACHE_TTL', 300) * 1000; // Convert to ms
 
+        // Support both REDIS_URL and individual variables
+        const storeConfig = redisUrl
+          ? {
+              url: redisUrl,
+              ttl,
+              keyPrefix: 'vendhub:cache:',
+            }
+          : {
+              host: configService.get<string>('REDIS_HOST', 'localhost'),
+              port: configService.get<number>('REDIS_PORT', 6379),
+              password: configService.get<string>('REDIS_PASSWORD'),
+              ttl,
+              keyPrefix: 'vendhub:cache:',
+            };
+
         return {
-          store: await redisStore({
-            host: redisHost,
-            port: redisPort,
-            password: redisPassword,
-            ttl,
-            // Redis key prefix for cache entries
-            keyPrefix: 'vendhub:cache:',
-          }),
+          store: await redisStore(storeConfig as any),
           ttl,
           max: configService.get<number>('CACHE_MAX', 1000),
         };
