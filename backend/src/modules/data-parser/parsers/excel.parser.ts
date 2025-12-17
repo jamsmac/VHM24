@@ -35,8 +35,8 @@ type RowData = Record<string, unknown>;
 export class ExcelParser implements DataParser {
   private readonly logger = new Logger(ExcelParser.name);
 
-  // Template configurations for different report types
-  private readonly templates = {
+  // Template configurations for different report types (reserved for future use)
+  private readonly _templates = {
     cash_register_report: {
       sheetIndex: 0,
       headerRow: 3,

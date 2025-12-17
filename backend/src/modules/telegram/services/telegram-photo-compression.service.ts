@@ -41,7 +41,7 @@ export class TelegramPhotoCompressionService {
   private readonly MAX_WIDTH = 1920; // Full HD width
   private readonly MAX_HEIGHT = 1080; // Full HD height
   private readonly QUALITY = 80; // JPEG quality (0-100)
-  private readonly FORMAT = 'jpeg'; // Output format
+  private readonly _FORMAT = 'jpeg'; // Output format (reserved for future use)
 
   /**
    * Compress photo buffer

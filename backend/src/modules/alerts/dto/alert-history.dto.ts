@@ -5,7 +5,7 @@ import {
   IsUUID,
   MaxLength,
 } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import { AlertStatus } from '../entities/alert-history.entity';
 
 /**

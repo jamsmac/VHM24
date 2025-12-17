@@ -7,7 +7,7 @@ import {
   forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, LessThan, MoreThan, In } from 'typeorm';
+import { Repository } from 'typeorm';
 import {
   AlertRule,
   AlertMetric,
