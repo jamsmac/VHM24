@@ -72,8 +72,7 @@ export class ImportWorkflow {
 
       const parsedFile = await this.fileIntakeAgent.execute(fileUpload, context);
       await this.sessionRepo.update(session.id, {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        file_metadata: parsedFile.metadata as any,
+        file_metadata: parsedFile.metadata as unknown as Record<string, any>,
       });
 
       // Step 2: Classification
@@ -83,8 +82,7 @@ export class ImportWorkflow {
       const classificationResult = await this.classificationAgent.execute(parsedFile, context);
       await this.sessionRepo.update(session.id, {
         domain: classificationResult.domain,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        classification_result: classificationResult as any,
+        classification_result: classificationResult as unknown as Record<string, any>,
         template_id: classificationResult.suggestedTemplate,
       });
 
@@ -109,8 +107,7 @@ export class ImportWorkflow {
         context,
       );
       await this.sessionRepo.update(session.id, {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        validation_report: validationReport as any,
+        validation_report: validationReport as unknown as Record<string, any>,
       });
 
       if (!validationReport.canProceed) {
@@ -140,8 +137,7 @@ export class ImportWorkflow {
         context,
       );
       await this.sessionRepo.update(session.id, {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        action_plan: actionPlan as any,
+        action_plan: actionPlan as unknown as Record<string, any>,
       });
 
       // Step 5: UX/Approval
@@ -180,8 +176,7 @@ export class ImportWorkflow {
 
       const executionResult = await this.executionAgent.execute(actionPlan, context);
       await this.sessionRepo.update(session.id, {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        execution_result: executionResult as any,
+        execution_result: executionResult as unknown as Record<string, any>,
       });
 
       // Step 7: Reconciliation
@@ -263,8 +258,7 @@ export class ImportWorkflow {
         context,
       );
       await this.sessionRepo.update(sessionId, {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        execution_result: executionResult as any,
+        execution_result: executionResult as unknown as Record<string, any>,
       });
 
       // Reconciliation
