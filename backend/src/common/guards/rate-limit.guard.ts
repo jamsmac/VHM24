@@ -5,18 +5,32 @@ import {
   HttpException,
   HttpStatus,
   Logger,
-  Inject,
-  Optional
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { RateLimiterService } from '../services/rate-limiter.service';
+import { RateLimiterService, RateLimitResult } from '../services/rate-limiter.service';
 import { Request, Response } from 'express';
+
+/**
+ * User payload attached to request by auth guard
+ */
+interface RequestUser {
+  id?: string;
+  userId?: string;
+  role?: string;
+}
+
+/**
+ * Express request with user property
+ */
+interface AuthenticatedRequest extends Request {
+  user?: RequestUser;
+}
 
 export interface RateLimitOptions {
   limit?: number;
   windowMs?: number;
   skipForRoles?: string[];
-  keyGenerator?: (req: Request, user?: any) => string;
+  keyGenerator?: (req: Request, user?: RequestUser) => string;
 }
 
 export const RATE_LIMIT_KEY = 'rateLimit';
@@ -41,7 +55,7 @@ export class RateLimitGuard implements CanActivate {
     );
 
     // Get user from request (set by auth guard)
-    const user = (request as any).user;
+    const user = (request as AuthenticatedRequest).user;
     const userId = user?.id || user?.userId;
     const userRole = user?.role;
 
@@ -111,7 +125,7 @@ export class RateLimitGuard implements CanActivate {
   ): string {
     // Use custom key generator if provided
     if (options?.keyGenerator) {
-      return options.keyGenerator(request, (request as any).user);
+      return options.keyGenerator(request, (request as AuthenticatedRequest).user);
     }
 
     // Prefer user ID for authenticated requests
@@ -180,7 +194,7 @@ export class RateLimitGuard implements CanActivate {
   /**
    * Set rate limit headers in response
    */
-  private setRateLimitHeaders(response: Response, result: any): void {
+  private setRateLimitHeaders(response: Response, result: RateLimitResult): void {
     if (result.remaining >= 0) {
       response.set({
         'X-RateLimit-Remaining': result.remaining.toString(),
@@ -201,7 +215,7 @@ export class RateLimitGuard implements CanActivate {
  * Decorator to set custom rate limiting options for a route
  */
 export function RateLimit(options: RateLimitOptions) {
-  return (target: any, propertyKey: string, descriptor: PropertyDescriptor) => {
+  return (target: object, propertyKey: string, descriptor: PropertyDescriptor) => {
     Reflect.defineMetadata(RATE_LIMIT_KEY, options, descriptor.value);
   };
 }
@@ -210,7 +224,7 @@ export function RateLimit(options: RateLimitOptions) {
  * Decorator to skip rate limiting for specific roles
  */
 export function SkipRateLimit(roles: string[] = []) {
-  return (target: any, propertyKey: string, descriptor: PropertyDescriptor) => {
+  return (target: object, propertyKey: string, descriptor: PropertyDescriptor) => {
     Reflect.defineMetadata(RATE_LIMIT_KEY, {
       skipForRoles: roles
     }, descriptor.value);

@@ -11,6 +11,13 @@ import { Request } from 'express';
 import * as crypto from 'crypto';
 
 /**
+ * Request with rawBody from body-parser middleware
+ */
+interface RequestWithRawBody extends Request {
+  rawBody?: string;
+}
+
+/**
  * Webhook signature configuration options
  */
 export interface WebhookSignatureOptions {
@@ -157,8 +164,9 @@ export class WebhookSignatureGuard implements CanActivate {
    */
   private getRawBody(request: Request): string | null {
     // Check for raw body stored by body-parser
-    if ((request as any).rawBody) {
-      return (request as any).rawBody;
+    const reqWithRawBody = request as RequestWithRawBody;
+    if (reqWithRawBody.rawBody) {
+      return reqWithRawBody.rawBody;
     }
 
     // Fallback to stringified body (less secure, may have formatting differences)

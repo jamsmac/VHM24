@@ -9,6 +9,28 @@ import {
 import { Request, Response } from 'express';
 
 /**
+ * Exception response structure from HttpException
+ */
+interface ExceptionResponse {
+  message?: string | string[];
+  error?: string;
+  statusCode?: number;
+}
+
+/**
+ * Error response returned to client
+ */
+interface ErrorResponse {
+  statusCode: number;
+  timestamp: string;
+  path: string;
+  method: string;
+  message?: string | string[] | ExceptionResponse;
+  error?: string;
+  stack?: string;
+}
+
+/**
  * Global HTTP Exception Filter
  *
  * Handles all exceptions in the application and returns a consistent error response.
@@ -43,7 +65,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const isProduction = process.env.NODE_ENV === 'production';
 
     // Build error response
-    const errorResponse: any = {
+    const errorResponse: ErrorResponse = {
       statusCode: status,
       timestamp: new Date().toISOString(),
       path: request.url,
@@ -52,8 +74,9 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
     // Extract message from exception
     if (typeof message === 'object') {
-      errorResponse.message = (message as any).message || message;
-      errorResponse.error = (message as any).error;
+      const messageObj = message as ExceptionResponse;
+      errorResponse.message = messageObj.message || message;
+      errorResponse.error = messageObj.error;
     } else {
       errorResponse.message = message;
     }
