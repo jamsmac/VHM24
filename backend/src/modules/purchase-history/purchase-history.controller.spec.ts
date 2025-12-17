@@ -8,6 +8,8 @@ import { UpdatePurchaseDto } from './dto/update-purchase.dto';
 import { JwtAuthGuard } from '@/modules/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '@/modules/auth/guards/roles.guard';
 
+type MockAuthRequest = Parameters<typeof PurchaseHistoryController.prototype.create>[1];
+
 describe('PurchaseHistoryController', () => {
   let controller: PurchaseHistoryController;
   let mockService: jest.Mocked<PurchaseHistoryService>;
@@ -34,7 +36,7 @@ describe('PurchaseHistoryController', () => {
     updated_at: new Date('2025-01-15'),
   };
 
-  const mockRequest = { user: { sub: 'user-uuid' } };
+  const mockRequest = { user: { sub: 'user-uuid' } } as MockAuthRequest;
 
   const mockStats = {
     total_purchases: 100,

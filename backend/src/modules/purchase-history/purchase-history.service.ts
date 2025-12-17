@@ -5,6 +5,30 @@ import { PurchaseHistory } from './entities/purchase-history.entity';
 import { CreatePurchaseDto, PurchaseStatus } from './dto/create-purchase.dto';
 import { UpdatePurchaseDto } from './dto/update-purchase.dto';
 
+export interface StatusStats {
+  status: string;
+  count: string;
+  total: string;
+}
+
+export interface SupplierStats {
+  supplier_id: string;
+  supplier_name: string;
+  purchase_count: string;
+  total_amount: string;
+}
+
+export interface MonthStats {
+  month: string;
+  count: string;
+  total: string;
+}
+
+export interface ImportError {
+  row: CreatePurchaseDto;
+  error: string;
+}
+
 @Injectable()
 export class PurchaseHistoryService {
   constructor(
@@ -166,9 +190,9 @@ export class PurchaseHistoryService {
     total_purchases: number;
     total_amount: number;
     total_vat: number;
-    by_status: any[];
-    by_supplier: any[];
-    by_month: any[];
+    by_status: StatusStats[];
+    by_supplier: SupplierStats[];
+    by_month: MonthStats[];
   }> {
     const query = this.purchaseRepository.createQueryBuilder('purchase');
 
@@ -275,7 +299,7 @@ export class PurchaseHistoryService {
     data: CreatePurchaseDto[],
     import_session_id: string,
     userId: string,
-  ): Promise<{ imported: number; failed: number; errors: any[] }> {
+  ): Promise<{ imported: number; failed: number; errors: ImportError[] }> {
     let imported = 0;
     let failed = 0;
     const errors = [];

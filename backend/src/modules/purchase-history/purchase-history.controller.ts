@@ -8,11 +8,18 @@ import {
   Delete,
   Query,
   UseGuards,
-  Request,
+  Req,
   ParseUUIDPipe,
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
+import { Request as ExpressRequest } from 'express';
+
+interface AuthenticatedRequest extends ExpressRequest {
+  user: {
+    sub: string;
+  };
+}
 import { PurchaseHistoryService } from './purchase-history.service';
 import { CreatePurchaseDto, PurchaseStatus } from './dto/create-purchase.dto';
 import { UpdatePurchaseDto } from './dto/update-purchase.dto';
@@ -33,7 +40,7 @@ export class PurchaseHistoryController {
   @Roles(UserRole.ADMIN, UserRole.MANAGER)
   @ApiOperation({ summary: 'Создать запись о закупке' })
   @ApiResponse({ status: 201, description: 'Закупка успешно создана' })
-  create(@Body() dto: CreatePurchaseDto, @Request() req: any) {
+  create(@Body() dto: CreatePurchaseDto, @Req() req: AuthenticatedRequest) {
     const userId = req.user.sub;
     return this.purchaseService.create(dto, userId);
   }
@@ -194,7 +201,7 @@ export class PurchaseHistoryController {
   @ApiResponse({ status: 201, description: 'История успешно импортирована' })
   async importPurchases(
     @Body() body: { data: CreatePurchaseDto[]; session_id: string },
-    @Request() req: any,
+    @Req() req: AuthenticatedRequest,
   ) {
     const userId = req.user.sub;
     return this.purchaseService.importPurchases(body.data, body.session_id, userId);
