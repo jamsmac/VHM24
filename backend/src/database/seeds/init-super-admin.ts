@@ -124,7 +124,7 @@ if (require.main === module) {
       await AppDataSource.destroy();
       process.exit(0);
     })
-    .catch((error: any) => {
+    .catch((error: unknown) => {
       logger.error('Error:', error);
       process.exit(1);
     });

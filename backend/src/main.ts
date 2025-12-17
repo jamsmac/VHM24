@@ -6,6 +6,7 @@ import * as cookieParser from 'cookie-parser';
 import * as compression from 'compression';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+import { CorsOptions } from '@nestjs/common/interfaces/external/cors-options.interface';
 
 const logger = new Logger('Bootstrap');
 
@@ -68,7 +69,7 @@ async function bootstrap() {
   }
 
   // Configure CORS based on environment
-  let corsOptions: any;
+  let corsOptions: CorsOptions;
 
   if (frontendUrl) {
     // If FRONTEND_URL is provided, use it for CORS
