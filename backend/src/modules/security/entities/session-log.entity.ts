@@ -66,6 +66,6 @@ export class SessionLog extends BaseEntity {
     fingerprint?: string;
     timezone?: string;
     screen_resolution?: string;
-    [key: string]: any;
+    [key: string]: unknown;
   };
 }

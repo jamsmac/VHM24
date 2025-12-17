@@ -3,6 +3,15 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between } from 'typeorm';
 import { AuditLog, AuditEventType, AuditSeverity } from '../entities/audit-log.entity';
 
+interface AuditLogQueryDto {
+  user_id?: string;
+  event_type?: AuditEventType;
+  severity?: AuditSeverity;
+  startDate?: Date;
+  endDate?: Date;
+  limit?: number;
+}
+
 @Injectable()
 export class AuditLogService {
   constructor(
@@ -135,7 +144,7 @@ export class AuditLogService {
     return result.affected || 0;
   }
 
-  async findAll(queryDto?: any): Promise<AuditLog[]> {
+  async findAll(queryDto?: AuditLogQueryDto): Promise<AuditLog[]> {
     const query = this.auditLogRepository.createQueryBuilder('log');
 
     // Apply filters if provided

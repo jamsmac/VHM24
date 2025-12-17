@@ -55,8 +55,8 @@ export class AccessControlLog extends BaseEntity {
 
   @Column({ type: 'jsonb', default: {} })
   metadata: {
-    request_params?: Record<string, any>;
+    request_params?: Record<string, unknown>;
     user_role?: string;
-    [key: string]: any;
+    [key: string]: unknown;
   };
 }

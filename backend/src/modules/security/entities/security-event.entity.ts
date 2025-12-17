@@ -69,8 +69,8 @@ export class SecurityEvent extends BaseEntity {
   details: {
     attempted_resource?: string;
     failure_reason?: string;
-    device_info?: Record<string, any>;
-    [key: string]: any;
+    device_info?: Record<string, unknown>;
+    [key: string]: unknown;
   };
 
   @Column({ type: 'boolean', default: false })

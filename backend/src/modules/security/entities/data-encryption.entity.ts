@@ -52,6 +52,6 @@ export class DataEncryption extends BaseEntity {
     data_classification?: string; // e.g., 'PII', 'financial', 'medical'
     retention_period?: number; // days
     compliance_tags?: string[]; // e.g., ['GDPR', 'PCI-DSS']
-    [key: string]: any;
+    [key: string]: unknown;
   };
 }

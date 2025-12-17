@@ -52,8 +52,8 @@ export class TwoFactorAuth extends BaseEntity {
 
   @Column({ type: 'jsonb', default: {} })
   metadata: {
-    device_info?: Record<string, any>;
+    device_info?: Record<string, unknown>;
     recovery_email?: string;
-    [key: string]: any;
+    [key: string]: unknown;
   };
 }
