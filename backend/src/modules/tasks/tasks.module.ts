@@ -6,6 +6,11 @@ import { Task } from './entities/task.entity';
 import { TaskItem } from './entities/task-item.entity';
 import { TaskComment } from './entities/task-comment.entity';
 import { TaskComponent } from './entities/task-component.entity';
+import {
+  TaskCompletionService,
+  TaskRejectionService,
+  TaskEscalationService,
+} from './services';
 import { FilesModule } from '../files/files.module';
 import { MachinesModule } from '../machines/machines.module';
 import { InventoryModule } from '../inventory/inventory.module';
@@ -30,7 +35,17 @@ import { EquipmentModule } from '../equipment/equipment.module';
     forwardRef(() => EquipmentModule),
   ],
   controllers: [TasksController],
-  providers: [TasksService],
-  exports: [TasksService],
+  providers: [
+    TasksService,
+    TaskCompletionService,
+    TaskRejectionService,
+    TaskEscalationService,
+  ],
+  exports: [
+    TasksService,
+    TaskCompletionService,
+    TaskRejectionService,
+    TaskEscalationService,
+  ],
 })
 export class TasksModule {}

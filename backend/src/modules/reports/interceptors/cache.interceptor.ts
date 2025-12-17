@@ -157,7 +157,7 @@ export class ReportsCacheInterceptor implements NestInterceptor {
   /**
    * Simple hash function for params object
    */
-  private hashParams(params: Record<string, any>): string {
+  private hashParams(params: Record<string, unknown>): string {
     const sortedParams = Object.keys(params)
       .sort()
       .reduce(
@@ -165,7 +165,7 @@ export class ReportsCacheInterceptor implements NestInterceptor {
           acc[key] = params[key];
           return acc;
         },
-        {} as Record<string, any>,
+        {} as Record<string, unknown>,
       );
 
     const str = JSON.stringify(sortedParams);

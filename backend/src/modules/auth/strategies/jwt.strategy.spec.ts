@@ -103,37 +103,35 @@ describe('JwtStrategy', () => {
       );
     });
 
-    it('should check user-level blacklist when jti is not present', async () => {
-      const payloadWithoutJti: JwtPayload = {
+    /**
+     * SEC-JWT-01: JTI is mandatory for token revocation
+     */
+    it('should throw UnauthorizedException when jti is missing', async () => {
+      const payloadWithoutJti = {
         sub: 'user-uuid',
         email: 'test@example.com',
         role: 'operator',
-      };
-
-      tokenBlacklistService.areUserTokensBlacklisted.mockResolvedValue(false);
-      usersService.findOne.mockResolvedValue(mockUser as any);
-
-      const result = await strategy.validate(payloadWithoutJti);
-
-      expect(result).toEqual(mockUser);
-      expect(tokenBlacklistService.areUserTokensBlacklisted).toHaveBeenCalledWith(
-        payloadWithoutJti.sub,
-      );
-      expect(tokenBlacklistService.shouldRejectToken).not.toHaveBeenCalled();
-    });
-
-    it('should throw UnauthorizedException when all user tokens are blacklisted', async () => {
-      const payloadWithoutJti: JwtPayload = {
-        sub: 'user-uuid',
-        email: 'test@example.com',
-        role: 'operator',
-      };
-
-      tokenBlacklistService.areUserTokensBlacklisted.mockResolvedValue(true);
+      } as JwtPayload;
 
       await expect(strategy.validate(payloadWithoutJti)).rejects.toThrow(UnauthorizedException);
       await expect(strategy.validate(payloadWithoutJti)).rejects.toThrow(
-        'Все сессии пользователя отозваны',
+        'Недействительный токен: отсутствует идентификатор токена',
+      );
+      expect(tokenBlacklistService.shouldRejectToken).not.toHaveBeenCalled();
+      expect(usersService.findOne).not.toHaveBeenCalled();
+    });
+
+    it('should throw UnauthorizedException when jti is empty string', async () => {
+      const payloadWithEmptyJti: JwtPayload = {
+        sub: 'user-uuid',
+        email: 'test@example.com',
+        role: 'operator',
+        jti: '',
+      };
+
+      await expect(strategy.validate(payloadWithEmptyJti)).rejects.toThrow(UnauthorizedException);
+      await expect(strategy.validate(payloadWithEmptyJti)).rejects.toThrow(
+        'Недействительный токен: отсутствует идентификатор токена',
       );
     });
 

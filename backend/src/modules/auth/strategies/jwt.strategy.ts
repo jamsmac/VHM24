@@ -10,12 +10,13 @@ import { TokenBlacklistService } from '../services/token-blacklist.service';
  * JWT Payload interface
  *
  * REQ-AUTH-10: JWT Structure
+ * SEC-JWT-01: Mandatory JTI for token revocation
  */
 export interface JwtPayload {
   sub: string; // user id
   email: string;
   role: string;
-  jti?: string; // JWT ID for blacklist checking (optional for backward compatibility)
+  jti: string; // JWT ID - MANDATORY for blacklist checking (SEC-JWT-01)
   iat?: number; // Issued at timestamp
   exp?: number; // Expiration timestamp
 }
@@ -75,31 +76,29 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   /**
    * Validate JWT payload
    *
+   * SEC-JWT-01: Mandatory JTI validation
+   *
    * Steps:
-   * 1. Check if token is blacklisted (REQ-AUTH-56)
-   * 2. Check if all user tokens are blacklisted
+   * 1. Validate JTI is present (required for token revocation)
+   * 2. Check if token is blacklisted (REQ-AUTH-56)
    * 3. Verify user exists and is active
    */
   async validate(payload: JwtPayload) {
-    // Check blacklist if jti is present
-    if (payload.jti) {
-      const isBlacklisted = await this.tokenBlacklistService.shouldRejectToken(
-        payload.jti,
-        payload.sub,
+    // SEC-JWT-01: JTI is mandatory - reject tokens without it
+    if (!payload.jti) {
+      throw new UnauthorizedException(
+        'Недействительный токен: отсутствует идентификатор токена',
       );
+    }
 
-      if (isBlacklisted) {
-        throw new UnauthorizedException('Токен недействителен (отозван)');
-      }
-    } else {
-      // Check user-level blacklist even without jti
-      const userBlacklisted = await this.tokenBlacklistService.areUserTokensBlacklisted(
-        payload.sub,
-      );
+    // Check if token or user is blacklisted
+    const isBlacklisted = await this.tokenBlacklistService.shouldRejectToken(
+      payload.jti,
+      payload.sub,
+    );
 
-      if (userBlacklisted) {
-        throw new UnauthorizedException('Все сессии пользователя отозваны');
-      }
+    if (isBlacklisted) {
+      throw new UnauthorizedException('Токен недействителен (отозван)');
     }
 
     // Verify user exists and is active
