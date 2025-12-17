@@ -14,6 +14,94 @@ import { v4 as uuidv4 } from 'uuid';
 import { InventoryDifferenceService } from './inventory-difference.service';
 
 /**
+ * Inventory session summary from aggregated data
+ */
+export interface InventorySessionSummary {
+  session_id: string;
+  counted_at: Date;
+  level_type: InventoryLevelType;
+  level_ref_id: string;
+  counted_by_user_id: string;
+  total_items: string;
+}
+
+/**
+ * Product statistics in inventorization report
+ */
+export interface ProductStats {
+  nomenclature_id: string;
+  nomenclature_name: string;
+  items_counted: number;
+  total_quantity: number;
+  avg_quantity: number;
+}
+
+/**
+ * Location statistics in inventorization report
+ */
+export interface LocationStats {
+  level_ref_id: string;
+  level_type: InventoryLevelType;
+  items_counted: number;
+  unique_products: number;
+  total_quantity: number;
+}
+
+/**
+ * Operator statistics in inventorization report
+ */
+export interface OperatorStats {
+  user_id: string;
+  user_name: string;
+  items_counted: number;
+  unique_products: number;
+  total_quantity: number;
+}
+
+/**
+ * Inventorization report item
+ */
+export interface InventorizationReportItem {
+  id: string;
+  nomenclature_id: string;
+  nomenclature_name: string | undefined;
+  actual_quantity: number;
+  unit_of_measure: string | null;
+  counted_at: Date;
+  counted_by: {
+    id: string | undefined;
+    full_name: string | undefined;
+  };
+  notes: string | null;
+}
+
+/**
+ * Inventorization report summary
+ */
+export interface InventorizationReportSummary {
+  session_id: string;
+  level_type: InventoryLevelType;
+  level_ref_id: string;
+  counted_at: Date;
+  total_items_counted: number;
+  unique_products: number;
+  unique_locations: number;
+  unique_operators: number;
+  total_quantity: number;
+}
+
+/**
+ * Full inventorization report
+ */
+export interface InventorizationReport {
+  summary: InventorizationReportSummary;
+  items: InventorizationReportItem[];
+  product_stats: ProductStats[];
+  location_stats: LocationStats[];
+  operator_stats: OperatorStats[];
+}
+
+/**
  * InventoryCountService
  *
  * REQ-STK-CALC-02: Управление фактическими остатками
@@ -281,7 +369,7 @@ export class InventoryCountService {
     levelRefId?: string,
     dateFrom?: string,
     dateTo?: string,
-  ): Promise<any[]> {
+  ): Promise<InventorySessionSummary[]> {
     const query = this.actualCountRepository
       .createQueryBuilder('ac')
       .select('ac.session_id', 'session_id')
@@ -328,7 +416,7 @@ export class InventoryCountService {
    * @param sessionId - ID сессии инвентаризации
    * @returns Детальный отчёт по инвентаризации
    */
-  async getInventorizationReport(sessionId: string): Promise<any> {
+  async getInventorizationReport(sessionId: string): Promise<InventorizationReport> {
     this.logger.log(`Getting inventorization report for session=${sessionId}`);
 
     // Получить все замеры в сессии с связанными данными

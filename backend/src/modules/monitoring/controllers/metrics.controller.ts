@@ -3,6 +3,46 @@ import { ApiOperation, ApiTags, ApiExcludeEndpoint } from '@nestjs/swagger';
 import { MetricsService } from '../services/metrics.service';
 
 /**
+ * Health check response
+ */
+interface HealthResponse {
+  status: string;
+  timestamp: string;
+  uptime: number;
+  memory: NodeJS.MemoryUsage;
+  environment: string | undefined;
+}
+
+/**
+ * Readiness check response
+ */
+interface ReadinessResponse {
+  status: string;
+  timestamp: string;
+  checks: {
+    database: string;
+    cache: string;
+    queue: string;
+  };
+}
+
+/**
+ * Liveness check response
+ */
+interface LivenessResponse {
+  status: string;
+  timestamp: string;
+}
+
+/**
+ * Metrics collection response
+ */
+interface CollectMetricsResponse {
+  message: string;
+  timestamp: string;
+}
+
+/**
  * Metrics Controller
  *
  * Provides endpoints for metrics collection and health checks
@@ -19,7 +59,7 @@ export class MetricsController {
    */
   @Get('health')
   @ApiOperation({ summary: 'Health check endpoint' })
-  async health(): Promise<any> {
+  async health(): Promise<HealthResponse> {
     return {
       status: 'healthy',
       timestamp: new Date().toISOString(),
@@ -35,7 +75,7 @@ export class MetricsController {
    */
   @Get('ready')
   @ApiOperation({ summary: 'Readiness check endpoint' })
-  async ready(): Promise<any> {
+  async ready(): Promise<ReadinessResponse> {
     // Here you would check database connectivity, cache, etc.
     return {
       status: 'ready',
@@ -54,7 +94,7 @@ export class MetricsController {
    */
   @Get('live')
   @ApiOperation({ summary: 'Liveness check endpoint' })
-  async live(): Promise<any> {
+  async live(): Promise<LivenessResponse> {
     return {
       status: 'alive',
       timestamp: new Date().toISOString(),
@@ -67,7 +107,7 @@ export class MetricsController {
    */
   @Get('collect-metrics')
   @ApiExcludeEndpoint()
-  async collectMetrics(): Promise<any> {
+  async collectMetrics(): Promise<CollectMetricsResponse> {
     await this.metricsService.collectBusinessMetrics();
     return {
       message: 'Metrics collection triggered',

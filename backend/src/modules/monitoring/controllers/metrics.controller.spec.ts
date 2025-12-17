@@ -227,19 +227,17 @@ describe('MetricsController', () => {
     it('should handle mixed endpoint calls simultaneously', async () => {
       metricsService.collectBusinessMetrics.mockResolvedValue(undefined);
 
-      const promises = [
+      const [healthResult, readyResult, liveResult, collectResult] = await Promise.all([
         controller.health(),
         controller.ready(),
         controller.live(),
         controller.collectMetrics(),
-      ];
+      ]);
 
-      const results = await Promise.all(promises);
-
-      expect(results[0].status).toBe('healthy');
-      expect(results[1].status).toBe('ready');
-      expect(results[2].status).toBe('alive');
-      expect(results[3].message).toBe('Metrics collection triggered');
+      expect(healthResult.status).toBe('healthy');
+      expect(readyResult.status).toBe('ready');
+      expect(liveResult.status).toBe('alive');
+      expect(collectResult.message).toBe('Metrics collection triggered');
     });
   });
 

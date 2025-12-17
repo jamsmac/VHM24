@@ -16,6 +16,26 @@ export interface AnalyticsResult {
   summary: Record<string, number>;
 }
 
+export interface TopMachineResult {
+  machine_id: string;
+  total_revenue: string;
+  total_transactions: string;
+  avg_availability: string;
+}
+
+export interface TopProductResult {
+  product_id: string;
+  total_units: string;
+  total_revenue: string;
+}
+
+export interface MachineStatusSummary {
+  online: number;
+  offline: number;
+  maintenance: number;
+  error: number;
+}
+
 @Injectable()
 export class AnalyticsCalculationService {
   private readonly logger = new Logger(AnalyticsCalculationService.name);
@@ -235,7 +255,7 @@ export class AnalyticsCalculationService {
     return colors[metric];
   }
 
-  async getTopMachines(limit: number = 10, days: number = 30): Promise<any[]> {
+  async getTopMachines(limit: number = 10, days: number = 30): Promise<TopMachineResult[]> {
     const startDate = subDays(new Date(), days);
 
     const results = await this.snapshotRepository
@@ -254,7 +274,7 @@ export class AnalyticsCalculationService {
     return results;
   }
 
-  async getTopProducts(limit: number = 10, days: number = 30): Promise<any[]> {
+  async getTopProducts(limit: number = 10, days: number = 30): Promise<TopProductResult[]> {
     const startDate = subDays(new Date(), days);
 
     const results = await this.snapshotRepository
@@ -272,7 +292,7 @@ export class AnalyticsCalculationService {
     return results;
   }
 
-  async getMachineStatusSummary(): Promise<any> {
+  async getMachineStatusSummary(): Promise<MachineStatusSummary> {
     // This would typically query the machines table directly
     // For now, return structure
     return {

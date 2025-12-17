@@ -74,8 +74,8 @@ describe('AnalyticsController', () => {
   describe('getTopMachines', () => {
     it('should return top machines with default parameters', async () => {
       const expectedResult = [
-        { machine_id: 'machine-1', total_revenue: 5000, total_transactions: 100 },
-        { machine_id: 'machine-2', total_revenue: 3000, total_transactions: 60 },
+        { machine_id: 'machine-1', total_revenue: '5000', total_transactions: '100', avg_availability: '95.5' },
+        { machine_id: 'machine-2', total_revenue: '3000', total_transactions: '60', avg_availability: '92.0' },
       ];
 
       mockAnalyticsService.getTopMachines.mockResolvedValue(expectedResult);
@@ -87,7 +87,7 @@ describe('AnalyticsController', () => {
     });
 
     it('should return top machines with custom limit and days', async () => {
-      const expectedResult = [{ machine_id: 'machine-1', total_revenue: 5000 }];
+      const expectedResult = [{ machine_id: 'machine-1', total_revenue: '5000', total_transactions: '100', avg_availability: '95.5' }];
 
       mockAnalyticsService.getTopMachines.mockResolvedValue(expectedResult);
 
@@ -101,8 +101,8 @@ describe('AnalyticsController', () => {
   describe('getTopProducts', () => {
     it('should return top products with default parameters', async () => {
       const expectedResult = [
-        { product_id: 'product-1', total_units: 500, total_revenue: 2500 },
-        { product_id: 'product-2', total_units: 300, total_revenue: 1500 },
+        { product_id: 'product-1', total_units: '500', total_revenue: '2500' },
+        { product_id: 'product-2', total_units: '300', total_revenue: '1500' },
       ];
 
       mockAnalyticsService.getTopProducts.mockResolvedValue(expectedResult);
@@ -114,7 +114,7 @@ describe('AnalyticsController', () => {
     });
 
     it('should return top products with custom limit and days', async () => {
-      const expectedResult = [{ product_id: 'product-1', total_units: 500 }];
+      const expectedResult = [{ product_id: 'product-1', total_units: '500', total_revenue: '2500' }];
 
       mockAnalyticsService.getTopProducts.mockResolvedValue(expectedResult);
 

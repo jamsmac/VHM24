@@ -29,6 +29,14 @@ export interface ImportError {
   error: string;
 }
 
+export interface PriceHistoryItem {
+  date: string;
+  price: number;
+  quantity: number;
+  supplier_id: string;
+  supplier_name: string;
+}
+
 @Injectable()
 export class PurchaseHistoryService {
   constructor(
@@ -268,7 +276,7 @@ export class PurchaseHistoryService {
   /**
    * Get price history for nomenclature
    */
-  async getPriceHistory(nomenclature_id: string, supplier_id?: string): Promise<any[]> {
+  async getPriceHistory(nomenclature_id: string, supplier_id?: string): Promise<PriceHistoryItem[]> {
     const query = this.purchaseRepository
       .createQueryBuilder('purchase')
       .where('purchase.nomenclature_id = :nomenclature_id', { nomenclature_id });

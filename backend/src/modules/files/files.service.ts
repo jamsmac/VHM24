@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { Readable } from 'stream';
 import { File } from './entities/file.entity';
 import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
@@ -147,7 +148,7 @@ export class FilesService {
    * @param fileId - File ID
    * @returns Readable stream
    */
-  async getFileStream(fileId: string): Promise<any> {
+  async getFileStream(fileId: string): Promise<Readable> {
     const file = await this.findOne(fileId);
     return this.s3StorageService.getFileStream(file.file_path);
   }
