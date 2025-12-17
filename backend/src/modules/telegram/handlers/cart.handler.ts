@@ -1,5 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Context, Telegraf } from 'telegraf';
+
+/** Context with match groups from regex action handlers */
+interface ActionContext extends Context {
+  match: RegExpExecArray;
+}
 import { TelegramSessionService } from '../services/telegram-session.service';
 import { CartStorageService, CartItem } from '../services/cart-storage.service';
 import { CartState, defaultSessionData } from './fsm-states';
@@ -145,11 +150,10 @@ export class CartHandler {
   /**
    * Увеличить количество позиции.
    */
-  private async handleCartIncrease(ctx: Context) {
+  private async handleCartIncrease(ctx: ActionContext) {
     const userId = ctx.from?.id?.toString();
     if (!userId) return;
 
-    // @ts-expect-error - ctx.match exists for action with regex
     const itemId = ctx.match[1];
 
     const item = await this.cartStorage.updateItemQuantity(userId, itemId, 1);
@@ -165,11 +169,10 @@ export class CartHandler {
   /**
    * Уменьшить количество позиции.
    */
-  private async handleCartDecrease(ctx: Context) {
+  private async handleCartDecrease(ctx: ActionContext) {
     const userId = ctx.from?.id?.toString();
     if (!userId) return;
 
-    // @ts-expect-error - ctx.match exists for action with regex
     const itemId = ctx.match[1];
 
     // Get item before update to show name in callback
@@ -192,11 +195,10 @@ export class CartHandler {
   /**
    * Удалить позицию из корзины.
    */
-  private async handleCartDelete(ctx: Context) {
+  private async handleCartDelete(ctx: ActionContext) {
     const userId = ctx.from?.id?.toString();
     if (!userId) return;
 
-    // @ts-expect-error - ctx.match exists for action with regex
     const itemId = ctx.match[1];
 
     const item = await this.cartStorage.removeItem(userId, itemId);
@@ -303,11 +305,10 @@ export class CartHandler {
   /**
    * Установить приоритет.
    */
-  private async handleSetPriority(ctx: Context) {
+  private async handleSetPriority(ctx: ActionContext) {
     const userId = ctx.from?.id?.toString();
     if (!userId) return;
 
-    // @ts-expect-error - ctx.match exists for action with regex
     const priority = ctx.match[1] as 'normal' | 'high' | 'urgent';
 
     const session = await this.sessionService.getSessionData(userId);

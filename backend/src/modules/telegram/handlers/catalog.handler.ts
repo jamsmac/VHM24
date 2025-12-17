@@ -1,6 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Context, Telegraf } from 'telegraf';
 import { InjectRepository } from '@nestjs/typeorm';
+
+/** Context with match groups from regex action handlers */
+interface ActionContext extends Context {
+  match: RegExpExecArray;
+}
 import { Repository } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
 import { Material, MaterialCategory } from '../../requests/entities/material.entity';
@@ -94,11 +99,10 @@ export class CatalogHandler {
   /**
    * Обработка выбора категории.
    */
-  private async handleCategory(ctx: Context) {
+  private async handleCategory(ctx: ActionContext) {
     const userId = ctx.from?.id?.toString();
     if (!userId) return;
 
-    // @ts-expect-error - ctx.match exists for action with regex - match groups from action regex
     const action = ctx.match[1];
 
     if (action === 'back') {
@@ -156,10 +160,8 @@ export class CatalogHandler {
   /**
    * Пагинация материалов.
    */
-  private async handlePagination(ctx: Context) {
-    // @ts-expect-error - ctx.match exists for action with regex
+  private async handlePagination(ctx: ActionContext) {
     const category = ctx.match[1] as MaterialCategory;
-    // @ts-expect-error - ctx.match exists for action with regex
     const page = parseInt(ctx.match[2], 10);
 
     const materials = await this.materialRepository.find({
@@ -184,11 +186,10 @@ export class CatalogHandler {
   /**
    * Выбор материала - показать выбор количества.
    */
-  private async handleMaterial(ctx: Context) {
+  private async handleMaterial(ctx: ActionContext) {
     const userId = ctx.from?.id?.toString();
     if (!userId) return;
 
-    // @ts-expect-error - ctx.match exists for action with regex
     const materialId = ctx.match[1];
 
     const material = await this.materialRepository.findOne({
@@ -224,11 +225,10 @@ export class CatalogHandler {
   /**
    * Увеличить количество.
    */
-  private async handleQuantityIncrease(ctx: Context) {
+  private async handleQuantityIncrease(ctx: ActionContext) {
     const userId = ctx.from?.id?.toString();
     if (!userId) return;
 
-    // @ts-expect-error - ctx.match exists for action with regex
     const materialId = ctx.match[1];
 
     const session = await this.sessionService.getSessionData(userId);
@@ -246,11 +246,10 @@ export class CatalogHandler {
   /**
    * Уменьшить количество.
    */
-  private async handleQuantityDecrease(ctx: Context) {
+  private async handleQuantityDecrease(ctx: ActionContext) {
     const userId = ctx.from?.id?.toString();
     if (!userId) return;
 
-    // @ts-expect-error - ctx.match exists for action with regex
     const materialId = ctx.match[1];
 
     const session = await this.sessionService.getSessionData(userId);
@@ -268,13 +267,11 @@ export class CatalogHandler {
   /**
    * Установить конкретное количество.
    */
-  private async handleQuantitySet(ctx: Context) {
+  private async handleQuantitySet(ctx: ActionContext) {
     const userId = ctx.from?.id?.toString();
     if (!userId) return;
 
-    // @ts-expect-error - ctx.match exists for action with regex
     const materialId = ctx.match[1];
-    // @ts-expect-error - ctx.match exists for action with regex
     const quantity = parseInt(ctx.match[2], 10);
 
     const session = await this.sessionService.getSessionData(userId);
@@ -301,11 +298,10 @@ export class CatalogHandler {
   /**
    * Начать ввод произвольного количества.
    */
-  private async handleQuantityCustomStart(ctx: Context) {
+  private async handleQuantityCustomStart(ctx: ActionContext) {
     const userId = ctx.from?.id?.toString();
     if (!userId) return;
 
-    // @ts-expect-error - ctx.match exists for action with regex
     const materialId = ctx.match[1];
 
     const session = await this.sessionService.getSessionData(userId);
@@ -325,11 +321,10 @@ export class CatalogHandler {
   /**
    * Добавить в корзину.
    */
-  private async handleAddToCart(ctx: Context) {
+  private async handleAddToCart(ctx: ActionContext) {
     const userId = ctx.from?.id?.toString();
     if (!userId) return;
 
-    // @ts-expect-error - ctx.match exists for action with regex
     const materialId = ctx.match[1];
 
     const session = await this.sessionService.getSessionData(userId);
@@ -400,11 +395,10 @@ export class CatalogHandler {
   /**
    * Пагинация результатов поиска.
    */
-  private async handleSearchPagination(ctx: Context) {
+  private async handleSearchPagination(ctx: ActionContext) {
     const userId = ctx.from?.id?.toString();
     if (!userId) return;
 
-    // @ts-expect-error - ctx.match exists for action with regex
     const page = parseInt(ctx.match[1], 10);
 
     const session = await this.sessionService.getSessionData(userId);
