@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Query, Param, UseGuards, Request, Res } from '@nestjs/common';
+import { Controller, Get, Post, Query, Param, UseGuards, Req, Res } from '@nestjs/common';
+import { Request as ExpressRequest } from 'express';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
 import { Response } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -92,7 +93,7 @@ export class InventoryDifferencesController {
   })
   async executeThresholdActions(
     @Param('actualCountId') actualCountId: string,
-    @Request() req: any,
+    @Req() req: ExpressRequest & { user: { id: string } },
   ) {
     return await this.differenceService.executeThresholdActionsForCount(actualCountId, req.user.id);
   }

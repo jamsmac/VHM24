@@ -80,13 +80,13 @@ describe('InventoryConsumptionCalculatorService', () => {
           items: [
             {
               nomenclature_id: testNomenclatureId1,
-              quantity_needed: 10,
-              nomenclature: { name: 'Coffee Beans' },
+              quantity: 10,
+              nomenclature_name: 'Coffee Beans',
             },
             {
               nomenclature_id: testNomenclatureId2,
-              quantity_needed: 5,
-              nomenclature: { name: 'Milk' },
+              quantity: 5,
+              nomenclature_name: 'Milk',
             },
           ],
         },
@@ -122,9 +122,9 @@ describe('InventoryConsumptionCalculatorService', () => {
         id: testRecipeId,
         ingredients: [
           {
-            nomenclature_id: testNomenclatureId1,
-            quantity_needed: 15,
-            nomenclature: { name: 'Coffee Beans' },
+            ingredient_id: testNomenclatureId1,
+            quantity: 15,
+            ingredient: { name: 'Coffee Beans' },
           },
         ],
       };
@@ -140,7 +140,7 @@ describe('InventoryConsumptionCalculatorService', () => {
       expect(result.get(testNomenclatureId1)).toBe(15);
       expect(recipeRepo.findOne).toHaveBeenCalledWith({
         where: { id: testRecipeId },
-        relations: ['ingredients', 'ingredients.nomenclature'],
+        relations: ['ingredients', 'ingredients.ingredient'],
       });
     });
 
@@ -161,9 +161,9 @@ describe('InventoryConsumptionCalculatorService', () => {
         id: testRecipeId,
         ingredients: [
           {
-            nomenclature_id: testNomenclatureId1,
-            quantity_needed: 8,
-            nomenclature: { name: 'Coffee Beans' },
+            ingredient_id: testNomenclatureId1,
+            quantity: 8,
+            ingredient: { name: 'Coffee Beans' },
           },
         ],
       };
@@ -255,9 +255,9 @@ describe('InventoryConsumptionCalculatorService', () => {
         id: testRecipeId,
         ingredients: [
           {
-            nomenclature_id: testNomenclatureId1,
-            quantity_needed: 10,
-            nomenclature: { name: 'Coffee Beans' },
+            ingredient_id: testNomenclatureId1,
+            quantity: 10,
+            ingredient: { name: 'Coffee Beans' },
           },
         ],
       };
@@ -290,16 +290,16 @@ describe('InventoryConsumptionCalculatorService', () => {
         id: testRecipeId,
         ingredients: [
           {
-            nomenclature_id: testNomenclatureId1,
-            quantity_needed: 10,
-            nomenclature: { name: 'Coffee Beans' },
+            ingredient_id: testNomenclatureId1,
+            quantity: 10,
+            ingredient: { name: 'Coffee Beans' },
           },
           {
-            nomenclature_id: testNomenclatureId2,
-            quantity_needed: 20,
-            nomenclature: { name: 'Water' },
+            ingredient_id: testNomenclatureId2,
+            quantity: 20,
+            ingredient: { name: 'Water' },
           },
-          { nomenclature_id: 'nom-3', quantity_needed: 5, nomenclature: { name: 'Sugar' } },
+          { ingredient_id: 'nom-3', quantity: 5, ingredient: { name: 'Sugar' } },
         ],
       };
 
@@ -379,9 +379,9 @@ describe('InventoryConsumptionCalculatorService', () => {
         id: testRecipeId,
         ingredients: [
           {
-            nomenclature_id: testNomenclatureId1,
-            quantity_needed: 10,
-            nomenclature: { name: 'Coffee Beans' },
+            ingredient_id: testNomenclatureId1,
+            quantity: 10,
+            ingredient: { name: 'Coffee Beans' },
           },
         ],
       };
@@ -414,9 +414,9 @@ describe('InventoryConsumptionCalculatorService', () => {
         id: testRecipeId,
         ingredients: [
           {
-            nomenclature_id: testNomenclatureId1,
-            quantity_needed: 10,
-            nomenclature: { name: 'Coffee Beans' },
+            ingredient_id: testNomenclatureId1,
+            quantity: 10,
+            ingredient: { name: 'Coffee Beans' },
           },
         ],
       };
@@ -454,9 +454,9 @@ describe('InventoryConsumptionCalculatorService', () => {
         id: testRecipeId,
         ingredients: [
           {
-            nomenclature_id: testNomenclatureId1,
-            quantity_needed: 10,
-            nomenclature: { name: 'Coffee Beans' },
+            ingredient_id: testNomenclatureId1,
+            quantity: 10,
+            ingredient: { name: 'Coffee Beans' },
           },
         ],
       };
@@ -494,14 +494,14 @@ describe('InventoryConsumptionCalculatorService', () => {
         id: testRecipeId,
         ingredients: [
           {
-            nomenclature_id: testNomenclatureId1,
-            quantity_needed: 10,
-            nomenclature: { name: 'Coffee Beans' },
+            ingredient_id: testNomenclatureId1,
+            quantity: 10,
+            ingredient: { name: 'Coffee Beans' },
           },
           {
-            nomenclature_id: testNomenclatureId2,
-            quantity_needed: 20,
-            nomenclature: { name: 'Water' },
+            ingredient_id: testNomenclatureId2,
+            quantity: 20,
+            ingredient: { name: 'Water' },
           },
         ],
       };
@@ -538,9 +538,9 @@ describe('InventoryConsumptionCalculatorService', () => {
         id: testRecipeId,
         ingredients: [
           {
-            nomenclature_id: testNomenclatureId1,
-            quantity_needed: 10,
-            nomenclature: { name: 'Coffee Beans' },
+            ingredient_id: testNomenclatureId1,
+            quantity: 10,
+            ingredient: { name: 'Coffee Beans' },
           },
         ],
       };

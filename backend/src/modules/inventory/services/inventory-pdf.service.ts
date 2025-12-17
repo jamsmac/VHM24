@@ -6,6 +6,22 @@ import {
   DifferenceReportItem,
   DifferenceDashboard,
 } from './inventory-difference.service';
+import { InventoryLevelType } from '../entities/inventory-actual-count.entity';
+import { SeverityLevel } from '../entities/inventory-difference-threshold.entity';
+
+/** Filter parameters for difference report */
+interface DifferenceReportFilters {
+  level_type?: InventoryLevelType;
+  level_ref_id?: string;
+  nomenclature_id?: string;
+  session_id?: string;
+  date_from?: string;
+  date_to?: string;
+  severity?: SeverityLevel;
+  threshold_exceeded_only?: boolean;
+  limit?: number;
+  offset?: number;
+}
 
 /**
  * InventoryPdfService
@@ -21,7 +37,7 @@ export class InventoryPdfService {
   /**
    * Генерировать PDF отчёт по расхождениям
    */
-  async generateDifferencesPDF(filters: any, res: Response): Promise<void> {
+  async generateDifferencesPDF(filters: DifferenceReportFilters, res: Response): Promise<void> {
     this.logger.log('Generating inventory differences PDF report...');
 
     try {

@@ -7,8 +7,9 @@ import {
   Param,
   Delete,
   UseGuards,
-  Request,
+  Req,
 } from '@nestjs/common';
+import { Request as ExpressRequest } from 'express';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 import { InventoryReportPresetsService } from '../services/inventory-report-presets.service';
 import {
@@ -37,7 +38,7 @@ export class InventoryReportPresetsController {
   @Post()
   @ApiOperation({ summary: 'Create new report filter preset' })
   async create(
-    @Request() req: any,
+    @Req() req: ExpressRequest & { user: { id: string } },
     @Body() createDto: CreateInventoryReportPresetDto,
   ): Promise<InventoryReportPresetResponseDto> {
     return await this.inventoryReportPresetsService.create(req.user.id, createDto);
@@ -48,7 +49,9 @@ export class InventoryReportPresetsController {
    */
   @Get()
   @ApiOperation({ summary: 'Get all presets for current user' })
-  async findAll(@Request() req: any): Promise<InventoryReportPresetResponseDto[]> {
+  async findAll(
+    @Req() req: ExpressRequest & { user: { id: string } },
+  ): Promise<InventoryReportPresetResponseDto[]> {
     return await this.inventoryReportPresetsService.findByUser(req.user.id);
   }
 
@@ -59,7 +62,7 @@ export class InventoryReportPresetsController {
   @ApiOperation({ summary: 'Get preset by ID' })
   @ApiParam({ name: 'id', type: String, description: 'Preset ID' })
   async findOne(
-    @Request() req: any,
+    @Req() req: ExpressRequest & { user: { id: string } },
     @Param('id') id: string,
   ): Promise<InventoryReportPresetResponseDto> {
     return await this.inventoryReportPresetsService.findOne(id, req.user.id);
@@ -72,7 +75,7 @@ export class InventoryReportPresetsController {
   @ApiOperation({ summary: 'Update preset' })
   @ApiParam({ name: 'id', type: String, description: 'Preset ID' })
   async update(
-    @Request() req: any,
+    @Req() req: ExpressRequest & { user: { id: string } },
     @Param('id') id: string,
     @Body() updateDto: UpdateInventoryReportPresetDto,
   ): Promise<InventoryReportPresetResponseDto> {
@@ -85,7 +88,10 @@ export class InventoryReportPresetsController {
   @Delete(':id')
   @ApiOperation({ summary: 'Delete preset' })
   @ApiParam({ name: 'id', type: String, description: 'Preset ID' })
-  async remove(@Request() req: any, @Param('id') id: string): Promise<void> {
+  async remove(
+    @Req() req: ExpressRequest & { user: { id: string } },
+    @Param('id') id: string,
+  ): Promise<void> {
     await this.inventoryReportPresetsService.remove(id, req.user.id);
   }
 
@@ -95,7 +101,7 @@ export class InventoryReportPresetsController {
   @Post('reorder')
   @ApiOperation({ summary: 'Reorder presets' })
   async reorder(
-    @Request() req: any,
+    @Req() req: ExpressRequest & { user: { id: string } },
     @Body() presetOrder: Array<{ id: string; sort_order: number }>,
   ): Promise<void> {
     await this.inventoryReportPresetsService.reorder(req.user.id, presetOrder);
@@ -106,7 +112,9 @@ export class InventoryReportPresetsController {
    */
   @Get('default')
   @ApiOperation({ summary: 'Get default preset for current user' })
-  async getDefault(@Request() req: any): Promise<InventoryReportPresetResponseDto | null> {
+  async getDefault(
+    @Req() req: ExpressRequest & { user: { id: string } },
+  ): Promise<InventoryReportPresetResponseDto | null> {
     return await this.inventoryReportPresetsService.getDefaultPreset(req.user.id);
   }
 }

@@ -6,10 +6,11 @@ import {
   Patch,
   Param,
   Query,
-  Request,
+  Req,
   UseGuards,
   ParseUUIDPipe,
 } from '@nestjs/common';
+import { Request as ExpressRequest } from 'express';
 import {
   ApiTags,
   ApiOperation,
@@ -98,7 +99,10 @@ export class InventoryController {
     description: 'Товар успешно добавлен',
     type: WarehouseInventory,
   })
-  addToWarehouse(@Body() dto: AddToWarehouseDto, @Request() req: any): Promise<WarehouseInventory> {
+  addToWarehouse(
+    @Body() dto: AddToWarehouseDto,
+    @Req() req: ExpressRequest & { user: { id: string } },
+  ): Promise<WarehouseInventory> {
     const userId = req.user.id;
     return this.inventoryService.addToWarehouse(dto, userId);
   }
@@ -113,7 +117,7 @@ export class InventoryController {
   })
   removeFromWarehouse(
     @Body() dto: RemoveFromWarehouseDto,
-    @Request() req: any,
+    @Req() req: ExpressRequest & { user: { id: string } },
   ): Promise<WarehouseInventory> {
     const userId = req.user.id;
     return this.inventoryService.removeFromWarehouse(dto, userId);
@@ -252,7 +256,7 @@ export class InventoryController {
     @Param('machineId', ParseUUIDPipe) machineId: string,
     @Param('nomenclatureId', ParseUUIDPipe) nomenclatureId: string,
     @Body() dto: AdjustInventoryDto,
-    @Request() req: any,
+    @Req() req: ExpressRequest & { user: { id: string } },
   ): Promise<MachineInventory> {
     const userId = req.user.id;
     return this.inventoryService.adjustMachineInventory(machineId, nomenclatureId, dto, userId);
@@ -269,7 +273,10 @@ export class InventoryController {
     status: 201,
     description: 'Товар успешно выдан',
   })
-  transferWarehouseToOperator(@Body() dto: TransferWarehouseToOperatorDto, @Request() req: any) {
+  transferWarehouseToOperator(
+    @Body() dto: TransferWarehouseToOperatorDto,
+    @Req() req: ExpressRequest & { user: { id: string } },
+  ) {
     const userId = req.user.id;
     return this.inventoryService.transferWarehouseToOperator(dto, userId);
   }
@@ -281,7 +288,10 @@ export class InventoryController {
     status: 201,
     description: 'Товар успешно возвращен',
   })
-  transferOperatorToWarehouse(@Body() dto: TransferOperatorToWarehouseDto, @Request() req: any) {
+  transferOperatorToWarehouse(
+    @Body() dto: TransferOperatorToWarehouseDto,
+    @Req() req: ExpressRequest & { user: { id: string } },
+  ) {
     const userId = req.user.id;
     return this.inventoryService.transferOperatorToWarehouse(dto, userId);
   }
@@ -295,7 +305,10 @@ export class InventoryController {
     status: 201,
     description: 'Аппарат успешно пополнен',
   })
-  transferOperatorToMachine(@Body() dto: TransferOperatorToMachineDto, @Request() req: any) {
+  transferOperatorToMachine(
+    @Body() dto: TransferOperatorToMachineDto,
+    @Req() req: ExpressRequest & { user: { id: string } },
+  ) {
     const userId = req.user.id;
     return this.inventoryService.transferOperatorToMachine(dto, userId);
   }
@@ -307,7 +320,10 @@ export class InventoryController {
     status: 201,
     description: 'Товар успешно изъят',
   })
-  transferMachineToOperator(@Body() dto: TransferMachineToOperatorDto, @Request() req: any) {
+  transferMachineToOperator(
+    @Body() dto: TransferMachineToOperatorDto,
+    @Req() req: ExpressRequest & { user: { id: string } },
+  ) {
     const userId = req.user.id;
     return this.inventoryService.transferMachineToOperator(dto, userId);
   }
@@ -322,7 +338,10 @@ export class InventoryController {
     description: 'Продажа зарегистрирована',
     type: MachineInventory,
   })
-  recordSale(@Body() dto: RecordSaleDto, @Request() req: any): Promise<MachineInventory> {
+  recordSale(
+    @Body() dto: RecordSaleDto,
+    @Req() req: ExpressRequest & { user: { id: string } },
+  ): Promise<MachineInventory> {
     const userId = req.user.id;
     return this.inventoryService.recordSale(dto, userId);
   }

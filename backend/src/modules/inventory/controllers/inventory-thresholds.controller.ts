@@ -8,10 +8,11 @@ import {
   Delete,
   Query,
   UseGuards,
-  Request,
+  Req,
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
+import { Request as ExpressRequest } from 'express';
 import {
   ApiTags,
   ApiOperation,
@@ -61,7 +62,7 @@ export class InventoryThresholdsController {
   })
   @ApiResponse({ status: 400, description: 'Invalid input data' })
   async create(
-    @Request() req: any,
+    @Req() req: ExpressRequest & { user?: { id: string } },
     @Body() createDto: CreateThresholdDto,
   ): Promise<InventoryDifferenceThreshold> {
     return this.thresholdService.create(createDto, req.user?.id);
@@ -307,7 +308,9 @@ export class InventoryThresholdsController {
     description: 'Default thresholds created',
     type: [InventoryDifferenceThreshold],
   })
-  async createDefaults(@Request() req: any): Promise<InventoryDifferenceThreshold[]> {
+  async createDefaults(
+    @Req() req: ExpressRequest & { user?: { id: string } },
+  ): Promise<InventoryDifferenceThreshold[]> {
     return this.thresholdService.createDefaultThresholds(req.user?.id);
   }
 }

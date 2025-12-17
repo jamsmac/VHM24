@@ -8,8 +8,9 @@ import {
   Param,
   Query,
   UseGuards,
-  Request,
+  Req,
 } from '@nestjs/common';
+import { Request as ExpressRequest } from 'express';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -21,6 +22,7 @@ import {
   ApproveAdjustmentDto,
   FilterAdjustmentsDto,
 } from './dto/inventory-adjustment.dto';
+import { AdjustmentStatus } from './entities/inventory-adjustment.entity';
 
 /**
  * Inventory Adjustments Controller
@@ -40,7 +42,10 @@ export class InventoryAdjustmentsController {
   @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.OPERATOR)
   @ApiOperation({ summary: 'Создать корректировку остатков' })
   @ApiResponse({ status: 201, description: 'Корректировка создана' })
-  async createAdjustment(@Body() dto: CreateAdjustmentDto, @Request() req: any) {
+  async createAdjustment(
+    @Body() dto: CreateAdjustmentDto,
+    @Req() req: ExpressRequest & { user: { id: string } },
+  ) {
     return await this.adjustmentService.createAdjustment(dto, req.user.id);
   }
 
@@ -67,7 +72,7 @@ export class InventoryAdjustmentsController {
   async approveOrReject(
     @Param('id') id: string,
     @Body() dto: ApproveAdjustmentDto,
-    @Request() req: any,
+    @Req() req: ExpressRequest & { user: { id: string } },
   ) {
     return await this.adjustmentService.approveOrReject(id, dto, req.user.id);
   }
@@ -79,7 +84,10 @@ export class InventoryAdjustmentsController {
     description: 'Обновляет фактические остатки в соответствии с корректировкой',
   })
   @ApiResponse({ status: 200, description: 'Корректировка применена' })
-  async applyAdjustment(@Param('id') id: string, @Request() req: any) {
+  async applyAdjustment(
+    @Param('id') id: string,
+    @Req() req: ExpressRequest & { user: { id: string } },
+  ) {
     return await this.adjustmentService.applyAdjustment(id, req.user.id);
   }
 
@@ -87,7 +95,10 @@ export class InventoryAdjustmentsController {
   @Roles(UserRole.ADMIN, UserRole.MANAGER)
   @ApiOperation({ summary: 'Отменить корректировку' })
   @ApiResponse({ status: 200, description: 'Корректировка отменена' })
-  async cancelAdjustment(@Param('id') id: string, @Request() req: any) {
+  async cancelAdjustment(
+    @Param('id') id: string,
+    @Req() req: ExpressRequest & { user: { id: string } },
+  ) {
     return await this.adjustmentService.cancelAdjustment(id, req.user.id);
   }
 
@@ -101,7 +112,7 @@ export class InventoryAdjustmentsController {
   })
   async getPendingCount() {
     const result = await this.adjustmentService.findAll({
-      status: 'pending' as any,
+      status: AdjustmentStatus.PENDING,
       limit: 1,
       offset: 0,
     });

@@ -2,6 +2,43 @@ import { Injectable, Logger } from '@nestjs/common';
 import * as ExcelJS from 'exceljs';
 import { Response } from 'express';
 import { InventoryDifferenceService, DifferenceReportItem } from './inventory-difference.service';
+import { InventoryLevelType } from '../entities/inventory-actual-count.entity';
+import { SeverityLevel } from '../entities/inventory-difference-threshold.entity';
+
+/** Export data row structure */
+interface ExportRow {
+  Товар: string;
+  'Уровень учёта': string;
+  Объект: string;
+  'Дата замера': string;
+  'Расчётный остаток': number;
+  'Фактический остаток': number;
+  'Разница (абс.)': number;
+  'Разница (%)': string;
+  Серьёзность: string;
+  'Порог превышен': string;
+  Проверил: string;
+}
+
+/** Summary data row structure */
+interface SummaryRow {
+  Показатель: string;
+  Значение: string | number;
+}
+
+/** Filter parameters for difference report */
+interface DifferenceReportFilters {
+  level_type?: InventoryLevelType;
+  level_ref_id?: string;
+  nomenclature_id?: string;
+  session_id?: string;
+  date_from?: string;
+  date_to?: string;
+  severity?: SeverityLevel;
+  threshold_exceeded_only?: boolean;
+  limit?: number;
+  offset?: number;
+}
 
 /**
  * InventoryExportService
@@ -17,7 +54,7 @@ export class InventoryExportService {
   /**
    * Экспорт отчёта по расхождениям в Excel
    */
-  async exportDifferencesToExcel(filters: any, res: Response): Promise<void> {
+  async exportDifferencesToExcel(filters: DifferenceReportFilters, res: Response): Promise<void> {
     this.logger.log('Exporting inventory differences to Excel...');
 
     try {
@@ -96,7 +133,7 @@ export class InventoryExportService {
   /**
    * Экспорт отчёта по расхождениям в CSV
    */
-  async exportDifferencesToCSV(filters: any, res: Response): Promise<void> {
+  async exportDifferencesToCSV(filters: DifferenceReportFilters, res: Response): Promise<void> {
     this.logger.log('Exporting inventory differences to CSV...');
 
     try {
@@ -146,7 +183,7 @@ export class InventoryExportService {
   /**
    * Подготовить данные для экспорта
    */
-  private prepareExportData(differences: DifferenceReportItem[]): any[] {
+  private prepareExportData(differences: DifferenceReportItem[]): ExportRow[] {
     return differences.map((item) => ({
       Товар: item.nomenclature_name,
       'Уровень учёта': this.translateLevelType(item.level_type),
@@ -165,7 +202,7 @@ export class InventoryExportService {
   /**
    * Подготовить сводные данные
    */
-  private prepareSummaryData(differences: DifferenceReportItem[]): any[] {
+  private prepareSummaryData(differences: DifferenceReportItem[]): SummaryRow[] {
     const totalCount = differences.length;
     const criticalCount = differences.filter((d) => d.severity === 'CRITICAL').length;
     const warningCount = differences.filter((d) => d.severity === 'WARNING').length;

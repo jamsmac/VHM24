@@ -1,9 +1,16 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between } from 'typeorm';
+import { Repository, Between, FindOptionsWhere } from 'typeorm';
 import { Transaction, TransactionType } from '../../transactions/entities/transaction.entity';
 import { RecipeSnapshot } from '../../recipes/entities/recipe-snapshot.entity';
 import { Recipe } from '../../recipes/entities/recipe.entity';
+
+/** Normalized recipe ingredient item for consumption calculation */
+interface NormalizedIngredient {
+  nomenclature_id: string;
+  quantity: number | string;
+  nomenclature_name?: string;
+}
 
 /**
  * InventoryConsumptionCalculatorService
@@ -49,7 +56,7 @@ export class InventoryConsumptionCalculatorService {
     const consumptionMap = new Map<string, number>();
 
     // 1. Получить все продажи за период
-    const whereConditions: any = {
+    const whereConditions: FindOptionsWhere<Transaction> = {
       transaction_type: TransactionType.SALE,
       transaction_date: Between(fromDate, toDate),
     };
@@ -90,7 +97,7 @@ export class InventoryConsumptionCalculatorService {
       // 3. Рассчитать расход каждого ингредиента
       for (const ingredient of recipeIngredients) {
         const ingredientId = ingredient.nomenclature_id;
-        const quantityPerPortion = Number(ingredient.quantity_needed);
+        const quantityPerPortion = Number(ingredient.quantity);
         const totalConsumed = quantityPerPortion * portionsCount;
 
         // Добавить к суммарному расходу
@@ -98,7 +105,7 @@ export class InventoryConsumptionCalculatorService {
         consumptionMap.set(ingredientId, currentConsumption + totalConsumed);
 
         this.logger.debug(
-          `  Recipe ${sale.recipe_id}: ${ingredient.nomenclature?.name || 'Unknown'} - ${quantityPerPortion} × ${portionsCount} = ${totalConsumed}`,
+          `  Recipe ${sale.recipe_id}: ${ingredient.nomenclature_name || 'Unknown'} - ${quantityPerPortion} × ${portionsCount} = ${totalConsumed}`,
         );
       }
     }
@@ -115,9 +122,12 @@ export class InventoryConsumptionCalculatorService {
    *
    * @param recipeId - ID рецепта
    * @param snapshotId - ID snapshot (опционально)
-   * @returns Массив ингредиентов с нормами расхода
+   * @returns Массив ингредиентов с нормами расхода в нормализованном формате
    */
-  private async getRecipeIngredients(recipeId: string, snapshotId: string | null): Promise<any[]> {
+  private async getRecipeIngredients(
+    recipeId: string,
+    snapshotId: string | null,
+  ): Promise<NormalizedIngredient[]> {
     // Приоритет: snapshot -> current recipe
     if (snapshotId) {
       try {
@@ -126,7 +136,7 @@ export class InventoryConsumptionCalculatorService {
         });
 
         if (snapshot && snapshot.snapshot?.items) {
-          return snapshot.snapshot.items;
+          return snapshot.snapshot.items as NormalizedIngredient[];
         }
       } catch (error) {
         this.logger.warn(`Failed to load snapshot ${snapshotId}, falling back to current recipe`);
@@ -136,14 +146,19 @@ export class InventoryConsumptionCalculatorService {
     // Fallback: текущий рецепт
     const recipe = await this.recipeRepository.findOne({
       where: { id: recipeId },
-      relations: ['ingredients', 'ingredients.nomenclature'],
+      relations: ['ingredients', 'ingredients.ingredient'],
     });
 
     if (!recipe) {
       return [];
     }
 
-    return recipe.ingredients;
+    // Нормализация: маппинг RecipeIngredient -> NormalizedIngredient
+    return recipe.ingredients.map((ing) => ({
+      nomenclature_id: ing.ingredient_id,
+      quantity: ing.quantity,
+      nomenclature_name: ing.ingredient?.name,
+    }));
   }
 
   /**

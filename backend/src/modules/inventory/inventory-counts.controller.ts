@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Body, Param, Query, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query, UseGuards, Req } from '@nestjs/common';
+import { Request as ExpressRequest } from 'express';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -11,6 +12,7 @@ import {
   CreateBatchCountDto,
   GetActualCountsFilterDto,
 } from './dto/inventory-count.dto';
+import { InventoryLevelType } from './entities/inventory-actual-count.entity';
 
 /**
  * Inventory Counts Controller
@@ -32,7 +34,10 @@ export class InventoryCountsController {
   @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.OPERATOR)
   @ApiOperation({ summary: 'Создать фактический замер' })
   @ApiResponse({ status: 201, description: 'Фактический замер создан' })
-  async createActualCount(@Body() dto: CreateActualCountDto, @Request() req: any) {
+  async createActualCount(
+    @Body() dto: CreateActualCountDto,
+    @Req() req: ExpressRequest & { user: { id: string } },
+  ) {
     return await this.countService.createActualCount(dto, req.user.id);
   }
 
@@ -40,7 +45,10 @@ export class InventoryCountsController {
   @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.OPERATOR)
   @ApiOperation({ summary: 'Массовая инвентаризация (много товаров)' })
   @ApiResponse({ status: 201, description: 'Инвентаризация создана' })
-  async createBatchCount(@Body() dto: CreateBatchCountDto, @Request() req: any) {
+  async createBatchCount(
+    @Body() dto: CreateBatchCountDto,
+    @Req() req: ExpressRequest & { user: { id: string } },
+  ) {
     return await this.countService.createBatchCount(dto, req.user.id);
   }
 
@@ -63,7 +71,7 @@ export class InventoryCountsController {
     @Query('date_to') dateTo?: string,
   ) {
     return await this.countService.getInventorySessions(
-      levelType as any,
+      levelType as InventoryLevelType | undefined,
       levelRefId,
       dateFrom,
       dateTo,
