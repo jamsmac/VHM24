@@ -7,12 +7,19 @@ import {
   Param,
   Delete,
   Query,
-  Request,
+  Req,
   HttpCode,
   HttpStatus,
   UseGuards,
   ParseUUIDPipe,
 } from '@nestjs/common';
+import { Request as ExpressRequest } from 'express';
+
+interface AuthenticatedRequest extends ExpressRequest {
+  user: {
+    id: string;
+  };
+}
 import {
   ApiTags,
   ApiOperation,
@@ -90,7 +97,7 @@ export class NotificationsController {
     type: [Notification],
   })
   getMyNotifications(
-    @Request() req: any,
+    @Req() req: AuthenticatedRequest,
     @Query('status') status?: NotificationStatus,
     @Query('unreadOnly') unreadOnly?: boolean,
   ): Promise<Notification[]> {
@@ -104,7 +111,7 @@ export class NotificationsController {
     status: 200,
     description: 'Статистика уведомлений',
   })
-  getStats(@Request() req: any) {
+  getStats(@Req() req: AuthenticatedRequest) {
     const userId = req.user.id;
     return this.notificationsService.getStats(userId);
   }
@@ -141,7 +148,7 @@ export class NotificationsController {
     status: 204,
     description: 'Все уведомления отмечены как прочитанные',
   })
-  markAllAsRead(@Request() req: any): Promise<void> {
+  markAllAsRead(@Req() req: AuthenticatedRequest): Promise<void> {
     const userId = req.user.id;
     return this.notificationsService.markAllAsRead(userId);
   }
@@ -179,7 +186,7 @@ export class NotificationsController {
     description: 'Настройки уведомлений',
     type: [NotificationPreference],
   })
-  getMyPreferences(@Request() req: any): Promise<NotificationPreference[]> {
+  getMyPreferences(@Req() req: AuthenticatedRequest): Promise<NotificationPreference[]> {
     const userId = req.user.id;
     return this.notificationsService.getUserPreferences(userId);
   }
@@ -193,7 +200,7 @@ export class NotificationsController {
   })
   createPreference(
     @Body() dto: CreateNotificationPreferenceDto,
-    @Request() req: any,
+    @Req() req: AuthenticatedRequest,
   ): Promise<NotificationPreference> {
     const userId = req.user.id;
     return this.notificationsService.createPreference(userId, dto);
@@ -212,7 +219,7 @@ export class NotificationsController {
     @Param('type') type: NotificationType,
     @Param('channel') channel: NotificationChannel,
     @Body() dto: UpdateNotificationPreferenceDto,
-    @Request() req: any,
+    @Req() req: AuthenticatedRequest,
   ): Promise<NotificationPreference> {
     const userId = req.user.id;
     return this.notificationsService.updatePreference(userId, type, channel, dto);
@@ -227,7 +234,7 @@ export class NotificationsController {
   removePreference(
     @Param('type') type: NotificationType,
     @Param('channel') channel: NotificationChannel,
-    @Request() req: any,
+    @Req() req: AuthenticatedRequest,
   ): Promise<void> {
     const userId = req.user.id;
     return this.notificationsService.removePreference(userId, type, channel);

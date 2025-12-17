@@ -18,6 +18,8 @@ import { NotFoundException } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 
+type MockAuthRequest = Parameters<typeof NotificationsController.prototype.getMyNotifications>[0];
+
 describe('NotificationsController', () => {
   let controller: NotificationsController;
   let mockNotificationsService: jest.Mocked<NotificationsService>;
@@ -29,7 +31,7 @@ describe('NotificationsController', () => {
 
   const mockRequest = {
     user: { id: mockUserId },
-  };
+  } as MockAuthRequest;
 
   const mockNotification: Partial<Notification> = {
     id: mockNotificationId,
