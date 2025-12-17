@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Task, TaskStatus, TaskType } from '../entities/task.entity';
+import { Task, TaskStatus, TaskType, TaskPriority } from '../entities/task.entity';
 import { IncidentsService } from '../../incidents/incidents.service';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { AuditLogService } from '../../security/services/audit-log.service';
@@ -266,10 +266,10 @@ export class TaskEscalationService {
     const tasks = await query.getMany();
 
     return {
-      critical: tasks.filter((t) => t.priority === 'critical'),
-      high: tasks.filter((t) => t.priority === 'high'),
-      medium: tasks.filter((t) => t.priority === 'medium'),
-      low: tasks.filter((t) => t.priority === 'low'),
+      critical: tasks.filter((t) => t.priority === TaskPriority.URGENT),
+      high: tasks.filter((t) => t.priority === TaskPriority.HIGH),
+      medium: tasks.filter((t) => t.priority === TaskPriority.NORMAL),
+      low: tasks.filter((t) => t.priority === TaskPriority.LOW),
     };
   }
 

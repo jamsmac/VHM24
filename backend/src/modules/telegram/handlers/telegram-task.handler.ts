@@ -212,10 +212,10 @@ export class TelegramTaskHandler {
         return;
       }
 
-      await this.tasksService.completeTask(taskId, user.id);
+      await this.tasksService.completeTask(taskId, user.id, {});
 
       // Clear session state
-      await this.sessionService.clearPhotoRequest(user.id);
+      await this.sessionService.clearActiveTask(user.id);
 
       await ctx.reply(
         lang === TelegramLanguage.RU
@@ -389,9 +389,8 @@ export class TelegramTaskHandler {
         telegram_user_id: ctx.telegramUser?.id,
         chat_id: ctx.chat?.id.toString(),
         message_type: type,
-        message_content: content,
-        direction: 'incoming',
-        processed_at: new Date(),
+        message_text: content,
+        metadata: { direction: 'incoming', processed_at: new Date() },
       });
       await this.messageLogRepository.save(log);
     } catch (error) {

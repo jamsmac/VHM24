@@ -23,6 +23,7 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { TasksService } from './tasks.service';
+import { FilesService } from '../files/files.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { CompleteTaskDto } from './dto/complete-task.dto';
@@ -45,7 +46,10 @@ interface AuthenticatedRequest extends ExpressRequest {
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('tasks')
 export class TasksController {
-  constructor(private readonly tasksService: TasksService) {}
+  constructor(
+    private readonly tasksService: TasksService,
+    private readonly filesService: FilesService,
+  ) {}
 
   @Post()
   @Roles('ADMIN', 'MANAGER', 'SUPER_ADMIN')
@@ -270,9 +274,7 @@ export class TasksController {
     description: 'Список фото задачи',
   })
   async getTaskPhotos(@Param('id', ParseUUIDPipe) id: string) {
-    // Используем FilesService напрямую
-    const filesService = this.tasksService['filesService'];
-    return await filesService.findByEntity('task', id);
+    return await this.filesService.findByEntity('task', id);
   }
 
   @Post(':id/upload-photos')
