@@ -15,7 +15,8 @@ export class XlsxParser {
   async parse(buffer: Buffer): Promise<RawTable[]> {
     try {
       const workbook = new ExcelJS.Workbook();
-      await workbook.xlsx.load(buffer as any);
+      // ExcelJS accepts ArrayBuffer, Node Buffer is compatible but requires type assertion
+      await workbook.xlsx.load(buffer as unknown as ArrayBuffer);
 
       const tables: RawTable[] = [];
 

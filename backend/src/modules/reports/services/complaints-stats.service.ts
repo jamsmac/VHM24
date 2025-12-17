@@ -179,7 +179,8 @@ export class ComplaintsStatsService {
   private async getComplaints(startDate: Date, endDate: Date): Promise<Complaint[]> {
     return await this.complaintRepository.find({
       where: {
-        submitted_at: Between(startDate, endDate) as any,
+        // TypeORM Between with Date parameters requires type assertion due to generic inference
+        submitted_at: Between(startDate, endDate) as ReturnType<typeof Between<Date>>,
       },
       relations: ['machine', 'machine.location'],
       order: { submitted_at: 'DESC' },

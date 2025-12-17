@@ -168,7 +168,8 @@ export class IncidentsStatsService {
   private async getIncidents(startDate: Date, endDate: Date): Promise<Incident[]> {
     return await this.incidentRepository.find({
       where: {
-        reported_at: Between(startDate, endDate) as any,
+        // TypeORM Between with Date parameters requires type assertion due to generic inference
+        reported_at: Between(startDate, endDate) as ReturnType<typeof Between<Date>>,
       },
       relations: ['machine', 'machine.location'],
       order: { reported_at: 'DESC' },

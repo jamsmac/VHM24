@@ -22,8 +22,8 @@ export function createMockJwtService(): Partial<JwtService> {
 /**
  * Create a mock ConfigService
  */
-export function createMockConfigService(config: Record<string, any> = {}): Partial<ConfigService> {
-  const defaultConfig: Record<string, any> = {
+export function createMockConfigService(config: Record<string, unknown> = {}): Partial<ConfigService> {
+  const defaultConfig: Record<string, unknown> = {
     JWT_SECRET: 'test-secret',
     JWT_ACCESS_EXPIRATION: '15m',
     JWT_REFRESH_EXPIRATION: '7d',
@@ -36,7 +36,7 @@ export function createMockConfigService(config: Record<string, any> = {}): Parti
   };
 
   return {
-    get: jest.fn((key: string, defaultValue?: any) => {
+    get: jest.fn((key: string, defaultValue?: unknown) => {
       return key in defaultConfig ? defaultConfig[key] : defaultValue;
     }),
     getOrThrow: jest.fn((key: string) => {
@@ -211,7 +211,18 @@ export function createMockLogger() {
 /**
  * Create a mock Express Request
  */
-export function createMockRequest(overrides?: any) {
+interface MockRequestOverrides {
+  headers?: Record<string, string>;
+  body?: Record<string, unknown>;
+  query?: Record<string, string>;
+  params?: Record<string, string>;
+  user?: { id: string; email: string; role: string } | null;
+  ip?: string;
+  method?: string;
+  path?: string;
+}
+
+export function createMockRequest(overrides?: MockRequestOverrides) {
   return {
     headers: {},
     body: {},
@@ -228,8 +239,17 @@ export function createMockRequest(overrides?: any) {
 /**
  * Create a mock Express Response
  */
-export function createMockResponse() {
-  const res: any = {
+interface MockResponse {
+  status: jest.Mock;
+  json: jest.Mock;
+  send: jest.Mock;
+  setHeader: jest.Mock;
+  cookie: jest.Mock;
+  clearCookie: jest.Mock;
+}
+
+export function createMockResponse(): MockResponse {
+  const res: MockResponse = {
     status: jest.fn().mockReturnThis(),
     json: jest.fn().mockReturnThis(),
     send: jest.fn().mockReturnThis(),

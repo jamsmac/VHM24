@@ -113,7 +113,8 @@ export class ExcelParser implements DataParser {
       // Read workbook
       const workbook = new ExcelJS.Workbook();
       if (Buffer.isBuffer(input)) {
-        await workbook.xlsx.load(input as any);
+        // ExcelJS accepts ArrayBuffer, Node Buffer is compatible but requires type assertion
+        await workbook.xlsx.load(input as unknown as ArrayBuffer);
       } else {
         throw new Error('Input must be a Buffer');
       }

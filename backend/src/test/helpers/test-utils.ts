@@ -97,7 +97,7 @@ export function dateInFuture(daysAhead: number): Date {
  * Assert that a function throws a specific error
  */
 export async function expectToThrow(
-  fn: () => Promise<any> | any,
+  fn: () => Promise<unknown> | unknown,
   errorMessage?: string | RegExp,
 ): Promise<void> {
   let error: Error | null = null;
@@ -203,20 +203,20 @@ export function formatUZS(amount: number): string {
  * Strip timestamps from object for easier comparison
  */
 export function stripTimestamps<T extends object>(obj: T): Partial<T> {
-  const copy = { ...obj };
-  delete (copy as any).created_at;
-  delete (copy as any).updated_at;
-  delete (copy as any).deleted_at;
-  return copy;
+  const copy = { ...obj } as Record<string, unknown>;
+  delete copy.created_at;
+  delete copy.updated_at;
+  delete copy.deleted_at;
+  return copy as Partial<T>;
 }
 
 /**
  * Strip IDs from object for easier comparison
  */
 export function stripIds<T extends object>(obj: T): Partial<T> {
-  const copy = { ...obj };
-  delete (copy as any).id;
-  return copy;
+  const copy = { ...obj } as Record<string, unknown>;
+  delete copy.id;
+  return copy as Partial<T>;
 }
 
 /**
@@ -260,15 +260,18 @@ export function suppressConsole(): {
 /**
  * Create a spy on a method
  */
-export function spyOn<T extends object, K extends keyof T>(obj: T, method: K): jest.SpyInstance {
-  return jest.spyOn(obj, method as any);
+export function spyOn<T extends object, K extends jest.FunctionPropertyNames<Required<T>>>(
+  obj: T,
+  method: K,
+): jest.SpyInstance {
+  return jest.spyOn(obj, method);
 }
 
 /**
  * Assert that a mock was called with specific arguments
  */
-export function expectCalledWith<T extends (...args: any[]) => any>(
-  mockFn: jest.Mock<T>,
+export function expectCalledWith<T extends (...args: unknown[]) => unknown>(
+  mockFn: jest.Mock<ReturnType<T>, Parameters<T>>,
   ...expectedArgs: Parameters<T>
 ): void {
   expect(mockFn).toHaveBeenCalledWith(...expectedArgs);

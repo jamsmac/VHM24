@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import type { StringValue } from 'ms';
 import { RealtimeGateway } from './realtime.gateway';
 
 /**
@@ -23,7 +24,7 @@ import { RealtimeGateway } from './realtime.gateway';
       useFactory: async (configService: ConfigService) => ({
         secret: configService.get<string>('JWT_SECRET'),
         signOptions: {
-          expiresIn: configService.get<string>('JWT_ACCESS_EXPIRATION', '15m') as any,
+          expiresIn: (configService.get<string>('JWT_ACCESS_EXPIRATION', '15m') ?? '15m') as StringValue,
         },
       }),
       inject: [ConfigService],

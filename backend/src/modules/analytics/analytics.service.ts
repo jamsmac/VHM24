@@ -25,12 +25,14 @@ export class AnalyticsService {
     const dateStr = format(date, 'yyyy-MM-dd');
 
     let stats = await this.dailyStatsRepository.findOne({
-      where: { stat_date: dateStr as any },
+      // TypeORM date columns accept 'YYYY-MM-DD' string format
+      where: { stat_date: dateStr as unknown as Date },
     });
 
     if (!stats) {
       stats = this.dailyStatsRepository.create({
-        stat_date: dateStr as any,
+        // TypeORM date columns accept 'YYYY-MM-DD' string format
+        stat_date: dateStr as unknown as Date,
         last_updated_at: new Date(),
       });
       stats = await this.dailyStatsRepository.save(stats);
@@ -334,7 +336,11 @@ export class AnalyticsService {
   async getStatsForDateRange(startDate: Date, endDate: Date): Promise<DailyStats[]> {
     return this.dailyStatsRepository.find({
       where: {
-        stat_date: Between(format(startDate, 'yyyy-MM-dd'), format(endDate, 'yyyy-MM-dd')) as any,
+        // TypeORM Between accepts string date format for date columns
+        stat_date: Between(
+          format(startDate, 'yyyy-MM-dd'),
+          format(endDate, 'yyyy-MM-dd'),
+        ) as unknown as Date,
       },
       order: {
         stat_date: 'ASC',
@@ -347,7 +353,8 @@ export class AnalyticsService {
    */
   async getStatsForDate(date: Date): Promise<DailyStats | null> {
     return this.dailyStatsRepository.findOne({
-      where: { stat_date: format(date, 'yyyy-MM-dd') as any },
+      // TypeORM date columns accept 'YYYY-MM-DD' string format
+      where: { stat_date: format(date, 'yyyy-MM-dd') as unknown as Date },
     });
   }
 

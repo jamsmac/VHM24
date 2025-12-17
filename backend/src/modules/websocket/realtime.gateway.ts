@@ -10,6 +10,24 @@ import { Server, Socket } from 'socket.io';
 import { Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 
+/**
+ * JWT Payload interface for authenticated users
+ */
+interface JwtPayload {
+  sub: string;
+  email?: string;
+  role?: string;
+  iat?: number;
+  exp?: number;
+}
+
+/**
+ * Extended Socket interface with user authentication data
+ */
+interface AuthenticatedSocket extends Socket {
+  user: JwtPayload | null;
+}
+
 // Connection rate limiting
 const connectionTracker = new Map<string, { count: number; resetTime: number }>();
 const MAX_CONNECTIONS_PER_IP = 10;
@@ -97,12 +115,12 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection, OnGa
       if (!token) {
         this.logger.warn(`Client ${client.id} connected without token - allowing anonymous access`);
         // Allow anonymous connections but mark them
-        (client as any).user = null;
+        (client as AuthenticatedSocket).user = null;
       } else {
         // Verify JWT token
         try {
-          const payload = this.jwtService.verify(token as string);
-          (client as any).user = payload;
+          const payload = this.jwtService.verify(token as string) as JwtPayload;
+          (client as AuthenticatedSocket).user = payload;
           this.logger.log(`Client ${client.id} authenticated as user ${payload.sub}`);
         } catch (error) {
           this.logger.warn(`Client ${client.id} provided invalid token - disconnecting`);
@@ -120,7 +138,7 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection, OnGa
       client.emit('connection:success', {
         message: 'Connected to VendHub realtime server',
         clientId,
-        authenticated: !!(client as any).user,
+        authenticated: !!(client as AuthenticatedSocket).user,
         timestamp: new Date().toISOString(),
       });
     } catch (error) {

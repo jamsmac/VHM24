@@ -353,7 +353,8 @@ export class SalesImportProcessor {
    */
   private async parseExcel(buffer: Buffer): Promise<ParsedRow[]> {
     const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.load(buffer as any);
+    // ExcelJS accepts ArrayBuffer, Node Buffer is compatible but requires type assertion
+    await workbook.xlsx.load(buffer as unknown as ArrayBuffer);
 
     const worksheet = workbook.worksheets[0];
     if (!worksheet) {

@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import type { StringValue } from 'ms';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { UsersModule } from '../users/users.module';
@@ -34,7 +35,7 @@ import { IsStrongPasswordConstraint } from './decorators/is-strong-password.deco
       useFactory: async (configService: ConfigService) => ({
         secret: configService.get<string>('JWT_SECRET'),
         signOptions: {
-          expiresIn: configService.get<string>('JWT_ACCESS_EXPIRATION', '15m') as any,
+          expiresIn: (configService.get<string>('JWT_ACCESS_EXPIRATION', '15m') ?? '15m') as StringValue,
         },
       }),
       inject: [ConfigService],

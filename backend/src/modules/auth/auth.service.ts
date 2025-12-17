@@ -10,10 +10,12 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThan, IsNull } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import type { StringValue } from 'ms';
 import * as bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
 import { UsersService } from '../users/users.service';
 import { User, UserRole, UserStatus } from '../users/entities/user.entity';
+import { UpdateUserDto } from '../users/dto/update-user.dto';
 import { RegisterDto } from './dto/register.dto';
 import { JwtPayload } from './strategies/jwt.strategy';
 import { AuditLogService } from '../security/services/audit-log.service';
@@ -479,11 +481,11 @@ export class AuthService {
     const [access_token, refresh_token] = await Promise.all([
       this.jwtService.signAsync(accessPayload, {
         secret: accessSecret,
-        expiresIn: this.configService.get<string>('JWT_ACCESS_EXPIRATION', '15m') as any,
+        expiresIn: (this.configService.get<string>('JWT_ACCESS_EXPIRATION', '15m') ?? '15m') as StringValue,
       }),
       this.jwtService.signAsync(refreshPayload, {
         secret: refreshSecret,
-        expiresIn: this.configService.get<string>('JWT_REFRESH_EXPIRATION', '7d') as any,
+        expiresIn: (this.configService.get<string>('JWT_REFRESH_EXPIRATION', '7d') ?? '7d') as StringValue,
       }),
     ]);
 
@@ -511,7 +513,7 @@ export class AuthService {
       15,
     );
 
-    const updates: Partial<User> = {
+    const updates: UpdateUserDto = {
       failed_login_attempts: failedAttempts,
       last_failed_login_at: new Date(),
     };
@@ -537,7 +539,7 @@ export class AuthService {
       });
     }
 
-    await this.usersService.update(userId, updates as any);
+    await this.usersService.update(userId, updates);
   }
 
   /**

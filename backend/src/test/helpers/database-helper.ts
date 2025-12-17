@@ -1,6 +1,10 @@
-import { DataSource, Repository, ObjectLiteral } from 'typeorm';
+import { DataSource, Repository, ObjectLiteral, EntityTarget, EntitySchema } from 'typeorm';
 import { Test, TestingModule } from '@nestjs/testing';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { Provider } from '@nestjs/common';
+
+// Type compatible with TypeORM module entity arrays
+type EntityClassOrSchema = (new (...args: unknown[]) => unknown) | EntitySchema;
 
 /**
  * Database Test Helper
@@ -18,7 +22,7 @@ export class DatabaseTestHelper {
    * Create a test database connection
    * Uses SQLite in-memory for fast test execution
    */
-  async createTestingModule(entities: any[], providers: any[] = []): Promise<TestingModule> {
+  async createTestingModule(entities: EntityClassOrSchema[], providers: Provider[] = []): Promise<TestingModule> {
     return await Test.createTestingModule({
       imports: [
         TypeOrmModule.forRoot({
@@ -70,14 +74,14 @@ export class DatabaseTestHelper {
   /**
    * Get repository for entity
    */
-  getRepository<T extends ObjectLiteral>(entity: any): Repository<T> {
+  getRepository<T extends ObjectLiteral>(entity: EntityTarget<T>): Repository<T> {
     return this.dataSource.getRepository(entity);
   }
 
   /**
    * Execute raw SQL query
    */
-  async query(sql: string, parameters?: any[]): Promise<any> {
+  async query(sql: string, parameters?: unknown[]): Promise<unknown> {
     return await this.dataSource.query(sql, parameters);
   }
 
@@ -105,7 +109,68 @@ export class DatabaseTestHelper {
 /**
  * Create a mock repository for testing
  */
-export function createMockRepository<_T extends ObjectLiteral = any>(): any {
+/**
+ * Mock QueryBuilder interface for testing
+ */
+interface MockQueryBuilder {
+  where: jest.Mock;
+  andWhere: jest.Mock;
+  orWhere: jest.Mock;
+  leftJoin: jest.Mock;
+  innerJoin: jest.Mock;
+  leftJoinAndSelect: jest.Mock;
+  innerJoinAndSelect: jest.Mock;
+  orderBy: jest.Mock;
+  addOrderBy: jest.Mock;
+  skip: jest.Mock;
+  take: jest.Mock;
+  select: jest.Mock;
+  addSelect: jest.Mock;
+  groupBy: jest.Mock;
+  getOne: jest.Mock;
+  getMany: jest.Mock;
+  getManyAndCount: jest.Mock;
+  getCount: jest.Mock;
+  getRawMany: jest.Mock;
+  execute: jest.Mock;
+}
+
+/**
+ * Create a mock QueryBuilder for testing
+ */
+function createMockQueryBuilder(): MockQueryBuilder {
+  const mockQb: MockQueryBuilder = {
+    where: jest.fn().mockReturnThis(),
+    andWhere: jest.fn().mockReturnThis(),
+    orWhere: jest.fn().mockReturnThis(),
+    leftJoin: jest.fn().mockReturnThis(),
+    innerJoin: jest.fn().mockReturnThis(),
+    leftJoinAndSelect: jest.fn().mockReturnThis(),
+    innerJoinAndSelect: jest.fn().mockReturnThis(),
+    orderBy: jest.fn().mockReturnThis(),
+    addOrderBy: jest.fn().mockReturnThis(),
+    skip: jest.fn().mockReturnThis(),
+    take: jest.fn().mockReturnThis(),
+    select: jest.fn().mockReturnThis(),
+    addSelect: jest.fn().mockReturnThis(),
+    groupBy: jest.fn().mockReturnThis(),
+    getOne: jest.fn(),
+    getMany: jest.fn(),
+    getManyAndCount: jest.fn(),
+    getCount: jest.fn(),
+    getRawMany: jest.fn(),
+    execute: jest.fn(),
+  };
+  // Make chaining methods return the mock
+  Object.values(mockQb).forEach((fn) => {
+    if (typeof fn === 'function' && fn.mockReturnThis) {
+      fn.mockReturnThis();
+    }
+  });
+  return mockQb;
+}
+
+export function createMockRepository<T extends ObjectLiteral>(): Partial<Repository<T>> {
   return {
     find: jest.fn(),
     findOne: jest.fn(),
@@ -119,28 +184,7 @@ export function createMockRepository<_T extends ObjectLiteral = any>(): any {
     softRemove: jest.fn(),
     remove: jest.fn(),
     count: jest.fn(),
-    createQueryBuilder: jest.fn(() => ({
-      where: jest.fn().mockReturnThis(),
-      andWhere: jest.fn().mockReturnThis(),
-      orWhere: jest.fn().mockReturnThis(),
-      leftJoin: jest.fn().mockReturnThis(),
-      innerJoin: jest.fn().mockReturnThis(),
-      leftJoinAndSelect: jest.fn().mockReturnThis(),
-      innerJoinAndSelect: jest.fn().mockReturnThis(),
-      orderBy: jest.fn().mockReturnThis(),
-      addOrderBy: jest.fn().mockReturnThis(),
-      skip: jest.fn().mockReturnThis(),
-      take: jest.fn().mockReturnThis(),
-      select: jest.fn().mockReturnThis(),
-      addSelect: jest.fn().mockReturnThis(),
-      groupBy: jest.fn().mockReturnThis(),
-      getOne: jest.fn(),
-      getMany: jest.fn(),
-      getManyAndCount: jest.fn(),
-      getCount: jest.fn(),
-      getRawMany: jest.fn(),
-      execute: jest.fn(),
-    })),
+    createQueryBuilder: jest.fn(() => createMockQueryBuilder()) as unknown as Repository<T>['createQueryBuilder'],
   };
 }
 
