@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "218442063340",
+    "project_id": "vendhub-manager-8efd4",
+    "storage_bucket": "vendhub-manager-8efd4.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:218442063340:android:3535cf19a89cad801534c9",
+        "android_client_info": {
+          "package_name": "com.vendhub.manager"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDbN-5Z-zq4p5aXHe7LhxOdwkWDWx_WocY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
