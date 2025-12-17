@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { alertsApi, AlertStatus, AlertSeverity } from '@/lib/alerts-api'
 import { Button } from '@/components/ui/button'
@@ -13,8 +13,6 @@ import {
   AlertCircle,
   BellRing,
   Info,
-  Clock,
-  User,
   MapPin,
   Package,
   MessageSquare,
@@ -65,7 +63,6 @@ const statusConfig: Record<AlertStatus, { label: string; color: string }> = {
 
 export default function AlertDetailPage() {
   const params = useParams()
-  const router = useRouter()
   const queryClient = useQueryClient()
   const [note, setNote] = useState('')
 

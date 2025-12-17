@@ -16,7 +16,6 @@ import {
   Info,
   Settings,
   Clock,
-  ArrowUpRight,
 } from 'lucide-react'
 import Link from 'next/link'
 import { formatDistanceToNow, format } from 'date-fns'

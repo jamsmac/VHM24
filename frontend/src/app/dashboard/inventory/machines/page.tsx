@@ -9,7 +9,6 @@ import { Badge } from '@/components/ui/badge'
 import { Package, MonitorSmartphone, AlertTriangle } from 'lucide-react'
 import Link from 'next/link'
 import { TableSkeleton } from '@/components/ui/LoadingSkeleton'
-import { InventoryItem } from '@/types/inventory'
 
 export default function MachineInventoryPage() {
   const [selectedMachine, setSelectedMachine] = useState<string>('')

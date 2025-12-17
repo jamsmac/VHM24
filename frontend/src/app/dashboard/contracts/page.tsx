@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query'
 import { contractsApi } from '@/lib/contracts-api'
 import { Button } from '@/components/ui/button'
 import { CardSkeleton } from '@/components/ui/LoadingSkeleton'
-import { Plus, Filter, FileText, Calendar, DollarSign } from 'lucide-react'
+import { Plus, Filter, FileText, Calendar } from 'lucide-react'
 import Link from 'next/link'
 import { ContractStatus, CommissionType } from '@/types/contract'
 

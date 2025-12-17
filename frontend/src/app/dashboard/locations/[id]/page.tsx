@@ -8,7 +8,7 @@ import { MachineCard } from '@/components/machines/MachineCard'
 import { Machine } from '@/types/machines'
 import { ArrowLeft, MapPin, Building2, Users, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
-import { LoadingSkeleton, CardSkeleton } from '@/components/ui/LoadingSkeleton'
+import { LoadingSkeleton } from '@/components/ui/LoadingSkeleton'
 
 interface LocationDetailPageProps {
   params: {

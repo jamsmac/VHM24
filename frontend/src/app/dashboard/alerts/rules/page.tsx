@@ -19,7 +19,6 @@ import {
   ToggleLeft,
   ToggleRight,
   Settings2,
-  Bell,
   ArrowLeft,
   X,
   Save,

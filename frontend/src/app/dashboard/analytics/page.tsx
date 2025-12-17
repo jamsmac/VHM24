@@ -10,7 +10,6 @@ import {
   DollarSign,
   ShoppingCart,
   Activity,
-  Clock,
   Percent,
   BarChart3,
   LineChart,
@@ -23,7 +22,7 @@ export default function AnalyticsPage() {
     end_date: new Date().toISOString().split('T')[0],
   })
 
-  const [selectedMachines, setSelectedMachines] = useState<string[]>([])
+  const [selectedMachines, _setSelectedMachines] = useState<string[]>([])
   const [selectedLocations, setSelectedLocations] = useState<string[]>([])
   const [groupBy, setGroupBy] = useState<GroupByType>(GroupByType.DAY)
 
@@ -58,7 +57,8 @@ export default function AnalyticsPage() {
     queryFn: () => analyticsApi.getTopProducts(10, 30),
   })
 
-  const { data: machines } = useQuery({
+  // Machines query reserved for future machine filter UI
+  const { data: _machines } = useQuery({
     queryKey: ['machines'],
     queryFn: () => machinesApi.getAll({}),
   })

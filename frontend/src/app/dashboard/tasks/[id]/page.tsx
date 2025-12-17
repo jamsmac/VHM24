@@ -1,7 +1,7 @@
 'use client'
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams } from 'next/navigation'
 import { tasksApi } from '@/lib/tasks-api'
 import { filesApi } from '@/lib/files-api'
 import { Button } from '@/components/ui/button'
@@ -18,7 +18,6 @@ import { getErrorMessage } from '@/types/common'
 
 export default function TaskDetailPage() {
   const params = useParams()
-  const router = useRouter()
   const queryClient = useQueryClient()
   const taskId = params.id as string
 

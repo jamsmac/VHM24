@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { Plus, Search, Filter, MapPin, MoveRight, Package, Wrench } from 'lucide-react'
+import { Plus, Search, MapPin } from 'lucide-react'
 import Link from 'next/link'
 import { componentsApi } from '@/lib/equipment-api'
 import { ComponentModal } from '@/components/equipment/ComponentModal'

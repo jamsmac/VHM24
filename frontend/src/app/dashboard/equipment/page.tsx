@@ -12,7 +12,6 @@ import {
   Calendar,
   DollarSign,
   MapPin,
-  MoveRight
 } from 'lucide-react'
 import {
   componentsApi,
