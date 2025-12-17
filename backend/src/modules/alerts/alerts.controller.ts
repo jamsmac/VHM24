@@ -26,6 +26,7 @@ import {
   FilterAlertHistoryDto,
 } from './dto/alert-history.dto';
 import { AlertMetric, AlertSeverity } from './entities/alert-rule.entity';
+import { AlertStatus } from './entities/alert-history.entity';
 import { JwtAuthGuard } from '@modules/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '@modules/auth/guards/roles.guard';
 import { Roles } from '@modules/auth/decorators/roles.decorator';
@@ -127,7 +128,7 @@ export class AlertsController {
   @Roles('ADMIN', 'MANAGER', 'OPERATOR', 'SUPER_ADMIN')
   @ApiOperation({ summary: 'Get active alerts' })
   async getActiveAlerts() {
-    return this.alertsService.getAlertHistory({ status: 'active' as any });
+    return this.alertsService.getAlertHistory({ status: AlertStatus.ACTIVE });
   }
 
   @Get('history/count')

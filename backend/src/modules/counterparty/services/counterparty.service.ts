@@ -10,6 +10,9 @@ import { Counterparty } from '../entities/counterparty.entity';
 import { CreateCounterpartyDto } from '../dto/create-counterparty.dto';
 import { UpdateCounterpartyDto } from '../dto/update-counterparty.dto';
 
+/** Valid counterparty types */
+type CounterpartyType = Counterparty['type'];
+
 /**
  * Counterparty Service
  *
@@ -168,9 +171,9 @@ export class CounterpartyService {
   /**
    * Get counterparties by type
    */
-  async getByType(type: string): Promise<Counterparty[]> {
+  async getByType(type: CounterpartyType): Promise<Counterparty[]> {
     return this.counterpartyRepository.find({
-      where: { type: type as any, is_active: true },
+      where: { type, is_active: true },
       order: { name: 'ASC' },
     });
   }
