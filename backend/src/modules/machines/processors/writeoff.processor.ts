@@ -227,7 +227,7 @@ export class WriteoffProcessor {
   /**
    * Determine if error is retryable
    */
-  private isRetryableError(error: any): boolean {
+  private isRetryableError(error: unknown): boolean {
     const retryableErrors = [
       'ECONNREFUSED', // Database connection issues
       'ETIMEDOUT',
@@ -236,7 +236,7 @@ export class WriteoffProcessor {
       'ER_LOCK_WAIT_TIMEOUT', // Database lock timeout
     ];
 
-    const errorMessage = error.message || error.toString();
+    const errorMessage = error instanceof Error ? error.message : String(error);
     return retryableErrors.some((retryableError) => errorMessage.includes(retryableError));
   }
 

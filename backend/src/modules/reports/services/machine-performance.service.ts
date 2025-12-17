@@ -339,11 +339,11 @@ export class MachinePerformanceService {
     //   .getRawMany();
 
     // const total = expensesRaw.reduce(
-    //   (sum: number, item: any) => sum + parseFloat(item.amount),
+    //   (sum: number, item: { amount: string }) => sum + parseFloat(item.amount),
     //   0,
     // );
 
-    // const byCategory = expensesRaw.map((item: any) => ({
+    // const byCategory = expensesRaw.map((item: { category: string; amount: string }) => ({
     //   category: item.category,
     //   amount: parseFloat(item.amount),
     //   percentage: total > 0 ? (parseFloat(item.amount) / total) * 100 : 0,

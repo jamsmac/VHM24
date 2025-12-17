@@ -167,8 +167,8 @@ export class DepreciationReportService {
     });
 
     return equipment
-      .filter((item: any) => item.purchase_price != null && item.purchase_price > 0)
-      .map((item: any) => {
+      .filter((item) => item.purchase_price != null && item.purchase_price > 0)
+      .map((item) => {
         const purchasePrice = Number(item.purchase_price || 0);
         const depreciationYears = Number(item.depreciation_years || 5);
         const accumulatedDepreciation = Number(item.accumulated_depreciation || 0);
@@ -193,7 +193,7 @@ export class DepreciationReportService {
           status,
         };
       })
-      .sort((a: any, b: any) => b.current_value - a.current_value);
+      .sort((a, b) => b.current_value - a.current_value);
     */
   }
 }

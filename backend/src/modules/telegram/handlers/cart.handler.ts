@@ -5,6 +5,14 @@ import { CartStorageService, CartItem } from '../services/cart-storage.service';
 import { CartState, defaultSessionData } from './fsm-states';
 import { getCartKeyboard, getCartEmptyKeyboard, getCheckoutKeyboard } from './keyboards';
 
+// Temporary interface until RequestsService is implemented
+interface UserRequest {
+  request_number: string;
+  status: string;
+  created_at?: Date;
+  items?: unknown[];
+}
+
 /**
  * Обработчик корзины и оформления заказа.
  * Портировано из Python vendhub-bot/handlers/cart.py
@@ -424,7 +432,7 @@ export class CartHandler {
     //   limit: 15,
     // });
 
-    const requests: any[] = []; // Temporary
+    const requests: UserRequest[] = []; // Temporary until RequestsService is implemented
 
     if (requests.length === 0) {
       await ctx.reply(

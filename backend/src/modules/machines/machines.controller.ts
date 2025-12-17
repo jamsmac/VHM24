@@ -388,7 +388,7 @@ export class MachinesController {
   // moveToLocation(
   //   @Param('id') id: string,
   //   @Body() moveMachineDto: MoveMachineDto,
-  //   @CurrentUser() user: any,
+  //   @CurrentUser() user: User,
   // ): Promise<Machine> {
   //   // TODO: Implement moveMachine method
   //   return this.machinesService.update(id, { location_id: moveMachineDto.location_id });

@@ -207,7 +207,7 @@ export class CommissionCalculationProcessor {
    *
    * Logs successful job completion
    */
-  async onCompleted(job: Job, result: any) {
+  async onCompleted(job: Job, result: unknown) {
     this.logger.debug(`Job ${job.id} (${job.name}) completed with result:`, result);
   }
 

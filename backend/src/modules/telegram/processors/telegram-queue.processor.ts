@@ -274,7 +274,7 @@ export class TelegramQueueProcessor {
    * Note: This is informational logging. Main success handling is in handleSendMessage.
    */
   // Removed @Process decorator - onCompleted/onFailed should not be processors
-  // async onCompleted(job: Job, result: any): Promise<void> {
+  // async onCompleted(job: Job, result: unknown): Promise<void> {
   //   this.logger.log(`✅ Job ${job.id} completed successfully after ${job.attemptsMade + 1} attempt(s)`);
   // }
 
