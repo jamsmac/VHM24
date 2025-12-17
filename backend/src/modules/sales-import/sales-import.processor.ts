@@ -333,14 +333,14 @@ export class SalesImportProcessor {
 
       stream
         .pipe(csv())
-        .on('data', (row: any) => {
+        .on('data', (row: Record<string, unknown>) => {
           rows.push({
-            date: row.date || row['Дата'] || row['Date'],
-            machine_number: row.machine_number || row['Номер аппарата'] || row['Machine Number'],
-            amount: parseFloat(row.amount || row['Сумма'] || row['Amount'] || '0'),
-            payment_method: row.payment_method || row['Способ оплаты'] || row['Payment Method'],
-            product_name: row.product_name || row['Товар'] || row['Product'],
-            quantity: parseInt(row.quantity || row['Количество'] || row['Quantity'] || '1'),
+            date: String(row.date || row['Дата'] || row['Date'] || ''),
+            machine_number: String(row.machine_number || row['Номер аппарата'] || row['Machine Number'] || ''),
+            amount: parseFloat(String(row.amount || row['Сумма'] || row['Amount'] || '0')),
+            payment_method: String(row.payment_method || row['Способ оплаты'] || row['Payment Method'] || ''),
+            product_name: String(row.product_name || row['Товар'] || row['Product'] || ''),
+            quantity: parseInt(String(row.quantity || row['Количество'] || row['Quantity'] || '1')),
           });
         })
         .on('end', () => resolve(rows))
@@ -360,7 +360,7 @@ export class SalesImportProcessor {
       throw new Error('Excel file is empty or invalid');
     }
 
-    const jsonData: any[] = [];
+    const jsonData: Record<string, unknown>[] = [];
     const headers: string[] = [];
 
     worksheet.eachRow((row, rowNumber) => {
@@ -371,7 +371,7 @@ export class SalesImportProcessor {
         });
       } else {
         // Data rows
-        const rowData: any = {};
+        const rowData: Record<string, unknown> = {};
         row.eachCell((cell, colNumber) => {
           const header = headers[colNumber - 1];
           if (header) {
@@ -382,13 +382,13 @@ export class SalesImportProcessor {
       }
     });
 
-    return jsonData.map((row: any) => ({
-      date: row.date || row['Дата'] || row['Date'],
-      machine_number: row.machine_number || row['Номер аппарата'] || row['Machine Number'],
-      amount: parseFloat(row.amount || row['Сумма'] || row['Amount'] || '0'),
-      payment_method: row.payment_method || row['Способ оплаты'] || row['Payment Method'],
-      product_name: row.product_name || row['Товар'] || row['Product'],
-      quantity: parseInt(row.quantity || row['Количество'] || row['Quantity'] || '1'),
+    return jsonData.map((row) => ({
+      date: String(row.date || row['Дата'] || row['Date'] || ''),
+      machine_number: String(row.machine_number || row['Номер аппарата'] || row['Machine Number'] || ''),
+      amount: parseFloat(String(row.amount || row['Сумма'] || row['Amount'] || '0')),
+      payment_method: String(row.payment_method || row['Способ оплаты'] || row['Payment Method'] || ''),
+      product_name: String(row.product_name || row['Товар'] || row['Product'] || ''),
+      quantity: parseInt(String(row.quantity || row['Количество'] || row['Quantity'] || '1')),
     }));
   }
 }

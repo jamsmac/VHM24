@@ -5,7 +5,7 @@ import {
   Delete,
   Param,
   Query,
-  Request,
+  Req,
   UseInterceptors,
   UploadedFile,
   HttpCode,
@@ -13,6 +13,7 @@ import {
   UseGuards,
   ParseUUIDPipe,
 } from '@nestjs/common';
+import { Request as ExpressRequest } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiTags,
@@ -31,6 +32,23 @@ import { JwtAuthGuard } from '@modules/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '@modules/auth/guards/roles.guard';
 import { Roles } from '@modules/auth/decorators/roles.decorator';
 import { UserRole } from '@modules/users/entities/user.entity';
+
+/** Request with authenticated user */
+interface AuthenticatedRequest extends ExpressRequest {
+  user: { id: string };
+}
+
+/** Job status response from Bull queue */
+interface JobStatusResponse {
+  jobId: string | number;
+  state: string;
+  progress: number | object;
+  data: Record<string, unknown>;
+  failedReason: string | null | undefined;
+  attemptsMade: number;
+  processedOn: number | null | undefined;
+  finishedOn: number | null | undefined;
+}
 
 @ApiTags('Sales Import')
 @ApiBearerAuth('JWT-auth')
@@ -61,7 +79,7 @@ export class SalesImportController {
   })
   async uploadFile(
     @UploadedFile() file: Express.Multer.File,
-    @Request() req: any,
+    @Req() req: AuthenticatedRequest,
   ): Promise<{ importRecord: SalesImport; jobId: string }> {
     const userId = req.user.id;
     return this.salesImportService.uploadSalesFile(file, userId);
@@ -136,7 +154,7 @@ export class SalesImportController {
       },
     },
   })
-  getJobStatus(@Param('jobId') jobId: string): Promise<any> {
+  getJobStatus(@Param('jobId') jobId: string): Promise<JobStatusResponse> {
     return this.salesImportService.getJobStatus(jobId);
   }
 

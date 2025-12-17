@@ -1,9 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { Request } from 'express';
 import { SalesImportController } from './sales-import.controller';
 import { SalesImportService } from './sales-import.service';
 import { JwtAuthGuard } from '@modules/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '@modules/auth/guards/roles.guard';
 import { SalesImport, ImportStatus, ImportFileType } from './entities/sales-import.entity';
+
+/** Mock authenticated request for testing */
+type MockAuthRequest = { user: { id: string } } & Partial<Request>;
 
 describe('SalesImportController', () => {
   let controller: SalesImportController;
@@ -78,10 +82,10 @@ describe('SalesImportController', () => {
       };
       mockSalesImportService.uploadSalesFile.mockResolvedValue(expectedResult);
 
-      const mockRequest = { user: { id: 'user-123' } };
+      const mockRequest = { user: { id: 'user-123' } } as MockAuthRequest;
 
       // Act
-      const result = await controller.uploadFile(mockFile, mockRequest);
+      const result = await controller.uploadFile(mockFile, mockRequest as Parameters<typeof controller.uploadFile>[1]);
 
       // Assert
       expect(mockSalesImportService.uploadSalesFile).toHaveBeenCalledWith(mockFile, 'user-123');
@@ -95,10 +99,10 @@ describe('SalesImportController', () => {
         jobId: 'job-456',
       });
 
-      const mockRequest = { user: { id: 'admin-456' } };
+      const mockRequest = { user: { id: 'admin-456' } } as MockAuthRequest;
 
       // Act
-      await controller.uploadFile(mockFile, mockRequest);
+      await controller.uploadFile(mockFile, mockRequest as Parameters<typeof controller.uploadFile>[1]);
 
       // Assert
       expect(mockSalesImportService.uploadSalesFile).toHaveBeenCalledWith(
@@ -271,7 +275,8 @@ describe('SalesImportController', () => {
       mockSalesImportService.findOne.mockResolvedValue(completedImport);
 
       // Act - Step 1: Upload
-      const upload = await controller.uploadFile(mockFile, { user: { id: 'user-123' } });
+      const mockRequest = { user: { id: 'user-123' } } as MockAuthRequest;
+      const upload = await controller.uploadFile(mockFile, mockRequest as Parameters<typeof controller.uploadFile>[1]);
       expect(upload.jobId).toBe('job-123');
 
       // Act - Step 2: Check status

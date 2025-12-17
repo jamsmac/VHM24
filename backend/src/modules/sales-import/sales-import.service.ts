@@ -180,7 +180,7 @@ export class SalesImportService {
       throw new BadRequestException('Excel file is empty or invalid');
     }
 
-    const jsonData: any[] = [];
+    const jsonData: Record<string, unknown>[] = [];
     const headers: string[] = [];
 
     worksheet.eachRow((row, rowNumber) => {
@@ -191,7 +191,7 @@ export class SalesImportService {
         });
       } else {
         // Data rows
-        const rowData: any = {};
+        const rowData: Record<string, unknown> = {};
         row.eachCell((cell, colNumber) => {
           const header = headers[colNumber - 1];
           if (header) {
@@ -202,7 +202,7 @@ export class SalesImportService {
       }
     });
 
-    return jsonData.map((row: any) => this.normalizeRow(row));
+    return jsonData.map((row) => this.normalizeRow(row));
   }
 
   /**
@@ -230,7 +230,7 @@ export class SalesImportService {
   /**
    * Normalize row to standard format
    */
-  private normalizeRow(row: any): ParsedRow {
+  private normalizeRow(row: Record<string, unknown>): ParsedRow {
     // Try to detect column names (supports Russian and English)
     const dateField =
       row['date'] || row['Date'] || row['Дата'] || row['дата'] || row['sale_date'] || '';
@@ -267,7 +267,7 @@ export class SalesImportService {
   /**
    * Parse date from various formats
    */
-  private parseDate(dateStr: any): string {
+  private parseDate(dateStr: unknown): string {
     if (!dateStr) return new Date().toISOString();
 
     // If it's already a Date object
@@ -284,7 +284,7 @@ export class SalesImportService {
     }
 
     // Try to parse as string
-    const date = new Date(dateStr);
+    const date = new Date(String(dateStr));
     if (!isNaN(date.getTime())) {
       return date.toISOString();
     }
@@ -515,7 +515,16 @@ export class SalesImportService {
   /**
    * Get job status from queue
    */
-  async getJobStatus(jobId: string): Promise<any> {
+  async getJobStatus(jobId: string): Promise<{
+    jobId: string | number;
+    state: string;
+    progress: number | object;
+    data: Record<string, unknown>;
+    failedReason: string | null | undefined;
+    attemptsMade: number;
+    processedOn: number | null | undefined;
+    finishedOn: number | null | undefined;
+  }> {
     const job = await this.salesImportQueue.getJob(jobId);
 
     if (!job) {
