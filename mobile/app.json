@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "VendHub Manager",
-    "slug": "vendhub-mobile",
+    "slug": "vendhub",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -69,13 +69,13 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "your-project-id"
+        "projectId": "bae3e185-7ae5-41b7-a8eb-0a55156b47b2"
       }
     },
     "owner": "vendhub",
     "updates": {
       "fallbackToCacheTimeout": 0,
-      "url": "https://u.expo.dev/your-project-id"
+      "url": "https://u.expo.dev/bae3e185-7ae5-41b7-a8eb-0a55156b47b2"
     },
     "runtimeVersion": {
       "policy": "appVersion"
