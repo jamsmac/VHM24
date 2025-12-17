@@ -20,6 +20,8 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Constants from 'expo-constants';
 
 import { useAuthStore } from '../../store/auth.store';
+import { useOfflineStore } from '../../store/offline.store';
+import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 import { RootStackParamList } from '../../navigation/AppNavigator';
 import { UserRole } from '../../types';
 
@@ -28,7 +30,44 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 export default function ProfileScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { user, logout, isLoading } = useAuthStore();
+  const {
+    taskQueue,
+    photoQueue,
+    isSyncing,
+    lastSyncAt,
+    syncAll,
+    isOnline,
+  } = useOfflineStore();
+  const { isConnected } = useNetworkStatus();
   const [loggingOut, setLoggingOut] = useState(false);
+
+  const queueCount = taskQueue.length + photoQueue.length;
+
+  const handleSync = async () => {
+    if (isSyncing || !isOnline) return;
+
+    const result = await syncAll();
+    if (result.success) {
+      if (result.synced > 0) {
+        Alert.alert('Успешно', `Синхронизировано ${result.synced} элемент(ов)`);
+      } else {
+        Alert.alert('Информация', 'Нет элементов для синхронизации');
+      }
+    } else {
+      Alert.alert('Ошибка', 'Не удалось синхронизировать данные');
+    }
+  };
+
+  const formatLastSync = (dateStr: string | null): string => {
+    if (!dateStr) return 'Никогда';
+    const date = new Date(dateStr);
+    return date.toLocaleString('ru-RU', {
+      day: '2-digit',
+      month: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
 
   const handleLogout = () => {
     Alert.alert(
@@ -168,26 +207,82 @@ export default function ProfileScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Синхронизация</Text>
 
+          {/* Network Status */}
+          <View style={styles.networkStatus}>
+            <View style={styles.networkRow}>
+              <Ionicons
+                name={isOnline ? 'wifi' : 'wifi-outline'}
+                size={20}
+                color={isOnline ? '#10b981' : '#ef4444'}
+              />
+              <Text style={[styles.networkText, { color: isOnline ? '#10b981' : '#ef4444' }]}>
+                {isOnline ? 'Подключено' : 'Нет подключения'}
+              </Text>
+            </View>
+            {lastSyncAt && (
+              <Text style={styles.lastSyncText}>
+                Последняя синхронизация: {formatLastSync(lastSyncAt)}
+              </Text>
+            )}
+          </View>
+
           <View style={styles.syncCard}>
             <View style={styles.syncInfo}>
-              <Ionicons name="cloud-offline-outline" size={32} color="#9ca3af" />
+              <Ionicons
+                name={queueCount > 0 ? 'cloud-upload-outline' : 'cloud-done-outline'}
+                size={32}
+                color={queueCount > 0 ? '#f59e0b' : '#10b981'}
+              />
               <View style={styles.syncDetails}>
                 <Text style={styles.syncTitle}>Офлайн очередь</Text>
-                <Text style={styles.syncSubtitle}>0 элементов</Text>
+                <Text style={styles.syncSubtitle}>
+                  {queueCount > 0
+                    ? `${queueCount} элемент(ов) ожидает синхронизации`
+                    : 'Все данные синхронизированы'}
+                </Text>
+                {queueCount > 0 && (
+                  <Text style={styles.queueDetails}>
+                    Задач: {taskQueue.length} | Фото: {photoQueue.length}
+                  </Text>
+                )}
               </View>
             </View>
             <TouchableOpacity
-              style={[styles.syncButton, styles.syncButtonDisabled]}
-              disabled
+              style={[
+                styles.syncButton,
+                (!isOnline || queueCount === 0) && styles.syncButtonDisabled,
+              ]}
+              onPress={handleSync}
+              disabled={!isOnline || queueCount === 0 || isSyncing}
             >
-              <Ionicons name="sync" size={20} color="#9ca3af" />
-              <Text style={styles.syncButtonTextDisabled}>Синхронизировать</Text>
+              {isSyncing ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <>
+                  <Ionicons
+                    name="sync"
+                    size={20}
+                    color={isOnline && queueCount > 0 ? '#fff' : '#9ca3af'}
+                  />
+                  <Text
+                    style={
+                      isOnline && queueCount > 0
+                        ? styles.syncButtonTextEnabled
+                        : styles.syncButtonTextDisabled
+                    }
+                  >
+                    Синхронизировать
+                  </Text>
+                </>
+              )}
             </TouchableOpacity>
           </View>
 
-          <Text style={styles.syncNote}>
-            Синхронизация будет доступна после подключения к интернету
-          </Text>
+          {!isOnline && (
+            <Text style={styles.syncNote}>
+              Синхронизация будет доступна после подключения к интернету
+            </Text>
+          )}
         </View>
 
         {/* App Info Section */}
@@ -417,6 +512,32 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6b7280',
   },
+  networkStatus: {
+    marginBottom: 12,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
+  },
+  networkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  networkText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  lastSyncText: {
+    fontSize: 12,
+    color: '#9ca3af',
+    marginTop: 4,
+    marginLeft: 28,
+  },
+  queueDetails: {
+    fontSize: 12,
+    color: '#9ca3af',
+    marginTop: 2,
+  },
   syncButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -424,9 +545,15 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 8,
     gap: 8,
+    backgroundColor: '#3b82f6',
   },
   syncButtonDisabled: {
     backgroundColor: '#f3f4f6',
+  },
+  syncButtonTextEnabled: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
   },
   syncButtonTextDisabled: {
     fontSize: 16,

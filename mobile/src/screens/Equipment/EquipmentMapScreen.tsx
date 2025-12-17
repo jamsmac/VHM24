@@ -4,7 +4,7 @@
  * Interactive map showing equipment locations with filtering
  */
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,8 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Linking,
+  Platform,
 } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
@@ -20,6 +22,7 @@ import { useQuery } from '@tanstack/react-query';
 
 import { Equipment, EquipmentStatus, EquipmentType } from '../../types';
 import apiClient from '../../services/api';
+import { useLocation } from '../../hooks/useLocation';
 
 // Tashkent, Uzbekistan coordinates
 const TASHKENT_REGION = {
@@ -30,8 +33,14 @@ const TASHKENT_REGION = {
 };
 
 export default function EquipmentMapScreen() {
+  const mapRef = useRef<MapView>(null);
   const [selectedEquipment, setSelectedEquipment] = useState<Equipment | null>(null);
   const [statusFilter, setStatusFilter] = useState<EquipmentStatus | 'all'>('all');
+
+  // Location hook for distance calculation and navigation
+  const { location, getDistanceTo, formatDistance, requestPermission } = useLocation({
+    autoRequest: true,
+  });
 
   // Fetch equipment
   const { data, isLoading, isError, refetch } = useQuery({
@@ -54,24 +63,95 @@ export default function EquipmentMapScreen() {
     setSelectedEquipment(null);
   };
 
-  const handleNavigate = (equipment: Equipment) => {
-    if (equipment.lat && equipment.lng) {
-      const url = `https://www.google.com/maps/dir/?api=1&destination=${equipment.lat},${equipment.lng}`;
-      Alert.alert(
-        'Навигация',
-        `Открыть навигацию к ${equipment.name} в Google Maps?`,
-        [
-          { text: 'Отмена', style: 'cancel' },
-          {
-            text: 'Открыть',
-            onPress: () => {
-              // In production, use Linking.openURL(url)
-              console.log('Navigate to:', url);
-              Alert.alert('Навигация', 'Навигация будет доступна в релизе');
-            },
+  const handleNavigate = async (equipment: Equipment) => {
+    if (!equipment.lat || !equipment.lng) {
+      Alert.alert('Ошибка', 'Координаты оборудования не указаны');
+      return;
+    }
+
+    const destination = `${equipment.lat},${equipment.lng}`;
+    const label = encodeURIComponent(equipment.name);
+
+    // Different URL schemes for iOS and Android
+    const googleMapsUrl = Platform.select({
+      ios: `comgooglemaps://?daddr=${destination}&directionsmode=driving`,
+      android: `google.navigation:q=${destination}`,
+    });
+
+    const appleMapsUrl = `maps://?daddr=${destination}&dirflg=d`;
+    const webUrl = `https://www.google.com/maps/dir/?api=1&destination=${destination}`;
+
+    // Calculate distance if we have user location
+    let distanceText = '';
+    if (location) {
+      const distance = getDistanceTo(equipment.lat, equipment.lng);
+      if (distance) {
+        distanceText = `\nРасстояние: ${formatDistance(distance)}`;
+      }
+    }
+
+    Alert.alert(
+      'Навигация',
+      `Проложить маршрут к ${equipment.name}?${distanceText}`,
+      [
+        { text: 'Отмена', style: 'cancel' },
+        {
+          text: Platform.OS === 'ios' ? 'Apple Maps' : 'Google Maps',
+          onPress: async () => {
+            try {
+              const url = Platform.OS === 'ios' ? appleMapsUrl : googleMapsUrl!;
+              const canOpen = await Linking.canOpenURL(url);
+
+              if (canOpen) {
+                await Linking.openURL(url);
+              } else {
+                // Fallback to web URL
+                await Linking.openURL(webUrl);
+              }
+            } catch (error) {
+              console.error('Navigation error:', error);
+              Alert.alert('Ошибка', 'Не удалось открыть навигацию');
+            }
           },
-        ]
-      );
+        },
+        Platform.OS === 'ios'
+          ? {
+              text: 'Google Maps',
+              onPress: async () => {
+                try {
+                  const canOpen = await Linking.canOpenURL(googleMapsUrl!);
+                  if (canOpen) {
+                    await Linking.openURL(googleMapsUrl!);
+                  } else {
+                    await Linking.openURL(webUrl);
+                  }
+                } catch (error) {
+                  await Linking.openURL(webUrl);
+                }
+              },
+            }
+          : null,
+      ].filter(Boolean) as any[]
+    );
+  };
+
+  // Center map on user location
+  const handleCenterOnUser = async () => {
+    if (location) {
+      mapRef.current?.animateToRegion({
+        latitude: location.latitude,
+        longitude: location.longitude,
+        latitudeDelta: 0.05,
+        longitudeDelta: 0.05,
+      });
+    } else {
+      const granted = await requestPermission();
+      if (!granted) {
+        Alert.alert(
+          'Геолокация',
+          'Для определения вашего местоположения необходим доступ к геолокации'
+        );
+      }
     }
   };
 
@@ -162,11 +242,12 @@ export default function EquipmentMapScreen() {
     <View style={styles.container}>
       {/* Map */}
       <MapView
+        ref={mapRef}
         provider={PROVIDER_GOOGLE}
         style={styles.map}
         initialRegion={TASHKENT_REGION}
         showsUserLocation
-        showsMyLocationButton
+        showsMyLocationButton={false}
       >
         {equipmentWithCoords.map((equipment) => (
           <Marker
@@ -221,6 +302,14 @@ export default function EquipmentMapScreen() {
         <Ionicons name="hardware-chip" size={16} color="#fff" />
         <Text style={styles.countText}>{equipmentWithCoords.length}</Text>
       </View>
+
+      {/* My Location Button */}
+      <TouchableOpacity
+        style={styles.myLocationButton}
+        onPress={handleCenterOnUser}
+      >
+        <Ionicons name="locate" size={24} color="#3b82f6" />
+      </TouchableOpacity>
 
       {/* Selected Equipment Details */}
       {selectedEquipment && (
@@ -278,6 +367,16 @@ export default function EquipmentMapScreen() {
                 <Text style={styles.detailLabel}>Адрес:</Text>
                 <Text style={styles.detailValue} numberOfLines={2}>
                   {selectedEquipment.location}
+                </Text>
+              </View>
+            )}
+
+            {/* Distance from user */}
+            {location && selectedEquipment.lat && selectedEquipment.lng && (
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>До вас:</Text>
+                <Text style={[styles.detailValue, styles.distanceValue]}>
+                  {formatDistance(getDistanceTo(selectedEquipment.lat, selectedEquipment.lng) || 0)}
                 </Text>
               </View>
             )}
@@ -433,6 +532,26 @@ const styles = StyleSheet.create({
   countText: {
     color: '#fff',
     fontSize: 14,
+    fontWeight: '600',
+  },
+  myLocationButton: {
+    position: 'absolute',
+    top: 70,
+    right: 16,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  distanceValue: {
+    color: '#3b82f6',
     fontWeight: '600',
   },
   detailsCard: {
