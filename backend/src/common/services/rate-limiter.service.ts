@@ -81,6 +81,7 @@ export class RateLimiterService {
         method: 'ALL',
         limit: 50,
         windowMs: 60 * 1000, // 1 minute per user
+        skipForRoles: ['admin', 'super-admin'],
       },
       // File uploads - strict limits
       {
