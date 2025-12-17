@@ -14,6 +14,21 @@ import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import { Request } from 'express';
 
+/** Request with authenticated user - extends Express User */
+interface AuthenticatedRequest extends Request {
+  user?: Express.User & { id?: string };
+}
+
+/** Redis-like cache store with keys method */
+interface RedisLikeCacheStore {
+  client?: {
+    keys: (pattern: string) => Promise<string[]>;
+  };
+  getClient?: () => {
+    keys: (pattern: string) => Promise<string[]>;
+  };
+}
+
 /**
  * Custom cache key metadata
  */
@@ -130,11 +145,11 @@ export class ReportsCacheInterceptor implements NestInterceptor {
   /**
    * Build cache key from request
    */
-  private buildCacheKey(request: Request): string {
+  private buildCacheKey(request: AuthenticatedRequest): string {
     const method = request.method;
     const url = request.url.split('?')[0]; // Remove query string from URL
     const query = this.hashParams(request.query || {});
-    const userId = (request as any).user?.id || 'anonymous';
+    const userId = request.user?.id || 'anonymous';
 
     return `${method}:${url}:${userId}:${query}`;
   }
@@ -169,7 +184,7 @@ export class ReportsCacheInterceptor implements NestInterceptor {
   async clearAll(): Promise<void> {
     try {
       // Get underlying Redis client to clear by pattern
-      const store = this.cacheManager?.store as any;
+      const store = this.cacheManager?.store as RedisLikeCacheStore | undefined;
       const client = store?.client || store?.getClient?.();
 
       if (client && typeof client.keys === 'function') {
@@ -191,7 +206,7 @@ export class ReportsCacheInterceptor implements NestInterceptor {
    */
   async clearPattern(pattern: string): Promise<number> {
     try {
-      const store = this.cacheManager?.store as any;
+      const store = this.cacheManager?.store as RedisLikeCacheStore | undefined;
       const client = store?.client || store?.getClient?.();
 
       if (client && typeof client.keys === 'function') {

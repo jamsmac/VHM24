@@ -285,7 +285,7 @@ export class ReportBuilderService {
         highlights: [
           `Общая выручка: ${MoneyHelper.formatUZS(totalRevenue)}`,
           `НДС к уплате: ${MoneyHelper.formatUZS(vatAmount)}`,
-          `Количество транзакций: ${data.totals.transaction_count}`,
+          `Количество транзакций: ${data.totals?.transaction_count ?? 0}`,
         ],
       },
       metadata: {

@@ -48,7 +48,7 @@ export interface ReportFilters {
   products?: string[];
   locations?: string[];
   status?: string[];
-  [key: string]: any;
+  [key: string]: string[] | string | number | boolean | Date | undefined;
 }
 
 export interface Report {
@@ -67,9 +67,9 @@ export interface Report {
 }
 
 export interface ReportData {
-  rows: any[];
+  rows: Record<string, unknown>[];
   columns: ColumnDefinition[];
-  totals?: any;
+  totals?: Record<string, number | string>;
   groupedData?: GroupedData[];
 }
 
@@ -86,10 +86,10 @@ export interface ColumnDefinition {
 
 export interface GroupedData {
   group: string;
-  value: any;
+  value: string | number | boolean | null;
   count: number;
-  data: any[];
-  subtotals?: any;
+  data: Record<string, unknown>[];
+  subtotals?: Record<string, number | string>;
 }
 
 export interface ReportMetrics {
@@ -110,8 +110,8 @@ export interface ChartData {
   id: string;
   type: 'line' | 'bar' | 'pie' | 'donut' | 'area' | 'scatter';
   title: string;
-  data: any;
-  options?: any;
+  data: Record<string, unknown> | unknown[];
+  options?: Record<string, unknown>;
 }
 
 export interface ReportSummary {
@@ -151,9 +151,9 @@ export interface QueryTemplate {
   entity: string;
   select?: string[];
   joins?: JoinTemplate[];
-  where?: any;
+  where?: Record<string, unknown>;
   groupBy?: string[];
-  orderBy?: any;
+  orderBy?: string;
   limit?: number;
 }
 
@@ -169,7 +169,7 @@ export interface ProcessorTemplate {
   type: 'aggregate' | 'transform' | 'filter' | 'calculate';
   field?: string;
   operation?: string;
-  params?: any;
+  params?: Record<string, unknown>;
 }
 
 export interface MetricTemplate {
@@ -189,7 +189,7 @@ export interface ChartTemplate {
   xAxis?: string;
   yAxis?: string;
   series?: string[];
-  options?: any;
+  options?: Record<string, unknown>;
 }
 
 export interface LayoutTemplate {
@@ -209,7 +209,7 @@ export interface LayoutSection {
   position?: number;
   width?: number;
   height?: number;
-  content?: any;
+  content?: Record<string, unknown>;
 }
 
 export interface StyleTemplate {

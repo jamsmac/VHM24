@@ -591,8 +591,8 @@ describe('ReportBuilderService', () => {
 
       // Assert
       expect(result.data.totals).toBeDefined();
-      expect(result.data.totals.total_amount).toBe(450000);
-      expect(result.data.totals.transaction_count).toBe(45); // 10 + 20 + 15
+      expect(result.data.totals?.total_amount).toBe(450000);
+      expect(result.data.totals?.transaction_count).toBe(45); // 10 + 20 + 15
     });
 
     it('should include highlights in summary', async () => {
