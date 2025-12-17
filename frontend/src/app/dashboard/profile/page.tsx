@@ -27,16 +27,12 @@ import {
   Shield,
   Bell,
   Key,
-  Smartphone,
   Monitor,
   LogOut,
   CheckCircle,
   XCircle,
   RefreshCw,
   Copy,
-  Eye,
-  EyeOff,
-  AlertTriangle,
   Clock,
   MapPin,
   Mail,
@@ -51,7 +47,6 @@ type TabType = 'profile' | 'security' | 'notifications'
 
 export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState<TabType>('profile')
-  const queryClient = useQueryClient()
 
   const { data: profile, isLoading: profileLoading } = useQuery({
     queryKey: ['profile'],

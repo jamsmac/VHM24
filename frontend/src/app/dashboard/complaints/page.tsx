@@ -8,12 +8,11 @@ import { Plus, Filter } from 'lucide-react'
 import Link from 'next/link'
 import { formatDateTime } from '@/lib/utils'
 import { complaintsApi, type ComplaintStatus } from '@/lib/complaints-api'
-import { TableSkeleton } from '@/components/ui/LoadingSkeleton'
 
 export default function ComplaintsPage() {
   const [statusFilter, setStatusFilter] = useState<ComplaintStatus | ''>('')
 
-  const { data: complaints = [], isLoading } = useQuery({
+  const { data: complaints = [] } = useQuery({
     queryKey: ['complaints', statusFilter],
     queryFn: () => complaintsApi.getAll({
       status: statusFilter || undefined,
