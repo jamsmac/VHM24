@@ -4,12 +4,14 @@ import { Repository } from 'typeorm';
 import { NotFoundException, ConflictException } from '@nestjs/common';
 import { LocationsService } from './locations.service';
 import { Location, LocationStatus } from './entities/location.entity';
+import { Machine } from '@modules/machines/entities/machine.entity';
 import { CreateLocationDto } from './dto/create-location.dto';
 import { UpdateLocationDto } from './dto/update-location.dto';
 
 describe('LocationsService', () => {
   let service: LocationsService;
   let mockLocationRepository: jest.Mocked<Repository<Location>>;
+  let mockMachineRepository: jest.Mocked<Repository<Machine>>;
 
   // Test data
   const mockLocationId = 'location-id-1';
@@ -79,12 +81,26 @@ describe('LocationsService', () => {
       createQueryBuilder: jest.fn().mockReturnValue(createMockQueryBuilder()),
     } as any;
 
+    mockMachineRepository = {
+      createQueryBuilder: jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        groupBy: jest.fn().mockReturnThis(),
+        getRawMany: jest.fn().mockResolvedValue([]),
+      }),
+    } as any;
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         LocationsService,
         {
           provide: getRepositoryToken(Location),
           useValue: mockLocationRepository,
+        },
+        {
+          provide: getRepositoryToken(Machine),
+          useValue: mockMachineRepository,
         },
       ],
     }).compile();
