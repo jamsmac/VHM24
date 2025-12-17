@@ -14,7 +14,7 @@ export enum FileFormat {
   TEXT = 'txt',
 }
 
-export interface ParsedData<T = any> {
+export interface ParsedData<T = Record<string, unknown>> {
   data: T[];
   metadata: ParseMetadata;
   warnings: ParseWarning[];
@@ -40,7 +40,7 @@ export interface ParseWarning {
   column?: string;
   type: 'data_type' | 'missing_value' | 'format' | 'range' | 'duplicate';
   message: string;
-  value?: any;
+  value?: unknown;
   suggestion?: string;
 }
 
@@ -49,7 +49,7 @@ export interface ParseError {
   column?: string;
   type: 'critical' | 'recoverable' | 'validation';
   message: string;
-  value?: any;
+  value?: unknown;
   stack?: string;
 }
 
@@ -63,9 +63,9 @@ export interface ParseStatistics {
   dataQualityScore?: number; // 0-100
 }
 
-export interface ValidationResult {
+export interface ValidationResult<T = Record<string, unknown>> {
   isValid: boolean;
-  data: any[];
+  data: T[];
   errors: ValidationError[];
   warnings: ValidationWarning[];
   summary: ValidationSummary;
@@ -73,7 +73,7 @@ export interface ValidationResult {
 
 export interface ValidationError {
   field: string;
-  value: any;
+  value: unknown;
   rule: string;
   message: string;
   row?: number;
@@ -81,7 +81,7 @@ export interface ValidationError {
 
 export interface ValidationWarning {
   field: string;
-  value: any;
+  value: unknown;
   type: string;
   message: string;
   row?: number;
@@ -104,7 +104,7 @@ export interface FieldValidationStats {
   dataTypes: Record<string, number>;
 }
 
-export interface TransformedData<T = any> {
+export interface TransformedData<T = Record<string, unknown>> {
   data: T[];
   transformations: TransformationLog[];
   originalCount: number;
@@ -114,8 +114,8 @@ export interface TransformedData<T = any> {
 export interface TransformationLog {
   field: string;
   type: 'rename' | 'convert' | 'calculate' | 'merge' | 'split' | 'clean';
-  from: any;
-  to: any;
+  from: unknown;
+  to: unknown;
   count: number;
 }
 
@@ -134,11 +134,11 @@ export interface ParserOptions {
   recoverCorrupted?: boolean; // Try to recover corrupted data
 }
 
-export interface DataParser<T = any> {
+export interface DataParser<T = Record<string, unknown>> {
   // Core parsing capabilities
   parse(input: Buffer | string, options?: ParserOptions): Promise<ParsedData<T>>;
-  validate(data: ParsedData<T>, schema?: any): ValidationResult;
-  transform(data: ParsedData<T>, rules?: any): TransformedData<T>;
+  validate(data: ParsedData<T>, schema?: unknown): ValidationResult;
+  transform(data: ParsedData<T>, rules?: unknown): TransformedData<T>;
 
   // Format detection and recovery
   detectFormat(input: Buffer): FileFormat;

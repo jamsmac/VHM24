@@ -13,6 +13,9 @@ import { ExcelParser } from './excel.parser';
 import { CsvParser } from './csv.parser';
 import { JsonParser } from './json.parser';
 
+/** Row data as key-value pairs */
+type RowData = Record<string, unknown>;
+
 /**
  * Universal Parser
  *
@@ -189,7 +192,7 @@ export class UniversalParser implements DataParser {
               for (let i = 1; i < lines.length; i++) {
                 const values = lines[i].split(delimiter);
                 if (values.length === headers.length) {
-                  const row: any = {};
+                  const row: RowData = {};
                   headers.forEach((header, idx) => {
                     row[header.trim()] = values[idx]?.trim();
                   });
@@ -279,7 +282,7 @@ export class UniversalParser implements DataParser {
   /**
    * Validate parsed data
    */
-  validate(data: ParsedData, _schema?: any): ValidationResult {
+  validate(data: ParsedData, _schema?: unknown): ValidationResult {
     // Implementation would go here
     // For now, return a basic validation result
     return {
@@ -300,7 +303,7 @@ export class UniversalParser implements DataParser {
   /**
    * Transform parsed data
    */
-  transform(data: ParsedData, _rules?: any): TransformedData {
+  transform(data: ParsedData, _rules?: unknown): TransformedData {
     // Implementation would go here
     // For now, return the data as-is
     return {

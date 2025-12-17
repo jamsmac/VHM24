@@ -12,6 +12,9 @@ import {
   ParseError,
 } from '../interfaces/parser.interface';
 
+/** Row data as key-value pairs */
+type RowData = Record<string, unknown>;
+
 /**
  * CSV Parser
  *
@@ -31,7 +34,7 @@ export class CsvParser implements DataParser {
     const errors: ParseError[] = [];
 
     return new Promise((resolve, reject) => {
-      const data: any[] = [];
+      const data: RowData[] = [];
       const headers: string[] = [];
       let rowCount = 0;
       let skippedRows = 0;
@@ -59,7 +62,7 @@ export class CsvParser implements DataParser {
 
       stream
         .pipe(parser)
-        .on('data', (row: any) => {
+        .on('data', (row: RowData) => {
           rowCount++;
 
           // Skip initial rows if specified
@@ -174,11 +177,11 @@ export class CsvParser implements DataParser {
   /**
    * Clean and convert row data
    */
-  private cleanRow(row: any, options: ParserOptions): any {
-    const cleaned: any = {};
+  private cleanRow(row: RowData, options: ParserOptions): RowData {
+    const cleaned: RowData = {};
 
     for (const [key, value] of Object.entries(row)) {
-      let cleanedValue: any = value;
+      let cleanedValue: unknown = value;
 
       if (typeof value === 'string') {
         const trimmedValue = value.trim();
@@ -309,13 +312,13 @@ export class CsvParser implements DataParser {
   /**
    * Check if row is valid
    */
-  private isValidRow(row: any): boolean {
+  private isValidRow(row: RowData): boolean {
     // Row must have at least one non-null value
     return Object.values(row).some((value) => value !== null && value !== undefined);
   }
 
   // Implementation of other interface methods
-  validate(data: ParsedData, _schema?: any): ValidationResult {
+  validate(data: ParsedData, _schema?: unknown): ValidationResult {
     return {
       isValid: true,
       data: data.data,
@@ -331,7 +334,7 @@ export class CsvParser implements DataParser {
     };
   }
 
-  transform(data: ParsedData, _rules?: any): TransformedData {
+  transform(data: ParsedData, _rules?: unknown): TransformedData {
     return {
       data: data.data,
       transformations: [],

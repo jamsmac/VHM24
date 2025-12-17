@@ -11,6 +11,20 @@ import {
   ParseError,
 } from '../interfaces/parser.interface';
 
+/** Structure info for a worksheet */
+interface SheetStructure {
+  headerRow: number;
+  dataStartRow: number;
+  lastRow: number;
+  lastCol: number;
+}
+
+/** Mapping of field names to column indices */
+type ColumnMapping = Record<string, number>;
+
+/** Row data as key-value pairs */
+type RowData = Record<string, unknown>;
+
 /**
  * Advanced Excel Parser
  *
@@ -112,7 +126,7 @@ export class ExcelParser implements DataParser {
       }
 
       // Parse all sheets or specific sheet
-      const allData: any[] = [];
+      const allData: RowData[] = [];
       let headers: string[] = [];
 
       for (const worksheet of worksheets) {
@@ -190,7 +204,7 @@ export class ExcelParser implements DataParser {
   /**
    * Detect sheet structure (headers, data start row, etc.)
    */
-  private detectSheetStructure(worksheet: ExcelJS.Worksheet, options: ParserOptions): any {
+  private detectSheetStructure(worksheet: ExcelJS.Worksheet, options: ParserOptions): SheetStructure {
     let headerRow = options.skipRows || 0;
     let dataStartRow = headerRow + 1;
 
@@ -230,7 +244,7 @@ export class ExcelParser implements DataParser {
   /**
    * Extract headers from sheet
    */
-  private extractHeaders(worksheet: ExcelJS.Worksheet, structure: any): string[] {
+  private extractHeaders(worksheet: ExcelJS.Worksheet, structure: SheetStructure): string[] {
     const headers: string[] = [];
 
     // headerRow is 0-based, ExcelJS rows are 1-based
@@ -252,8 +266,8 @@ export class ExcelParser implements DataParser {
   /**
    * Auto-detect column mapping based on header names
    */
-  private async autoDetectColumns(headers: string[]): Promise<any> {
-    const mapping: any = {};
+  private async autoDetectColumns(headers: string[]): Promise<ColumnMapping> {
+    const mapping: ColumnMapping = {};
 
     for (const [index, header] of headers.entries()) {
       for (const [field, pattern] of Object.entries(this.columnPatterns)) {
@@ -278,11 +292,11 @@ export class ExcelParser implements DataParser {
    */
   private extractData(
     worksheet: ExcelJS.Worksheet,
-    structure: any,
-    columnMapping: any,
+    structure: SheetStructure,
+    columnMapping: ColumnMapping,
     options: ParserOptions,
-  ): any[] {
-    const data: any[] = [];
+  ): RowData[] {
+    const data: RowData[] = [];
     const maxRows = options.maxRows || Infinity;
 
     // dataStartRow is 0-based, convert to 1-based for ExcelJS
@@ -292,7 +306,7 @@ export class ExcelParser implements DataParser {
       rowNum++
     ) {
       const row = worksheet.getRow(rowNum);
-      const rowData: any = {};
+      const rowData: RowData = {};
       let hasData = false;
 
       for (const [field, colIndex] of Object.entries(columnMapping)) {
@@ -318,7 +332,7 @@ export class ExcelParser implements DataParser {
   /**
    * Get cell value with proper type conversion
    */
-  private getCellValue(cell: ExcelJS.Cell, field: string): any {
+  private getCellValue(cell: ExcelJS.Cell, field: string): unknown {
     const value = cell.value;
 
     // Handle null/undefined
@@ -354,8 +368,9 @@ export class ExcelParser implements DataParser {
 
     // Handle rich text (ExcelJS specific)
     if (typeof value === 'object' && 'richText' in value) {
-      return (value as any).richText
-        .map((rt: any) => rt.text)
+      const richTextValue = value as { richText: Array<{ text: string }> };
+      return richTextValue.richText
+        .map((rt) => rt.text)
         .join('')
         .trim();
     }
@@ -382,11 +397,11 @@ export class ExcelParser implements DataParser {
   /**
    * Clean and normalize row data
    */
-  private async cleanRow(row: any, _columnMapping: any): Promise<any> {
-    const cleaned: any = {};
+  private async cleanRow(row: RowData, _columnMapping: ColumnMapping): Promise<RowData> {
+    const cleaned: RowData = {};
 
     for (const [field, value] of Object.entries(row)) {
-      let cleanedValue: any = value;
+      let cleanedValue: unknown = value;
 
       // Clean strings
       if (typeof value === 'string') {
@@ -462,7 +477,7 @@ export class ExcelParser implements DataParser {
   /**
    * Check if row has valid data
    */
-  private isValidRow(row: any): boolean {
+  private isValidRow(row: RowData): boolean {
     // Row must have at least one non-null value
     return Object.values(row).some((value) => value !== null && value !== undefined);
   }
@@ -480,7 +495,7 @@ export class ExcelParser implements DataParser {
   }
 
   // Implementation of other interface methods
-  validate(data: ParsedData, _schema?: any): ValidationResult {
+  validate(data: ParsedData, _schema?: unknown): ValidationResult {
     return {
       isValid: true,
       data: data.data,
@@ -496,7 +511,7 @@ export class ExcelParser implements DataParser {
     };
   }
 
-  transform(data: ParsedData, _rules?: any): TransformedData {
+  transform(data: ParsedData, _rules?: unknown): TransformedData {
     return {
       data: data.data,
       transformations: [],

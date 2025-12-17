@@ -10,6 +10,12 @@ import {
   ParseError,
 } from '../interfaces/parser.interface';
 
+/** Row data as key-value pairs */
+type RowData = Record<string, unknown>;
+
+/** JSON value that can be any valid JSON type */
+type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
+
 /**
  * JSON Parser
  *
@@ -35,7 +41,7 @@ export class JsonParser implements DataParser {
           : input.toString((options.encoding as BufferEncoding) || 'utf8');
 
       // Parse JSON
-      let jsonData: any;
+      let jsonData: JsonValue;
       try {
         jsonData = JSON.parse(jsonString);
       } catch (error) {
@@ -133,40 +139,43 @@ export class JsonParser implements DataParser {
   /**
    * Extract data array from JSON structure
    */
-  private extractDataArray(jsonData: any): any[] {
+  private extractDataArray(jsonData: JsonValue): RowData[] {
     // If already an array, return it
     if (Array.isArray(jsonData)) {
-      return jsonData;
+      return jsonData as RowData[];
     }
+
+    // Must be an object to extract data from
+    if (typeof jsonData !== 'object' || jsonData === null) {
+      return [];
+    }
+
+    const obj = jsonData as Record<string, JsonValue>;
 
     // Look for common data property names
     const dataKeys = ['data', 'items', 'results', 'records', 'rows'];
 
     for (const key of dataKeys) {
-      if (jsonData[key] && Array.isArray(jsonData[key])) {
-        return jsonData[key];
+      if (obj[key] && Array.isArray(obj[key])) {
+        return obj[key] as RowData[];
       }
     }
 
     // Look for first array property
-    for (const key of Object.keys(jsonData)) {
-      if (Array.isArray(jsonData[key])) {
-        return jsonData[key];
+    for (const key of Object.keys(obj)) {
+      if (Array.isArray(obj[key])) {
+        return obj[key] as RowData[];
       }
     }
 
     // If object, wrap in array
-    if (typeof jsonData === 'object') {
-      return [jsonData];
-    }
-
-    return [];
+    return [obj as RowData];
   }
 
   /**
    * Extract headers from data array
    */
-  private extractHeaders(dataArray: any[]): string[] {
+  private extractHeaders(dataArray: RowData[]): string[] {
     const headers = new Set<string>();
 
     // Collect all unique keys
@@ -182,16 +191,16 @@ export class JsonParser implements DataParser {
   /**
    * Recursively extract keys from nested objects
    */
-  private extractKeysRecursive(obj: any, prefix: string, keys: Set<string>): void {
+  private extractKeysRecursive(obj: RowData, prefix: string, keys: Set<string>): void {
     for (const [key, value] of Object.entries(obj)) {
       const fullKey = prefix ? `${prefix}.${key}` : key;
 
       if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
         // Nested object - recurse
-        this.extractKeysRecursive(value, fullKey, keys);
+        this.extractKeysRecursive(value as RowData, fullKey, keys);
       } else if (Array.isArray(value) && value.length > 0 && typeof value[0] === 'object') {
         // Array of objects - extract keys from first item
-        this.extractKeysRecursive(value[0], `${fullKey}[0]`, keys);
+        this.extractKeysRecursive(value[0] as RowData, `${fullKey}[0]`, keys);
       } else {
         // Primitive value or array of primitives
         keys.add(fullKey);
@@ -202,14 +211,14 @@ export class JsonParser implements DataParser {
   /**
    * Normalize JSON object to flat structure
    */
-  private normalizeJsonObject(obj: any, options: ParserOptions): any {
+  private normalizeJsonObject(obj: unknown, options: ParserOptions): RowData {
     if (typeof obj !== 'object' || obj === null) {
       return { value: obj };
     }
 
-    const normalized: any = {};
+    const normalized: RowData = {};
 
-    const flatten = (current: any, prefix: string = ''): void => {
+    const flatten = (current: Record<string, unknown>, prefix: string = ''): void => {
       for (const [key, value] of Object.entries(current)) {
         const newKey = prefix ? `${prefix}_${key}` : key;
 
@@ -217,7 +226,7 @@ export class JsonParser implements DataParser {
           normalized[newKey] = null;
         } else if (typeof value === 'object' && !Array.isArray(value) && !(value instanceof Date)) {
           // Nested object - flatten it
-          flatten(value, newKey);
+          flatten(value as Record<string, unknown>, newKey);
         } else if (Array.isArray(value)) {
           // Array - convert to string or flatten if objects
           if (value.length === 0) {
@@ -236,14 +245,14 @@ export class JsonParser implements DataParser {
       }
     };
 
-    flatten(obj);
+    flatten(obj as Record<string, unknown>);
     return normalized;
   }
 
   /**
    * Convert value based on type and options
    */
-  private convertValue(value: any, _options: ParserOptions): any {
+  private convertValue(value: unknown, _options: ParserOptions): unknown {
     // Handle dates
     if (value instanceof Date) {
       return value;
@@ -277,7 +286,7 @@ export class JsonParser implements DataParser {
   }
 
   // Implementation of other interface methods
-  validate(data: ParsedData, _schema?: any): ValidationResult {
+  validate(data: ParsedData, _schema?: unknown): ValidationResult {
     return {
       isValid: true,
       data: data.data,
@@ -293,7 +302,7 @@ export class JsonParser implements DataParser {
     };
   }
 
-  transform(data: ParsedData, _rules?: any): TransformedData {
+  transform(data: ParsedData, _rules?: unknown): TransformedData {
     return {
       data: data.data,
       transformations: [],

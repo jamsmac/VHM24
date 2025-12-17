@@ -410,7 +410,7 @@ describe('DataValidationService', () => {
         value: {
           required: true,
           type: 'number',
-          validator: (v) => v % 2 === 0, // Must be even
+          validator: (v) => (v as number) % 2 === 0, // Must be even
         },
       };
 
@@ -432,7 +432,7 @@ describe('DataValidationService', () => {
           type: 'string',
           validator: async (v) => {
             await new Promise((resolve) => setTimeout(resolve, 10));
-            return v.startsWith('VALID');
+            return (v as string).startsWith('VALID');
           },
         },
       };
@@ -458,7 +458,7 @@ describe('DataValidationService', () => {
         name: {
           required: true,
           type: 'string',
-          transformer: (v) => v.toUpperCase(),
+          transformer: (v) => (v as string).toUpperCase(),
         },
       };
 

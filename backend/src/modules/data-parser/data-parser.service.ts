@@ -8,6 +8,21 @@ import {
   ValidationResult,
 } from './interfaces/parser.interface';
 
+/** Row data as key-value pairs */
+type RowData = Record<string, unknown>;
+
+/** Import result with success and failed rows */
+interface ImportResult {
+  success: RowData[];
+  failed: Array<{
+    row: number | undefined;
+    field: string;
+    message: string;
+    value: unknown;
+  }>;
+  warnings: string[];
+}
+
 /**
  * Data Parser Service
  *
@@ -69,7 +84,7 @@ export class DataParserService {
   /**
    * Validate data against schema
    */
-  async validate(data: any[], schema: ValidationSchema): Promise<ValidationResult> {
+  async validate(data: RowData[], schema: ValidationSchema): Promise<ValidationResult> {
     return this.validationService.validateBatch(data, schema);
   }
 
@@ -90,7 +105,7 @@ export class DataParserService {
   /**
    * Infer validation schema from sample data
    */
-  async inferSchema(data: any[]): Promise<ValidationSchema> {
+  async inferSchema(data: RowData[]): Promise<ValidationSchema> {
     return this.validationService.inferSchema(data);
   }
 
@@ -104,11 +119,7 @@ export class DataParserService {
   /**
    * Parse sales import file
    */
-  async parseSalesImport(file: Buffer): Promise<{
-    success: any[];
-    failed: any[];
-    warnings: string[];
-  }> {
+  async parseSalesImport(file: Buffer): Promise<ImportResult> {
     const { validated } = await this.parseAndValidate(file, {
       date: {
         required: true,
@@ -155,11 +166,7 @@ export class DataParserService {
   /**
    * Parse counterparties import file
    */
-  async parseCounterpartiesImport(file: Buffer): Promise<{
-    success: any[];
-    failed: any[];
-    warnings: string[];
-  }> {
+  async parseCounterpartiesImport(file: Buffer): Promise<ImportResult> {
     const { validated } = await this.parseAndValidate(file, {
       name: {
         required: true,
@@ -210,11 +217,7 @@ export class DataParserService {
   /**
    * Parse inventory import file
    */
-  async parseInventoryImport(file: Buffer): Promise<{
-    success: any[];
-    failed: any[];
-    warnings: string[];
-  }> {
+  async parseInventoryImport(file: Buffer): Promise<ImportResult> {
     const { validated } = await this.parseAndValidate(file, {
       product_code: {
         required: true,

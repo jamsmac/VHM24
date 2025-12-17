@@ -8,6 +8,9 @@ import {
 } from '../interfaces/parser.interface';
 import * as moment from 'moment';
 
+/** Row data as key-value pairs */
+type RowData = Record<string, unknown>;
+
 export interface ValidationSchema {
   [field: string]: ValidationRule;
 }
@@ -20,9 +23,9 @@ export interface ValidationRule {
   minLength?: number;
   maxLength?: number;
   pattern?: RegExp;
-  enum?: any[];
-  validator?: (value: any) => boolean | Promise<boolean>;
-  transformer?: (value: any) => any;
+  enum?: unknown[];
+  validator?: (value: unknown) => boolean | Promise<boolean>;
+  transformer?: (value: unknown) => unknown;
   message?: string;
 }
 
@@ -51,10 +54,10 @@ export class DataValidationService {
   /**
    * Validate batch of data against schema
    */
-  async validateBatch(data: any[], schema: ValidationSchema): Promise<ValidationResult> {
+  async validateBatch(data: RowData[], schema: ValidationSchema): Promise<ValidationResult> {
     const errors: ValidationError[] = [];
     const warnings: ValidationWarning[] = [];
-    const validData: any[] = [];
+    const validData: RowData[] = [];
     const fieldStats: Record<string, FieldValidationStats> = {};
 
     // Initialize field stats
@@ -111,15 +114,15 @@ export class DataValidationService {
    * Validate single row
    */
   private async validateRow(
-    row: any,
+    row: RowData,
     schema: ValidationSchema,
     rowIndex: number,
   ): Promise<{
-    cleanedRow: any;
+    cleanedRow: RowData;
     rowErrors: ValidationError[];
     rowWarnings: ValidationWarning[];
   }> {
-    const cleanedRow: any = {};
+    const cleanedRow: RowData = {};
     const rowErrors: ValidationError[] = [];
     const rowWarnings: ValidationWarning[] = [];
 
@@ -163,8 +166,8 @@ export class DataValidationService {
         cleanedValue = typeValidation.converted;
       }
 
-      // Range validation
-      if (rules.min !== undefined && cleanedValue < rules.min) {
+      // Range validation (only for numbers)
+      if (rules.min !== undefined && typeof cleanedValue === 'number' && cleanedValue < rules.min) {
         rowErrors.push({
           field,
           value: cleanedValue,
@@ -174,7 +177,7 @@ export class DataValidationService {
         });
       }
 
-      if (rules.max !== undefined && cleanedValue > rules.max) {
+      if (rules.max !== undefined && typeof cleanedValue === 'number' && cleanedValue > rules.max) {
         rowErrors.push({
           field,
           value: cleanedValue,
@@ -260,25 +263,27 @@ export class DataValidationService {
   /**
    * Clean value based on rules
    */
-  private async cleanValue(value: any, rules: ValidationRule): Promise<any> {
+  private async cleanValue(value: unknown, rules: ValidationRule): Promise<unknown> {
     if (value === null || value === undefined) {
       return null;
     }
 
     // Clean strings
     if (typeof value === 'string') {
-      value = value.trim().replace(/\s+/g, ' ');
+      let cleanedStr = value.trim().replace(/\s+/g, ' ');
 
       // Clean based on type
       if (rules.type === 'phone') {
-        value = this.cleanPhone(value);
+        cleanedStr = this.cleanPhone(cleanedStr);
       } else if (rules.type === 'amount') {
-        value = this.cleanAmount(value);
+        return this.cleanAmount(cleanedStr);
       } else if (rules.type === 'inn') {
-        value = value.replace(/\D/g, '');
+        cleanedStr = cleanedStr.replace(/\D/g, '');
       } else if (rules.type === 'email') {
-        value = value.toLowerCase();
+        cleanedStr = cleanedStr.toLowerCase();
       }
+
+      return cleanedStr;
     }
 
     return value;
@@ -329,11 +334,11 @@ export class DataValidationService {
    * Validate data type
    */
   private validateType(
-    value: any,
+    value: unknown,
     type: string,
   ): {
     isValid: boolean;
-    converted?: any;
+    converted?: unknown;
     message?: string;
   } {
     switch (type) {
@@ -409,10 +414,13 @@ export class DataValidationService {
   /**
    * Parse date with multiple format support
    */
-  private parseDate(value: any): Date | null {
+  private parseDate(value: unknown): Date | null {
     if (value instanceof Date) {
       return value;
     }
+
+    // Convert to string for parsing
+    const strValue = typeof value === 'string' ? value : String(value);
 
     const dateFormats = [
       'DD.MM.YYYY',
@@ -424,14 +432,14 @@ export class DataValidationService {
     ];
 
     for (const format of dateFormats) {
-      const parsed = moment(value, format, true);
+      const parsed = moment(strValue, format, true);
       if (parsed.isValid()) {
         return parsed.toDate();
       }
     }
 
     // Try native parsing
-    const nativeDate = new Date(value);
+    const nativeDate = new Date(strValue);
     return isNaN(nativeDate.getTime()) ? null : nativeDate;
   }
 
@@ -439,7 +447,7 @@ export class DataValidationService {
    * Update field statistics
    */
   private updateFieldStats(
-    row: any,
+    row: RowData,
     schema: ValidationSchema,
     fieldStats: Record<string, FieldValidationStats>,
   ): void {
@@ -464,7 +472,7 @@ export class DataValidationService {
   /**
    * Create validation schema from sample data
    */
-  async inferSchema(data: any[]): Promise<ValidationSchema> {
+  async inferSchema(data: RowData[]): Promise<ValidationSchema> {
     const schema: ValidationSchema = {};
 
     if (data.length === 0) {

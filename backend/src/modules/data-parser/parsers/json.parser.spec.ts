@@ -144,7 +144,7 @@ describe('JsonParser', () => {
       const result = await parser.parse(buffer);
 
       expect(typeof result.data[0].variants).toBe('string');
-      expect(JSON.parse(result.data[0].variants)).toHaveLength(2);
+      expect(JSON.parse(result.data[0].variants as string)).toHaveLength(2);
     });
 
     it('should handle null values', async () => {
