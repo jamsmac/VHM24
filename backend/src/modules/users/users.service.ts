@@ -5,7 +5,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, FindOptionsWhere } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
 import * as bcrypt from 'bcrypt';
 import { User, UserStatus, UserRole } from './entities/user.entity';
@@ -547,7 +547,7 @@ export class UsersService {
    * @returns Array of users with the specified role
    */
   async findByRole(role: UserRole, activeOnly: boolean = true): Promise<User[]> {
-    const whereCondition: any = { role };
+    const whereCondition: FindOptionsWhere<User> = { role };
 
     if (activeOnly) {
       whereCondition.status = UserStatus.ACTIVE;
