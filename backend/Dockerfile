@@ -62,11 +62,11 @@ COPY --chown=nestjs:nodejs --from=build /app/node_modules ./node_modules
 COPY --chown=nestjs:nodejs --from=build /app/dist ./dist
 
 # Copy startup script
-COPY --chown=nestjs:nodejs startup.sh ./startup.sh
+COPY --chown=nestjs:nodejs --from=build /app/startup.sh ./startup.sh
 RUN chmod +x ./startup.sh
 
 # Copy TypeORM config for migrations
-COPY --chown=nestjs:nodejs typeorm-migrations-only.config.js ./typeorm-migrations-only.config.js
+COPY --chown=nestjs:nodejs --from=build /app/typeorm-migrations-only.config.js ./typeorm-migrations-only.config.js
 
 # Create necessary directories with proper permissions
 RUN mkdir -p /app/uploads /app/temp/voice && \
