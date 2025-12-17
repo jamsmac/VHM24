@@ -1,23 +1,19 @@
 # ============================================================================
 # VendHub Manager Frontend - Production Dockerfile
 # ============================================================================
-# Can be built from either:
-# - Root context with: docker build -f frontend/Dockerfile .
-# - Frontend context with: docker build -f Dockerfile .
+# Build context: frontend/ directory
 
 FROM node:20-alpine AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-# Try to copy from frontend/ first (root context), fallback to current dir
-COPY frontend/package.json frontend/package-lock.json* ./
+COPY package.json package-lock.json* ./
 RUN npm install
 
 FROM node:20-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
-# Copy source files first (includes .env.production with defaults)
-COPY frontend/ .
+COPY . .
 
 # Optional build-time args to override .env.production if provided
 ARG NEXT_PUBLIC_API_URL

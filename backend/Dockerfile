@@ -1,8 +1,7 @@
 # ============================================================================
 # VendHub Manager Backend - Production Dockerfile
 # ============================================================================
-# Build context: Repository root (same as frontend)
-# Usage: docker build -f backend/Dockerfile .
+# Build context: backend/ directory
 
 # ----------------------------------------------------------------------------
 # Stage 1: Dependencies
@@ -11,8 +10,8 @@ FROM node:20-alpine AS dependencies
 
 WORKDIR /app
 
-# Copy package files from backend/
-COPY backend/package*.json ./
+# Copy package files
+COPY package*.json ./
 
 # Install all dependencies (including dev dependencies for build)
 RUN npm install --legacy-peer-deps
@@ -27,8 +26,8 @@ WORKDIR /app
 # Copy dependencies from previous stage
 COPY --from=dependencies /app/node_modules ./node_modules
 
-# Copy source code from backend/
-COPY backend/ .
+# Copy source code
+COPY . .
 
 # Build the application using nest CLI directly
 RUN ./node_modules/.bin/nest build
@@ -54,7 +53,7 @@ RUN addgroup -g 1001 -S nodejs && \
     adduser -S nestjs -u 1001
 
 # Copy package files
-COPY --chown=nestjs:nodejs backend/package*.json ./
+COPY --chown=nestjs:nodejs package*.json ./
 
 # Copy production dependencies
 COPY --chown=nestjs:nodejs --from=build /app/node_modules ./node_modules
@@ -63,11 +62,11 @@ COPY --chown=nestjs:nodejs --from=build /app/node_modules ./node_modules
 COPY --chown=nestjs:nodejs --from=build /app/dist ./dist
 
 # Copy startup script
-COPY --chown=nestjs:nodejs backend/startup.sh ./startup.sh
+COPY --chown=nestjs:nodejs startup.sh ./startup.sh
 RUN chmod +x ./startup.sh
 
 # Copy TypeORM config for migrations
-COPY --chown=nestjs:nodejs backend/typeorm-migrations-only.config.js ./typeorm-migrations-only.config.js
+COPY --chown=nestjs:nodejs typeorm-migrations-only.config.js ./typeorm-migrations-only.config.js
 
 # Create necessary directories with proper permissions
 RUN mkdir -p /app/uploads /app/temp/voice && \

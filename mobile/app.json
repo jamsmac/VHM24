@@ -24,7 +24,7 @@
         "NSPhotoLibraryUsageDescription": "VendHub нуждается в доступе к фотографиям для загрузки в задачи"
       },
       "config": {
-        "googleMapsApiKey": "YOUR_IOS_GOOGLE_MAPS_API_KEY"
+        "googleMapsApiKey": "AIzaSyAh5d36-NTKyKvin4xXemS2QCDaqlNdOSQ"
       }
     },
     "android": {
@@ -47,7 +47,7 @@
       ],
       "config": {
         "googleMaps": {
-          "apiKey": "YOUR_ANDROID_GOOGLE_MAPS_API_KEY"
+          "apiKey": "AIzaSyAh5d36-NTKyKvin4xXemS2QCDaqlNdOSQ"
         }
       },
       "googleServicesFile": "./google-services.json"
