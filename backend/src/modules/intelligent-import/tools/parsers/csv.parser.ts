@@ -18,7 +18,7 @@ export class CsvParser {
       const encoding = this.detectEncoding(buffer);
       const delimiter = this.detectDelimiter(buffer);
 
-      const rows: any[] = await this.parseWithOptions(buffer, {
+      const rows: Record<string, unknown>[] = await this.parseWithOptions(buffer, {
         separator: delimiter,
         encoding: encoding as BufferEncoding,
       });
@@ -59,9 +59,9 @@ export class CsvParser {
   private parseWithOptions(
     buffer: Buffer,
     options: { separator: string; encoding: BufferEncoding },
-  ): Promise<any[]> {
+  ): Promise<Record<string, unknown>[]> {
     return new Promise((resolve, reject) => {
-      const rows: any[] = [];
+      const rows: Record<string, unknown>[] = [];
       const stream = Readable.from(buffer);
 
       stream

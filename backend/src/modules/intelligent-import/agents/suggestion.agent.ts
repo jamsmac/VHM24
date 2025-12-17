@@ -1,12 +1,18 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { IAgent, AgentContext, AgentStatus } from '../interfaces/agent.interface';
-import { ValidationReport, Action, ActionPlan, ActionType } from '../interfaces/common.interface';
+import {
+  ValidationReport,
+  Action,
+  ActionPlan,
+  ActionType,
+  ColumnMapping,
+} from '../interfaces/common.interface';
 
 interface SuggestionInput {
   validationReport: ValidationReport;
-  rows: any[];
+  rows: Record<string, unknown>[];
   domain: string;
-  columnMapping: any;
+  columnMapping: ColumnMapping | null;
 }
 
 /**

@@ -42,7 +42,7 @@ export class XmlParser {
   /**
    * Find array of records in XML structure
    */
-  private findRecordsArray(obj: any): any[] | null {
+  private findRecordsArray(obj: Record<string, unknown>): Record<string, unknown>[] | null {
     // Common XML structures:
     // <root><row>...</row><row>...</row></root>
     // <root><data><row>...</row></data></root>
@@ -58,12 +58,12 @@ export class XmlParser {
 
       // If value is an array, return it
       if (Array.isArray(value)) {
-        return value;
+        return value as Record<string, unknown>[];
       }
 
       // If value is object, check nested
-      if (typeof value === 'object') {
-        const nested = this.findRecordsArray(value);
+      if (value && typeof value === 'object' && !Array.isArray(value)) {
+        const nested = this.findRecordsArray(value as Record<string, unknown>);
         if (nested) return nested;
       }
     }
@@ -73,11 +73,11 @@ export class XmlParser {
     if (rootKeys.length === 1) {
       const firstValue = obj[rootKeys[0]];
       if (Array.isArray(firstValue)) {
-        return firstValue;
+        return firstValue as Record<string, unknown>[];
       }
       // Single object -> wrap in array
-      if (typeof firstValue === 'object') {
-        return [firstValue];
+      if (firstValue && typeof firstValue === 'object') {
+        return [firstValue as Record<string, unknown>];
       }
     }
 
@@ -87,7 +87,7 @@ export class XmlParser {
   /**
    * Convert records to table format
    */
-  private parseRecordsToTable(records: any[]): RawTable[] {
+  private parseRecordsToTable(records: Record<string, unknown>[]): RawTable[] {
     if (records.length === 0) {
       throw new BadRequestException('XML records array is empty');
     }
@@ -126,14 +126,14 @@ export class XmlParser {
   /**
    * Extract all keys from object (flatten nested)
    */
-  private extractKeys(obj: any, keys: Set<string>, prefix: string = ''): void {
+  private extractKeys(obj: Record<string, unknown>, keys: Set<string>, prefix: string = ''): void {
     for (const key of Object.keys(obj)) {
       const fullKey = prefix ? `${prefix}.${key}` : key;
       const value = obj[key];
 
       if (typeof value === 'object' && !Array.isArray(value) && value !== null) {
         // Nested object -> flatten
-        this.extractKeys(value, keys, fullKey);
+        this.extractKeys(value as Record<string, unknown>, keys, fullKey);
       } else {
         keys.add(fullKey);
       }
@@ -143,13 +143,13 @@ export class XmlParser {
   /**
    * Extract value by key path (supports dot notation)
    */
-  private extractValue(obj: any, keyPath: string): any {
+  private extractValue(obj: Record<string, unknown>, keyPath: string): unknown {
     const keys = keyPath.split('.');
-    let current = obj;
+    let current: unknown = obj;
 
     for (const key of keys) {
-      if (current && typeof current === 'object' && key in current) {
-        current = current[key];
+      if (current && typeof current === 'object' && !Array.isArray(current) && key in current) {
+        current = (current as Record<string, unknown>)[key];
       } else {
         return null;
       }

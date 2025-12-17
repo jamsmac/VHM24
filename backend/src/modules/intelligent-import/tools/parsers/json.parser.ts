@@ -59,7 +59,7 @@ export class JsonParser {
   /**
    * Parse array of objects into table format
    */
-  private parseArrayOfObjects(data: any[]): RawTable[] {
+  private parseArrayOfObjects(data: Record<string, unknown>[]): RawTable[] {
     if (data.length === 0) {
       throw new BadRequestException('JSON array is empty');
     }
@@ -98,7 +98,7 @@ export class JsonParser {
   /**
    * Flatten nested values (objects, arrays) to strings
    */
-  private flattenValue(value: any): any {
+  private flattenValue(value: unknown): unknown {
     if (value === null || value === undefined) {
       return null;
     }

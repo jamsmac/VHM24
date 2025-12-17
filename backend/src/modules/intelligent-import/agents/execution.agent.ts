@@ -39,7 +39,7 @@ export class ExecutionAgent implements IAgent<ActionPlan, ExecutionResult> {
       await this.dataSource.transaction(async (manager) => {
         for (const action of input.actions) {
           try {
-            let result: any = null;
+            let result: unknown = null;
 
             switch (action.type) {
               case ActionType.INSERT:

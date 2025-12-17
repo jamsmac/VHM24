@@ -24,9 +24,9 @@ export class XlsxParser {
         const sheetName = worksheet.name;
 
         // Convert to array of arrays (header: 1 equivalent)
-        const jsonData: any[][] = [];
+        const jsonData: unknown[][] = [];
         worksheet.eachRow((row) => {
-          const rowValues: any[] = [];
+          const rowValues: unknown[] = [];
           row.eachCell({ includeEmpty: true }, (cell) => {
             rowValues.push(cell.value);
           });
@@ -38,10 +38,10 @@ export class XlsxParser {
         }
 
         // First row is headers
-        const headers = (jsonData[0] as any[]).map((h) => String(h || '').trim());
+        const headers = (jsonData[0] as unknown[]).map((h) => String(h || '').trim());
 
         // Remaining rows are data
-        const rows = jsonData.slice(1) as any[][];
+        const rows = jsonData.slice(1) as unknown[][];
 
         // Filter out empty rows
         const validRows = rows.filter((row) =>
