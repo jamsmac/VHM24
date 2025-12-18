@@ -122,8 +122,9 @@ import { RateLimitModule } from './common/modules/rate-limit.module';
         const redisUrl = configService.get('REDIS_URL');
 
         // Support both REDIS_URL and individual variables
+        // Bull/ioredis accepts URL string directly, not as { url: ... }
         const redisConfig = redisUrl
-          ? { url: redisUrl }
+          ? redisUrl
           : {
               host: configService.get('REDIS_HOST', 'localhost'),
               port: configService.get('REDIS_PORT', 6379),
