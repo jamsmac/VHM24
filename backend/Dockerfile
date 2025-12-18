@@ -75,12 +75,12 @@ RUN mkdir -p /app/uploads /app/temp/voice && \
 # Switch to non-root user
 USER nestjs
 
-# Expose application port
+# Expose application port (Railway assigns PORT dynamically)
 EXPOSE 3000
 
-# Health check
+# Health check using PORT environment variable
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3000/health/live', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+  CMD node -e "const port = process.env.PORT || 3000; require('http').get('http://localhost:' + port + '/health/live', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
 # Use dumb-init to handle signals properly
 ENTRYPOINT ["dumb-init", "--"]
