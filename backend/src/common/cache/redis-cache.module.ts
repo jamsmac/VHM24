@@ -30,23 +30,31 @@ import { redisStore } from 'cache-manager-ioredis-yet';
         const redisUrl = configService.get<string>('REDIS_URL');
         const ttl = configService.get<number>('CACHE_TTL', 300) * 1000; // Convert to ms
 
-        // Support both REDIS_URL and individual variables
-        const storeConfig = redisUrl
-          ? {
-              url: redisUrl,
-              ttl,
-              keyPrefix: 'vendhub:cache:',
-            }
-          : {
-              host: configService.get<string>('REDIS_HOST', 'localhost'),
-              port: configService.get<number>('REDIS_PORT', 6379),
-              password: configService.get<string>('REDIS_PASSWORD'),
-              ttl,
-              keyPrefix: 'vendhub:cache:',
-            };
+        let storeConfig: any;
+
+        if (redisUrl) {
+          // Parse REDIS_URL into components for cache-manager-ioredis-yet
+          const url = new URL(redisUrl);
+          storeConfig = {
+            host: url.hostname,
+            port: parseInt(url.port) || 6379,
+            password: url.password || undefined,
+            username: url.username || undefined,
+            ttl,
+            keyPrefix: 'vendhub:cache:',
+          };
+        } else {
+          storeConfig = {
+            host: configService.get<string>('REDIS_HOST', 'localhost'),
+            port: configService.get<number>('REDIS_PORT', 6379),
+            password: configService.get<string>('REDIS_PASSWORD'),
+            ttl,
+            keyPrefix: 'vendhub:cache:',
+          };
+        }
 
         return {
-          store: await redisStore(storeConfig as any),
+          store: await redisStore(storeConfig),
           ttl,
           max: configService.get<number>('CACHE_MAX', 1000),
         };
