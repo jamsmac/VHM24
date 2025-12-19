@@ -38,6 +38,9 @@ export interface MenuItem {
   points_earned?: number;
 }
 
+// Alias for backward compatibility
+export type PublicMenuItem = MenuItem;
+
 export interface QrResolveResult {
   machine_id: string;
   machine_number: string;
@@ -51,12 +54,16 @@ export interface ClientUser {
   id: string;
   telegram_id: string;
   telegram_username?: string;
+  first_name?: string;
+  last_name?: string;
   full_name?: string;
   phone?: string;
   email?: string;
   is_verified: boolean;
   language: 'ru' | 'uz' | 'en';
   loyalty_points?: number;
+  points_balance?: number;
+  total_orders?: number;
 }
 
 export interface LoyaltyBalance {
@@ -154,10 +161,14 @@ class ClientApiService {
     return data;
   }
 
-  async getMenu(machineId: string): Promise<MenuItem[]> {
+  async getMenu(machineId: string): Promise<{ data: MenuItem[] }> {
     const { data } = await this.axiosInstance.get('/public/menu', {
       params: { machine_id: machineId },
     });
+    // Ensure consistent response structure
+    if (Array.isArray(data)) {
+      return { data };
+    }
     return data;
   }
 
@@ -241,6 +252,19 @@ class ClientApiService {
   async getOrder(orderId: string): Promise<ClientOrder> {
     const { data } = await this.axiosInstance.get(`/orders/${orderId}`);
     return data;
+  }
+
+  // Alias methods for store compatibility
+  async loginWithTelegram(initData: string): Promise<{
+    access_token: string;
+    refresh_token: string;
+    user: ClientUser;
+  }> {
+    return this.authenticateTelegram(initData);
+  }
+
+  async getProfile(): Promise<ClientUser> {
+    return this.getCurrentUser();
   }
 }
 

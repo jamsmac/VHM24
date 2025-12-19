@@ -1,5 +1,9 @@
 /**
  * VendHub Mobile - Main App Navigator
+ *
+ * Supports two modes:
+ * - Staff mode: For operators with task management
+ * - Client mode: For consumers with QR scanning and ordering
  */
 
 import React, { useEffect } from 'react';
@@ -10,14 +14,18 @@ import { ActivityIndicator, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useAuthStore } from '../store/auth.store';
+import { useClientStore } from '../store/client.store';
 
-// Screens
+// Staff Screens
 import LoginScreen from '../screens/Auth/LoginScreen';
 import TaskListScreen from '../screens/Tasks/TaskListScreen';
 import TaskDetailScreen from '../screens/Tasks/TaskDetailScreen';
 import TaskCameraScreen from '../screens/Tasks/TaskCameraScreen';
 import EquipmentMapScreen from '../screens/Equipment/EquipmentMapScreen';
 import ProfileScreen from '../screens/Profile/ProfileScreen';
+
+// Client Navigator
+import ClientNavigator from './ClientNavigator';
 
 export type RootStackParamList = {
   Login: undefined;
@@ -78,10 +86,12 @@ function MainTabs() {
 
 export default function AppNavigator() {
   const { isAuthenticated, isLoading, loadUser } = useAuthStore();
+  const { appMode, loadAppMode } = useClientStore();
 
   useEffect(() => {
+    loadAppMode();
     loadUser();
-  }, [loadUser]);
+  }, [loadUser, loadAppMode]);
 
   if (isLoading) {
     return (
@@ -91,6 +101,16 @@ export default function AppNavigator() {
     );
   }
 
+  // Client mode - show client navigator (no staff auth required)
+  if (appMode === 'client') {
+    return (
+      <NavigationContainer>
+        <ClientNavigator />
+      </NavigationContainer>
+    );
+  }
+
+  // Staff mode - requires authentication
   return (
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: true }}>

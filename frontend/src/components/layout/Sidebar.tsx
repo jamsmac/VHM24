@@ -26,6 +26,7 @@ import {
   Activity,
   ScrollText,
   Timer,
+  KeyRound,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useActiveAlertsCount } from '@/hooks/useActiveAlertsCount'
@@ -33,6 +34,7 @@ import { useActiveAlertsCount } from '@/hooks/useActiveAlertsCount'
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Аппараты', href: '/dashboard/machines', icon: Package },
+  { name: 'Доступ к аппаратам', href: '/dashboard/machines/access', icon: KeyRound },
   { name: 'Задачи', href: '/dashboard/tasks', icon: ClipboardList },
   { name: 'Инциденты', href: '/dashboard/incidents', icon: AlertTriangle },
   { name: 'Жалобы', href: '/dashboard/complaints', icon: MessageSquare },

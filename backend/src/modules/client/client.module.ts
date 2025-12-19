@@ -19,6 +19,7 @@ import {
   ClientPublicService,
   ClientAuthService,
   ClientLoyaltyService,
+  ClientOrdersService,
 } from './services';
 
 // Controllers
@@ -26,6 +27,7 @@ import {
   ClientPublicController,
   ClientAuthController,
   ClientLoyaltyController,
+  ClientOrdersController,
 } from './controllers';
 
 // Guards
@@ -75,17 +77,20 @@ import { Nomenclature } from '@modules/nomenclature/entities/nomenclature.entity
     ClientPublicController,
     ClientAuthController,
     ClientLoyaltyController,
+    ClientOrdersController,
   ],
   providers: [
     ClientPublicService,
     ClientAuthService,
     ClientLoyaltyService,
+    ClientOrdersService,
     ClientAuthGuard,
   ],
   exports: [
     ClientPublicService,
     ClientAuthService,
     ClientLoyaltyService,
+    ClientOrdersService,
     ClientAuthGuard,
   ],
 })
