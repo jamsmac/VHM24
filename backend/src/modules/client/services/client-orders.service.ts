@@ -11,7 +11,7 @@ import {
   PaymentProvider,
 } from '../entities/client-order.entity';
 import { ClientUser } from '../entities/client-user.entity';
-import { ClientPayment, PaymentStatus } from '../entities/client-payment.entity';
+import { ClientPayment } from '../entities/client-payment.entity';
 import { ClientLoyaltyService } from './client-loyalty.service';
 import {
   CreateClientOrderDto,
