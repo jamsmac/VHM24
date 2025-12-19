@@ -1,7 +1,7 @@
 # CLAUDE.md - AI Assistant Guide for VendHub Manager
 
 > **Last Updated**: 2025-12-19
-> **Version**: 2.0.0
+> **Version**: 2.1.0
 > **Target Audience**: AI Assistants (Claude, GPT, etc.)
 
 This document provides comprehensive guidance for AI assistants working on the VendHub Manager codebase. It explains the architecture, conventions, workflows, and critical rules that must be followed.
@@ -12,31 +12,46 @@ This document provides comprehensive guidance for AI assistants working on the V
 
 1. [Project Overview](#project-overview)
 2. [Critical Architecture Principles](#critical-architecture-principles)
-3. [Codebase Structure](#codebase-structure)
-4. [Technology Stack](#technology-stack)
-5. [Development Workflows](#development-workflows)
-6. [Code Conventions](#code-conventions)
-7. [Module Patterns](#module-patterns)
-8. [Database Guidelines](#database-guidelines)
-9. [Testing Requirements](#testing-requirements)
-10. [Security Best Practices](#security-best-practices)
-11. [Common Tasks Guide](#common-tasks-guide)
-12. [Pitfalls to Avoid](#pitfalls-to-avoid)
-13. [Specialized Claude Agents](#specialized-claude-agents)
+3. [Additive Development Rules](#additive-development-rules)
+4. [Dual Platform Architecture](#dual-platform-architecture)
+5. [Machine Identifiers](#machine-identifiers)
+6. [Codebase Structure](#codebase-structure)
+7. [Technology Stack](#technology-stack)
+8. [Development Workflows](#development-workflows)
+9. [Code Conventions](#code-conventions)
+10. [Module Patterns](#module-patterns)
+11. [Public API Patterns](#public-api-patterns)
+12. [Bulk Import Patterns](#bulk-import-patterns)
+13. [Machine Access Control](#machine-access-control)
+14. [Client Data Model](#client-data-model)
+15. [Telegram Integration](#telegram-integration)
+16. [QR Code and Mobile Patterns](#qr-code-and-mobile-patterns)
+17. [Database Guidelines](#database-guidelines)
+18. [Testing Requirements](#testing-requirements)
+19. [Security Best Practices](#security-best-practices)
+20. [Common Tasks Guide](#common-tasks-guide)
+21. [Pitfalls to Avoid](#pitfalls-to-avoid)
+22. [Specialized Claude Agents](#specialized-claude-agents)
 
 ---
 
 ## Project Overview
 
-**VendHub Manager** is a complete vending machine management system (ERP/CRM/CMMS) built for manual operations architecture. It manages:
+**VendHub Manager** is a complete vending machine management system (ERP/CRM/CMMS) with two distinct platforms:
 
+### Staff Platform (VHM24)
 - **Machines**: Vending machine fleet management
 - **Tasks**: Photo-validated operator workflows (refill, collection, maintenance)
 - **Inventory**: 3-level inventory system (warehouse -> operator -> machine)
 - **Finance**: Transactions, collections, expenses
 - **Operations**: User management, incidents, complaints
 - **Integrations**: Telegram bot, web push, sales imports
-- **Mobile**: React Native/Expo operator mobile app
+
+### Client Platform (NEW)
+- **Client Web**: Public-facing website for customers
+- **Client Mobile**: React Native/Expo app for customers
+- **Telegram Payments**: QR -> Telegram deep link -> Payment flow
+- **Loyalty Program**: Points, bonuses, wallets
 
 **Key Characteristic**: NO direct machine connectivity. All data flows through operator actions and manual data entry with photo validation.
 
@@ -82,12 +97,177 @@ Warehouse Inventory -> Operator Inventory -> Machine Inventory
 
 #### 4. **Tasks are the Central Mechanism**
 All operations flow through tasks:
-- Refill (pополнение) - Load products into machine
+- Refill (пополнение) - Load products into machine
 - Collection (инкассация) - Collect cash from machine
 - Maintenance (обслуживание) - Service machine
 - Inspection (проверка) - Check machine condition
 - Repair (ремонт) - Fix machine issues
 - Cleaning (мойка) - Clean machine/components
+
+---
+
+## Additive Development Rules
+
+### CRITICAL: NON-BREAKING CHANGES ONLY
+
+When extending the system, follow these rules strictly:
+
+#### 1. **Never Delete or Rename Existing Code**
+```typescript
+// WRONG - Breaks existing consumers
+// Renamed: CreateMachineDto -> CreateMachineRequestDto
+// Deleted: findByStatus() method
+
+// CORRECT - Add new, keep old
+export class CreateMachineDto { /* unchanged */ }
+export class CreateMachineRequestDtoV2 { /* new version */ }
+
+// Old method stays, new method added
+async findByStatus(status: string) { /* unchanged */ }
+async findByStatusWithAccess(status: string, userId: string) { /* new */ }
+```
+
+#### 2. **New Files Over Editing Old Ones**
+```
+// WRONG - Modifying existing machine.entity.ts extensively
+
+// CORRECT - Create new entity for new features
+machine.entity.ts           // Unchanged
+machine-access.entity.ts    // NEW - for access control
+client-user.entity.ts       // NEW - for client platform
+```
+
+#### 3. **New Endpoints Over Modifying Existing**
+```typescript
+// WRONG - Changing existing endpoint behavior
+@Get('machines')
+findAll() { /* changed behavior */ }
+
+// CORRECT - Add new endpoint with v2 or specific path
+@Get('machines')
+findAll() { /* unchanged */ }
+
+@Get('v2/machines')
+findAllWithAccess() { /* new with access filtering */ }
+
+@Get('public/machines')
+findAllPublic() { /* new public endpoint */ }
+```
+
+#### 4. **Preserve All Existing Tests**
+```bash
+# Before any changes, ensure:
+npm run test  # All existing tests pass
+
+# After changes:
+npm run test  # All existing tests STILL pass
+# New tests added for new functionality
+```
+
+#### 5. **Handle Conflicts with New Endpoints**
+```typescript
+// If new feature conflicts with existing behavior:
+// 1. Keep existing endpoint unchanged
+// 2. Create new endpoint for new behavior
+// 3. Document the difference
+
+// Example: Adding access control
+@Get('machines')           // Original - returns all (for backward compat)
+@Get('machines/accessible') // New - returns only accessible machines
+```
+
+---
+
+## Dual Platform Architecture
+
+### Platform Separation
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     VendHub Backend API                          │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  ┌──────────────────────┐      ┌──────────────────────────┐     │
+│  │    STAFF MODULES     │      │    CLIENT MODULES        │     │
+│  │   (Authenticated)    │      │   (Public + Fast Auth)   │     │
+│  ├──────────────────────┤      ├──────────────────────────┤     │
+│  │ /api/machines        │      │ /api/public/locations    │     │
+│  │ /api/tasks           │      │ /api/public/machines     │     │
+│  │ /api/inventory       │      │ /api/public/qr/:code     │     │
+│  │ /api/users           │      │ /api/client/auth         │     │
+│  │ /api/transactions    │      │ /api/client/orders       │     │
+│  │ /api/telegram/*      │      │ /api/client/loyalty      │     │
+│  └──────────────────────┘      │ /api/client/wallet       │     │
+│                                 └──────────────────────────┘     │
+└─────────────────────────────────────────────────────────────────┘
+           │                                    │
+           ▼                                    ▼
+┌──────────────────────┐            ┌──────────────────────────────┐
+│   Staff Frontend     │            │      Client Platforms        │
+│   (Next.js Admin)    │            │  ┌────────────────────────┐  │
+│   Port 3001          │            │  │  Client Web (Next.js)  │  │
+└──────────────────────┘            │  │  /client-web           │  │
+           │                        │  └────────────────────────┘  │
+           ▼                        │  ┌────────────────────────┐  │
+┌──────────────────────┐            │  │  Mobile App (Expo)     │  │
+│   Mobile Operator    │            │  │  /mobile-client        │  │
+│   (Expo - Staff)     │            │  └────────────────────────┘  │
+│   /mobile            │            │  ┌────────────────────────┐  │
+└──────────────────────┘            │  │  Telegram Bot          │  │
+                                    │  │  (Payment flow)        │  │
+                                    │  └────────────────────────┘  │
+                                    └──────────────────────────────┘
+```
+
+### Two User Types
+
+| Aspect | Staff User (users table) | Client User (client_users table) |
+|--------|-------------------------|----------------------------------|
+| Auth | JWT + 2FA | Fast auth (Telegram) |
+| Roles | SUPERADMIN, ADMIN, MANAGER, OPERATOR, TECHNICIAN | CLIENT |
+| Access | Full system | Own orders, wallet, loyalty |
+| Tables | users, user_roles, user_permissions | client_users |
+| Endpoints | /api/* | /api/public/*, /api/client/* |
+
+---
+
+## Machine Identifiers
+
+### Understanding Machine IDs
+
+The system uses multiple identifiers for machines:
+
+| Field | Purpose | Example | Unique |
+|-------|---------|---------|--------|
+| `id` | Internal UUID | `550e8400-e29b-41d4-a716-446655440000` | Yes |
+| `machine_number` | Primary business ID | `M-001`, `VM-042` | Yes |
+| `serial_number` | Manufacturer serial | `SN-ABC123456` | No (nullable) |
+| `qr_code` | QR code identifier | `VH-M001-ABC123` | Yes |
+
+### Resolution Priority
+When resolving a machine from external input:
+```typescript
+async resolveMachine(identifier: string): Promise<Machine> {
+  // 1. Try UUID first
+  if (isUUID(identifier)) {
+    return await this.findById(identifier);
+  }
+
+  // 2. Try machine_number (primary business ID)
+  const byNumber = await this.findByMachineNumber(identifier);
+  if (byNumber) return byNumber;
+
+  // 3. Try QR code
+  const byQr = await this.findByQrCode(identifier);
+  if (byQr) return byQr;
+
+  // 4. Try serial_number (fallback)
+  const bySerial = await this.findBySerialNumber(identifier);
+  if (bySerial) return bySerial;
+
+  throw new NotFoundException('Machine not found');
+}
+```
 
 ---
 
@@ -99,8 +279,9 @@ VendHub/
 │   ├── src/
 │   │   ├── modules/                   # Feature modules (domain-driven)
 │   │   │   ├── auth/                  # JWT authentication
-│   │   │   ├── users/                 # User management + RBAC
+│   │   │   ├── users/                 # Staff user management + RBAC
 │   │   │   ├── machines/              # Machine CRUD + QR codes
+│   │   │   ├── machine-access/        # NEW: User-Machine access control
 │   │   │   ├── tasks/                 # CORE: Task management
 │   │   │   ├── inventory/             # 3-level inventory system
 │   │   │   ├── transactions/          # Financial transactions
@@ -110,9 +291,11 @@ VendHub/
 │   │   │   ├── recipes/               # Product recipes + versioning
 │   │   │   ├── files/                 # File/photo management
 │   │   │   ├── notifications/         # Multi-channel notifications
-│   │   │   ├── telegram/              # Telegram bot integration
+│   │   │   ├── telegram/              # Telegram bot (staff)
+│   │   │   ├── telegram-client/       # NEW: Telegram payments (client)
 │   │   │   ├── web-push/              # Browser push notifications
 │   │   │   ├── sales-import/          # Excel/CSV sales import
+│   │   │   ├── bulk-import/           # NEW: Bulk machine/user import
 │   │   │   ├── intelligent-import/    # AI-powered data import
 │   │   │   ├── reports/               # PDF report generation
 │   │   │   ├── analytics/             # Analytics tables
@@ -126,6 +309,16 @@ VendHub/
 │   │   │   ├── integration/           # External integrations
 │   │   │   ├── security/              # Security & audit
 │   │   │   ├── rbac/                  # Role-based access control
+│   │   │   │
+│   │   │   │   # CLIENT PLATFORM MODULES (NEW)
+│   │   │   ├── client-auth/           # Client fast authentication
+│   │   │   ├── client-users/          # Client user management
+│   │   │   ├── client-orders/         # Client orders
+│   │   │   ├── client-payments/       # Payment processing
+│   │   │   ├── client-loyalty/        # Loyalty program
+│   │   │   ├── client-wallets/        # Client wallets
+│   │   │   ├── public-api/            # Public endpoints
+│   │   │   │
 │   │   │   ├── access-requests/       # User access requests
 │   │   │   ├── alerts/                # System alerts
 │   │   │   ├── audit-logs/            # Audit logging
@@ -142,12 +335,10 @@ VendHub/
 │   │   ├── common/                    # Shared utilities
 │   │   │   ├── entities/              # Base entity classes
 │   │   │   ├── filters/               # Exception filters
-│   │   │   ├── guards/                # Auth guards
+│   │   │   ├── guards/                # Auth guards (JWT, RBAC, Public)
 │   │   │   ├── decorators/            # Custom decorators
 │   │   │   └── pipes/                 # Validation pipes
 │   │   ├── config/                    # Configuration
-│   │   │   ├── typeorm.config.ts      # Database config
-│   │   │   └── env.validation.ts      # Environment validation
 │   │   ├── database/                  # Database management
 │   │   │   ├── migrations/            # TypeORM migrations
 │   │   │   └── seeds/                 # Database seeders
@@ -156,104 +347,64 @@ VendHub/
 │   │   ├── main.ts                    # Application entry point
 │   │   └── app.module.ts              # Root module
 │   ├── test/                          # E2E tests
-│   ├── .env.example                   # Environment variables template
-│   ├── package.json
-│   └── tsconfig.json
+│   └── package.json
 │
-├── frontend/                          # Next.js 16 Frontend (App Router)
+├── frontend/                          # Next.js 16 Staff Frontend
 │   ├── src/
 │   │   ├── app/                       # Next.js App Router
-│   │   │   ├── (auth)/               # Auth pages (login, register)
-│   │   │   └── (dashboard)/          # Dashboard pages
 │   │   ├── components/                # React components
-│   │   │   ├── ui/                   # UI primitives (shadcn/ui)
-│   │   │   ├── layout/               # Layout components
-│   │   │   ├── dashboard/            # Dashboard widgets
-│   │   │   ├── machines/             # Machine components
-│   │   │   ├── tasks/                # Task components
-│   │   │   ├── incidents/            # Incident components
-│   │   │   ├── equipment/            # Equipment components
-│   │   │   ├── inventory/            # Inventory components
-│   │   │   ├── charts/               # Chart components
-│   │   │   ├── map/                  # Map components
-│   │   │   ├── monitoring/           # Monitoring components
-│   │   │   ├── notifications/        # Notification components
-│   │   │   ├── realtime/             # Real-time components
-│   │   │   ├── security/             # Security components
-│   │   │   ├── audit/                # Audit components
-│   │   │   ├── import/               # Import components
-│   │   │   ├── search/               # Search components
-│   │   │   └── help/                 # Help components
 │   │   ├── lib/                       # Utilities
 │   │   ├── hooks/                     # Custom React hooks
-│   │   ├── providers/                 # Context providers
-│   │   ├── i18n/                      # Internationalization
-│   │   ├── stories/                   # Storybook stories
 │   │   └── types/                     # TypeScript types
-│   ├── public/                        # Static assets
-│   ├── package.json
-│   └── next.config.js
+│   └── package.json
 │
-├── mobile/                            # React Native/Expo Mobile App
+├── client-web/                        # NEW: Next.js Client Frontend
 │   ├── src/
-│   │   ├── screens/                   # App screens
-│   │   ├── components/                # Reusable components
-│   │   ├── navigation/                # Navigation setup
-│   │   ├── services/                  # API services
-│   │   ├── store/                     # Zustand state management
-│   │   ├── hooks/                     # Custom hooks
-│   │   └── types/                     # TypeScript types
-│   ├── __tests__/                     # Jest tests
-│   ├── App.tsx                        # Root component
-│   ├── app.json                       # Expo config
-│   ├── eas.json                       # EAS Build config
+│   │   ├── app/
+│   │   │   ├── page.tsx              # Landing page
+│   │   │   ├── locations/            # Location listing
+│   │   │   ├── machines/[id]/        # Machine details
+│   │   │   ├── scan/                 # QR scanner page
+│   │   │   └── profile/              # Client profile
+│   │   ├── components/
+│   │   └── lib/
+│   └── package.json
+│
+├── mobile/                            # React Native/Expo Staff App
+│   ├── src/
+│   │   ├── screens/                   # Operator screens
+│   │   ├── components/
+│   │   └── services/
+│   └── package.json
+│
+├── mobile-client/                     # NEW: React Native/Expo Client App
+│   ├── src/
+│   │   ├── screens/
+│   │   │   ├── HomeScreen.tsx        # Main screen with scanner
+│   │   │   ├── ScanScreen.tsx        # QR scanner
+│   │   │   ├── MachineScreen.tsx     # Machine details
+│   │   │   ├── ProfileScreen.tsx     # User profile
+│   │   │   └── LoyaltyScreen.tsx     # Loyalty program
+│   │   ├── components/
+│   │   │   ├── QRScanner.tsx         # Camera QR scanner
+│   │   │   └── TelegramButton.tsx    # Telegram deep link button
+│   │   ├── services/
+│   │   │   └── api.ts                # API client
+│   │   └── store/
+│   │       └── useClientStore.ts     # Zustand store
 │   └── package.json
 │
 ├── docs/                              # Documentation
-│   ├── architecture/                  # Architecture docs
-│   └── dictionaries/                  # System dictionaries
-│
 ├── .claude/                           # Claude Code Rules & Templates
-│   ├── README.md                      # Developer onboarding guide
-│   ├── rules.md                       # CRITICAL: Coding rules
-│   ├── testing-guide.md               # Testing guidelines
-│   ├── deployment-guide.md            # Deployment instructions
-│   ├── phase-1-mvp-checklist.md       # MVP development checklist
 │   ├── agents/                        # Specialized Claude agents
-│   │   ├── vendhub-dev-architect.md
-│   │   ├── vendhub-api-developer.md
-│   │   ├── vendhub-auth-security.md
-│   │   ├── vendhub-database-expert.md
-│   │   ├── vendhub-frontend-specialist.md
-│   │   ├── vendhub-telegram-bot.md
-│   │   └── vendhub-tester.md
-│   ├── prompts/                       # AI prompts
-│   ├── scripts/                       # Utility scripts
 │   └── templates/                     # Code templates
-│       └── backend/
-│           ├── service-template.ts
-│           └── controller-template.ts
-│
 ├── monitoring/                        # Monitoring configuration
-│   ├── prometheus/                    # Prometheus config
-│   └── grafana/                       # Grafana dashboards
-│
 ├── scripts/                           # Deployment/utility scripts
-│
-├── .github/
-│   └── workflows/
-│       ├── ci.yml                     # CI pipeline
-│       ├── deploy-staging.yml         # Staging deployment
-│       └── deploy-production.yml      # Production deployment
-│
-├── docker-compose.yml                 # Local development setup
-├── docker-compose.prod.yml            # Production docker setup
-├── README.md                          # Project README
-├── CLAUDE.md                          # This file (AI assistant guide)
+├── .github/workflows/                 # CI/CD pipelines
+├── docker-compose.yml                 # Local development
+├── CLAUDE.md                          # This file
 ├── DEPLOYMENT.md                      # Deployment guide
-├── SECURITY.md                        # Security documentation
-├── OPERATIONS_RUNBOOK.md              # Operations runbook
-└── CHANGELOG.md                       # Changelog
+└── SECURITY.md                        # Security documentation
 ```
 
 ---
@@ -264,7 +415,7 @@ VendHub/
 - **Framework**: NestJS 10 (TypeScript)
 - **Database**: PostgreSQL 14+
 - **ORM**: TypeORM with migrations
-- **Authentication**: JWT with refresh tokens, 2FA (TOTP)
+- **Authentication**: JWT with refresh tokens, 2FA (TOTP), Fast Auth (Telegram)
 - **Validation**: class-validator, class-transformer
 - **API Docs**: Swagger/OpenAPI
 - **Job Queue**: Bull + Redis
@@ -281,8 +432,9 @@ VendHub/
 - **Security**: helmet, bcrypt, @nestjs/throttler
 - **WebSocket**: Socket.IO
 - **Caching**: cache-manager with Redis (ioredis)
+- **Payments**: Telegram Payments API (NEW)
 
-### Frontend
+### Staff Frontend (Next.js)
 - **Framework**: Next.js 16 (App Router)
 - **UI Library**: React 19
 - **Styling**: TailwindCSS 3.4
@@ -297,19 +449,35 @@ VendHub/
 - **Internationalization**: next-intl
 - **Testing**: Vitest, Testing Library, Playwright
 - **Documentation**: Storybook 10
-- **Type Safety**: TypeScript 5
 
-### Mobile (React Native/Expo)
+### Client Web (Next.js) - NEW
+- **Framework**: Next.js 16 (App Router)
+- **UI Library**: React 19
+- **Styling**: TailwindCSS 3.4
+- **Components**: shadcn/ui (mobile-optimized)
+- **State Management**: Zustand
+- **HTTP Client**: Axios
+- **QR Scanner**: html5-qrcode
+- **PWA**: next-pwa
+
+### Mobile Staff (Expo)
 - **Framework**: Expo SDK 54
 - **Navigation**: React Navigation 7
 - **State Management**: Zustand, TanStack Query
-- **Storage**: Expo Secure Store, AsyncStorage
+- **Storage**: Expo Secure Store
 - **Camera**: Expo Camera
 - **Location**: Expo Location
 - **Maps**: React Native Maps
 - **Push Notifications**: Expo Notifications
-- **Testing**: Jest with jest-expo
-- **Type Safety**: TypeScript 5
+
+### Mobile Client (Expo) - NEW
+- **Framework**: Expo SDK 54
+- **Navigation**: React Navigation 7
+- **State Management**: Zustand
+- **Storage**: AsyncStorage (offline cache)
+- **Camera**: Expo Camera (QR scanning)
+- **Deep Links**: Expo Linking (Telegram)
+- **Offline Support**: NetInfo + cached data
 
 ### Infrastructure
 - **Containerization**: Docker + Docker Compose
@@ -317,42 +485,37 @@ VendHub/
 - **Cache/Queue**: Redis 7
 - **Object Storage**: MinIO (dev), Cloudflare R2 (prod)
 - **CI/CD**: GitHub Actions
-- **Hosting**: Railway (production)
+- **Hosting**: Railway (production), Vercel (frontends)
 - **Monitoring**: Prometheus + Grafana
 
 ---
 
 ## Development Workflows
 
-### 1. Creating a New Feature
+### 1. Creating a New Feature (Additive)
 
 ```bash
 # 1. Create feature branch
-git checkout -b feature/task-photo-validation
+git checkout -b feature/client-loyalty-program
 
-# 2. Check if feature is in current phase (see .claude/phase-1-mvp-checklist.md)
+# 2. Create NEW modules/files (don't modify existing heavily)
+mkdir -p backend/src/modules/client-loyalty
 
-# 3. Implement following module pattern (see below)
-
-# 4. Write tests IMMEDIATELY (not later!)
+# 3. Verify existing tests still pass
 npm run test
 
-# 5. Run all checks before commit
-npm run lint
-npm run type-check
-npm run test
-npm run build
+# 4. Implement with NEW files
+# 5. Add NEW tests for new functionality
+# 6. Run all checks
+npm run lint && npm run type-check && npm run test && npm run build
 
-# 6. Commit with conventional commits format
-git commit -m "feat(tasks): add photo validation before completion
+# 7. Commit with conventional commits
+git commit -m "feat(client): add loyalty program module
 
-Implemented mandatory photo check for refill tasks.
-Tasks cannot be completed without before/after photos.
+New module for client loyalty points and rewards.
+Does not modify existing staff modules.
 
 Closes #123"
-
-# 7. Push and create PR
-git push origin feature/task-photo-validation
 ```
 
 ### 2. Git Commit Message Format
@@ -378,27 +541,21 @@ git push origin feature/task-photo-validation
 - `perf`: Performance improvements
 - `build`: Build system changes
 
-**Example**:
-```
-feat(inventory): implement 3-level inventory transfer
-
-Add automatic inventory transfer when refill tasks complete:
-- Warehouse -> Operator (task creation)
-- Operator -> Machine (task completion)
-
-Includes validation for insufficient stock.
-
-Closes #456
-```
+**Scopes**:
+- `machines`: Machine module
+- `tasks`: Task module
+- `client`: Client platform (NEW)
+- `telegram`: Telegram integration
+- `mobile`: Mobile apps
+- `api`: API changes
 
 ### 3. Branch Naming
 
 ```bash
-feature/task-photo-validation      # New features
-fix/inventory-update-bug           # Bug fixes
-docs/add-api-documentation         # Documentation
-refactor/simplify-auth-logic       # Refactoring
-test/add-task-service-tests        # Tests
+feature/client-loyalty-program     # New client features
+feature/machine-access-control     # New staff features
+fix/qr-scan-ios-camera            # Bug fixes
+docs/client-api-documentation      # Documentation
 ```
 
 ---
@@ -410,143 +567,44 @@ test/add-task-service-tests        # Tests
 #### File Naming
 ```
 kebab-case for all files:
-  - user.service.ts
-  - task.controller.ts
-  - machine.entity.ts
-  - create-task.dto.ts
+  - client-user.service.ts
+  - machine-access.controller.ts
+  - client-order.entity.ts
+  - create-client-user.dto.ts
 ```
 
 #### Class/Interface Naming
 ```typescript
 // Classes: PascalCase
-class UserService {}
-class TaskController {}
-class Machine {}
+class ClientUserService {}
+class MachineAccessController {}
+class ClientOrder {}
 
 // Interfaces: PascalCase (no I prefix)
-interface CreateTaskDto {}
-interface TaskResponse {}
+interface CreateClientUserDto {}
+interface MachineAccessResponse {}
 
 // Types: PascalCase
-type TaskStatus = 'created' | 'in_progress' | 'completed';
+type ClientAuthMethod = 'telegram' | 'phone' | 'email';
 
-// Enums: PascalCase
-enum MachineStatus {
-  ACTIVE = 'active',
-  OFFLINE = 'offline',
+// Enums: PascalCase with UPPER_SNAKE values
+enum LoyaltyTier {
+  BRONZE = 'bronze',
+  SILVER = 'silver',
+  GOLD = 'gold',
 }
 ```
 
-#### Function/Method Naming
-```typescript
-// camelCase for methods
-async createTask() {}
-async getUserById() {}
-async updateInventory() {}
-
-// Boolean methods start with is/has/can
-isTaskComplete() {}
-hasPhotos() {}
-canCompleteTask() {}
-```
-
-#### Constants
-```typescript
-// UPPER_SNAKE_CASE
-const MAX_FILE_SIZE = 5_000_000;
-const DEFAULT_PAGE_SIZE = 20;
-const TASK_PHOTO_REQUIRED = true;
-```
-
-#### Path Aliases (tsconfig.json)
+#### Path Aliases
 ```typescript
 import { BaseEntity } from '@/common/entities/base.entity';
-import { TaskService } from '@modules/tasks/tasks.service';
-import { DatabaseConfig } from '@config/database.config';
+import { ClientUserService } from '@modules/client-users/client-users.service';
+import { PublicGuard } from '@/common/guards/public.guard';
 ```
 
-### Frontend (TypeScript/React/Next.js)
+### Frontend/Mobile Conventions
 
-#### File Naming
-```
-PascalCase for components:
-  - TaskList.tsx
-  - MachineCard.tsx
-  - DashboardLayout.tsx
-
-camelCase for utilities/hooks:
-  - useAuth.ts
-  - useTasks.ts
-  - formatDate.ts
-```
-
-#### Component Structure
-```typescript
-'use client'; // If using client-side features
-
-import { useState } from 'react';
-import { Task } from '@/types';
-
-interface TaskCardProps {
-  task: Task;
-  onComplete: (taskId: string) => void;
-}
-
-/**
- * Task card component with completion action
- *
- * Used in operator task list to display and complete tasks
- */
-export function TaskCard({ task, onComplete }: TaskCardProps) {
-  const [isLoading, setIsLoading] = useState(false);
-
-  const handleComplete = async () => {
-    setIsLoading(true);
-    try {
-      await onComplete(task.id);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  return (
-    <div className="task-card">
-      {/* JSX */}
-    </div>
-  );
-}
-```
-
-### Mobile (React Native/Expo)
-
-#### File Naming
-```
-PascalCase for components and screens:
-  - TaskListScreen.tsx
-  - MachineCard.tsx
-
-camelCase for utilities/hooks:
-  - useAuth.ts
-  - api.ts
-```
-
-#### Screen Structure
-```typescript
-import { View, Text } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-
-interface TaskListScreenProps {}
-
-export function TaskListScreen({}: TaskListScreenProps) {
-  const navigation = useNavigation();
-
-  return (
-    <View>
-      <Text>Tasks</Text>
-    </View>
-  );
-}
-```
+Same as backend for TypeScript. Components use PascalCase, hooks use camelCase with `use` prefix.
 
 ---
 
@@ -555,258 +613,695 @@ export function TaskListScreen({}: TaskListScreenProps) {
 ### Standard NestJS Module Structure
 
 ```
-users/
+client-users/
 ├── dto/
-│   ├── create-user.dto.ts         # Input validation for create
-│   ├── update-user.dto.ts         # Input validation for update
-│   └── user-response.dto.ts       # Response shape (optional)
+│   ├── create-client-user.dto.ts
+│   ├── update-client-user.dto.ts
+│   └── client-user-response.dto.ts
 ├── entities/
-│   └── user.entity.ts             # TypeORM entity
-├── users.controller.ts            # REST API endpoints
-├── users.service.ts               # Business logic
-├── users.module.ts                # Module definition
-└── users.service.spec.ts          # Unit tests
+│   └── client-user.entity.ts
+├── guards/
+│   └── client-auth.guard.ts          # Module-specific guard
+├── client-users.controller.ts
+├── client-users.service.ts
+├── client-users.module.ts
+└── client-users.service.spec.ts
 ```
 
-### Entity Pattern (TypeORM)
+### Entity Pattern with Proper Types
 
 ```typescript
-import { Entity, Column, ManyToOne, JoinColumn, Index } from 'typeorm';
+import { Entity, Column, Index, CreateDateColumn } from 'typeorm';
 import { BaseEntity } from '@/common/entities/base.entity';
 
-export enum MachineStatus {
+export enum ClientStatus {
   ACTIVE = 'active',
-  LOW_STOCK = 'low_stock',
-  ERROR = 'error',
-  MAINTENANCE = 'maintenance',
-  OFFLINE = 'offline',
-  DISABLED = 'disabled',
+  SUSPENDED = 'suspended',
+  DELETED = 'deleted',
 }
 
-@Entity('machines')
-@Index(['location_id'])
-@Index(['machine_number'], { unique: true })
-export class Machine extends BaseEntity {
-  // BaseEntity provides: id, created_at, updated_at, deleted_at
+@Entity('client_users')
+@Index(['telegram_id'], { unique: true })
+@Index(['phone'], { unique: true, where: 'phone IS NOT NULL' })
+export class ClientUser extends BaseEntity {
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  telegram_id: string | null;
 
-  @Column({ type: 'varchar', length: 50, unique: true })
-  machine_number: string;
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  telegram_username: string | null;
 
-  @Column({ type: 'varchar', length: 200 })
-  name: string;
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  phone: string | null;
+
+  @Column({ type: 'varchar', length: 200, nullable: true })
+  display_name: string | null;
 
   @Column({
     type: 'enum',
-    enum: MachineStatus,
-    default: MachineStatus.ACTIVE,
+    enum: ClientStatus,
+    default: ClientStatus.ACTIVE,
   })
-  status: MachineStatus;
+  status: ClientStatus;
 
-  @Column({ type: 'uuid' })
-  location_id: string;
+  @Column({ type: 'integer', default: 0 })
+  loyalty_points: number;
 
-  @ManyToOne(() => Location, { onDelete: 'RESTRICT' })
-  @JoinColumn({ name: 'location_id' })
-  location: Location;
+  @Column({ type: 'decimal', precision: 15, scale: 2, default: 0 })
+  wallet_balance: number;
 
+  // Use Record<string, unknown> instead of any
   @Column({ type: 'jsonb', nullable: true })
-  settings: Record<string, unknown>;
+  preferences: Record<string, unknown> | null;
+
+  @CreateDateColumn({ type: 'timestamp with time zone' })
+  first_seen_at: Date;
+
+  @Column({ type: 'timestamp with time zone', nullable: true })
+  last_active_at: Date | null;
 }
 ```
 
-### DTO Pattern (Validation)
+---
+
+## Public API Patterns
+
+### Creating Public Endpoints
 
 ```typescript
-import {
-  IsString,
-  IsEnum,
-  IsOptional,
-  IsNumber,
-  IsUUID,
-  MinLength,
-  Min,
-  Max,
-} from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { MachineStatus } from '../entities/machine.entity';
+// public-api.controller.ts
+import { Controller, Get, Param } from '@nestjs/common';
+import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { Public } from '@/common/decorators/public.decorator';
+import { Throttle } from '@nestjs/throttler';
 
-export class CreateMachineDto {
-  @ApiProperty({ example: 'M-001' })
-  @IsString()
-  @MinLength(1, { message: 'Machine number is required' })
-  machine_number: string;
-
-  @ApiProperty({ example: 'Coffee Machine in Lobby' })
-  @IsString()
-  @MinLength(2, { message: 'Name must be at least 2 characters' })
-  name: string;
-
-  @ApiPropertyOptional({ enum: MachineStatus, default: MachineStatus.ACTIVE })
-  @IsOptional()
-  @IsEnum(MachineStatus)
-  status?: MachineStatus;
-
-  @ApiProperty({ example: 'uuid', description: 'Location ID' })
-  @IsUUID()
-  location_id: string;
-
-  @ApiPropertyOptional({ example: 10, default: 10 })
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  @Max(100)
-  low_stock_threshold_percent?: number;
-}
-```
-
-### Service Pattern
-
-```typescript
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Machine } from './entities/machine.entity';
-import { CreateMachineDto } from './dto/create-machine.dto';
-import { UpdateMachineDto } from './dto/update-machine.dto';
-
-@Injectable()
-export class MachinesService {
+@ApiTags('public')
+@Controller('public')
+export class PublicApiController {
   constructor(
-    @InjectRepository(Machine)
-    private readonly machineRepository: Repository<Machine>,
+    private readonly locationsService: LocationsService,
+    private readonly machinesService: MachinesService,
   ) {}
 
   /**
-   * Create a new machine
-   *
-   * Validates location exists and machine_number is unique
-   *
-   * @param createMachineDto - Machine creation data
-   * @returns Created machine
-   * @throws BadRequestException if machine_number already exists
+   * Public endpoint - no authentication required
+   * Rate limited more strictly than authenticated endpoints
    */
-  async create(createMachineDto: CreateMachineDto): Promise<Machine> {
-    const existing = await this.machineRepository.findOne({
-      where: { machine_number: createMachineDto.machine_number },
-    });
+  @Get('locations')
+  @Public()
+  @Throttle({ default: { limit: 30, ttl: 60000 } }) // 30 req/min
+  @ApiOperation({ summary: 'Get all public locations' })
+  async getPublicLocations() {
+    return this.locationsService.findAllPublic();
+  }
 
-    if (existing) {
-      throw new BadRequestException('Machine number already exists');
-    }
+  @Get('locations/:id')
+  @Public()
+  @Throttle({ default: { limit: 60, ttl: 60000 } })
+  @ApiOperation({ summary: 'Get location details with machines' })
+  async getLocationDetails(@Param('id') id: string) {
+    return this.locationsService.findOnePublic(id);
+  }
 
-    const machine = this.machineRepository.create(createMachineDto);
-    return await this.machineRepository.save(machine);
+  @Get('machines/:id')
+  @Public()
+  @Throttle({ default: { limit: 60, ttl: 60000 } })
+  @ApiOperation({ summary: 'Get machine public details' })
+  async getMachinePublic(@Param('id') id: string) {
+    return this.machinesService.findOnePublic(id);
   }
 
   /**
-   * Find all machines with optional filters
+   * QR Code resolution endpoint
+   * Returns machine info + Telegram payment link
    */
-  async findAll(filters?: Record<string, unknown>): Promise<Machine[]> {
-    return await this.machineRepository.find({
-      where: filters,
-      relations: ['location'],
-    });
+  @Get('qr/:code')
+  @Public()
+  @Throttle({ default: { limit: 100, ttl: 60000 } })
+  @ApiOperation({ summary: 'Resolve QR code to machine and payment link' })
+  async resolveQrCode(@Param('code') code: string) {
+    const machine = await this.machinesService.findByQrCode(code);
+    return {
+      machine_id: machine.id,
+      machine_number: machine.machine_number,
+      name: machine.name,
+      location: machine.location,
+      telegram_pay_link: this.buildTelegramPayLink(machine),
+      accepts_cash: machine.accepts_cash,
+      accepts_card: machine.accepts_card,
+      accepts_qr: machine.accepts_qr,
+    };
   }
 
-  /**
-   * Find machine by ID
-   *
-   * @throws NotFoundException if machine not found
-   */
-  async findOne(id: string): Promise<Machine> {
-    const machine = await this.machineRepository.findOne({
-      where: { id },
-      relations: ['location'],
-    });
-
-    if (!machine) {
-      throw new NotFoundException(`Machine with ID ${id} not found`);
-    }
-
-    return machine;
-  }
-
-  /**
-   * Update machine
-   */
-  async update(id: string, updateMachineDto: UpdateMachineDto): Promise<Machine> {
-    await this.findOne(id);
-    await this.machineRepository.update(id, updateMachineDto);
-    return await this.findOne(id);
-  }
-
-  /**
-   * Soft delete machine
-   */
-  async remove(id: string): Promise<void> {
-    await this.findOne(id);
-    await this.machineRepository.softDelete(id);
+  private buildTelegramPayLink(machine: Machine): string {
+    const botUsername = process.env.TELEGRAM_BOT_USERNAME;
+    return `https://t.me/${botUsername}?start=pay_${machine.qr_code}`;
   }
 }
 ```
 
-### Controller Pattern
+### Public Decorator Implementation
 
 ```typescript
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
-import { MachinesService } from './machines.service';
-import { CreateMachineDto } from './dto/create-machine.dto';
-import { UpdateMachineDto } from './dto/update-machine.dto';
-import { JwtAuthGuard } from '@modules/auth/guards/jwt-auth.guard';
-import { Roles } from '@modules/auth/decorators/roles.decorator';
-import { RolesGuard } from '@modules/auth/guards/roles.guard';
+// common/decorators/public.decorator.ts
+import { SetMetadata } from '@nestjs/common';
 
-@ApiTags('machines')
-@ApiBearerAuth('JWT-auth')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Controller('machines')
-export class MachinesController {
-  constructor(private readonly machinesService: MachinesService) {}
+export const IS_PUBLIC_KEY = 'isPublic';
+export const Public = () => SetMetadata(IS_PUBLIC_KEY, true);
+```
 
-  @Post()
-  @Roles('ADMIN', 'MANAGER')
-  @ApiOperation({ summary: 'Create new machine' })
-  create(@Body() createMachineDto: CreateMachineDto) {
-    return this.machinesService.create(createMachineDto);
+---
+
+## Bulk Import Patterns
+
+### CSV/XLSX Import Structure
+
+```typescript
+// bulk-import/dto/bulk-import.dto.ts
+export class BulkImportMachineAccessDto {
+  @ApiProperty({ type: 'string', format: 'binary' })
+  file: Express.Multer.File;
+}
+
+export interface BulkImportResult {
+  total: number;
+  successful: number;
+  failed: number;
+  errors: BulkImportError[];
+}
+
+export interface BulkImportError {
+  row: number;
+  field: string;
+  value: string;
+  message: string;
+}
+```
+
+### Bulk Import Service Pattern
+
+```typescript
+// bulk-import/bulk-import.service.ts
+@Injectable()
+export class BulkImportService {
+  /**
+   * Import machine access from CSV/XLSX
+   *
+   * CSV Format:
+   * user_identifier,machine_identifier,access_level
+   * john@example.com,M-001,full
+   * operator1,M-002,view
+   *
+   * User resolution: uuid -> email -> username -> telegram_username
+   * Machine resolution: uuid -> machine_number -> serial_number
+   */
+  async importMachineAccess(
+    file: Express.Multer.File,
+  ): Promise<BulkImportResult> {
+    const rows = await this.parseFile(file);
+    const result: BulkImportResult = {
+      total: rows.length,
+      successful: 0,
+      failed: 0,
+      errors: [],
+    };
+
+    for (let i = 0; i < rows.length; i++) {
+      try {
+        const row = rows[i];
+        const user = await this.resolveUser(row.user_identifier);
+        const machine = await this.resolveMachine(row.machine_identifier);
+
+        await this.machineAccessService.upsertAccess({
+          user_id: user.id,
+          machine_id: machine.id,
+          access_level: row.access_level,
+        });
+
+        result.successful++;
+      } catch (error) {
+        result.failed++;
+        result.errors.push({
+          row: i + 2, // +2 for header and 0-index
+          field: error.field || 'unknown',
+          value: error.value || '',
+          message: error.message,
+        });
+      }
+    }
+
+    return result;
   }
 
-  @Get()
-  @ApiOperation({ summary: 'Get all machines' })
-  findAll(@Query() filters: Record<string, unknown>) {
-    return this.machinesService.findAll(filters);
-  }
+  /**
+   * Resolve user from multiple identifier types
+   */
+  private async resolveUser(identifier: string): Promise<User> {
+    // 1. UUID
+    if (isUUID(identifier)) {
+      const user = await this.usersService.findById(identifier);
+      if (user) return user;
+    }
 
-  @Get(':id')
-  @ApiOperation({ summary: 'Get machine by ID' })
-  findOne(@Param('id') id: string) {
-    return this.machinesService.findOne(id);
-  }
+    // 2. Email
+    const byEmail = await this.usersService.findByEmail(identifier);
+    if (byEmail) return byEmail;
 
-  @Patch(':id')
-  @Roles('ADMIN', 'MANAGER')
-  @ApiOperation({ summary: 'Update machine' })
-  update(@Param('id') id: string, @Body() updateMachineDto: UpdateMachineDto) {
-    return this.machinesService.update(id, updateMachineDto);
-  }
+    // 3. Username
+    const byUsername = await this.usersService.findByUsername(identifier);
+    if (byUsername) return byUsername;
 
-  @Delete(':id')
-  @Roles('ADMIN')
-  @ApiOperation({ summary: 'Delete machine' })
-  remove(@Param('id') id: string) {
-    return this.machinesService.remove(id);
+    // 4. Telegram username
+    const byTelegram = await this.usersService.findByTelegramUsername(identifier);
+    if (byTelegram) return byTelegram;
+
+    throw new NotFoundException(`User not found: ${identifier}`);
   }
 }
+```
+
+### Access Templates Pattern
+
+```typescript
+// machine-access/dto/access-template.dto.ts
+export class CreateAccessTemplateDto {
+  @IsString()
+  @MinLength(1)
+  name: string;
+
+  @IsArray()
+  @IsUUID('4', { each: true })
+  machine_ids: string[];
+
+  @IsEnum(AccessLevel)
+  default_access_level: AccessLevel;
+}
+
+// Apply template to user
+export class ApplyAccessTemplateDto {
+  @IsUUID()
+  template_id: string;
+
+  @IsUUID()
+  user_id: string;
+}
+
+// Special case: "Assign owner to all machines"
+export class AssignOwnerToAllDto {
+  @IsUUID()
+  user_id: string;
+}
+```
+
+---
+
+## Machine Access Control
+
+### Many-to-Many User-Machine Access
+
+```typescript
+// machine-access/entities/machine-access.entity.ts
+export enum AccessLevel {
+  VIEW = 'view',           // Can see machine
+  OPERATE = 'operate',     // Can perform tasks
+  MANAGE = 'manage',       // Can edit machine settings
+  FULL = 'full',          // Full access including delete
+}
+
+@Entity('machine_access')
+@Index(['user_id', 'machine_id'], { unique: true })
+@Index(['user_id'])
+@Index(['machine_id'])
+export class MachineAccess extends BaseEntity {
+  @Column({ type: 'uuid' })
+  user_id: string;
+
+  @ManyToOne(() => User, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'user_id' })
+  user: User;
+
+  @Column({ type: 'uuid' })
+  machine_id: string;
+
+  @ManyToOne(() => Machine, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'machine_id' })
+  machine: Machine;
+
+  @Column({
+    type: 'enum',
+    enum: AccessLevel,
+    default: AccessLevel.VIEW,
+  })
+  access_level: AccessLevel;
+
+  @Column({ type: 'uuid', nullable: true })
+  granted_by_id: string | null;
+
+  @Column({ type: 'timestamp with time zone', nullable: true })
+  expires_at: Date | null;
+}
+```
+
+### Access Control Guard
+
+```typescript
+// machine-access/guards/machine-access.guard.ts
+@Injectable()
+export class MachineAccessGuard implements CanActivate {
+  constructor(private machineAccessService: MachineAccessService) {}
+
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    const request = context.switchToHttp().getRequest();
+    const user = request.user;
+    const machineId = request.params.machineId || request.body.machine_id;
+
+    if (!machineId) return true; // No machine context
+
+    // SuperAdmin and Admin bypass access control
+    if (['SUPERADMIN', 'ADMIN'].includes(user.role)) {
+      return true;
+    }
+
+    const requiredLevel = this.getRequiredLevel(context);
+    return this.machineAccessService.hasAccess(
+      user.id,
+      machineId,
+      requiredLevel,
+    );
+  }
+}
+```
+
+---
+
+## Client Data Model
+
+### Client Tables Overview
+
+```sql
+-- Client users (separate from staff users)
+CREATE TABLE client_users (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  telegram_id VARCHAR(100) UNIQUE,
+  telegram_username VARCHAR(100),
+  phone VARCHAR(20) UNIQUE,
+  email VARCHAR(255) UNIQUE,
+  display_name VARCHAR(200),
+  avatar_url TEXT,
+  status VARCHAR(20) DEFAULT 'active',
+  loyalty_points INTEGER DEFAULT 0,
+  loyalty_tier VARCHAR(20) DEFAULT 'bronze',
+  wallet_balance DECIMAL(15,2) DEFAULT 0,
+  preferences JSONB,
+  first_seen_at TIMESTAMPTZ DEFAULT NOW(),
+  last_active_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Client orders
+CREATE TABLE client_orders (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_user_id UUID REFERENCES client_users(id),
+  machine_id UUID REFERENCES machines(id),
+  order_number VARCHAR(50) UNIQUE,
+  status VARCHAR(20) DEFAULT 'pending',
+  total_amount DECIMAL(15,2),
+  payment_method VARCHAR(20),
+  telegram_payment_id VARCHAR(100),
+  items JSONB,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  completed_at TIMESTAMPTZ
+);
+
+-- Client payments
+CREATE TABLE client_payments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_user_id UUID REFERENCES client_users(id),
+  order_id UUID REFERENCES client_orders(id),
+  amount DECIMAL(15,2),
+  currency VARCHAR(3) DEFAULT 'UZS',
+  payment_method VARCHAR(20),
+  telegram_payment_charge_id VARCHAR(100),
+  status VARCHAR(20) DEFAULT 'pending',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  completed_at TIMESTAMPTZ
+);
+
+-- Client loyalty transactions
+CREATE TABLE client_loyalty (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_user_id UUID REFERENCES client_users(id),
+  order_id UUID REFERENCES client_orders(id),
+  points INTEGER,
+  type VARCHAR(20), -- 'earned', 'spent', 'bonus', 'expired'
+  description TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Client wallets (for prepaid balance)
+CREATE TABLE client_wallets (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_user_id UUID REFERENCES client_users(id) UNIQUE,
+  balance DECIMAL(15,2) DEFAULT 0,
+  currency VARCHAR(3) DEFAULT 'UZS',
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Wallet transactions
+CREATE TABLE client_wallet_transactions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  wallet_id UUID REFERENCES client_wallets(id),
+  amount DECIMAL(15,2),
+  type VARCHAR(20), -- 'deposit', 'withdrawal', 'payment', 'refund'
+  reference_id UUID,
+  reference_type VARCHAR(50),
+  description TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+---
+
+## Telegram Integration
+
+### Staff Bot vs Client Bot
+
+| Aspect | Staff Bot | Client Bot |
+|--------|-----------|------------|
+| Purpose | Operator notifications, task alerts | Customer payments, orders |
+| Commands | /start, /tasks, /status | /start, /pay, /balance, /history |
+| Payments | No | Yes (Telegram Payments API) |
+| Module | `telegram/` | `telegram-client/` |
+
+### Telegram Payment Flow
+
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│  QR Scan    │────▶│  Deep Link  │────▶│  Telegram   │
+│  (Mobile)   │     │  t.me/bot   │     │    Bot      │
+└─────────────┘     └─────────────┘     └─────────────┘
+                                               │
+                                               ▼
+                                        ┌─────────────┐
+                                        │  Payment    │
+                                        │  Invoice    │
+                                        └─────────────┘
+                                               │
+                                               ▼
+                                        ┌─────────────┐
+                                        │  Telegram   │
+                                        │  Payments   │
+                                        └─────────────┘
+                                               │
+                                               ▼
+                                        ┌─────────────┐
+                                        │  Webhook    │
+                                        │  Callback   │
+                                        └─────────────┘
+                                               │
+                                               ▼
+                                        ┌─────────────┐
+                                        │  Order      │
+                                        │  Created    │
+                                        └─────────────┘
+```
+
+### Telegram Client Service Pattern
+
+```typescript
+// telegram-client/telegram-client.service.ts
+@Injectable()
+export class TelegramClientService {
+  constructor(
+    private readonly bot: Telegraf<Context>,
+    private readonly clientUsersService: ClientUsersService,
+    private readonly clientOrdersService: ClientOrdersService,
+  ) {}
+
+  /**
+   * Handle /start command with machine QR code
+   * Format: /start pay_VH-M001-ABC123
+   */
+  async handleStart(ctx: Context) {
+    const startParam = ctx.message.text.split(' ')[1];
+
+    if (startParam?.startsWith('pay_')) {
+      const qrCode = startParam.replace('pay_', '');
+      await this.initializePayment(ctx, qrCode);
+    } else {
+      await this.showWelcome(ctx);
+    }
+  }
+
+  /**
+   * Initialize payment for machine
+   */
+  async initializePayment(ctx: Context, qrCode: string) {
+    const machine = await this.machinesService.findByQrCode(qrCode);
+    const clientUser = await this.getOrCreateClientUser(ctx.from);
+
+    // Show machine info and payment options
+    await ctx.reply(
+      `Machine: ${machine.name}\nLocation: ${machine.location.name}`,
+      Markup.inlineKeyboard([
+        [Markup.button.callback('Pay with Telegram', `pay_${machine.id}`)],
+        [Markup.button.callback('Use Wallet Balance', `wallet_${machine.id}`)],
+      ])
+    );
+  }
+
+  /**
+   * Create Telegram payment invoice
+   */
+  async createPaymentInvoice(ctx: Context, machineId: string, amount: number) {
+    await ctx.replyWithInvoice({
+      title: 'Vending Machine Payment',
+      description: 'Payment for products',
+      payload: JSON.stringify({ machine_id: machineId }),
+      provider_token: process.env.TELEGRAM_PAYMENT_TOKEN,
+      currency: 'UZS',
+      prices: [{ label: 'Total', amount: amount * 100 }],
+    });
+  }
+}
+```
+
+---
+
+## QR Code and Mobile Patterns
+
+### QR Code URL Format
+
+```
+https://vendhub.app/m/{qr_code}
+Example: https://vendhub.app/m/VH-M001-ABC123
+
+Alternative (direct Telegram):
+https://t.me/vendhub_bot?start=pay_VH-M001-ABC123
+```
+
+### Mobile Client QR Scanner
+
+```typescript
+// mobile-client/src/screens/ScanScreen.tsx
+import { CameraView, useCameraPermissions } from 'expo-camera';
+import * as Linking from 'expo-linking';
+
+export function ScanScreen() {
+  const [permission, requestPermission] = useCameraPermissions();
+  const [scanned, setScanned] = useState(false);
+
+  const handleBarCodeScanned = async ({ data }: { data: string }) => {
+    if (scanned) return;
+    setScanned(true);
+
+    try {
+      // Extract QR code from URL or use directly
+      const qrCode = extractQrCode(data);
+
+      // Resolve QR to machine info
+      const response = await api.get(`/public/qr/${qrCode}`);
+      const { telegram_pay_link } = response.data;
+
+      // Open Telegram for payment
+      await Linking.openURL(telegram_pay_link);
+    } catch (error) {
+      Alert.alert('Error', 'Invalid QR code');
+    } finally {
+      setTimeout(() => setScanned(false), 2000);
+    }
+  };
+
+  return (
+    <CameraView
+      style={{ flex: 1 }}
+      barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
+      onBarcodeScanned={handleBarCodeScanned}
+    />
+  );
+}
+```
+
+### Offline Support Pattern
+
+```typescript
+// mobile-client/src/store/useClientStore.ts
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import NetInfo from '@react-native-community/netinfo';
+
+interface ClientStore {
+  locations: Location[];
+  machines: Machine[];
+  isOffline: boolean;
+  lastSync: Date | null;
+
+  syncData: () => Promise<void>;
+  getCachedMachine: (id: string) => Machine | null;
+}
+
+export const useClientStore = create<ClientStore>()(
+  persist(
+    (set, get) => ({
+      locations: [],
+      machines: [],
+      isOffline: false,
+      lastSync: null,
+
+      syncData: async () => {
+        const netInfo = await NetInfo.fetch();
+
+        if (!netInfo.isConnected) {
+          set({ isOffline: true });
+          return;
+        }
+
+        try {
+          const [locations, machines] = await Promise.all([
+            api.get('/public/locations'),
+            api.get('/public/machines'),
+          ]);
+
+          set({
+            locations: locations.data,
+            machines: machines.data,
+            isOffline: false,
+            lastSync: new Date(),
+          });
+        } catch (error) {
+          set({ isOffline: true });
+        }
+      },
+
+      getCachedMachine: (id) => {
+        return get().machines.find(m => m.id === id) || null;
+      },
+    }),
+    {
+      name: 'client-store',
+      storage: createJSONStorage(() => AsyncStorage),
+    }
+  )
+);
 ```
 
 ---
@@ -817,13 +1312,41 @@ export class MachinesController {
 
 ```bash
 # Generate migration after entity changes
-npm run migration:generate -- -n AddMachineQrCode
+npm run migration:generate -- -n AddClientUsersTables
 
 # Run migrations
 npm run migration:run
 
 # Revert last migration
 npm run migration:revert
+```
+
+### Migration Best Practices
+
+```typescript
+// Always include both up and down methods
+export class AddClientUsersTables1234567890123 implements MigrationInterface {
+  public async up(queryRunner: QueryRunner): Promise<void> {
+    // Create tables
+    await queryRunner.query(`
+      CREATE TABLE client_users (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        ...
+      );
+    `);
+
+    // Add indexes
+    await queryRunner.query(`
+      CREATE INDEX idx_client_users_telegram_id ON client_users(telegram_id);
+    `);
+  }
+
+  public async down(queryRunner: QueryRunner): Promise<void> {
+    // Drop in reverse order
+    await queryRunner.query(`DROP INDEX idx_client_users_telegram_id`);
+    await queryRunner.query(`DROP TABLE client_users`);
+  }
+}
 ```
 
 ### Entity Conventions
@@ -833,41 +1356,8 @@ npm run migration:revert
 3. **Add indexes** for foreign keys and frequently queried fields
 4. **Use enums** for status/type fields
 5. **Use jsonb** for flexible metadata
-6. **Avoid `any` types** - use `Record<string, unknown>` or specific interfaces
-
-### Relationships
-
-```typescript
-// One-to-Many
-@Entity('machines')
-export class Machine extends BaseEntity {
-  @OneToMany(() => Task, (task) => task.machine)
-  tasks: Task[];
-}
-
-// Many-to-One
-@Entity('tasks')
-export class Task extends BaseEntity {
-  @Column({ type: 'uuid' })
-  machine_id: string;
-
-  @ManyToOne(() => Machine, (machine) => machine.tasks, { onDelete: 'RESTRICT' })
-  @JoinColumn({ name: 'machine_id' })
-  machine: Machine;
-}
-
-// Many-to-Many
-@Entity('tasks')
-export class Task extends BaseEntity {
-  @ManyToMany(() => Nomenclature)
-  @JoinTable({
-    name: 'task_items',
-    joinColumn: { name: 'task_id' },
-    inverseJoinColumn: { name: 'nomenclature_id' },
-  })
-  items: Nomenclature[];
-}
-```
+6. **NEVER use `any` type** - use `Record<string, unknown>` or specific interfaces
+7. **Add proper comments** for Russian context where applicable
 
 ---
 
@@ -877,238 +1367,120 @@ export class Task extends BaseEntity {
 - **Unit Tests**: Minimum 70% coverage
 - **Integration Tests**: All API endpoints
 - **E2E Tests**: Critical user flows
-
-### Backend Unit Test Pattern
-
-```typescript
-import { Test, TestingModule } from '@nestjs/testing';
-import { TasksService } from './tasks.service';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { Task } from './entities/task.entity';
-import { BadRequestException } from '@nestjs/common';
-
-describe('TasksService', () => {
-  let service: TasksService;
-  let mockTaskRepository: Record<string, jest.Mock>;
-
-  beforeEach(async () => {
-    mockTaskRepository = {
-      findOne: jest.fn(),
-      save: jest.fn(),
-      update: jest.fn(),
-    };
-
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        TasksService,
-        {
-          provide: getRepositoryToken(Task),
-          useValue: mockTaskRepository,
-        },
-      ],
-    }).compile();
-
-    service = module.get<TasksService>(TasksService);
-  });
-
-  describe('completeTask', () => {
-    it('should throw error if no photos before', async () => {
-      const taskId = 'test-task-id';
-      mockTaskRepository.findOne.mockResolvedValue({ id: taskId });
-
-      await expect(service.completeTask(taskId)).rejects.toThrow(
-        BadRequestException,
-      );
-    });
-  });
-});
-```
-
-### Frontend Test Pattern (Vitest)
-
-```typescript
-import { render, screen } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
-import { TaskCard } from './TaskCard';
-
-describe('TaskCard', () => {
-  it('renders task title', () => {
-    const task = { id: '1', title: 'Refill Machine' };
-    render(<TaskCard task={task} onComplete={() => {}} />);
-    expect(screen.getByText('Refill Machine')).toBeInTheDocument();
-  });
-});
-```
+- **Existing tests must ALWAYS pass** after changes
 
 ### Running Tests
 
 ```bash
-# Backend
-npm run test              # Run all tests
-npm run test:watch        # Watch mode
+# Backend - must pass before and after changes
+npm run test              # Unit tests
 npm run test:cov          # With coverage
 npm run test:e2e          # E2E tests
 
 # Frontend
 npm run test              # Vitest
-npm run test:ui           # Vitest UI
-npm run test:coverage     # With coverage
 
 # Mobile
 npm run test              # Jest
-npm run test:coverage     # With coverage
 ```
 
 ---
 
 ## Security Best Practices
 
-### 1. Authentication & Authorization
+### 1. Authentication Patterns
 
 ```typescript
-// Use guards for all protected routes
+// Staff: JWT + optional 2FA
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('ADMIN', 'MANAGER')
-@Post()
-createMachine(@Body() dto: CreateMachineDto) {
-  return this.machinesService.create(dto);
-}
+createMachine() {}
+
+// Client: Fast auth via Telegram
+@UseGuards(ClientAuthGuard)
+getClientProfile() {}
+
+// Public: No auth, rate limited
+@Public()
+@Throttle({ default: { limit: 30, ttl: 60000 } })
+getPublicLocations() {}
 ```
 
 ### 2. Input Validation
 
 ```typescript
-// ALWAYS validate ALL inputs using DTOs
-export class CreateTaskDto {
-  @IsString()
-  @MinLength(1)
-  title: string;
-
-  @IsEnum(TaskType)
-  type: TaskType;
-
+// ALWAYS validate using DTOs with class-validator
+export class CreateClientOrderDto {
   @IsUUID()
   machine_id: string;
+
+  @IsNumber()
+  @Min(1)
+  amount: number;
+
+  @IsEnum(PaymentMethod)
+  payment_method: PaymentMethod;
 }
 ```
 
-### 3. SQL Injection Prevention
+### 3. Rate Limiting
 
 ```typescript
-// SAFE - TypeORM prevents SQL injection
-await this.repository.findOne({ where: { id: userId } });
+// Public endpoints: Strict limits
+@Throttle({ default: { limit: 30, ttl: 60000 } })  // 30/min
 
-// UNSAFE - Never use raw queries with user input
-await this.repository.query(`SELECT * FROM users WHERE id = ${userId}`);
-```
+// Authenticated endpoints: Normal limits
+@Throttle({ default: { limit: 100, ttl: 60000 } }) // 100/min
 
-### 4. File Upload Security
-
-```typescript
-// Validate file type and size
-if (file.size > 5_000_000) {
-  throw new BadRequestException('File too large (max 5MB)');
-}
-
-const allowedMimes = ['image/jpeg', 'image/png', 'image/webp'];
-if (!allowedMimes.includes(file.mimetype)) {
-  throw new BadRequestException('Invalid file type');
-}
-```
-
-### 5. Rate Limiting
-
-```typescript
-// Already configured in main.ts via @nestjs/throttler
-// Default: 100 requests per minute per IP
+// Payment endpoints: Very strict
+@Throttle({ default: { limit: 10, ttl: 60000 } })  // 10/min
 ```
 
 ---
 
 ## Common Tasks Guide
 
-### Task 1: Add New CRUD Module
+### Task 1: Add New Client Module
 
-1. **Create module directory**:
 ```bash
+# 1. Create module structure
 cd backend/src/modules
-mkdir my-module
-cd my-module
+mkdir -p client-loyalty/{dto,entities,guards}
+
+# 2. Create files following patterns above
+
+# 3. Register in app.module.ts
+# 4. Create migration
+# 5. Add tests
+# 6. Run all checks
+npm run lint && npm run test && npm run build
 ```
 
-2. **Create files**:
-```
-my-module/
-├── dto/
-│   ├── create-my-entity.dto.ts
-│   └── update-my-entity.dto.ts
-├── entities/
-│   └── my-entity.entity.ts
-├── my-module.controller.ts
-├── my-module.service.ts
-├── my-module.module.ts
-└── my-module.service.spec.ts
-```
+### Task 2: Add Public Endpoint
 
-3. **Use templates** from `.claude/templates/backend/`
-
-4. **Register module** in `app.module.ts`:
 ```typescript
-import { MyModule } from './modules/my-module/my-module.module';
-
-@Module({
-  imports: [
-    // ... other modules
-    MyModule,
-  ],
-})
-export class AppModule {}
-```
-
-5. **Create migration**:
-```bash
-npm run migration:generate -- -n CreateMyEntityTable
-npm run migration:run
-```
-
-### Task 2: Add API Endpoint to Existing Module
-
-1. **Add method to service**:
-```typescript
-async findByStatus(status: string): Promise<MyEntity[]> {
-  return await this.repository.find({ where: { status } });
+// Add to public-api.controller.ts
+@Get('new-endpoint')
+@Public()
+@Throttle({ default: { limit: 30, ttl: 60000 } })
+@ApiOperation({ summary: 'Description' })
+async newEndpoint() {
+  return this.service.getPublicData();
 }
 ```
 
-2. **Add endpoint to controller**:
-```typescript
-@Get('by-status/:status')
-@ApiOperation({ summary: 'Get entities by status' })
-findByStatus(@Param('status') status: string) {
-  return this.myModuleService.findByStatus(status);
-}
-```
-
-3. **Add tests**
-
-### Task 3: Update Database Schema
-
-1. **Modify entity**
-2. **Generate migration**: `npm run migration:generate -- -n AddNewFieldToMachine`
-3. **Review migration** in `src/database/migrations/`
-4. **Run migration**: `npm run migration:run`
-
-### Task 4: Add Scheduled Job
+### Task 3: Add Telegram Payment Handler
 
 ```typescript
-// src/scheduled-tasks/scheduled-tasks.service.ts
-@Cron('0 */6 * * *') // Every 6 hours
-async checkLowStock() {
-  const lowStockMachines = await this.machinesService.findLowStock();
-  for (const machine of lowStockMachines) {
-    await this.notificationsService.sendLowStockAlert(machine);
-  }
-}
+// Add to telegram-client.service.ts
+bot.on('pre_checkout_query', async (ctx) => {
+  await ctx.answerPreCheckoutQuery(true);
+});
+
+bot.on('successful_payment', async (ctx) => {
+  const payload = JSON.parse(ctx.message.successful_payment.invoice_payload);
+  await this.clientOrdersService.completeOrder(payload.order_id);
+});
 ```
 
 ---
@@ -1117,87 +1489,70 @@ async checkLowStock() {
 
 ### CRITICAL MISTAKES
 
-#### 1. Creating Machine Connectivity Features
+#### 1. Breaking Existing Functionality
 ```typescript
-// WRONG - This project has NO machine connectivity!
-async getMachineOnlineStatus(machineId: string) {
-  return await this.machineAPI.ping(machineId); // NO SUCH API!
-}
+// WRONG - Modifying existing endpoint
+@Get('machines')
+findAll() { /* changed behavior */ }
 
-// CORRECT - Status updated manually by operators
-async updateMachineStatus(machineId: string, status: MachineStatus) {
-  return await this.machineRepository.update(machineId, { status });
-}
+// CORRECT - Add new endpoint
+@Get('machines')
+findAll() { /* unchanged */ }
+
+@Get('v2/machines')
+findAllV2() { /* new behavior */ }
 ```
 
-#### 2. Skipping Photo Validation
-```typescript
-// WRONG - Photos are MANDATORY
-async completeTask(taskId: string) {
-  await this.taskRepository.update(taskId, { status: 'completed' });
-}
-
-// CORRECT - Always validate photos
-async completeTask(taskId: string) {
-  await this.validateTaskPhotos(taskId); // Throws if missing
-  await this.taskRepository.update(taskId, { status: 'completed' });
-}
-```
-
-#### 3. Forgetting Inventory Updates
-```typescript
-// WRONG - Inventory not updated after refill
-async completeRefillTask(task: Task) {
-  await this.taskRepository.update(task.id, { status: 'completed' });
-}
-
-// CORRECT - Always update inventory
-async completeRefillTask(task: Task) {
-  await this.taskRepository.update(task.id, { status: 'completed' });
-  await this.inventoryService.updateAfterRefill(task); // CRITICAL!
-}
-```
-
-#### 4. Using `any` Type
+#### 2. Using `any` Type
 ```typescript
 // WRONG
-async findAll(filters?: any): Promise<Machine[]> {}
+settings: any;
+preferences: any;
 
 // CORRECT
-async findAll(filters?: Record<string, unknown>): Promise<Machine[]> {}
-// or define a proper interface
+settings: Record<string, unknown>;
+preferences: ClientPreferences; // Define interface
 ```
 
-#### 5. Over-Engineering
+#### 3. Missing Offline Support in Mobile
 ```typescript
-// WRONG - Unnecessary abstraction
-abstract class BaseInventoryStrategy {
-  abstract updateInventory(): Promise<void>;
-}
+// WRONG - No offline handling
+const data = await api.get('/machines');
 
-// CORRECT - Keep it simple
-async updateWarehouseInventory(data: InventoryUpdate) { ... }
-async updateOperatorInventory(data: InventoryUpdate) { ... }
-async updateMachineInventory(data: InventoryUpdate) { ... }
+// CORRECT - Check offline, use cache
+const netInfo = await NetInfo.fetch();
+if (!netInfo.isConnected) {
+  return getCachedData();
+}
+```
+
+#### 4. Forgetting Rate Limits on Public Endpoints
+```typescript
+// WRONG - No rate limit
+@Get('public/locations')
+@Public()
+getLocations() {}
+
+// CORRECT - Always rate limit public endpoints
+@Get('public/locations')
+@Public()
+@Throttle({ default: { limit: 30, ttl: 60000 } })
+getLocations() {}
 ```
 
 ---
 
 ## Specialized Claude Agents
 
-The project includes specialized Claude agents in `.claude/agents/` for different domains:
-
 | Agent | Purpose |
 |-------|---------|
-| `vendhub-dev-architect` | Architecture decisions, feature planning, Sprint requirements |
-| `vendhub-api-developer` | NestJS API development, controllers, services, DTOs |
-| `vendhub-auth-security` | Authentication, authorization, security features |
-| `vendhub-database-expert` | Database design, migrations, query optimization |
-| `vendhub-frontend-specialist` | React/Next.js frontend development |
+| `vendhub-dev-architect` | Architecture, feature planning, Sprint requirements |
+| `vendhub-api-developer` | NestJS API, controllers, services, DTOs |
+| `vendhub-auth-security` | Authentication, authorization, security |
+| `vendhub-database-expert` | Database design, migrations, optimization |
+| `vendhub-frontend-specialist` | React/Next.js frontend |
 | `vendhub-telegram-bot` | Telegram bot integration |
-| `vendhub-tester` | Test writing and coverage improvement |
-
-Use these agents by referencing the corresponding markdown files for domain-specific guidance.
+| `vendhub-tester` | Test writing and coverage |
 
 ---
 
@@ -1206,24 +1561,22 @@ Use these agents by referencing the corresponding markdown files for domain-spec
 ### Environment Setup
 
 ```bash
-# Backend setup
-cd backend
-cp .env.example .env
-npm install
+# Backend
+cd backend && cp .env.example .env && npm install
 docker-compose up -d postgres redis minio
-npm run migration:run
-npm run start:dev
+npm run migration:run && npm run start:dev
 
-# Frontend setup
-cd frontend
-cp .env.example .env
-npm install
-npm run dev
+# Staff Frontend
+cd frontend && npm install && npm run dev
 
-# Mobile setup
-cd mobile
-npm install
-npm run start
+# Client Web (NEW)
+cd client-web && npm install && npm run dev
+
+# Mobile Staff
+cd mobile && npm install && npm run start
+
+# Mobile Client (NEW)
+cd mobile-client && npm install && npm run start
 ```
 
 ### Common Commands
@@ -1231,125 +1584,51 @@ npm run start
 ```bash
 # Backend
 npm run start:dev         # Start dev server
-npm run build             # Build for production
-npm run test              # Run tests
-npm run test:cov          # Run tests with coverage
-npm run lint              # Lint code
-npm run format            # Format code
-npm run migration:generate -- -n MigrationName
+npm run test              # Run tests (MUST PASS)
+npm run migration:generate -- -n Name
 npm run migration:run
-npm run migration:revert
 
-# Frontend
+# Frontends
 npm run dev               # Start dev server
 npm run build             # Build for production
-npm run start             # Start production server
-npm run lint              # Lint code
-npm run storybook         # Start Storybook
 
 # Mobile
 npm run start             # Start Expo
 npm run android           # Run on Android
 npm run ios               # Run on iOS
-npm run test              # Run tests
 ```
 
-### Key Files to Check
+### Key Files
 
-- **Architecture**: `.claude/rules.md` - READ FIRST!
-- **API Docs**: `http://localhost:3000/api/docs` (Swagger)
-- **Database Schema**: Check migration files
+- **Architecture Rules**: `.claude/rules.md`
+- **API Docs**: `http://localhost:3000/api/docs`
 - **Environment**: `backend/.env.example`
 - **Deployment**: `DEPLOYMENT.md`
 - **Security**: `SECURITY.md`
 
 ---
 
-## For AI Assistants: Best Practices
-
-### When Creating New Code
-
-1. **Check `.claude/rules.md` first** - Contains critical architecture rules
-2. **Use templates** from `.claude/templates/backend/`
-3. **Follow naming conventions** strictly (kebab-case files, PascalCase classes)
-4. **Add JSDoc comments** to all public methods
-5. **Write tests immediately** - Don't postpone
-6. **Validate all inputs** using DTOs with class-validator
-7. **Never skip photo validation** for tasks
-8. **Update inventory** when completing refill/collection tasks
-9. **Check current phase** in `.claude/phase-1-mvp-checklist.md`
-10. **Keep it simple** - Avoid unnecessary abstractions
-11. **Avoid `any` types** - Use proper TypeScript types
-
-### When Modifying Existing Code
-
-1. **Read the module first** to understand current patterns
-2. **Maintain consistency** with existing code style
-3. **Update tests** when changing logic
-4. **Update DTOs** when changing entity fields
-5. **Create migrations** for database changes
-6. **Update Swagger docs** with `@ApiProperty` decorators
-7. **Check for breaking changes** in API responses
-
-### When Debugging Issues
-
-1. **Check logs** - NestJS provides detailed error messages
-2. **Verify database state** - Check if migrations ran
-3. **Test validation** - DTOs might be rejecting requests
-4. **Check environment variables** - Compare with `.env.example`
-5. **Review recent commits** - `git log --oneline -20`
-
-### Red Flags to Watch For
-
-- Creating machine connectivity/integration features
-- Skipping photo validation in task completion
-- Not updating inventory after tasks
-- Using `any` type instead of proper interfaces
-- Raw SQL queries instead of TypeORM
-- Missing validation on user inputs
-- No tests for new features
-- Hardcoded secrets/credentials
-
----
-
 ## Pre-Commit Checklist
 
-Before committing code, ensure:
-
-- [ ] Code follows naming conventions
-- [ ] All public methods have JSDoc comments
-- [ ] DTOs have proper validation decorators
-- [ ] Tests are written and passing
-- [ ] `npm run lint` passes with no errors
-- [ ] `npm run type-check` passes (TypeScript)
-- [ ] `npm run test` passes
-- [ ] `npm run build` succeeds
-- [ ] Commit message follows conventional commits format
-- [ ] No hardcoded secrets or credentials
-- [ ] Database migrations created (if schema changed)
-- [ ] API documentation updated (Swagger)
-
----
-
-## Support
-
-For questions or clarifications:
-
-1. Check **`.claude/rules.md`** - Most answers are there
-2. Review **`.claude/phase-1-mvp-checklist.md`** - For implementation priorities
-3. Look at existing modules - Follow established patterns
-4. Check documentation in `docs/` directory
-5. Review specialized agents in `.claude/agents/`
+- [ ] All existing tests still pass
+- [ ] New tests added for new functionality
+- [ ] No modifications to existing DTOs/entities (add new ones)
+- [ ] Public endpoints have rate limiting
+- [ ] No `any` types used
+- [ ] Migrations have up AND down methods
+- [ ] Mobile has offline support
+- [ ] Commit message follows conventions
 
 ---
 
 **Last Updated**: 2025-12-19
-**Version**: 2.0.0
+**Version**: 2.1.0
 **Maintained By**: VendHub Development Team
-**For**: AI Assistants (Claude Code, GitHub Copilot, etc.)
 
 **Key Principles**:
-- Manual Operations Architecture
-- Photo Validation is Mandatory
-- 3-Level Inventory System
-- Tasks are the Central Mechanism
+1. Manual Operations Architecture
+2. Photo Validation is Mandatory
+3. 3-Level Inventory System
+4. Tasks are the Central Mechanism
+5. **Additive Development Only** - Never break existing functionality
+6. **Dual Platform** - Staff (VHM24) + Client Platform
