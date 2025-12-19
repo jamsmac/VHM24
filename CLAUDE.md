@@ -1,7 +1,7 @@
 # CLAUDE.md - AI Assistant Guide for VendHub Manager
 
 > **Last Updated**: 2025-12-19
-> **Version**: 2.0.0
+> **Version**: 2.1.0
 > **Target Audience**: AI Assistants (Claude, GPT, etc.)
 
 This document provides comprehensive guidance for AI assistants working on the VendHub Manager codebase. It explains the architecture, conventions, workflows, and critical rules that must be followed.
@@ -11,17 +11,21 @@ This document provides comprehensive guidance for AI assistants working on the V
 ## Table of Contents
 
 1. [Project Overview](#project-overview)
-2. [Critical Architecture Principles](#critical-architecture-principles)
-3. [Codebase Structure](#codebase-structure)
-4. [Technology Stack](#technology-stack)
-5. [Development Workflows](#development-workflows)
-6. [Code Conventions](#code-conventions)
-7. [Module Patterns](#module-patterns)
-8. [Database Guidelines](#database-guidelines)
-9. [Testing Requirements](#testing-requirements)
-10. [Security Best Practices](#security-best-practices)
-11. [Common Tasks Guide](#common-tasks-guide)
-12. [Pitfalls to Avoid](#pitfalls-to-avoid)
+2. [Dual Platform Architecture](#dual-platform-architecture)
+3. [Critical Architecture Principles](#critical-architecture-principles)
+4. [Additive Development Rules](#additive-development-rules)
+5. [Machine Identifiers](#machine-identifiers)
+6. [Codebase Structure](#codebase-structure)
+7. [Technology Stack](#technology-stack)
+8. [Client Data Model](#client-data-model)
+9. [Development Workflows](#development-workflows)
+10. [Code Conventions](#code-conventions)
+11. [Module Patterns](#module-patterns)
+12. [Database Guidelines](#database-guidelines)
+13. [Testing Requirements](#testing-requirements)
+14. [Security Best Practices](#security-best-practices)
+15. [Common Tasks Guide](#common-tasks-guide)
+16. [Pitfalls to Avoid](#pitfalls-to-avoid)
 
 ---
 
@@ -36,8 +40,46 @@ This document provides comprehensive guidance for AI assistants working on the V
 - **Operations**: User management, incidents, complaints
 - **Integrations**: Telegram bot, web push, sales imports
 - **Mobile**: React Native operator app
+- **Machine Access**: Per-machine role-based access control
+- **Client Platform**: Customer-facing ordering and loyalty system
 
 **Key Characteristic**: NO direct machine connectivity. All data flows through operator actions and manual data entry with photo validation.
+
+---
+
+## Dual Platform Architecture
+
+VendHub Manager operates as a **dual-platform system**:
+
+### Staff Platform (VHM24)
+- Internal team management
+- Operator task workflows
+- Inventory management
+- Financial operations
+- Machine access control with roles
+
+### Client Platform
+- Customer-facing mobile app
+- Public machine menus via QR codes
+- Order placement and tracking
+- Loyalty program with points
+- Telegram-based authentication
+
+### Platform Separation
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    VendHub Manager                          │
+├─────────────────────────────┬───────────────────────────────┤
+│       Staff Platform        │       Client Platform         │
+│         (VHM24)             │        (Public)               │
+├─────────────────────────────┼───────────────────────────────┤
+│ - /api/* endpoints          │ - /api/client/* endpoints     │
+│ - JWT auth (email/password) │ - Telegram auth (initData)    │
+│ - RBAC with system roles    │ - Simple client authentication│
+│ - Dashboard UI              │ - Public menu pages           │
+│ - Mobile operator app       │ - Mobile client app           │
+└─────────────────────────────┴───────────────────────────────┘
+```
 
 ---
 
@@ -90,16 +132,121 @@ All operations flow through tasks:
 
 ---
 
+## Additive Development Rules
+
+### CRITICAL: Never Break Existing Functionality
+
+When implementing new features, follow these rules strictly:
+
+#### 1. **Additive Only**
+```typescript
+// WRONG - Modifying existing enum
+enum MachineStatus {
+  ACTIVE = 'active',
+  INACTIVE = 'inactive', // Changed from 'offline'
+}
+
+// CORRECT - Add new values, keep existing
+enum MachineStatus {
+  ACTIVE = 'active',
+  OFFLINE = 'offline',      // Keep original
+  MAINTENANCE = 'maintenance',
+  DISABLED = 'disabled',    // New addition
+}
+```
+
+#### 2. **Backward Compatible APIs**
+```typescript
+// WRONG - Changing response structure
+return { machines: [...] }; // Was: return [...]
+
+// CORRECT - Keep original, add new endpoints
+// Original endpoint unchanged
+@Get()
+findAll() { return this.service.findAll(); }
+
+// New endpoint for new structure
+@Get('v2')
+findAllV2() { return { machines: this.service.findAll() }; }
+```
+
+#### 3. **Modular Additions**
+- New features go in new modules/files
+- Existing modules only get minimal integration points
+- Use feature flags for gradual rollout
+
+#### 4. **Database Migrations**
+```typescript
+// WRONG - Dropping columns
+await queryRunner.dropColumn('machines', 'old_field');
+
+// CORRECT - Add new, mark old as deprecated
+await queryRunner.addColumn('machines', new TableColumn({
+  name: 'new_field',
+  type: 'varchar',
+  isNullable: true,
+}));
+// Document: old_field is deprecated, use new_field
+```
+
+---
+
+## Machine Identifiers
+
+### Primary Identifier: `machine_number`
+
+The `machine_number` field is the **primary human-readable identifier** for machines:
+
+```typescript
+// Machine entity key fields
+@Entity('machines')
+class Machine {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;                    // Internal UUID
+
+  @Column({ unique: true })
+  machine_number: string;        // PRIMARY IDENTIFIER: "M-001", "A-123"
+
+  @Column({ unique: true, nullable: true })
+  serial_number: string;         // Manufacturer serial
+
+  @Column()
+  name: string;                  // Display name
+}
+```
+
+### Usage Guidelines
+
+1. **QR Codes**: Encode `machine_number`, not UUID
+2. **User-Facing**: Display `machine_number` in UI
+3. **API Lookups**: Support both `id` and `machine_number`
+4. **Reports**: Use `machine_number` for readability
+
+```typescript
+// Service pattern for machine resolution
+async findByIdentifier(identifier: string): Promise<Machine> {
+  // Try UUID first
+  if (isUUID(identifier)) {
+    return this.machineRepository.findOne({ where: { id: identifier } });
+  }
+  // Then machine_number
+  return this.machineRepository.findOne({ where: { machine_number: identifier } });
+}
+```
+
+---
+
 ## Codebase Structure
 
 ```
 VHM24/
 ├── backend/                           # NestJS 10 Backend API
 │   ├── src/
-│   │   ├── modules/                   # Feature modules (45 modules)
+│   │   ├── modules/                   # Feature modules (48+ modules)
 │   │   │   ├── auth/                  # JWT authentication + 2FA
 │   │   │   ├── users/                 # User management + RBAC
 │   │   │   ├── machines/              # Machine CRUD + QR codes
+│   │   │   ├── machine-access/        # Per-machine access control
 │   │   │   ├── tasks/                 # CORE: Task management
 │   │   │   ├── inventory/             # 3-level inventory system
 │   │   │   ├── transactions/          # Financial transactions
@@ -138,7 +285,14 @@ VHM24/
 │   │   │   ├── reconciliation/        # Financial reconciliation
 │   │   │   ├── requests/              # Request management
 │   │   │   ├── bull-board/            # Queue dashboard
-│   │   │   └── websocket/             # Real-time WebSocket
+│   │   │   ├── websocket/             # Real-time WebSocket
+│   │   │   └── client/                # Client platform module
+│   │   │       ├── entities/          # Client entities
+│   │   │       ├── dto/               # Client DTOs
+│   │   │       ├── controllers/       # Client controllers
+│   │   │       ├── services/          # Client services
+│   │   │       ├── guards/            # Client auth guard
+│   │   │       └── client.module.ts
 │   │   ├── common/                    # Shared utilities
 │   │   │   ├── entities/              # Base entity classes
 │   │   │   ├── filters/               # Exception filters
@@ -164,12 +318,20 @@ VHM24/
 ├── frontend/                          # Next.js 16 Frontend (App Router)
 │   ├── src/
 │   │   ├── app/                       # Next.js App Router
-│   │   │   └── (auth)/                # Auth pages
-│   │   ├── components/                # React components (20+ dirs)
+│   │   │   ├── (auth)/                # Auth pages
+│   │   │   ├── (public)/              # Public client pages
+│   │   │   │   ├── menu/[machineNumber]/  # Public machine menu
+│   │   │   │   └── order/[orderId]/   # Order tracking
+│   │   │   └── dashboard/             # Admin dashboard
+│   │   │       └── machines/
+│   │   │           └── [id]/
+│   │   │               └── access/    # Machine access management
+│   │   ├── components/                # React components (25+ dirs)
 │   │   │   ├── ui/                    # UI primitives (shadcn)
 │   │   │   ├── layout/                # Layout components
 │   │   │   ├── dashboard/             # Dashboard widgets
 │   │   │   ├── machines/              # Machine components
+│   │   │   ├── machine-access/        # Machine access components
 │   │   │   ├── tasks/                 # Task components
 │   │   │   ├── incidents/             # Incident components
 │   │   │   ├── equipment/             # Equipment components
@@ -199,61 +361,31 @@ VHM24/
 │   ├── src/
 │   │   ├── components/                # Mobile components
 │   │   ├── screens/                   # Screen components
+│   │   │   ├── Staff/                 # Staff screens
+│   │   │   └── Client/                # Client screens
 │   │   ├── navigation/                # Navigation config
+│   │   │   ├── AppNavigator.tsx       # Root navigator
+│   │   │   ├── MainNavigator.tsx      # Staff navigator
+│   │   │   └── ClientNavigator.tsx    # Client navigator
 │   │   ├── hooks/                     # Mobile hooks
 │   │   ├── services/                  # API services
+│   │   │   ├── api.ts                 # Staff API
+│   │   │   └── clientApi.ts           # Client API
 │   │   ├── store/                     # Zustand store
+│   │   │   ├── auth.store.ts          # Staff auth
+│   │   │   └── client.store.ts        # Client state
 │   │   └── types/                     # TypeScript types
 │   ├── __tests__/                     # Jest tests
 │   ├── assets/                        # Mobile assets
 │   └── package.json
 │
 ├── docs/                              # Documentation
-│   ├── architecture/                  # Architecture docs
-│   ├── dictionaries/                  # System dictionaries
-│   ├── devops/                        # DevOps guides
-│   ├── vendhub_import/                # Import guides
-│   └── archive/                       # Archived docs
-│
 ├── .claude/                           # Claude Code Rules & Templates
-│   ├── README.md                      # Developer onboarding
-│   ├── rules.md                       # CRITICAL: Coding rules
-│   ├── testing-guide.md               # Testing guidelines
-│   ├── deployment-guide.md            # Deployment instructions
-│   ├── phase-1-mvp-checklist.md       # MVP checklist
-│   ├── comprehensive-analysis-prompt.md
-│   ├── project-review-prompt.md
-│   ├── agents/                        # Agent configurations
-│   ├── prompts/                       # Prompt templates
-│   ├── scripts/                       # Helper scripts
-│   └── templates/                     # Code templates
-│       └── backend/                   # Backend templates
-│
 ├── scripts/                           # Root-level scripts
-│   ├── backup/                        # Backup scripts
-│   ├── deployment/                    # Deployment scripts
-│   ├── quick-analysis.sh              # Quick analysis
-│   ├── seed.mjs                       # Seed data
-│   └── setup-railway.sh               # Railway setup
-│
 ├── monitoring/                        # Monitoring stack
-│   ├── prometheus/                    # Prometheus config
-│   ├── grafana/                       # Grafana dashboards
-│   └── alertmanager/                  # Alert configs
-│
 ├── nginx/                             # Nginx configuration
-│   └── conf.d/                        # Site configs
-│
-├── .github/
-│   └── workflows/
-│       ├── ci.yml                     # CI pipeline
-│       ├── deploy-production.yml      # Production deploy
-│       └── deploy-staging.yml         # Staging deploy
-│
-├── .railway/                          # Railway.app config
+├── .github/workflows/                 # CI/CD workflows
 ├── docker-compose.yml                 # Local development
-├── docker-compose.prod.yml            # Production setup
-├── docker-compose.production.yml      # Alternative prod config
 └── Various root files (README, DEPLOYMENT, etc.)
 ```
 
@@ -274,13 +406,6 @@ VHM24/
 | Swagger | 8.x | API documentation |
 | Telegraf | 4.x | Telegram bot |
 | Socket.io | 4.x | WebSocket |
-| OpenAI | 6.x | AI-powered imports |
-| PDFKit | 0.17.x | PDF generation |
-| ExcelJS | 4.x | Excel export/import |
-| Sharp | 0.34.x | Image processing |
-| Prometheus | 15.x | Metrics |
-| Winston | 3.x | Logging |
-| Sentry | 10.x | Error tracking |
 
 ### Frontend
 | Technology | Version | Purpose |
@@ -295,14 +420,6 @@ VHM24/
 | Zustand | 5.x | State management |
 | React Hook Form | 7.x | Form handling |
 | Zod | 4.x | Schema validation |
-| Recharts | 3.x | Charts |
-| Leaflet | 1.9.x | Maps |
-| Socket.io Client | 4.x | WebSocket |
-| next-intl | 4.x | Internationalization |
-| next-themes | 0.4.x | Theme switching |
-| Vitest | 4.x | Testing |
-| Storybook | 10.x | Component development |
-| Playwright | 1.57.x | E2E testing |
 
 ### Mobile (React Native)
 | Technology | Version | Purpose |
@@ -314,18 +431,88 @@ VHM24/
 | Zustand | 5.x | State management |
 | Expo Camera | 17.x | Photo capture |
 | Expo Location | 19.x | Geolocation |
-| Expo Notifications | 0.32.x | Push notifications |
 
 ### Infrastructure
 | Technology | Purpose |
 |------------|---------|
 | Docker + Docker Compose | Containerization |
 | Railway.app | Cloud deployment |
-| Nginx | Reverse proxy |
-| MinIO (dev) / Cloudflare R2 (prod) | Object storage |
 | GitHub Actions | CI/CD |
 | Prometheus + Grafana | Monitoring |
-| AlertManager | Alerting |
+
+---
+
+## Client Data Model
+
+### Entity Overview
+
+The client platform uses these entities:
+
+```
+┌─────────────────┐     ┌─────────────────┐
+│   ClientUser    │────<│  ClientOrder    │
+│                 │     │                 │
+│ telegram_id     │     │ machine_id      │
+│ points_balance  │     │ status          │
+│ level           │     │ total_amount    │
+└─────────────────┘     └────────┬────────┘
+        │                        │
+        ▼                        ▼
+┌─────────────────┐     ┌─────────────────┐
+│ ClientFavorite  │     │ClientOrderItem  │
+│                 │     │                 │
+│ machine_id      │     │ nomenclature_id │
+│ nomenclature_id │     │ quantity        │
+└─────────────────┘     │ price           │
+                        └─────────────────┘
+```
+
+### Key Entities
+
+#### ClientUser
+```typescript
+@Entity('client_users')
+class ClientUser {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @Column({ unique: true })
+  telegram_id: string;           // Telegram authentication
+
+  @Column({ default: 0 })
+  points_balance: number;        // Loyalty points
+
+  @Column({ default: 'bronze' })
+  level: 'bronze' | 'silver' | 'gold' | 'platinum';
+}
+```
+
+#### ClientOrder
+```typescript
+@Entity('client_orders')
+class ClientOrder {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @Column()
+  client_id: string;
+
+  @Column()
+  machine_id: string;
+
+  @Column({
+    type: 'enum',
+    enum: ['pending', 'confirmed', 'preparing', 'ready', 'completed', 'cancelled']
+  })
+  status: ClientOrderStatus;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2 })
+  total_amount: number;
+
+  @Column({ nullable: true })
+  pickup_code: string;           // 4-digit code for pickup
+}
+```
 
 ---
 
@@ -505,6 +692,68 @@ users/
 └── users.service.spec.ts
 ```
 
+### Machine Access Module Structure
+
+```
+machine-access/
+├── dto/
+│   ├── create-machine-access.dto.ts
+│   ├── update-machine-access.dto.ts
+│   ├── bulk-assign.dto.ts
+│   └── apply-template.dto.ts
+├── entities/
+│   ├── machine-access.entity.ts
+│   ├── access-template.entity.ts
+│   └── access-template-row.entity.ts
+├── machine-access.controller.ts
+├── machine-access.service.ts
+├── machine-access.module.ts
+└── machine-access.service.spec.ts
+```
+
+### Machine Access Entity Pattern
+
+```typescript
+export enum MachineAccessRole {
+  OWNER = 'owner',
+  ADMIN = 'admin',
+  MANAGER = 'manager',
+  OPERATOR = 'operator',
+  TECHNICIAN = 'technician',
+  VIEWER = 'viewer',
+}
+
+@Entity('machine_access')
+@Unique(['machine_id', 'user_id'])
+@Index(['machine_id'])
+@Index(['user_id'])
+export class MachineAccess extends BaseEntity {
+  @Column({ type: 'uuid' })
+  machine_id: string;
+
+  @Column({ type: 'uuid' })
+  user_id: string;
+
+  @Column({
+    type: 'enum',
+    enum: MachineAccessRole,
+    default: MachineAccessRole.VIEWER,
+  })
+  role: MachineAccessRole;
+
+  @Column({ type: 'uuid', nullable: true })
+  created_by_id: string;
+
+  @ManyToOne(() => Machine, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'machine_id' })
+  machine: Machine;
+
+  @ManyToOne(() => User, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'user_id' })
+  user: User;
+}
+```
+
 ### Entity Pattern (TypeORM)
 
 ```typescript
@@ -558,11 +807,8 @@ import {
   IsString,
   IsEnum,
   IsOptional,
-  IsNumber,
   IsUUID,
   MinLength,
-  Min,
-  Max,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -722,6 +968,30 @@ Multiple rate limit tiers are configured:
 - `medium`: 20 requests/10 seconds
 - `long`: 100 requests/minute
 
+### 5. Client Authentication
+
+Client platform uses Telegram initData for authentication:
+
+```typescript
+@Injectable()
+export class ClientAuthGuard implements CanActivate {
+  canActivate(context: ExecutionContext): boolean {
+    const request = context.switchToHttp().getRequest();
+    const initData = request.headers['x-telegram-init-data'];
+
+    if (!initData) {
+      throw new UnauthorizedException('Telegram init data required');
+    }
+
+    // Validate with Telegram Bot API
+    const validated = this.validateTelegramInitData(initData);
+    request.clientUser = validated.user;
+
+    return true;
+  }
+}
+```
+
 ---
 
 ## Common Tasks Guide
@@ -757,6 +1027,22 @@ async checkLowStock() {
 }
 ```
 
+### Task 5: Add Machine Access Role
+
+1. Add new value to `MachineAccessRole` enum
+2. Create migration to update enum type
+3. Update frontend types
+4. Add role label and color to helpers
+
+### Task 6: Add Client Feature
+
+1. Create/modify entity in `backend/src/modules/client/entities/`
+2. Create DTO in `backend/src/modules/client/dto/`
+3. Add service method in appropriate service
+4. Add controller endpoint with `@UseGuards(ClientAuthGuard)`
+5. Update frontend types
+6. Add mobile screen if needed
+
 ---
 
 ## Pitfalls to Avoid
@@ -766,12 +1052,15 @@ async checkLowStock() {
 1. **Creating Machine Connectivity Features** - This project has NO machine connectivity
 2. **Skipping Photo Validation** - Photos are MANDATORY for task completion
 3. **Forgetting Inventory Updates** - Always update inventory after tasks
-4. **Over-Engineering** - Keep it simple
-5. **Ignoring Validation** - Always validate with DTOs
-6. **Using `any` type** - Use proper interfaces
-7. **Raw SQL queries** - Use TypeORM
-8. **Missing tests** - Write tests immediately
-9. **Hardcoded secrets** - Use environment variables
+4. **Breaking Existing Features** - All changes must be additive
+5. **Over-Engineering** - Keep it simple
+6. **Ignoring Validation** - Always validate with DTOs
+7. **Using `any` type** - Use proper interfaces
+8. **Raw SQL queries** - Use TypeORM
+9. **Missing tests** - Write tests immediately
+10. **Hardcoded secrets** - Use environment variables
+11. **Mixing Staff and Client Auth** - Use appropriate guards for each platform
+12. **Forgetting Machine Number** - Use `machine_number` as primary identifier
 
 ---
 
@@ -840,30 +1129,6 @@ npm run test              # Run tests
 
 ---
 
-## Additional Documentation
-
-### Project Documentation
-- **README.md** - Main project README
-- **DEPLOYMENT.md** - Deployment guide
-- **OPERATIONS_RUNBOOK.md** - Operations guide
-- **SECURITY.md** - Security documentation
-- **DEVELOPMENT_STATUS.md** - Current development status
-- **CHANGELOG.md** - Change history
-
-### Module-Specific Guides
-- **mobile/README.md** - Mobile app guide
-- **mobile/IMPLEMENTATION_GUIDE.md** - Mobile implementation details
-- **mobile/BUILD_GUIDE.md** - Mobile build instructions
-
-### Claude Code Documentation
-- **.claude/README.md** - Developer onboarding
-- **.claude/rules.md** - Coding rules (CRITICAL)
-- **.claude/testing-guide.md** - Testing guide
-- **.claude/deployment-guide.md** - Deployment guide
-- **.claude/phase-1-mvp-checklist.md** - MVP checklist
-
----
-
 ## Pre-Commit Checklist
 
 Before committing code, ensure:
@@ -880,6 +1145,7 @@ Before committing code, ensure:
 - [ ] No hardcoded secrets or credentials
 - [ ] Database migrations created (if schema changed)
 - [ ] API documentation updated (Swagger)
+- [ ] No breaking changes to existing features
 
 ---
 
@@ -897,6 +1163,7 @@ Before committing code, ensure:
 8. **Update inventory** when completing tasks
 9. **Check current phase** in `.claude/phase-1-mvp-checklist.md`
 10. **Keep it simple** - Avoid unnecessary abstractions
+11. **Be additive** - Never break existing functionality
 
 ### When Modifying Existing Code
 
@@ -907,6 +1174,7 @@ Before committing code, ensure:
 5. **Create migrations** for database changes
 6. **Update Swagger docs** with `@ApiProperty` decorators
 7. **Check for breaking changes** in API responses
+8. **Keep backward compatibility** - Add, don't replace
 
 ### Red Flags to Watch For
 
@@ -918,12 +1186,20 @@ Before committing code, ensure:
 - Missing validation on user inputs
 - No tests for new features
 - Hardcoded secrets/credentials
+- Breaking changes to existing APIs
+- Modifying enums in incompatible ways
+- Mixing staff and client authentication
 
 ---
 
 **Last Updated**: 2025-12-19
-**Version**: 2.0.0
+**Version**: 2.1.0
 **Maintained By**: VendHub Development Team
 **For**: AI Assistants (Claude Code, GitHub Copilot, etc.)
 
-**Key Principle**: Manual Operations, Photo Validation, 3-Level Inventory
+**Key Principles**:
+- Manual Operations
+- Photo Validation
+- 3-Level Inventory
+- Additive Development
+- Dual Platform (Staff + Client)
