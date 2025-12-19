@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { machinesApi } from '@/lib/machines-api'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, MapPin, Calendar, DollarSign, Package, Settings, AlertCircle } from 'lucide-react'
+import { ArrowLeft, MapPin, Calendar, DollarSign, Package, Settings, AlertCircle, KeyRound } from 'lucide-react'
 import Link from 'next/link'
 import { formatDateTime, formatCurrency, getStatusColor } from '@/lib/utils'
 import { LoadingSkeleton } from '@/components/ui/LoadingSkeleton'
@@ -69,12 +69,18 @@ export default function MachineDetailPage({ params }: MachineDetailPageProps) {
           </div>
         </div>
         <div className="flex gap-2">
-          <Link href={`/machines/${params.id}/tasks`}>
+          <Link href={`/dashboard/machines/${params.id}/tasks`}>
             <Button variant="secondary">
               История задач
             </Button>
           </Link>
-          <Link href={`/machines/${params.id}/edit`}>
+          <Link href={`/dashboard/machines/${params.id}/access`}>
+            <Button variant="secondary">
+              <KeyRound className="h-4 w-4 mr-2" />
+              Доступ
+            </Button>
+          </Link>
+          <Link href={`/dashboard/machines/${params.id}/edit`}>
             <Button>
               <Settings className="h-4 w-4 mr-2" />
               Настройки

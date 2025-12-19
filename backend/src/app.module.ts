@@ -54,6 +54,8 @@ import { HealthModule } from './health/health.module';
 import { ScheduledTasksModule } from './scheduled-tasks/scheduled-tasks.module';
 import { CommonModule } from './common/common.module';
 import { RateLimitModule } from './common/modules/rate-limit.module';
+import { MachineAccessModule } from './modules/machine-access/machine-access.module';
+import { ClientModule } from './modules/client/client.module';
 
 @Module({
   imports: [
@@ -176,6 +178,7 @@ import { RateLimitModule } from './common/modules/rate-limit.module';
     DictionariesModule,
     LocationsModule,
     MachinesModule,
+    MachineAccessModule, // Machine-level access control
     NomenclatureModule,
     RecipesModule,
     FilesModule,
@@ -216,6 +219,9 @@ import { RateLimitModule } from './common/modules/rate-limit.module';
 
     // Enhanced Rate Limiting Module (Redis-based sliding window)
     RateLimitModule,
+
+    // Client-facing module (public API, Telegram auth, loyalty)
+    ClientModule,
   ],
   controllers: [AppController],
   providers: [
