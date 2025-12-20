@@ -16,6 +16,7 @@ import {
 import { EmailService } from '../email/email.service';
 import { TelegramBotService } from '../telegram-bot/telegram-bot.service';
 import { WebPushService } from '../web-push/web-push.service';
+import { SmsService } from '../sms/sms.service';
 
 @Injectable()
 export class NotificationsService {
@@ -30,6 +31,7 @@ export class NotificationsService {
     @Inject(forwardRef(() => TelegramBotService))
     private readonly telegramBotService: TelegramBotService,
     private readonly webPushService: WebPushService,
+    private readonly smsService: SmsService,
   ) {}
 
   // ============================================================================
@@ -370,18 +372,60 @@ export class NotificationsService {
 
   /**
    * Отправка через SMS
+   * Sends SMS notification to user's phone number via Twilio
    */
   private async sendSMS(notification: Notification): Promise<string> {
-    // TODO: Интеграция с SMS провайдером (Twilio, etc.)
-    // const phone = notification.recipient.phone;
-    // await this.smsService.send(phone, notification.message);
+    if (!notification.recipient || !notification.recipient.phone) {
+      throw new Error('Recipient phone number not found');
+    }
 
-    // Заглушка для разработки
-    this.logger.debug(
-      `[SMS] Sending to user ${notification.recipient_id}: ${notification.message}`,
-    );
+    // Format phone number to E.164 format
+    const formattedPhone = SmsService.formatPhoneNumber(notification.recipient.phone);
+    if (!formattedPhone) {
+      throw new Error(`Invalid phone number format: ${notification.recipient.phone}`);
+    }
 
-    return 'SMS sent (mock)';
+    // Check if SMS service is configured
+    if (!this.smsService.isReady()) {
+      this.logger.warn(
+        `[SMS] Service not configured, skipping SMS to ${notification.recipient_id}`,
+      );
+      throw new Error('SMS service not configured');
+    }
+
+    // Send SMS based on notification type
+    let success = false;
+
+    switch (notification.type) {
+      case NotificationType.TASK_ASSIGNED:
+        if (notification.data?.machine_number && notification.data?.due_date) {
+          success = await this.smsService.sendTaskNotification(
+            formattedPhone,
+            notification.data.task_type || 'Task',
+            notification.data.machine_number,
+            new Date(notification.data.due_date),
+          );
+        } else {
+          success = await this.smsService.sendSimple(formattedPhone, notification.message);
+        }
+        break;
+
+      case NotificationType.SYSTEM_ALERT:
+      case NotificationType.MACHINE_ERROR:
+        success = await this.smsService.sendUrgentAlert(formattedPhone, notification.message);
+        break;
+
+      default:
+        success = await this.smsService.sendSimple(formattedPhone, notification.message);
+    }
+
+    if (!success) {
+      throw new Error('Failed to send SMS');
+    }
+
+    this.logger.debug(`[SMS] Sent to ${formattedPhone} for user ${notification.recipient_id}`);
+
+    return `SMS sent to ${formattedPhone}`;
   }
 
   /**

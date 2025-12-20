@@ -15,6 +15,7 @@ import { CreateNotificationDto, BulkNotificationDto } from './dto/create-notific
 import { EmailService } from '../email/email.service';
 import { TelegramBotService } from '../telegram-bot/telegram-bot.service';
 import { WebPushService } from '../web-push/web-push.service';
+import { SmsService } from '../sms/sms.service';
 import { User } from '@modules/users/entities/user.entity';
 
 describe('NotificationsService', () => {
@@ -24,6 +25,7 @@ describe('NotificationsService', () => {
   let mockEmailService: jest.Mocked<EmailService>;
   let mockTelegramBotService: jest.Mocked<TelegramBotService>;
   let mockWebPushService: jest.Mocked<WebPushService>;
+  let mockSmsService: jest.Mocked<SmsService>;
 
   // Test data
   const mockUserId = 'user-id-1';
@@ -147,6 +149,17 @@ describe('NotificationsService', () => {
       cleanupInactiveSubscriptions: jest.fn(),
     } as any;
 
+    mockSmsService = {
+      send: jest.fn(),
+      sendSimple: jest.fn(),
+      sendBulk: jest.fn(),
+      sendVerificationCode: jest.fn(),
+      sendTaskNotification: jest.fn(),
+      sendUrgentAlert: jest.fn(),
+      isReady: jest.fn().mockReturnValue(true),
+      getAccountInfo: jest.fn(),
+    } as any;
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         NotificationsService,
@@ -169,6 +182,10 @@ describe('NotificationsService', () => {
         {
           provide: WebPushService,
           useValue: mockWebPushService,
+        },
+        {
+          provide: SmsService,
+          useValue: mockSmsService,
         },
       ],
     }).compile();
@@ -716,11 +733,93 @@ describe('NotificationsService', () => {
     });
 
     describe('SMS channel', () => {
-      it('should handle SMS notification (mock implementation)', async () => {
+      const mockUserWithPhone: Partial<User> = {
+        ...mockUser,
+        phone: '+79001234567',
+      };
+
+      it('should send SMS notification successfully', async () => {
         // Arrange
         const smsNotification = {
           ...mockNotification,
           channel: NotificationChannel.SMS,
+          recipient: mockUserWithPhone as User,
+        };
+        mockNotificationRepository.findOne.mockResolvedValue(smsNotification as Notification);
+        mockNotificationRepository.save.mockImplementation(async (n) => n as Notification);
+        mockSmsService.sendSimple.mockResolvedValue(true);
+
+        // Act
+        const result = await service.sendNotification(mockNotificationId);
+
+        // Assert
+        expect(result.status).toBe(NotificationStatus.SENT);
+        expect(result.delivery_response).toBe('SMS sent to +79001234567');
+        expect(mockSmsService.sendSimple).toHaveBeenCalledWith(
+          '+79001234567',
+          smsNotification.message,
+        );
+      });
+
+      it('should send task notification SMS with special formatting', async () => {
+        // Arrange
+        const smsNotification = {
+          ...mockNotification,
+          channel: NotificationChannel.SMS,
+          type: NotificationType.TASK_ASSIGNED,
+          recipient: mockUserWithPhone as User,
+          data: {
+            machine_number: 'M-001',
+            due_date: '2025-01-20T14:30:00',
+            task_type: 'REFILL',
+          },
+        };
+        mockNotificationRepository.findOne.mockResolvedValue(smsNotification as Notification);
+        mockNotificationRepository.save.mockImplementation(async (n) => n as Notification);
+        mockSmsService.sendTaskNotification.mockResolvedValue(true);
+
+        // Act
+        const result = await service.sendNotification(mockNotificationId);
+
+        // Assert
+        expect(result.status).toBe(NotificationStatus.SENT);
+        expect(mockSmsService.sendTaskNotification).toHaveBeenCalledWith(
+          '+79001234567',
+          'REFILL',
+          'M-001',
+          expect.any(Date),
+        );
+      });
+
+      it('should send urgent alert for system alerts', async () => {
+        // Arrange
+        const smsNotification = {
+          ...mockNotification,
+          channel: NotificationChannel.SMS,
+          type: NotificationType.SYSTEM_ALERT,
+          recipient: mockUserWithPhone as User,
+        };
+        mockNotificationRepository.findOne.mockResolvedValue(smsNotification as Notification);
+        mockNotificationRepository.save.mockImplementation(async (n) => n as Notification);
+        mockSmsService.sendUrgentAlert.mockResolvedValue(true);
+
+        // Act
+        const result = await service.sendNotification(mockNotificationId);
+
+        // Assert
+        expect(result.status).toBe(NotificationStatus.SENT);
+        expect(mockSmsService.sendUrgentAlert).toHaveBeenCalledWith(
+          '+79001234567',
+          smsNotification.message,
+        );
+      });
+
+      it('should fail when recipient has no phone number', async () => {
+        // Arrange
+        const smsNotification = {
+          ...mockNotification,
+          channel: NotificationChannel.SMS,
+          recipient: { ...mockUser, phone: null } as User,
         };
         mockNotificationRepository.findOne.mockResolvedValue(smsNotification as Notification);
         mockNotificationRepository.save.mockImplementation(async (n) => n as Notification);
@@ -729,8 +828,45 @@ describe('NotificationsService', () => {
         const result = await service.sendNotification(mockNotificationId);
 
         // Assert
-        expect(result.status).toBe(NotificationStatus.SENT);
-        expect(result.delivery_response).toBe('SMS sent (mock)');
+        expect(result.status).toBe(NotificationStatus.FAILED);
+        expect(result.error_message).toContain('phone number not found');
+      });
+
+      it('should fail when SMS service is not configured', async () => {
+        // Arrange
+        const smsNotification = {
+          ...mockNotification,
+          channel: NotificationChannel.SMS,
+          recipient: mockUserWithPhone as User,
+        };
+        mockNotificationRepository.findOne.mockResolvedValue(smsNotification as Notification);
+        mockNotificationRepository.save.mockImplementation(async (n) => n as Notification);
+        mockSmsService.isReady.mockReturnValue(false);
+
+        // Act
+        const result = await service.sendNotification(mockNotificationId);
+
+        // Assert
+        expect(result.status).toBe(NotificationStatus.FAILED);
+        expect(result.error_message).toContain('SMS service not configured');
+      });
+
+      it('should fail when phone number format is invalid', async () => {
+        // Arrange
+        const smsNotification = {
+          ...mockNotification,
+          channel: NotificationChannel.SMS,
+          recipient: { ...mockUser, phone: 'invalid' } as User,
+        };
+        mockNotificationRepository.findOne.mockResolvedValue(smsNotification as Notification);
+        mockNotificationRepository.save.mockImplementation(async (n) => n as Notification);
+
+        // Act
+        const result = await service.sendNotification(mockNotificationId);
+
+        // Assert
+        expect(result.status).toBe(NotificationStatus.FAILED);
+        expect(result.error_message).toContain('Invalid phone number format');
       });
     });
 
