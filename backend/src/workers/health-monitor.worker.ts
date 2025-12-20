@@ -8,6 +8,10 @@
  * - Application health endpoints
  *
  * It runs periodic health checks and can trigger alerts if issues are detected.
+ *
+ * External Alerting:
+ * - Slack: Set SLACK_WEBHOOK_URL environment variable
+ * - Email: Set SMTP_HOST, SMTP_USER, SMTP_PASSWORD, ALERT_EMAIL_TO
  */
 
 import { NestFactory } from '@nestjs/core';
@@ -16,6 +20,7 @@ import { AppModule } from '../app.module';
 import { Queue } from 'bull';
 import { Connection } from 'typeorm';
 import Redis from 'ioredis';
+import * as nodemailer from 'nodemailer';
 
 const logger = new Logger('HealthMonitorWorker');
 
@@ -41,6 +46,275 @@ interface SystemHealth {
     usedMemory: string;
   };
   status: 'healthy' | 'degraded' | 'unhealthy';
+}
+
+// Alert configuration from environment
+const ALERT_CONFIG = {
+  slackWebhookUrl: process.env.SLACK_WEBHOOK_URL,
+  emailEnabled:
+    !!(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.ALERT_EMAIL_TO),
+  smtpHost: process.env.SMTP_HOST,
+  smtpPort: parseInt(process.env.SMTP_PORT || '587'),
+  smtpUser: process.env.SMTP_USER,
+  smtpPassword: process.env.SMTP_PASSWORD,
+  alertEmailTo: process.env.ALERT_EMAIL_TO,
+  alertEmailFrom: process.env.SMTP_FROM_EMAIL || 'alerts@vendhub.com',
+};
+
+// Track last alert status to prevent duplicate alerts
+let lastAlertStatus: SystemHealth['status'] | null = null;
+let lastAlertTime: Date | null = null;
+const ALERT_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes cooldown between alerts
+
+/**
+ * Send alert to Slack via webhook
+ */
+async function sendSlackAlert(health: SystemHealth): Promise<boolean> {
+  if (!ALERT_CONFIG.slackWebhookUrl) {
+    return false;
+  }
+
+  try {
+    const statusEmoji = health.status === 'unhealthy' ? '🔴' : '🟡';
+    const statusText = health.status === 'unhealthy' ? 'UNHEALTHY' : 'DEGRADED';
+
+     
+    const blocks: any[] = [
+      {
+        type: 'header',
+        text: {
+          type: 'plain_text',
+          text: `${statusEmoji} VendHub System Alert: ${statusText}`,
+          emoji: true,
+        },
+      },
+      {
+        type: 'section',
+        fields: [
+          {
+            type: 'mrkdwn',
+            text: `*Database:*\n${health.database.connected ? '✅ Connected' : '❌ Disconnected'}\nConnections: ${health.database.activeConnections}`,
+          },
+          {
+            type: 'mrkdwn',
+            text: `*Redis:*\n${health.redis.connected ? '✅ Connected' : '❌ Disconnected'}\nMemory: ${health.redis.usedMemory}`,
+          },
+        ],
+      },
+    ];
+
+    // Add queue information
+    for (const queue of health.queues) {
+      blocks.push({
+        type: 'section',
+        fields: [
+          {
+            type: 'mrkdwn',
+            text: `*Queue: ${queue.name}*\nWaiting: ${queue.waiting} | Active: ${queue.active} | Failed: ${queue.failed}`,
+          },
+          {
+            type: 'mrkdwn',
+            text: `*Status:*\n${queue.paused ? '⏸️ Paused' : '▶️ Running'}`,
+          },
+        ],
+      });
+    }
+
+    blocks.push({
+      type: 'context',
+      elements: [
+        {
+          type: 'mrkdwn',
+          text: `Timestamp: ${health.timestamp}`,
+        },
+      ],
+    });
+
+    const response = await fetch(ALERT_CONFIG.slackWebhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ blocks }),
+    });
+
+    if (response.ok) {
+      logger.log('Slack alert sent successfully');
+      return true;
+    } else {
+      logger.error(`Slack alert failed: ${response.status} ${response.statusText}`);
+      return false;
+    }
+  } catch (error) {
+    logger.error(`Failed to send Slack alert: ${error.message}`);
+    return false;
+  }
+}
+
+/**
+ * Send alert via email
+ */
+async function sendEmailAlert(health: SystemHealth): Promise<boolean> {
+  if (!ALERT_CONFIG.emailEnabled) {
+    return false;
+  }
+
+  try {
+    const transporter = nodemailer.createTransport({
+      host: ALERT_CONFIG.smtpHost,
+      port: ALERT_CONFIG.smtpPort,
+      secure: ALERT_CONFIG.smtpPort === 465,
+      auth: {
+        user: ALERT_CONFIG.smtpUser,
+        pass: ALERT_CONFIG.smtpPassword,
+      },
+    });
+
+    const statusEmoji = health.status === 'unhealthy' ? '🔴' : '🟡';
+    const statusText = health.status.toUpperCase();
+
+    const queueRows = health.queues
+      .map(
+        (q) => `
+        <tr>
+          <td style="padding: 8px; border: 1px solid #ddd;">${q.name}</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">${q.waiting}</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">${q.active}</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">${q.failed}</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">${q.paused ? 'Paused' : 'Running'}</td>
+        </tr>
+      `,
+      )
+      .join('');
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background-color: ${health.status === 'unhealthy' ? '#f44336' : '#ff9800'}; color: white; padding: 20px; text-align: center; }
+            .content { padding: 20px; background-color: #f9f9f9; }
+            .footer { padding: 10px; text-align: center; font-size: 12px; color: #666; }
+            table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+            th { background-color: #333; color: white; padding: 10px; text-align: left; }
+            .status-box { padding: 10px; margin: 10px 0; border-radius: 5px; }
+            .ok { background-color: #e8f5e9; border-left: 4px solid #4CAF50; }
+            .error { background-color: #ffebee; border-left: 4px solid #f44336; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>${statusEmoji} System Alert: ${statusText}</h1>
+            </div>
+            <div class="content">
+              <h2>System Status</h2>
+
+              <div class="status-box ${health.database.connected ? 'ok' : 'error'}">
+                <strong>Database:</strong> ${health.database.connected ? '✅ Connected' : '❌ Disconnected'}
+                <br>Active Connections: ${health.database.activeConnections}
+              </div>
+
+              <div class="status-box ${health.redis.connected ? 'ok' : 'error'}">
+                <strong>Redis:</strong> ${health.redis.connected ? '✅ Connected' : '❌ Disconnected'}
+                <br>Used Memory: ${health.redis.usedMemory}
+              </div>
+
+              <h3>Queue Status</h3>
+              <table>
+                <tr>
+                  <th>Queue</th>
+                  <th>Waiting</th>
+                  <th>Active</th>
+                  <th>Failed</th>
+                  <th>Status</th>
+                </tr>
+                ${queueRows}
+              </table>
+
+              <p><em>Timestamp: ${health.timestamp}</em></p>
+            </div>
+            <div class="footer">
+              <p>VendHub Manager - Health Monitor Alert</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    await transporter.sendMail({
+      from: `"VendHub Alerts" <${ALERT_CONFIG.alertEmailFrom}>`,
+      to: ALERT_CONFIG.alertEmailTo,
+      subject: `${statusEmoji} VendHub System Alert: ${statusText}`,
+      html,
+      text: `VendHub System Alert: ${statusText}\n\nDatabase: ${health.database.connected ? 'Connected' : 'Disconnected'}\nRedis: ${health.redis.connected ? 'Connected' : 'Disconnected'}\n\nTimestamp: ${health.timestamp}`,
+    });
+
+    logger.log('Email alert sent successfully');
+    return true;
+  } catch (error) {
+    logger.error(`Failed to send email alert: ${error.message}`);
+    return false;
+  }
+}
+
+/**
+ * Send alerts to all configured external systems
+ */
+async function sendExternalAlerts(health: SystemHealth): Promise<void> {
+  // Only send alerts for degraded or unhealthy status
+  if (health.status === 'healthy') {
+    // If previously alerted, send recovery notification
+    if (lastAlertStatus && lastAlertStatus !== 'healthy') {
+      logger.log('System recovered to healthy status');
+      // Could send recovery notification here
+    }
+    lastAlertStatus = health.status;
+    return;
+  }
+
+  // Check cooldown to prevent alert spam
+  const now = new Date();
+  if (
+    lastAlertStatus === health.status &&
+    lastAlertTime &&
+    now.getTime() - lastAlertTime.getTime() < ALERT_COOLDOWN_MS
+  ) {
+    logger.log(
+      `Skipping duplicate alert (cooldown: ${Math.round((ALERT_COOLDOWN_MS - (now.getTime() - lastAlertTime.getTime())) / 1000)}s remaining)`,
+    );
+    return;
+  }
+
+  logger.log(`Sending external alerts for ${health.status} status...`);
+
+  const alertPromises: Promise<boolean>[] = [];
+
+  // Send Slack alert
+  if (ALERT_CONFIG.slackWebhookUrl) {
+    alertPromises.push(sendSlackAlert(health));
+  }
+
+  // Send email alert
+  if (ALERT_CONFIG.emailEnabled) {
+    alertPromises.push(sendEmailAlert(health));
+  }
+
+  if (alertPromises.length === 0) {
+    logger.warn(
+      'No external alerting configured. Set SLACK_WEBHOOK_URL or SMTP_* environment variables.',
+    );
+  } else {
+    const results = await Promise.allSettled(alertPromises);
+    const successCount = results.filter(
+      (r) => r.status === 'fulfilled' && r.value === true,
+    ).length;
+    logger.log(`External alerts sent: ${successCount}/${alertPromises.length} successful`);
+  }
+
+  // Update last alert tracking
+  lastAlertStatus = health.status;
+  lastAlertTime = now;
 }
 
 async function bootstrap() {
@@ -278,10 +552,8 @@ async function bootstrap() {
       // Log alerts if any
       logHealthAlerts(systemHealth);
 
-      // TODO: Send alerts to external monitoring systems (PagerDuty, Slack, etc.)
-      // if (systemHealth.status === 'unhealthy') {
-      //   await sendAlert(systemHealth);
-      // }
+      // Send external alerts (Slack, email) if system is degraded or unhealthy
+      await sendExternalAlerts(systemHealth);
     } catch (error) {
       logger.error(`Health check failed: ${error.message}`, error.stack);
     }
