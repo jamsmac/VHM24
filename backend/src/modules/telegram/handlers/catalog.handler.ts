@@ -11,6 +11,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { Material, MaterialCategory } from '../../requests/entities/material.entity';
 import { TelegramSessionService } from '../services/telegram-session.service';
 import { CartStorageService } from '../services/cart-storage.service';
+import { UsersService } from '../../users/users.service';
+import { UserRole } from '../../users/entities/user.entity';
 import { CatalogState, defaultSessionData } from './fsm-states';
 import {
   getCategoryKeyboard,
@@ -30,11 +32,21 @@ import {
 export class CatalogHandler {
   private readonly logger = new Logger(CatalogHandler.name);
 
+  /** Roles that are allowed to create material requests */
+  private static readonly ALLOWED_REQUEST_ROLES: UserRole[] = [
+    UserRole.SUPER_ADMIN,
+    UserRole.ADMIN,
+    UserRole.MANAGER,
+    UserRole.OPERATOR,
+    UserRole.TECHNICIAN,
+  ];
+
   constructor(
     @InjectRepository(Material)
     private readonly materialRepository: Repository<Material>,
     private readonly sessionService: TelegramSessionService,
     private readonly cartStorage: CartStorageService,
+    private readonly usersService: UsersService,
   ) {}
 
   /**
@@ -71,18 +83,40 @@ export class CatalogHandler {
   }
 
   /**
+   * Checks if a user role is allowed to create material requests.
+   */
+  private canCreateRequests(role: UserRole): boolean {
+    return CatalogHandler.ALLOWED_REQUEST_ROLES.includes(role);
+  }
+
+  /**
    * Создать заявку - показать категории.
    */
   private async handleCreateOrder(ctx: Context) {
     const userId = ctx.from?.id?.toString();
     if (!userId) return;
 
-    // TODO: Проверка прав доступа
-    // const user = await this.userService.findByTelegramId(userId);
-    // if (!user || !canCreateRequests(user.role)) {
-    //   await ctx.reply('❌ У вас нет доступа к созданию заявок');
-    //   return;
-    // }
+    // Проверка прав доступа
+    const user = await this.usersService.findByTelegramId(userId);
+    if (!user) {
+      await ctx.reply(
+        '❌ <b>Пользователь не найден</b>\n\n' +
+          'Ваш аккаунт не связан с системой VendHub.\n' +
+          'Обратитесь к администратору для получения доступа.',
+        { parse_mode: 'HTML' },
+      );
+      return;
+    }
+
+    if (!this.canCreateRequests(user.role)) {
+      await ctx.reply(
+        '❌ <b>Недостаточно прав</b>\n\n' +
+          'У вас нет доступа к созданию заявок на материалы.\n' +
+          'Данная функция доступна только для операторов и выше.',
+        { parse_mode: 'HTML' },
+      );
+      return;
+    }
 
     // Сбрасываем состояние
     await this.sessionService.setSessionData(userId, defaultSessionData);
