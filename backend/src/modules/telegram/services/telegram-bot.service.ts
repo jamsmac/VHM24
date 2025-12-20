@@ -1499,10 +1499,10 @@ export class TelegramBotService implements OnModuleInit {
         `👤 Имя: <b>${name}</b>\n` +
         `📱 Telegram: ${telegramFrom.username ? `@${telegramFrom.username}` : 'не указан'}\n` +
         `🆔 ID: <code>${telegramFrom.id}</code>\n\n` +
-        `<b>Выберите роль для пользователя:</b>`;
+        `<b>Выберите действие:</b>`;
 
-      // Create role selection keyboard
-      const keyboard = this.getRoleSelectionKeyboard(userId, TelegramLanguage.RU);
+      // Create simplified approval keyboard (only MANAGER and OPERATOR)
+      const keyboard = this.getAdminApprovalKeyboard(userId, TelegramLanguage.RU);
 
       await this.sendMessage(adminTelegramUser.chat_id, message, keyboard);
 
@@ -1639,27 +1639,28 @@ export class TelegramBotService implements OnModuleInit {
             where: { telegram_id: result.user.telegram_user_id },
           });
 
-          if (telegramUserRecord) {
-            const userLang = telegramUserRecord.language;
-            await this.sendMessage(
-              telegramUserRecord.chat_id,
-              userLang === TelegramLanguage.RU
-                ? `✅ <b>Ваша учетная запись одобрена!</b>\n\n` +
-                    `🎉 Добро пожаловать в VendHub!\n\n` +
-                    `🔐 <b>Ваши учетные данные:</b>\n` +
-                    `Username: <code>${result.credentials.username}</code>\n` +
-                    `Password: <code>${result.credentials.password}</code>\n\n` +
-                    `⚠️ <b>Важно:</b> Пароль временный и одноразовый. Вам потребуется изменить его при первом входе.\n\n` +
-                    `🌐 <a href="${process.env.FRONTEND_URL}">Перейти в VendHub Manager</a>`
-                : `✅ <b>Your account has been approved!</b>\n\n` +
-                    `🎉 Welcome to VendHub!\n\n` +
-                    `🔐 <b>Your credentials:</b>\n` +
-                    `Username: <code>${result.credentials.username}</code>\n` +
-                    `Password: <code>${result.credentials.password}</code>\n\n` +
-                    `⚠️ <b>Important:</b> Password is temporary and one-time. You'll need to change it on first login.\n\n` +
-                    `🌐 <a href="${process.env.FRONTEND_URL}">Open VendHub Manager</a>`,
-            );
-          }
+          // Determine chat_id and language
+          const chatId = telegramUserRecord?.chat_id || result.user.telegram_user_id;
+          const userLang = telegramUserRecord?.language || TelegramLanguage.RU;
+
+          const message =
+            userLang === TelegramLanguage.RU
+              ? `✅ <b>Ваша учетная запись одобрена!</b>\n\n` +
+                `🎉 Добро пожаловать в VendHub!\n\n` +
+                `🔐 <b>Ваши учетные данные:</b>\n` +
+                `Username: <code>${result.credentials.username}</code>\n` +
+                `Password: <code>${result.credentials.password}</code>\n\n` +
+                `⚠️ <b>Важно:</b> Пароль временный и одноразовый. Вам потребуется изменить его при первом входе.\n\n` +
+                `🌐 <a href="${process.env.FRONTEND_URL}">Перейти в VendHub Manager</a>`
+              : `✅ <b>Your account has been approved!</b>\n\n` +
+                `🎉 Welcome to VendHub!\n\n` +
+                `🔐 <b>Your credentials:</b>\n` +
+                `Username: <code>${result.credentials.username}</code>\n` +
+                `Password: <code>${result.credentials.password}</code>\n\n` +
+                `⚠️ <b>Important:</b> Password is temporary and one-time. You'll need to change it on first login.\n\n` +
+                `🌐 <a href="${process.env.FRONTEND_URL}">Open VendHub Manager</a>`;
+
+          await this.sendMessage(chatId, message);
         } catch (error) {
           this.logger.warn(`Failed to send telegram notification to user ${userId}:`, error);
           // Don't fail the approval if telegram notification fails
@@ -2114,6 +2115,35 @@ export class TelegramBotService implements OnModuleInit {
   /**
    * Get role selection keyboard for user approval
    */
+  /**
+   * Get simplified keyboard for admin approval notification
+   * Shows only MANAGER and OPERATOR roles + Reject button
+   */
+  private getAdminApprovalKeyboard(userId: string, lang: TelegramLanguage) {
+    const buttons = [
+      [
+        Markup.button.callback(
+          lang === TelegramLanguage.RU ? '📊 Одобрить как Менеджер' : '📊 Approve as Manager',
+          `approve_user_${userId}_role_${UserRole.MANAGER}`,
+        ),
+      ],
+      [
+        Markup.button.callback(
+          lang === TelegramLanguage.RU ? '👨‍💼 Одобрить как Оператор' : '👨‍💼 Approve as Operator',
+          `approve_user_${userId}_role_${UserRole.OPERATOR}`,
+        ),
+      ],
+      [
+        Markup.button.callback(
+          lang === TelegramLanguage.RU ? '❌ Отклонить' : '❌ Reject',
+          `reject_user_${userId}`,
+        ),
+      ],
+    ];
+
+    return Markup.inlineKeyboard(buttons);
+  }
+
   private getRoleSelectionKeyboard(userId: string, lang: TelegramLanguage) {
     const roles = [
       {
