@@ -12,6 +12,7 @@ import { OperatorInventory } from '../entities/operator-inventory.entity';
 import { MachineInventory } from '../entities/machine-inventory.entity';
 import { InventoryLevelType } from '../entities/inventory-actual-count.entity';
 import { NotificationsService } from '../../notifications/notifications.service';
+import { UsersService } from '../../users/users.service';
 import { createMockRepository } from '@/test/helpers';
 import { ApproveAdjustmentDto } from '../dto/inventory-adjustment.dto';
 
@@ -31,6 +32,7 @@ describe('InventoryAdjustmentService', () => {
   let operatorInventoryRepo: any;
   let machineInventoryRepo: any;
   let notificationsService: any;
+  let usersService: any;
 
   // Test fixtures
   const testUserId = '11111111-1111-1111-1111-111111111111';
@@ -46,6 +48,10 @@ describe('InventoryAdjustmentService', () => {
 
     notificationsService = {
       create: jest.fn().mockResolvedValue({}),
+    };
+
+    usersService = {
+      findByRoles: jest.fn().mockResolvedValue([]),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -70,6 +76,10 @@ describe('InventoryAdjustmentService', () => {
         {
           provide: NotificationsService,
           useValue: notificationsService,
+        },
+        {
+          provide: UsersService,
+          useValue: usersService,
         },
       ],
     }).compile();
@@ -190,6 +200,10 @@ describe('InventoryAdjustmentService', () => {
         status: AdjustmentStatus.PENDING,
         created_by_user_id: testUserId,
       };
+
+      // Mock approvers to receive notifications
+      const mockApprover = { id: 'approver-1', telegram_user_id: '123456' };
+      usersService.findByRoles.mockResolvedValue([mockApprover]);
 
       adjustmentRepo.create.mockReturnValue(createdAdjustment);
       adjustmentRepo.save.mockResolvedValue(createdAdjustment);
@@ -926,6 +940,10 @@ describe('InventoryAdjustmentService', () => {
         created_by_user_id: testUserId,
         nomenclature: { name: 'Coffee Beans' },
       };
+
+      // Mock approvers to receive notifications
+      const mockApprover = { id: 'approver-1', telegram_user_id: '123456' };
+      usersService.findByRoles.mockResolvedValue([mockApprover]);
 
       adjustmentRepo.create.mockReturnValue(createdAdjustment);
       adjustmentRepo.save.mockResolvedValue(createdAdjustment);

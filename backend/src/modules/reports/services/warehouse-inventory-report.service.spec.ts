@@ -5,6 +5,7 @@ import { Warehouse } from '@modules/warehouse/entities/warehouse.entity';
 import { WarehouseInventory } from '@modules/inventory/entities/warehouse-inventory.entity';
 import { InventoryMovement } from '@modules/inventory/entities/inventory-movement.entity';
 import { InventoryBatch } from '@modules/warehouse/entities/inventory-batch.entity';
+import { Nomenclature } from '@modules/nomenclature/entities/nomenclature.entity';
 
 describe('WarehouseInventoryReportService', () => {
   let service: WarehouseInventoryReportService;
@@ -12,6 +13,7 @@ describe('WarehouseInventoryReportService', () => {
   let mockWarehouseInventoryRepository: any;
   let mockMovementRepository: any;
   let mockBatchRepository: any;
+  let mockNomenclatureRepository: any;
   let movementQueryBuilder: any;
 
   const warehouseId = 'warehouse-123';
@@ -45,6 +47,10 @@ describe('WarehouseInventoryReportService', () => {
       find: jest.fn().mockResolvedValue([]),
     };
 
+    mockNomenclatureRepository = {
+      find: jest.fn().mockResolvedValue([]),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         WarehouseInventoryReportService,
@@ -63,6 +69,10 @@ describe('WarehouseInventoryReportService', () => {
         {
           provide: getRepositoryToken(InventoryBatch),
           useValue: mockBatchRepository,
+        },
+        {
+          provide: getRepositoryToken(Nomenclature),
+          useValue: mockNomenclatureRepository,
         },
       ],
     }).compile();

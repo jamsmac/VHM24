@@ -6,6 +6,7 @@ import { NotificationsService } from '../../notifications/notifications.service'
 import { UsersService } from '../../users/users.service';
 import { UserRole } from '../../users/entities/user.entity';
 import { TelegramNotificationsService } from '../../telegram/services/telegram-notifications.service';
+import { MachineAccessService } from '../../machine-access/machine-access.service';
 import {
   InventoryDifferenceThreshold,
   SeverityLevel,
@@ -28,6 +29,7 @@ describe('InventoryThresholdActionsService', () => {
   let notificationsService: any;
   let usersService: any;
   let telegramNotificationsService: any;
+  let machineAccessService: any;
 
   // Test fixtures
   const testUserId = '11111111-1111-1111-1111-111111111111';
@@ -101,6 +103,10 @@ describe('InventoryThresholdActionsService', () => {
       sendNotification: jest.fn().mockResolvedValue(undefined),
     };
 
+    machineAccessService = {
+      findByUser: jest.fn().mockResolvedValue([]),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         InventoryThresholdActionsService,
@@ -123,6 +129,10 @@ describe('InventoryThresholdActionsService', () => {
         {
           provide: TelegramNotificationsService,
           useValue: telegramNotificationsService,
+        },
+        {
+          provide: MachineAccessService,
+          useValue: machineAccessService,
         },
       ],
     }).compile();

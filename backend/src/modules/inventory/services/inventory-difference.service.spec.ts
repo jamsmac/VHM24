@@ -4,6 +4,8 @@ import { InventoryDifferenceService } from './inventory-difference.service';
 import { InventoryCalculationService } from './inventory-calculation.service';
 import { InventoryThresholdActionsService } from './inventory-threshold-actions.service';
 import { InventoryThresholdService } from './inventory-threshold.service';
+import { MachinesService } from '../../machines/machines.service';
+import { UsersService } from '../../users/users.service';
 import {
   InventoryActualCount,
   InventoryLevelType,
@@ -27,6 +29,8 @@ describe('InventoryDifferenceService', () => {
   let calculationService: any;
   let thresholdActionsService: any;
   let thresholdService: any;
+  let machinesService: any;
+  let usersService: any;
 
   // Test fixtures
   const testUserId = '11111111-1111-1111-1111-111111111111';
@@ -48,6 +52,14 @@ describe('InventoryDifferenceService', () => {
 
     thresholdService = {
       findApplicableThreshold: jest.fn().mockResolvedValue(null),
+    };
+
+    machinesService = {
+      findOne: jest.fn().mockResolvedValue(null),
+    };
+
+    usersService = {
+      findOne: jest.fn().mockResolvedValue(null),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -72,6 +84,14 @@ describe('InventoryDifferenceService', () => {
         {
           provide: InventoryThresholdService,
           useValue: thresholdService,
+        },
+        {
+          provide: MachinesService,
+          useValue: machinesService,
+        },
+        {
+          provide: UsersService,
+          useValue: usersService,
         },
       ],
     }).compile();
