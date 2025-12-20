@@ -40,7 +40,6 @@ describe('MachineAccessService', () => {
     role: MachineAccessRole.OPERATOR,
     created_by_id: 'admin-id',
     created_at: new Date(),
-    updated_at: new Date(),
   };
 
   const mockTemplate: Partial<AccessTemplate> = {
@@ -131,7 +130,7 @@ describe('MachineAccessService', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    jest.resetAllMocks();
   });
 
   describe('findByMachine', () => {
@@ -273,12 +272,19 @@ describe('MachineAccessService', () => {
     });
 
     it('should check specific roles if provided', async () => {
-      machineAccessRepository.findOne.mockResolvedValue(mockMachineAccess as MachineAccess);
+      // Mock returns access with OPERATOR role
+      const accessWithRole = { ...mockMachineAccess, role: MachineAccessRole.OPERATOR };
+      machineAccessRepository.findOne.mockResolvedValue(accessWithRole as MachineAccess);
 
+      // Test matching role - should return true
       const resultWithRole = await service.hasAccess('user-id-1', 'machine-id-1', [MachineAccessRole.OPERATOR]);
-      const resultWrongRole = await service.hasAccess('user-id-1', 'machine-id-1', [MachineAccessRole.OWNER]);
-
       expect(resultWithRole).toBe(true);
+
+      // Reset mock for next assertion
+      machineAccessRepository.findOne.mockResolvedValue(accessWithRole as MachineAccess);
+
+      // Test non-matching role - should return false
+      const resultWrongRole = await service.hasAccess('user-id-1', 'machine-id-1', [MachineAccessRole.OWNER]);
       expect(resultWrongRole).toBe(false);
     });
   });
@@ -334,9 +340,8 @@ describe('MachineAccessService', () => {
     });
 
     it('should find machine by serial_number', async () => {
-      machineRepository.findOne
-        .mockResolvedValueOnce(null) // Not machine_number
-        .mockResolvedValueOnce(mockMachine as Machine); // Serial number
+      // When machineNumber is undefined, only the serial_number lookup is performed
+      machineRepository.findOne.mockResolvedValue(mockMachine as Machine);
 
       const result = await service.resolveMachine(undefined, 'SN-001');
 

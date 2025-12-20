@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository, SelectQueryBuilder } from 'typeorm';
 import { TaskEscalationService } from './task-escalation.service';
-import { Task, TaskStatus, TaskType } from '../entities/task.entity';
+import { Task, TaskStatus, TaskType, TaskPriority } from '../entities/task.entity';
 import { IncidentsService } from '../../incidents/incidents.service';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { AuditLogService } from '../../security/services/audit-log.service';
@@ -30,7 +30,7 @@ describe('TaskEscalationService', () => {
       created_by_user_id: mockCreatorId,
       due_date: new Date(Date.now() - 5 * 60 * 60 * 1000), // 5 hours ago
       description: 'Test task description',
-      priority: 'medium',
+      priority: TaskPriority.NORMAL,
       machine: {
         id: mockMachineId,
         machine_number: 'M-001',
@@ -343,11 +343,11 @@ describe('TaskEscalationService', () => {
   describe('getTasksByPriority', () => {
     it('should group tasks by priority', async () => {
       const tasks = [
-        createMockTask({ id: 'task-1', priority: 'critical' }),
-        createMockTask({ id: 'task-2', priority: 'high' }),
-        createMockTask({ id: 'task-3', priority: 'high' }),
-        createMockTask({ id: 'task-4', priority: 'medium' }),
-        createMockTask({ id: 'task-5', priority: 'low' }),
+        createMockTask({ id: 'task-1', priority: TaskPriority.URGENT }),
+        createMockTask({ id: 'task-2', priority: TaskPriority.HIGH }),
+        createMockTask({ id: 'task-3', priority: TaskPriority.HIGH }),
+        createMockTask({ id: 'task-4', priority: TaskPriority.NORMAL }),
+        createMockTask({ id: 'task-5', priority: TaskPriority.LOW }),
       ];
 
       const mockQb = createMockQueryBuilder();

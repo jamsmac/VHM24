@@ -5,6 +5,12 @@ import { TelegramLanguage, TelegramUser } from '../entities/telegram-user.entity
 import { TaskStatus, TaskType } from '../../tasks/entities/task.entity';
 import { UserRole } from '../../users/entities/user.entity';
 import { TelegramTaskInfo, TelegramMachineInfo } from '../types/telegram.types';
+import { InlineKeyboardButton } from 'telegraf/types';
+
+// Helper to extract callback_data from InlineKeyboardButton
+const getCallbackData = (button: InlineKeyboardButton): string | undefined => {
+  return 'callback_data' in button ? button.callback_data : undefined;
+};
 
 describe('TelegramKeyboardHandler', () => {
   let handler: TelegramKeyboardHandler;
@@ -73,15 +79,15 @@ describe('TelegramKeyboardHandler', () => {
       const keyboard = result.reply_markup.inline_keyboard;
 
       // First row: tasks and machines
-      expect(keyboard[0][0].callback_data).toBe('menu_tasks');
-      expect(keyboard[0][1].callback_data).toBe('menu_machines');
+      expect(getCallbackData(keyboard[0][0])).toBe('menu_tasks');
+      expect(getCallbackData(keyboard[0][1])).toBe('menu_machines');
 
       // Second row: alerts and stats
-      expect(keyboard[1][0].callback_data).toBe('menu_alerts');
-      expect(keyboard[1][1].callback_data).toBe('menu_stats');
+      expect(getCallbackData(keyboard[1][0])).toBe('menu_alerts');
+      expect(getCallbackData(keyboard[1][1])).toBe('menu_stats');
 
       // Third row: settings
-      expect(keyboard[2][0].callback_data).toBe('menu_settings');
+      expect(getCallbackData(keyboard[2][0])).toBe('menu_settings');
     });
   });
 
@@ -91,7 +97,7 @@ describe('TelegramKeyboardHandler', () => {
 
       expect(result.reply_markup.inline_keyboard).toHaveLength(1);
       expect(result.reply_markup.inline_keyboard[0][0].text).toContain('Проверить статус');
-      expect(result.reply_markup.inline_keyboard[0][0].callback_data).toBe('check_verification');
+      expect(getCallbackData(result.reply_markup.inline_keyboard[0][0])).toBe('check_verification');
     });
 
     it('should return keyboard with check status button (EN)', () => {
@@ -106,9 +112,9 @@ describe('TelegramKeyboardHandler', () => {
       const result = handler.getSettingsKeyboard(TelegramLanguage.EN);
 
       expect(result.reply_markup.inline_keyboard).toHaveLength(3);
-      expect(result.reply_markup.inline_keyboard[0][0].callback_data).toBe('settings_notifications');
-      expect(result.reply_markup.inline_keyboard[1][0].callback_data).toBe('settings_language');
-      expect(result.reply_markup.inline_keyboard[2][0].callback_data).toBe('back_to_menu');
+      expect(getCallbackData(result.reply_markup.inline_keyboard[0][0])).toBe('settings_notifications');
+      expect(getCallbackData(result.reply_markup.inline_keyboard[1][0])).toBe('settings_language');
+      expect(getCallbackData(result.reply_markup.inline_keyboard[2][0])).toBe('back_to_menu');
     });
   });
 
@@ -138,10 +144,10 @@ describe('TelegramKeyboardHandler', () => {
       const result = handler.getNotificationSettingsKeyboard(TelegramLanguage.EN, user);
       const keyboard = result.reply_markup.inline_keyboard;
 
-      expect(keyboard[0][0].callback_data).toBe('toggle_machine_offline');
-      expect(keyboard[1][0].callback_data).toBe('toggle_low_stock');
-      expect(keyboard[2][0].callback_data).toBe('toggle_maintenance_due');
-      expect(keyboard[3][0].callback_data).toBe('toggle_task_assigned');
+      expect(getCallbackData(keyboard[0][0])).toBe('toggle_machine_offline');
+      expect(getCallbackData(keyboard[1][0])).toBe('toggle_low_stock');
+      expect(getCallbackData(keyboard[2][0])).toBe('toggle_maintenance_due');
+      expect(getCallbackData(keyboard[3][0])).toBe('toggle_task_assigned');
     });
 
     it('should handle null notification_preferences', () => {
@@ -252,7 +258,7 @@ describe('TelegramKeyboardHandler', () => {
 
       const result = handler.getTasksKeyboard(tasks, TelegramLanguage.EN);
 
-      expect(result.reply_markup.inline_keyboard[0][0].callback_data).toBe('task_start_task-123');
+      expect(getCallbackData(result.reply_markup.inline_keyboard[0][0])).toBe('task_start_task-123');
     });
   });
 
@@ -298,7 +304,7 @@ describe('TelegramKeyboardHandler', () => {
 
       const result = handler.getMachinesKeyboard(machines, TelegramLanguage.EN);
 
-      expect(result.reply_markup.inline_keyboard[0][0].callback_data).toBe('view_machine_machine-abc');
+      expect(getCallbackData(result.reply_markup.inline_keyboard[0][0])).toBe('view_machine_machine-abc');
     });
   });
 
@@ -315,8 +321,8 @@ describe('TelegramKeyboardHandler', () => {
       const result = handler.getRoleSelectionKeyboard('user-456', TelegramLanguage.EN);
       const keyboard = result.reply_markup.inline_keyboard;
 
-      expect(keyboard[0][0].callback_data).toBe(`approve_user_user-456_role_${UserRole.OPERATOR}`);
-      expect(keyboard[1][0].callback_data).toBe(`approve_user_user-456_role_${UserRole.COLLECTOR}`);
+      expect(getCallbackData(keyboard[0][0])).toBe(`approve_user_user-456_role_${UserRole.OPERATOR}`);
+      expect(getCallbackData(keyboard[1][0])).toBe(`approve_user_user-456_role_${UserRole.COLLECTOR}`);
     });
 
     it('should have reject button with user ID', () => {
@@ -324,7 +330,7 @@ describe('TelegramKeyboardHandler', () => {
       const keyboard = result.reply_markup.inline_keyboard;
       const lastRow = keyboard[keyboard.length - 1];
 
-      expect(lastRow[0].callback_data).toBe('reject_user_user-789');
+      expect(getCallbackData(lastRow[0])).toBe('reject_user_user-789');
       expect(lastRow[0].text).toContain('Reject');
     });
 
@@ -364,9 +370,9 @@ describe('TelegramKeyboardHandler', () => {
       const result = handler.getStepKeyboard('task-abc', 2, TelegramLanguage.EN, true);
       const keyboard = result.reply_markup.inline_keyboard;
 
-      expect(keyboard[0][0].callback_data).toBe('step_done_task-abc_2');
-      expect(keyboard[0][1].callback_data).toBe('step_skip_task-abc_2');
-      expect(keyboard[1][0].callback_data).toBe('step_back_task-abc');
+      expect(getCallbackData(keyboard[0][0])).toBe('step_done_task-abc_2');
+      expect(getCallbackData(keyboard[0][1])).toBe('step_skip_task-abc_2');
+      expect(getCallbackData(keyboard[1][0])).toBe('step_back_task-abc');
     });
   });
 });

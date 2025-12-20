@@ -65,7 +65,7 @@ export class ClientAuthService {
 
     // Find or create client user
     let clientUser = await this.clientUserRepository.findOne({
-      where: { telegram_id: userData.id.toString() },
+      where: { telegram_id: userData.id },
     });
 
     const isNewUser = !clientUser;
@@ -73,7 +73,7 @@ export class ClientAuthService {
     if (!clientUser) {
       // Create new client user
       clientUser = this.clientUserRepository.create({
-        telegram_id: userData.id.toString(),
+        telegram_id: userData.id,
         telegram_username: userData.username || null,
         full_name: [userData.first_name, userData.last_name].filter(Boolean).join(' ') || null,
         language: this.mapLanguageCode(userData.language_code),
@@ -297,7 +297,7 @@ export class ClientAuthService {
     return {
       id: user.id,
       telegram_username: user.telegram_username || undefined,
-      telegram_id: user.telegram_id,
+      telegram_id: user.telegram_id?.toString() || '',
       full_name: user.full_name || undefined,
       phone: user.phone || undefined,
       email: user.email || undefined,

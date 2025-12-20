@@ -189,7 +189,7 @@ describe('TaskCompletionService', () => {
     });
 
     it('should throw BadRequestException if task is not in IN_PROGRESS status', async () => {
-      const task = createMockTask({ status: TaskStatus.CREATED });
+      const task = createMockTask({ status: TaskStatus.PENDING });
 
       await expect(
         service.completeTask(task, mockUserId, {}),
@@ -201,6 +201,8 @@ describe('TaskCompletionService', () => {
       filesService.validateTaskPhotos.mockResolvedValue({
         hasPhotoBefore: false,
         hasPhotoAfter: false,
+        photosBefore: [],
+        photosAfter: [],
       });
 
       await expect(
@@ -214,6 +216,8 @@ describe('TaskCompletionService', () => {
       filesService.validateTaskPhotos.mockResolvedValue({
         hasPhotoBefore: false,
         hasPhotoAfter: true,
+        photosBefore: [],
+        photosAfter: [],
       });
 
       await expect(
@@ -226,6 +230,8 @@ describe('TaskCompletionService', () => {
       filesService.validateTaskPhotos.mockResolvedValue({
         hasPhotoBefore: true,
         hasPhotoAfter: false,
+        photosBefore: [],
+        photosAfter: [],
       });
 
       await expect(
@@ -259,13 +265,15 @@ describe('TaskCompletionService', () => {
     it('should throw BadRequestException if checklist is incomplete', async () => {
       const task = createMockTask({
         checklist: [
-          { id: 1, title: 'Step 1', completed: true },
-          { id: 2, title: 'Step 2', completed: false },
+          { item: 'Step 1', completed: true },
+          { item: 'Step 2', completed: false },
         ],
       });
       filesService.validateTaskPhotos.mockResolvedValue({
         hasPhotoBefore: true,
         hasPhotoAfter: true,
+        photosBefore: [],
+        photosAfter: [],
       });
 
       await expect(
@@ -278,10 +286,14 @@ describe('TaskCompletionService', () => {
       filesService.validateTaskPhotos.mockResolvedValue({
         hasPhotoBefore: true,
         hasPhotoAfter: true,
+        photosBefore: [],
+        photosAfter: [],
       });
       taskRepository.save.mockResolvedValue({
         ...task,
         status: TaskStatus.COMPLETED,
+        has_photo_before: true,
+        has_photo_after: true,
       });
 
       const result = await service.completeTask(task, mockUserId, {});
@@ -300,6 +312,8 @@ describe('TaskCompletionService', () => {
       filesService.validateTaskPhotos.mockResolvedValue({
         hasPhotoBefore: true,
         hasPhotoAfter: true,
+        photosBefore: [],
+        photosAfter: [],
       });
       taskRepository.save.mockResolvedValue(task);
       taskCommentRepository.create.mockReturnValue({} as any);
@@ -323,6 +337,8 @@ describe('TaskCompletionService', () => {
       filesService.validateTaskPhotos.mockResolvedValue({
         hasPhotoBefore: true,
         hasPhotoAfter: true,
+        photosBefore: [],
+        photosAfter: [],
       });
       taskRepository.save.mockResolvedValue(task);
 
@@ -341,6 +357,8 @@ describe('TaskCompletionService', () => {
       filesService.validateTaskPhotos.mockResolvedValue({
         hasPhotoBefore: true,
         hasPhotoAfter: true,
+        photosBefore: [],
+        photosAfter: [],
       });
       taskRepository.save.mockResolvedValue(task);
 
@@ -356,6 +374,8 @@ describe('TaskCompletionService', () => {
       filesService.validateTaskPhotos.mockResolvedValue({
         hasPhotoBefore: true,
         hasPhotoAfter: true,
+        photosBefore: [],
+        photosAfter: [],
       });
 
       await expect(
@@ -368,6 +388,8 @@ describe('TaskCompletionService', () => {
       filesService.validateTaskPhotos.mockResolvedValue({
         hasPhotoBefore: true,
         hasPhotoAfter: true,
+        photosBefore: [],
+        photosAfter: [],
       });
       taskRepository.save.mockResolvedValue(task);
 
@@ -401,6 +423,8 @@ describe('TaskCompletionService', () => {
       filesService.validateTaskPhotos.mockResolvedValue({
         hasPhotoBefore: true,
         hasPhotoAfter: true,
+        photosBefore: [],
+        photosAfter: [],
       });
       taskRepository.save.mockResolvedValue(task);
 
@@ -429,6 +453,8 @@ describe('TaskCompletionService', () => {
       filesService.validateTaskPhotos.mockResolvedValue({
         hasPhotoBefore: true,
         hasPhotoAfter: true,
+        photosBefore: [],
+        photosAfter: [],
       });
       taskRepository.save.mockResolvedValue(task);
 
@@ -459,9 +485,11 @@ describe('TaskCompletionService', () => {
       filesService.validateTaskPhotos.mockResolvedValue({
         hasPhotoBefore: true,
         hasPhotoAfter: true,
+        photosBefore: [],
+        photosAfter: [],
       });
       taskRepository.save.mockResolvedValue(task);
-      taskItemRepository.save.mockResolvedValue([taskItem]);
+      taskItemRepository.save.mockResolvedValue([taskItem] as any);
 
       await service.completeTask(task, mockUserId, {
         items: [{ nomenclature_id: 'nom-1', actual_quantity: 8 }],
@@ -489,6 +517,8 @@ describe('TaskCompletionService', () => {
       filesService.validateTaskPhotos.mockResolvedValue({
         hasPhotoBefore: true,
         hasPhotoAfter: true,
+        photosBefore: [],
+        photosAfter: [],
       });
       taskRepository.save.mockResolvedValue(task);
 
@@ -534,6 +564,8 @@ describe('TaskCompletionService', () => {
       filesService.validateTaskPhotos.mockResolvedValue({
         hasPhotoBefore: true,
         hasPhotoAfter: true,
+        photosBefore: [],
+        photosAfter: [],
       });
       taskRepository.save.mockResolvedValue({
         ...task,
@@ -558,6 +590,8 @@ describe('TaskCompletionService', () => {
       filesService.validateTaskPhotos.mockResolvedValue({
         hasPhotoBefore: true,
         hasPhotoAfter: false,
+        photosBefore: [],
+        photosAfter: [],
       });
 
       await expect(

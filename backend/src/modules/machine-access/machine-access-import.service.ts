@@ -73,7 +73,8 @@ export class MachineAccessImportService {
       // Dynamic import to avoid issues if exceljs is not installed
       const ExcelJS = await import('exceljs');
       const workbook = new ExcelJS.Workbook();
-      await workbook.xlsx.load(buffer);
+      // Cast buffer to satisfy exceljs type requirements
+      await workbook.xlsx.load(buffer as unknown as ArrayBuffer);
 
       const worksheet = workbook.worksheets[0];
       if (!worksheet) {

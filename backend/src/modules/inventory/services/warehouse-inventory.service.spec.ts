@@ -15,8 +15,8 @@ describe('WarehouseInventoryService', () => {
   const mockUserId = 'user-123';
   const mockNomenclatureId = 'nom-456';
 
-  const createMockInventory = (overrides: Partial<WarehouseInventory> = {}): WarehouseInventory =>
-    ({
+  const createMockInventory = (overrides: Partial<WarehouseInventory> = {}): WarehouseInventory => {
+    const base = {
       id: 'inv-789',
       nomenclature_id: mockNomenclatureId,
       current_quantity: 100,
@@ -24,7 +24,15 @@ describe('WarehouseInventoryService', () => {
       min_stock_level: 10,
       last_restocked_at: new Date(),
       ...overrides,
-    }) as WarehouseInventory;
+    };
+    return {
+      ...base,
+      // Add computed getter
+      get available_quantity() {
+        return Number(this.current_quantity) - Number(this.reserved_quantity);
+      },
+    } as WarehouseInventory;
+  };
 
   const createMockQueryBuilder = () => {
     const qb = {
@@ -132,10 +140,9 @@ describe('WarehouseInventoryService', () => {
     it('should add stock to warehouse inventory', async () => {
       const mockInventory = createMockInventory({ current_quantity: 100 });
       warehouseInventoryRepository.findOne.mockResolvedValue(mockInventory);
-      warehouseInventoryRepository.save.mockResolvedValue({
-        ...mockInventory,
-        current_quantity: 150,
-      });
+      warehouseInventoryRepository.save.mockResolvedValue(
+        createMockInventory({ current_quantity: 150 }),
+      );
 
       const result = await service.addToWarehouse(
         {
@@ -181,10 +188,9 @@ describe('WarehouseInventoryService', () => {
     it('should remove stock from warehouse inventory', async () => {
       const mockInventory = createMockInventory({ current_quantity: 100 });
       warehouseInventoryRepository.findOne.mockResolvedValue(mockInventory);
-      warehouseInventoryRepository.save.mockResolvedValue({
-        ...mockInventory,
-        current_quantity: 80,
-      });
+      warehouseInventoryRepository.save.mockResolvedValue(
+        createMockInventory({ current_quantity: 80 }),
+      );
 
       const result = await service.removeFromWarehouse(
         {
@@ -224,10 +230,9 @@ describe('WarehouseInventoryService', () => {
     it('should update warehouse inventory settings', async () => {
       const mockInventory = createMockInventory();
       warehouseInventoryRepository.findOne.mockResolvedValue(mockInventory);
-      warehouseInventoryRepository.save.mockResolvedValue({
-        ...mockInventory,
-        min_stock_level: 25,
-      });
+      warehouseInventoryRepository.save.mockResolvedValue(
+        createMockInventory({ min_stock_level: 25 }),
+      );
 
       const result = await service.updateWarehouseInventory(mockNomenclatureId, {
         min_stock_level: 25,

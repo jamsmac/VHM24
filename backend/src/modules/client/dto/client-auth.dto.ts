@@ -56,20 +56,6 @@ export class ClientProfileDto {
 }
 
 /**
- * Response DTO for client auth
- */
-export class ClientAuthResponseDto {
-  @ApiProperty()
-  access_token: string;
-
-  @ApiProperty()
-  refresh_token: string;
-
-  @ApiProperty()
-  user: ClientUserResponseDto;
-}
-
-/**
  * Response DTO for client user
  */
 export class ClientUserResponseDto {
@@ -102,4 +88,18 @@ export class ClientUserResponseDto {
 
   @ApiPropertyOptional()
   loyalty_points?: number;
+}
+
+/**
+ * Response DTO for client auth
+ */
+export class ClientAuthResponseDto {
+  @ApiProperty()
+  access_token: string;
+
+  @ApiProperty()
+  refresh_token: string;
+
+  @ApiProperty()
+  user: ClientUserResponseDto;
 }
