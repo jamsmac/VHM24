@@ -5,6 +5,7 @@ import { RedisCacheModule } from '@/common/cache/redis-cache.module';
 import { TelegramUser } from './entities/telegram-user.entity';
 import { TelegramSettings } from './entities/telegram-settings.entity';
 import { TelegramMessageLog } from './entities/telegram-message-log.entity';
+import { TelegramBotAnalytics } from './entities/telegram-bot-analytics.entity';
 import { User } from '../users/entities/user.entity';
 import { Task } from '../tasks/entities/task.entity';
 import { TelegramBotService } from './services/telegram-bot.service';
@@ -39,7 +40,14 @@ import { CatalogHandler } from './handlers/catalog.handler';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([TelegramUser, TelegramSettings, TelegramMessageLog, User, Task]),
+    TypeOrmModule.forFeature([
+      TelegramUser,
+      TelegramSettings,
+      TelegramMessageLog,
+      TelegramBotAnalytics,
+      User,
+      Task,
+    ]),
     BullModule.registerQueue({
       name: 'telegram-messages',
     }),

@@ -1,8 +1,15 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository, Between } from 'typeorm';
 import { Markup } from 'telegraf';
 import { TelegramLanguage } from '../entities/telegram-user.entity';
+import {
+  TelegramBotAnalytics,
+  TelegramAnalyticsEventType,
+} from '../entities/telegram-bot-analytics.entity';
 import { TelegramI18nService } from './telegram-i18n.service';
 import { UserRole } from '@modules/users/entities/user.entity';
+import { startOfDay, endOfDay, subDays } from 'date-fns';
 
 /**
  * User state for context-aware actions
@@ -51,7 +58,11 @@ export interface UserState {
 export class TelegramQuickActionsService {
   private readonly logger = new Logger(TelegramQuickActionsService.name);
 
-  constructor(private readonly i18nService: TelegramI18nService) {}
+  constructor(
+    @InjectRepository(TelegramBotAnalytics)
+    private readonly analyticsRepository: Repository<TelegramBotAnalytics>,
+    private readonly i18nService: TelegramI18nService,
+  ) {}
 
   /**
    * Get quick action keyboard based on user state
@@ -308,21 +319,160 @@ export class TelegramQuickActionsService {
   }
 
   /**
-   * Get quick action analytics
+   * Track quick action usage for analytics
    *
-   * Track which quick actions are most used for optimization.
+   * Stores action usage in database for later analysis.
+   * Used to optimize UI and identify most-used features.
    *
-   * @param userId - User ID
-   * @param action - Action type
+   * @param userId - User ID (from VendHub users table)
+   * @param action - Action type (e.g., 'start_refill', 'stats')
+   * @param telegramUserId - Optional Telegram user ID
+   * @param metadata - Optional additional metadata
    */
-  async trackQuickActionUsage(userId: string, action: string): Promise<void> {
+  async trackQuickActionUsage(
+    userId: string,
+    action: string,
+    telegramUserId?: string,
+    metadata?: Record<string, any>,
+  ): Promise<void> {
     try {
-      // TODO: Implement analytics tracking
-      // Store in database or send to analytics service
+      const analytics = this.analyticsRepository.create({
+        user_id: userId,
+        telegram_user_id: telegramUserId || null,
+        event_type: TelegramAnalyticsEventType.QUICK_ACTION,
+        action_name: action,
+        action_category: this.getActionCategory(action),
+        success: true,
+        metadata: metadata || {},
+      });
 
-      this.logger.log(`Quick action used: ${action} by user ${userId}`);
+      await this.analyticsRepository.save(analytics);
+
+      this.logger.debug(`Quick action tracked: ${action} by user ${userId}`);
     } catch (error) {
+      // Don't throw - analytics should not break the main flow
       this.logger.error('Failed to track quick action usage', error);
+    }
+  }
+
+  /**
+   * Get action category for grouping analytics
+   */
+  private getActionCategory(action: string): string {
+    const categoryMap: Record<string, string> = {
+      // Task actions
+      start_refill: 'task',
+      start_collection: 'task',
+      complete: 'task',
+      pause: 'task',
+      cancel: 'task',
+
+      // Photo actions
+      photo_before: 'photo',
+      photo_after: 'photo',
+
+      // Information actions
+      stats: 'info',
+      route: 'info',
+      tasks: 'info',
+      task_info: 'info',
+
+      // Emergency actions
+      incident: 'emergency',
+      repair: 'emergency',
+      report_problem: 'emergency',
+
+      // Manager actions
+      team_status: 'manager',
+      active_operators: 'manager',
+      assign_tasks: 'manager',
+      approvals: 'manager',
+      alerts: 'manager',
+      incidents: 'manager',
+    };
+
+    return categoryMap[action] || 'other';
+  }
+
+  /**
+   * Get analytics summary for a date range
+   *
+   * Returns aggregated statistics about quick action usage.
+   *
+   * @param days - Number of days to look back (default: 7)
+   * @returns Analytics summary
+   */
+  async getAnalyticsSummary(days: number = 7): Promise<{
+    totalActions: number;
+    byAction: Record<string, number>;
+    byCategory: Record<string, number>;
+    topActions: Array<{ action: string; count: number }>;
+  }> {
+    const startDate = startOfDay(subDays(new Date(), days));
+    const endDate = endOfDay(new Date());
+
+    const analytics = await this.analyticsRepository.find({
+      where: {
+        event_type: TelegramAnalyticsEventType.QUICK_ACTION,
+        created_at: Between(startDate, endDate),
+      },
+      select: ['action_name', 'action_category'],
+    });
+
+    const byAction: Record<string, number> = {};
+    const byCategory: Record<string, number> = {};
+
+    for (const record of analytics) {
+      byAction[record.action_name] = (byAction[record.action_name] || 0) + 1;
+      if (record.action_category) {
+        byCategory[record.action_category] = (byCategory[record.action_category] || 0) + 1;
+      }
+    }
+
+    // Sort by count to get top actions
+    const topActions = Object.entries(byAction)
+      .map(([action, count]) => ({ action, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
+
+    return {
+      totalActions: analytics.length,
+      byAction,
+      byCategory,
+      topActions,
+    };
+  }
+
+  /**
+   * Track generic bot event for analytics
+   *
+   * @param eventType - Type of event
+   * @param actionName - Name of the action
+   * @param userId - Optional user ID
+   * @param telegramUserId - Optional Telegram user ID
+   * @param metadata - Optional metadata
+   */
+  async trackEvent(
+    eventType: TelegramAnalyticsEventType,
+    actionName: string,
+    userId?: string,
+    telegramUserId?: string,
+    metadata?: Record<string, any>,
+  ): Promise<void> {
+    try {
+      const analytics = this.analyticsRepository.create({
+        user_id: userId || null,
+        telegram_user_id: telegramUserId || null,
+        event_type: eventType,
+        action_name: actionName,
+        action_category: this.getActionCategory(actionName),
+        success: true,
+        metadata: metadata || {},
+      });
+
+      await this.analyticsRepository.save(analytics);
+    } catch (error) {
+      this.logger.error(`Failed to track event: ${eventType}/${actionName}`, error);
     }
   }
 
