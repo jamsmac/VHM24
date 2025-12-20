@@ -1,6 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import { TelegramQuickActionsService, UserState } from './telegram-quick-actions.service';
 import { TelegramI18nService } from './telegram-i18n.service';
+import { TelegramBotAnalytics } from '../entities/telegram-bot-analytics.entity';
 import { UserRole } from '@modules/users/entities/user.entity';
 
 describe('TelegramQuickActionsService', () => {
@@ -22,10 +24,17 @@ describe('TelegramQuickActionsService', () => {
       getMachineStatusName: jest.fn((status) => status),
     };
 
+    const mockAnalyticsRepository = {
+      create: jest.fn().mockReturnValue({}),
+      save: jest.fn().mockResolvedValue({}),
+      find: jest.fn().mockResolvedValue([]),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         TelegramQuickActionsService,
         { provide: TelegramI18nService, useValue: mockI18nService },
+        { provide: getRepositoryToken(TelegramBotAnalytics), useValue: mockAnalyticsRepository },
       ],
     }).compile();
 

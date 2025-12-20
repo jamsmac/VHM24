@@ -188,26 +188,26 @@ describe('TelegramI18nService', () => {
   });
 
   describe('getTaskTypeName', () => {
-    it('should return translation key for task type', () => {
+    it('should return translated task type name', () => {
       const result = service.getTaskTypeName('refill', 'ru');
-      expect(result).toBe('tasks.types.refill');
+      expect(result).toBe('Пополнение');
     });
 
-    it('should convert task type to lowercase', () => {
+    it('should convert task type to lowercase and translate', () => {
       const result = service.getTaskTypeName('COLLECTION', 'en');
-      expect(result).toBe('tasks.types.collection');
+      expect(result).toBe('Collection');
     });
   });
 
   describe('getMachineStatusName', () => {
-    it('should return translation key for machine status', () => {
+    it('should return translated machine status name', () => {
       const result = service.getMachineStatusName('active', 'ru');
-      expect(result).toBe('machines.status.active');
+      expect(result).toBe('Активен');
     });
 
-    it('should convert status to lowercase', () => {
+    it('should convert status to lowercase and translate', () => {
       const result = service.getMachineStatusName('OFFLINE', 'en');
-      expect(result).toBe('machines.status.offline');
+      expect(result).toBe('Offline');
     });
   });
 });

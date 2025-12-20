@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AuditLogController } from './audit-log.controller';
-import { AuditLogService } from '@modules/security/services/audit-log.service';
+import { AuditLogService } from './audit-log.service';
 import { QueryAuditLogDto } from './dto/query-audit-log.dto';
 
 describe('AuditLogController', () => {
