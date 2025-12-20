@@ -1,10 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { WarehouseInventory } from '@modules/inventory/entities/warehouse-inventory.entity';
 import { InventoryMovement } from '@modules/inventory/entities/inventory-movement.entity';
 import { InventoryBatch } from '@modules/warehouse/entities/inventory-batch.entity';
 import { Warehouse } from '@modules/warehouse/entities/warehouse.entity';
+import { Nomenclature } from '@modules/nomenclature/entities/nomenclature.entity';
 
 export interface WarehouseInventoryReport {
   warehouse: {
@@ -70,6 +71,8 @@ export class WarehouseInventoryReportService {
     private readonly movementRepository: Repository<InventoryMovement>,
     @InjectRepository(InventoryBatch)
     private readonly batchRepository: Repository<InventoryBatch>,
+    @InjectRepository(Nomenclature)
+    private readonly nomenclatureRepository: Repository<Nomenclature>,
   ) {}
 
   /**
@@ -229,6 +232,10 @@ export class WarehouseInventoryReportService {
       },
     });
 
+    // Load product names in bulk
+    const productIds = [...new Set(batches.map((b) => b.product_id))];
+    const productNames = await this.loadProductNames(productIds);
+
     const now = new Date();
     let expiringSoon = 0;
     let expired = 0;
@@ -255,7 +262,7 @@ export class WarehouseInventoryReportService {
 
         return {
           batch_number: batch.batch_number,
-          product_name: 'Product ' + batch.product_id, // TODO: Load product name
+          product_name: productNames.get(batch.product_id) || 'Unknown Product',
           quantity: batch.current_quantity || 0,
           expiry_date: expiryDate,
           days_until_expiry: daysUntilExpiry,
@@ -272,5 +279,33 @@ export class WarehouseInventoryReportService {
       expired,
       batches: batchesData,
     };
+  }
+
+  /**
+   * Load product names in bulk for a list of product IDs
+   */
+  private async loadProductNames(
+    productIds: string[],
+  ): Promise<Map<string, string>> {
+    const nameMap = new Map<string, string>();
+
+    if (productIds.length === 0) {
+      return nameMap;
+    }
+
+    const products = await this.nomenclatureRepository.find({
+      where: { id: In(productIds) },
+      select: ['id', 'name', 'sku'],
+    });
+
+    for (const product of products) {
+      // Include SKU for better identification
+      const displayName = product.sku
+        ? `${product.name} (${product.sku})`
+        : product.name;
+      nameMap.set(product.id, displayName);
+    }
+
+    return nameMap;
   }
 }
