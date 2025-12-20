@@ -62,14 +62,6 @@ export class ClientPublicController {
   async submitCooperationRequest(
     @Body() dto: CooperationRequestDto,
   ): Promise<{ success: boolean; message: string }> {
-    // TODO: Implement cooperation request handling (email/notification)
-    // For now, just log and return success
-    // eslint-disable-next-line no-console
-    console.log('Cooperation request received:', dto);
-
-    return {
-      success: true,
-      message: 'Спасибо за ваш интерес! Мы свяжемся с вами в ближайшее время.',
-    };
+    return this.clientPublicService.handleCooperationRequest(dto);
   }
 }

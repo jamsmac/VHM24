@@ -11,7 +11,16 @@ import {
   MenuItemResponseDto,
   QrResolveDto,
   QrResolveResponseDto,
+  CooperationRequestDto,
 } from '../dto/client-public.dto';
+import { EmailService } from '@modules/email/email.service';
+import { NotificationsService } from '@modules/notifications/notifications.service';
+import {
+  NotificationType,
+  NotificationChannel,
+} from '@modules/notifications/entities/notification.entity';
+import { UsersService } from '@modules/users/users.service';
+import { UserRole } from '@modules/users/entities/user.entity';
 
 /**
  * Public API service for client-facing endpoints.
@@ -28,6 +37,9 @@ export class ClientPublicService {
     private readonly machineRepository: Repository<Machine>,
     @InjectRepository(Nomenclature)
     private readonly nomenclatureRepository: Repository<Nomenclature>,
+    private readonly emailService: EmailService,
+    private readonly notificationsService: NotificationsService,
+    private readonly usersService: UsersService,
   ) {}
 
   /**
@@ -253,6 +265,195 @@ export class ClientPublicService {
       .getRawMany();
 
     return result.map((r) => r.city).filter(Boolean);
+  }
+
+  /**
+   * Handle cooperation request submission
+   * Sends email and notifications to admins/managers
+   */
+  async handleCooperationRequest(
+    dto: CooperationRequestDto,
+  ): Promise<{ success: boolean; message: string }> {
+    this.logger.log(`Cooperation request received from ${dto.name} (${dto.phone})`);
+
+    try {
+      // Get admins and managers to notify
+      const recipients = await this.usersService.findByRoles([
+        UserRole.SUPER_ADMIN,
+        UserRole.ADMIN,
+        UserRole.MANAGER,
+      ]);
+
+      if (recipients.length === 0) {
+        this.logger.warn('No recipients found for cooperation request notification');
+      }
+
+      const title = '🤝 Новая заявка на сотрудничество';
+      const message = this.formatCooperationMessage(dto);
+
+      // Send notifications to all recipients
+      const notificationPromises: Promise<any>[] = [];
+
+      for (const recipient of recipients) {
+        // Send in-app notification
+        notificationPromises.push(
+          this.notificationsService.create({
+            type: NotificationType.OTHER,
+            channel: NotificationChannel.IN_APP,
+            recipient_id: recipient.id,
+            title,
+            message,
+            data: {
+              type: 'cooperation_request',
+              name: dto.name,
+              phone: dto.phone,
+              email: dto.email,
+              company: dto.company,
+            },
+          }),
+        );
+
+        // Send Telegram notification if user has telegram_user_id
+        if (recipient.telegram_user_id) {
+          notificationPromises.push(
+            this.notificationsService.create({
+              type: NotificationType.OTHER,
+              channel: NotificationChannel.TELEGRAM,
+              recipient_id: recipient.id,
+              title,
+              message,
+              data: {
+                type: 'cooperation_request',
+                name: dto.name,
+                phone: dto.phone,
+              },
+            }),
+          );
+        }
+
+        // Send email if user has email
+        if (recipient.email) {
+          notificationPromises.push(
+            this.sendCooperationEmail(recipient.email, dto),
+          );
+        }
+      }
+
+      await Promise.allSettled(notificationPromises);
+
+      this.logger.log(
+        `Cooperation request notifications sent to ${recipients.length} recipients`,
+      );
+
+      return {
+        success: true,
+        message: 'Спасибо за ваш интерес! Мы свяжемся с вами в ближайшее время.',
+      };
+    } catch (error) {
+      this.logger.error('Failed to process cooperation request:', error.message);
+
+      // Still return success to user - the request was received
+      return {
+        success: true,
+        message: 'Спасибо за ваш интерес! Мы свяжемся с вами в ближайшее время.',
+      };
+    }
+  }
+
+  /**
+   * Format cooperation request message
+   */
+  private formatCooperationMessage(dto: CooperationRequestDto): string {
+    let message = `Получена новая заявка на сотрудничество:\n\n`;
+    message += `👤 Имя: ${dto.name}\n`;
+    message += `📞 Телефон: ${dto.phone}\n`;
+
+    if (dto.email) {
+      message += `📧 Email: ${dto.email}\n`;
+    }
+
+    if (dto.company) {
+      message += `🏢 Компания: ${dto.company}\n`;
+    }
+
+    message += `\n💬 Сообщение:\n${dto.message}`;
+
+    return message;
+  }
+
+  /**
+   * Send cooperation request email to admin
+   */
+  private async sendCooperationEmail(
+    to: string,
+    dto: CooperationRequestDto,
+  ): Promise<boolean> {
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background-color: #2196F3; color: white; padding: 20px; text-align: center; }
+            .content { padding: 20px; background-color: #f9f9f9; }
+            .footer { padding: 10px; text-align: center; font-size: 12px; color: #666; }
+            .info-row { margin: 10px 0; padding: 10px; background: white; border-left: 3px solid #2196F3; }
+            .label { font-weight: bold; color: #666; }
+            .message-box { background: white; padding: 15px; border: 1px solid #ddd; margin-top: 15px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>🤝 Новая заявка на сотрудничество</h1>
+            </div>
+            <div class="content">
+              <div class="info-row">
+                <span class="label">👤 Имя:</span> ${dto.name}
+              </div>
+              <div class="info-row">
+                <span class="label">📞 Телефон:</span> ${dto.phone}
+              </div>
+              ${dto.email ? `<div class="info-row"><span class="label">📧 Email:</span> ${dto.email}</div>` : ''}
+              ${dto.company ? `<div class="info-row"><span class="label">🏢 Компания:</span> ${dto.company}</div>` : ''}
+              <div class="message-box">
+                <span class="label">💬 Сообщение:</span>
+                <p>${dto.message.replace(/\n/g, '<br>')}</p>
+              </div>
+              <p style="margin-top: 20px;">
+                <em>Рекомендуется связаться с заявителем в течение 24 часов.</em>
+              </p>
+            </div>
+            <div class="footer">
+              <p>VendHub Manager - Система управления торговыми автоматами</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    const text = `
+Новая заявка на сотрудничество
+
+Имя: ${dto.name}
+Телефон: ${dto.phone}
+${dto.email ? `Email: ${dto.email}` : ''}
+${dto.company ? `Компания: ${dto.company}` : ''}
+
+Сообщение:
+${dto.message}
+
+---
+VendHub Manager
+    `;
+
+    return this.emailService.sendEmail({
+      to,
+      subject: '🤝 Новая заявка на сотрудничество - VendHub',
+      html,
+      text,
+    });
   }
 
   /**

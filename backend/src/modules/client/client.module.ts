@@ -38,6 +38,11 @@ import { Location } from '@modules/locations/entities/location.entity';
 import { Machine } from '@modules/machines/entities/machine.entity';
 import { Nomenclature } from '@modules/nomenclature/entities/nomenclature.entity';
 
+// External modules for cooperation request handling
+import { EmailModule } from '@modules/email/email.module';
+import { NotificationsModule } from '@modules/notifications/notifications.module';
+import { UsersModule } from '@modules/users/users.module';
+
 /**
  * Client module - handles client-facing functionality:
  * - Public API (locations, menu, QR resolution)
@@ -72,6 +77,10 @@ import { Nomenclature } from '@modules/nomenclature/entities/nomenclature.entity
       }),
       inject: [ConfigService],
     }),
+    // External modules for cooperation request handling
+    EmailModule,
+    NotificationsModule,
+    UsersModule,
   ],
   controllers: [
     ClientPublicController,
