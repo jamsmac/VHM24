@@ -14,6 +14,7 @@ import { NotificationPreference } from './entities/notification-preference.entit
 import { CreateNotificationDto, BulkNotificationDto } from './dto/create-notification.dto';
 import { EmailService } from '../email/email.service';
 import { TelegramBotService } from '../telegram-bot/telegram-bot.service';
+import { WebPushService } from '../web-push/web-push.service';
 import { User } from '@modules/users/entities/user.entity';
 
 describe('NotificationsService', () => {
@@ -22,6 +23,7 @@ describe('NotificationsService', () => {
   let mockPreferenceRepository: jest.Mocked<Repository<NotificationPreference>>;
   let mockEmailService: jest.Mocked<EmailService>;
   let mockTelegramBotService: jest.Mocked<TelegramBotService>;
+  let mockWebPushService: jest.Mocked<WebPushService>;
 
   // Test data
   const mockUserId = 'user-id-1';
@@ -134,6 +136,17 @@ describe('NotificationsService', () => {
       notifyTaskOverdue: jest.fn(),
     } as any;
 
+    mockWebPushService = {
+      sendToUser: jest.fn(),
+      sendToMultipleUsers: jest.fn(),
+      getPublicKey: jest.fn().mockReturnValue('test-public-key'),
+      subscribe: jest.fn(),
+      unsubscribe: jest.fn(),
+      getUserSubscriptions: jest.fn(),
+      sendTestNotification: jest.fn(),
+      cleanupInactiveSubscriptions: jest.fn(),
+    } as any;
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         NotificationsService,
@@ -152,6 +165,10 @@ describe('NotificationsService', () => {
         {
           provide: TelegramBotService,
           useValue: mockTelegramBotService,
+        },
+        {
+          provide: WebPushService,
+          useValue: mockWebPushService,
         },
       ],
     }).compile();
@@ -718,7 +735,7 @@ describe('NotificationsService', () => {
     });
 
     describe('WEB_PUSH channel', () => {
-      it('should handle WEB_PUSH notification (mock implementation)', async () => {
+      it('should send WEB_PUSH notification successfully', async () => {
         // Arrange
         const webPushNotification = {
           ...mockNotification,
@@ -726,13 +743,95 @@ describe('NotificationsService', () => {
         };
         mockNotificationRepository.findOne.mockResolvedValue(webPushNotification as Notification);
         mockNotificationRepository.save.mockImplementation(async (n) => n as Notification);
+        mockWebPushService.sendToUser.mockResolvedValue(2); // Sent to 2 devices
 
         // Act
         const result = await service.sendNotification(mockNotificationId);
 
         // Assert
         expect(result.status).toBe(NotificationStatus.SENT);
-        expect(result.delivery_response).toBe('Web push sent (mock)');
+        expect(result.delivery_response).toBe('Web push sent to 2 device(s)');
+        expect(mockWebPushService.sendToUser).toHaveBeenCalledWith(mockUserId, {
+          user_id: mockUserId,
+          title: webPushNotification.title,
+          body: webPushNotification.message,
+          url: webPushNotification.action_url,
+          data: webPushNotification.data,
+        });
+      });
+
+      it('should fail when no active subscriptions for user', async () => {
+        // Arrange
+        const webPushNotification = {
+          ...mockNotification,
+          channel: NotificationChannel.WEB_PUSH,
+        };
+        mockNotificationRepository.findOne.mockResolvedValue(webPushNotification as Notification);
+        mockNotificationRepository.save.mockImplementation(async (n) => n as Notification);
+        mockWebPushService.sendToUser.mockResolvedValue(0); // No subscriptions
+
+        // Act
+        const result = await service.sendNotification(mockNotificationId);
+
+        // Assert
+        expect(result.status).toBe(NotificationStatus.FAILED);
+        expect(result.error_message).toBe('No active push subscriptions for user');
+      });
+
+      it('should handle WebPushService error', async () => {
+        // Arrange - Create a fresh notification to avoid mutation issues
+        const webPushNotification: Partial<Notification> = {
+          id: mockNotificationId,
+          type: NotificationType.OTHER,
+          channel: NotificationChannel.WEB_PUSH,
+          status: NotificationStatus.PENDING,
+          priority: NotificationPriority.NORMAL,
+          recipient_id: mockUserId,
+          recipient: mockUser as User,
+          title: 'Test Notification',
+          message: 'Test message',
+          data: {},
+          action_url: null,
+          sent_at: null,
+          delivered_at: null,
+          read_at: null,
+          delivery_response: null,
+          error_message: null,
+          retry_count: 0, // Start at 0
+          next_retry_at: null,
+          created_at: new Date(),
+        };
+        mockNotificationRepository.findOne.mockResolvedValue(webPushNotification as Notification);
+        mockNotificationRepository.save.mockImplementation(async (n) => n as Notification);
+        mockWebPushService.sendToUser.mockRejectedValue(new Error('Web push service error'));
+
+        // Act
+        const result = await service.sendNotification(mockNotificationId);
+
+        // Assert
+        expect(result.status).toBe(NotificationStatus.FAILED);
+        expect(result.error_message).toBe('Web push service error');
+        expect(result.retry_count).toBe(1);
+      });
+
+      it('should send to single device', async () => {
+        // Arrange
+        const webPushNotification = {
+          ...mockNotification,
+          channel: NotificationChannel.WEB_PUSH,
+          action_url: '/tasks/task-1',
+          data: { task_id: 'task-1' },
+        };
+        mockNotificationRepository.findOne.mockResolvedValue(webPushNotification as Notification);
+        mockNotificationRepository.save.mockImplementation(async (n) => n as Notification);
+        mockWebPushService.sendToUser.mockResolvedValue(1);
+
+        // Act
+        const result = await service.sendNotification(mockNotificationId);
+
+        // Assert
+        expect(result.status).toBe(NotificationStatus.SENT);
+        expect(result.delivery_response).toBe('Web push sent to 1 device(s)');
       });
     });
 

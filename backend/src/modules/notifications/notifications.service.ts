@@ -15,6 +15,7 @@ import {
 } from './dto/notification-preference.dto';
 import { EmailService } from '../email/email.service';
 import { TelegramBotService } from '../telegram-bot/telegram-bot.service';
+import { WebPushService } from '../web-push/web-push.service';
 
 @Injectable()
 export class NotificationsService {
@@ -28,6 +29,7 @@ export class NotificationsService {
     private readonly emailService: EmailService,
     @Inject(forwardRef(() => TelegramBotService))
     private readonly telegramBotService: TelegramBotService,
+    private readonly webPushService: WebPushService,
   ) {}
 
   // ============================================================================
@@ -384,20 +386,26 @@ export class NotificationsService {
 
   /**
    * Отправка через Web Push
+   * Sends browser push notifications to user's subscribed devices
    */
   private async sendWebPush(notification: Notification): Promise<string> {
-    // TODO: Интеграция с Web Push API
-    // await this.webPushService.send(notification.recipient_id, {
-    //   title: notification.title,
-    //   body: notification.message,
-    // });
+    const sentCount = await this.webPushService.sendToUser(notification.recipient_id, {
+      user_id: notification.recipient_id,
+      title: notification.title,
+      body: notification.message,
+      url: notification.action_url ?? undefined,
+      data: notification.data ?? undefined,
+    });
 
-    // Заглушка для разработки
+    if (sentCount === 0) {
+      throw new Error('No active push subscriptions for user');
+    }
+
     this.logger.debug(
-      `[WEB_PUSH] Sending to user ${notification.recipient_id}: ${notification.title} - ${notification.message}`,
+      `[WEB_PUSH] Sent to user ${notification.recipient_id}: ${sentCount} device(s)`,
     );
 
-    return 'Web push sent (mock)';
+    return `Web push sent to ${sentCount} device(s)`;
   }
 
   // ============================================================================

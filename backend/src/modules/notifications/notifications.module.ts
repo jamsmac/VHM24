@@ -6,12 +6,14 @@ import { Notification } from './entities/notification.entity';
 import { NotificationPreference } from './entities/notification-preference.entity';
 import { EmailModule } from '../email/email.module';
 import { TelegramBotModule } from '../telegram-bot/telegram-bot.module';
+import { WebPushModule } from '../web-push/web-push.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Notification, NotificationPreference]),
     EmailModule,
     forwardRef(() => TelegramBotModule),
+    WebPushModule,
   ],
   controllers: [NotificationsController],
   providers: [NotificationsService],
