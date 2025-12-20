@@ -13,7 +13,7 @@ import {
 import { NotificationPreference } from './entities/notification-preference.entity';
 import { CreateNotificationDto, BulkNotificationDto } from './dto/create-notification.dto';
 import { EmailService } from '../email/email.service';
-import { TelegramBotService } from '../telegram-bot/telegram-bot.service';
+import { TelegramNotificationsService } from '../telegram/services/telegram-notifications.service';
 import { WebPushService } from '../web-push/web-push.service';
 import { SmsService } from '../sms/sms.service';
 import { User } from '@modules/users/entities/user.entity';
@@ -23,7 +23,7 @@ describe('NotificationsService', () => {
   let mockNotificationRepository: jest.Mocked<Repository<Notification>>;
   let mockPreferenceRepository: jest.Mocked<Repository<NotificationPreference>>;
   let mockEmailService: jest.Mocked<EmailService>;
-  let mockTelegramBotService: jest.Mocked<TelegramBotService>;
+  let mockTelegramNotificationsService: jest.Mocked<TelegramNotificationsService>;
   let mockWebPushService: jest.Mocked<WebPushService>;
   let mockSmsService: jest.Mocked<SmsService>;
 
@@ -132,9 +132,9 @@ describe('NotificationsService', () => {
       sendLowStockAlert: jest.fn(),
     } as any;
 
-    mockTelegramBotService = {
-      sendNotification: jest.fn(),
-      notifyTaskAssigned: jest.fn(),
+    mockTelegramNotificationsService = {
+      sendDirectNotification: jest.fn(),
+      notifyTaskAssignedWithTask: jest.fn(),
       notifyTaskOverdue: jest.fn(),
     } as any;
 
@@ -176,8 +176,8 @@ describe('NotificationsService', () => {
           useValue: mockEmailService,
         },
         {
-          provide: TelegramBotService,
-          useValue: mockTelegramBotService,
+          provide: TelegramNotificationsService,
+          useValue: mockTelegramNotificationsService,
         },
         {
           provide: WebPushService,
@@ -217,7 +217,7 @@ describe('NotificationsService', () => {
       mockNotificationRepository.create.mockReturnValue(mockNotification as Notification);
       mockNotificationRepository.save.mockResolvedValue(mockNotification as Notification);
       mockNotificationRepository.findOne.mockResolvedValue(mockNotification as Notification);
-      mockTelegramBotService.notifyTaskAssigned.mockResolvedValue(true);
+      mockTelegramNotificationsService.notifyTaskAssignedWithTask.mockResolvedValue(true);
 
       // Act
       const result = await service.create(createDto);
@@ -255,7 +255,7 @@ describe('NotificationsService', () => {
       mockNotificationRepository.create.mockReturnValue(mockNotification as Notification);
       mockNotificationRepository.save.mockResolvedValue(mockNotification as Notification);
       mockNotificationRepository.findOne.mockResolvedValue(mockNotification as Notification);
-      mockTelegramBotService.notifyTaskAssigned.mockResolvedValue(true);
+      mockTelegramNotificationsService.notifyTaskAssignedWithTask.mockResolvedValue(true);
 
       // Act
       const result = await service.create(createDto);
@@ -302,7 +302,7 @@ describe('NotificationsService', () => {
       mockNotificationRepository.create.mockReturnValue(mockNotification as Notification);
       mockNotificationRepository.save.mockResolvedValue(mockNotification as Notification);
       mockNotificationRepository.findOne.mockResolvedValue(mockNotification as Notification);
-      mockTelegramBotService.sendNotification.mockResolvedValue(true);
+      mockTelegramNotificationsService.sendDirectNotification.mockResolvedValue(true);
 
       // Act
       const result = await service.createBulk(bulkDto);
@@ -332,7 +332,7 @@ describe('NotificationsService', () => {
         .mockResolvedValueOnce(successNotification as Notification)
         .mockResolvedValueOnce(failedNotification as Notification);
       mockNotificationRepository.findOne.mockResolvedValue(mockNotification as Notification);
-      mockTelegramBotService.sendNotification.mockResolvedValue(true);
+      mockTelegramNotificationsService.sendDirectNotification.mockResolvedValue(true);
 
       // Act
       const result = await service.createBulk(bulkDto);
@@ -520,7 +520,7 @@ describe('NotificationsService', () => {
           data: { task: { id: 'task-1' } },
         };
         mockNotificationRepository.findOne.mockResolvedValue(telegramNotification as Notification);
-        mockTelegramBotService.notifyTaskAssigned.mockResolvedValue(true);
+        mockTelegramNotificationsService.notifyTaskAssignedWithTask.mockResolvedValue(true);
         mockNotificationRepository.save.mockImplementation(async (n) => n as Notification);
 
         // Act
@@ -529,7 +529,7 @@ describe('NotificationsService', () => {
         // Assert
         expect(result.status).toBe(NotificationStatus.SENT);
         expect(result.sent_at).toBeDefined();
-        expect(mockTelegramBotService.notifyTaskAssigned).toHaveBeenCalled();
+        expect(mockTelegramNotificationsService.notifyTaskAssignedWithTask).toHaveBeenCalled();
       });
 
       it('should send Telegram TASK_OVERDUE notification', async () => {
@@ -541,14 +541,14 @@ describe('NotificationsService', () => {
           data: { task: { id: 'task-1' }, overdue_hours: 5 },
         };
         mockNotificationRepository.findOne.mockResolvedValue(telegramNotification as Notification);
-        mockTelegramBotService.notifyTaskOverdue.mockResolvedValue(true);
+        mockTelegramNotificationsService.notifyTaskOverdue.mockResolvedValue(true);
         mockNotificationRepository.save.mockImplementation(async (n) => n as Notification);
 
         // Act
         const _result = await service.sendNotification(mockNotificationId);
 
         // Assert
-        expect(mockTelegramBotService.notifyTaskOverdue).toHaveBeenCalled();
+        expect(mockTelegramNotificationsService.notifyTaskOverdue).toHaveBeenCalled();
       });
 
       it('should fallback to generic send for unknown Telegram notification types', async () => {
@@ -559,14 +559,14 @@ describe('NotificationsService', () => {
           type: NotificationType.OTHER,
         };
         mockNotificationRepository.findOne.mockResolvedValue(telegramNotification as Notification);
-        mockTelegramBotService.sendNotification.mockResolvedValue(true);
+        mockTelegramNotificationsService.sendDirectNotification.mockResolvedValue(true);
         mockNotificationRepository.save.mockImplementation(async (n) => n as Notification);
 
         // Act
         const _result = await service.sendNotification(mockNotificationId);
 
         // Assert
-        expect(mockTelegramBotService.sendNotification).toHaveBeenCalled();
+        expect(mockTelegramNotificationsService.sendDirectNotification).toHaveBeenCalled();
       });
 
       it('should handle missing recipient Telegram ID', async () => {
@@ -981,7 +981,7 @@ describe('NotificationsService', () => {
 
         // Assert
         expect(result.status).toBe(NotificationStatus.SENT);
-        expect(mockTelegramBotService.sendNotification).not.toHaveBeenCalled();
+        expect(mockTelegramNotificationsService.sendDirectNotification).not.toHaveBeenCalled();
         expect(mockEmailService.sendEmail).not.toHaveBeenCalled();
       });
 
@@ -1010,7 +1010,7 @@ describe('NotificationsService', () => {
           created_at: new Date(),
         };
         mockNotificationRepository.findOne.mockResolvedValue(telegramNotification as Notification);
-        mockTelegramBotService.sendNotification.mockResolvedValue(false);
+        mockTelegramNotificationsService.sendDirectNotification.mockResolvedValue(false);
         mockNotificationRepository.save.mockImplementation(async (n) => n as Notification);
 
         // Act
@@ -1031,7 +1031,7 @@ describe('NotificationsService', () => {
           retry_count: 1,
         };
         mockNotificationRepository.findOne.mockResolvedValue(failingNotification as Notification);
-        mockTelegramBotService.sendNotification.mockResolvedValue(false);
+        mockTelegramNotificationsService.sendDirectNotification.mockResolvedValue(false);
         mockNotificationRepository.save.mockImplementation(async (n) => n as Notification);
 
         // Act
@@ -1052,7 +1052,7 @@ describe('NotificationsService', () => {
           retry_count: 2, // Will become 3 after failure
         };
         mockNotificationRepository.findOne.mockResolvedValue(failingNotification as Notification);
-        mockTelegramBotService.sendNotification.mockResolvedValue(false);
+        mockTelegramNotificationsService.sendDirectNotification.mockResolvedValue(false);
         mockNotificationRepository.save.mockImplementation(async (n) => n as Notification);
 
         // Act
@@ -1077,7 +1077,7 @@ describe('NotificationsService', () => {
         channel: NotificationChannel.TELEGRAM,
         type: NotificationType.OTHER,
       } as Notification);
-      mockTelegramBotService.sendNotification.mockResolvedValue(true);
+      mockTelegramNotificationsService.sendDirectNotification.mockResolvedValue(true);
       mockNotificationRepository.save.mockImplementation(async (n) => n as Notification);
 
       // Act
@@ -1100,7 +1100,7 @@ describe('NotificationsService', () => {
       await service.retryFailedNotifications();
 
       // Assert
-      expect(mockTelegramBotService.sendNotification).not.toHaveBeenCalled();
+      expect(mockTelegramNotificationsService.sendDirectNotification).not.toHaveBeenCalled();
     });
 
     it('should process multiple failed notifications', async () => {
@@ -1118,7 +1118,7 @@ describe('NotificationsService', () => {
         channel: NotificationChannel.TELEGRAM,
         type: NotificationType.OTHER,
       } as Notification);
-      mockTelegramBotService.sendNotification.mockResolvedValue(true);
+      mockTelegramNotificationsService.sendDirectNotification.mockResolvedValue(true);
       mockNotificationRepository.save.mockImplementation(async (n) => n as Notification);
 
       // Spy on sendNotification
@@ -1456,7 +1456,7 @@ describe('NotificationsService', () => {
       mockNotificationRepository.findOne.mockResolvedValue(
         notificationWithNullData as Notification,
       );
-      mockTelegramBotService.notifyTaskAssigned.mockResolvedValue(false);
+      mockTelegramNotificationsService.notifyTaskAssignedWithTask.mockResolvedValue(false);
       mockNotificationRepository.save.mockImplementation(async (n) => n as Notification);
 
       // Act - should not throw, just fail gracefully

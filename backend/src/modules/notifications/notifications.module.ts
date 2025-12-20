@@ -5,7 +5,7 @@ import { NotificationsController } from './notifications.controller';
 import { Notification } from './entities/notification.entity';
 import { NotificationPreference } from './entities/notification-preference.entity';
 import { EmailModule } from '../email/email.module';
-import { TelegramBotModule } from '../telegram-bot/telegram-bot.module';
+import { TelegramModule } from '../telegram/telegram.module';
 import { WebPushModule } from '../web-push/web-push.module';
 import { SmsModule } from '../sms/sms.module';
 
@@ -13,7 +13,7 @@ import { SmsModule } from '../sms/sms.module';
   imports: [
     TypeOrmModule.forFeature([Notification, NotificationPreference]),
     EmailModule,
-    forwardRef(() => TelegramBotModule),
+    forwardRef(() => TelegramModule),
     WebPushModule,
     SmsModule,
   ],

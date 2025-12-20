@@ -11,6 +11,7 @@ import {
   TelegramMessageType,
   TelegramMessageStatus,
 } from '../entities/telegram-message-log.entity';
+import { Task } from '../../tasks/entities/task.entity';
 
 /**
  * Type for inline keyboard with reply_markup
@@ -316,5 +317,105 @@ export class TelegramNotificationsService {
         },
       ],
     });
+  }
+
+  // ============================================================================
+  // DIRECT TELEGRAM ID METHODS (for legacy compatibility with NotificationsService)
+  // ============================================================================
+
+  /**
+   * Send notification directly to Telegram user by their Telegram ID
+   * Used by NotificationsService for general notifications
+   *
+   * @param telegramUserId - Telegram user ID (numeric)
+   * @param message - Message text (supports Markdown)
+   * @returns true if sent successfully
+   */
+  async sendDirectNotification(telegramUserId: number, message: string): Promise<boolean> {
+    if (!this.telegramBotService.isReady()) {
+      this.logger.warn('Telegram bot not ready, cannot send notification');
+      return false;
+    }
+
+    try {
+      await this.resilientApi.sendText(
+        telegramUserId.toString(),
+        message,
+        { parse_mode: 'Markdown' },
+        {
+          priority: 1,
+          attempts: 3,
+          metadata: {
+            messageType: TelegramMessageType.NOTIFICATION,
+            relatedEntityType: 'direct_notification',
+          },
+        },
+      );
+      return true;
+    } catch (error) {
+      this.logger.error(`Failed to send direct notification to ${telegramUserId}`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Notify user about task assignment with full task object
+   * Used by NotificationsService for task assignment notifications
+   *
+   * @param task - Task entity with machine relation
+   * @param telegramUserId - Telegram user ID (numeric)
+   * @returns true if sent successfully
+   */
+  async notifyTaskAssignedWithTask(task: Task, telegramUserId: number): Promise<boolean> {
+    const priority = this.getPriorityEmoji(task.priority);
+    const dueDate = task.due_date
+      ? new Date(task.due_date).toLocaleString('ru-RU')
+      : 'Не указан';
+
+    const message =
+      `🔔 **Новая задача назначена**\n\n` +
+      `${priority} Тип: ${task.type_code}\n` +
+      `📍 Аппарат: ${task.machine?.machine_number || 'N/A'}\n` +
+      `⏰ Срок: ${dueDate}\n\n` +
+      `Используйте /task ${task.id} для просмотра деталей`;
+
+    return this.sendDirectNotification(telegramUserId, message);
+  }
+
+  /**
+   * Notify user about overdue task
+   * Used by NotificationsService for task overdue notifications
+   *
+   * @param task - Task entity with machine relation
+   * @param telegramUserId - Telegram user ID (numeric)
+   * @param hoursOverdue - Hours the task is overdue
+   * @returns true if sent successfully
+   */
+  async notifyTaskOverdue(
+    task: Task,
+    telegramUserId: number,
+    hoursOverdue: number,
+  ): Promise<boolean> {
+    const message =
+      `⚠️ **Задача просрочена**\n\n` +
+      `Задача ${task.type_code} для аппарата ${task.machine?.machine_number || 'N/A'}\n` +
+      `Просрочено на: ${hoursOverdue} часов\n\n` +
+      `Пожалуйста, завершите задачу как можно скорее.\n` +
+      `/task ${task.id}`;
+
+    return this.sendDirectNotification(telegramUserId, message);
+  }
+
+  /**
+   * Get priority emoji for task priority
+   */
+  private getPriorityEmoji(priority: string): string {
+    const map: Record<string, string> = {
+      low: '🟢',
+      normal: '🟡',
+      high: '🟠',
+      urgent: '🔴',
+    };
+    return map[priority] || '⚪';
   }
 }

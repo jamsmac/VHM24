@@ -14,7 +14,7 @@ import {
   UpdateNotificationPreferenceDto,
 } from './dto/notification-preference.dto';
 import { EmailService } from '../email/email.service';
-import { TelegramBotService } from '../telegram-bot/telegram-bot.service';
+import { TelegramNotificationsService } from '../telegram/services/telegram-notifications.service';
 import { WebPushService } from '../web-push/web-push.service';
 import { SmsService } from '../sms/sms.service';
 
@@ -28,8 +28,8 @@ export class NotificationsService {
     @InjectRepository(NotificationPreference)
     private readonly preferenceRepository: Repository<NotificationPreference>,
     private readonly emailService: EmailService,
-    @Inject(forwardRef(() => TelegramBotService))
-    private readonly telegramBotService: TelegramBotService,
+    @Inject(forwardRef(() => TelegramNotificationsService))
+    private readonly telegramNotificationsService: TelegramNotificationsService,
     private readonly webPushService: WebPushService,
     private readonly smsService: SmsService,
   ) {}
@@ -270,7 +270,7 @@ export class NotificationsService {
     switch (notification.type) {
       case NotificationType.TASK_ASSIGNED:
         if (notification.data?.task) {
-          success = await this.telegramBotService.notifyTaskAssigned(
+          success = await this.telegramNotificationsService.notifyTaskAssignedWithTask(
             notification.data.task,
             telegramUserId,
           );
@@ -279,7 +279,7 @@ export class NotificationsService {
 
       case NotificationType.TASK_OVERDUE:
         if (notification.data?.task && notification.data?.overdue_hours) {
-          success = await this.telegramBotService.notifyTaskOverdue(
+          success = await this.telegramNotificationsService.notifyTaskOverdue(
             notification.data.task,
             telegramUserId,
             notification.data.overdue_hours,
@@ -290,7 +290,10 @@ export class NotificationsService {
       default: {
         // Для остальных типов отправляем простое сообщение
         const message = `**${notification.title}**\n\n${notification.message}`;
-        success = await this.telegramBotService.sendNotification(telegramUserId, message);
+        success = await this.telegramNotificationsService.sendDirectNotification(
+          telegramUserId,
+          message,
+        );
       }
     }
 
