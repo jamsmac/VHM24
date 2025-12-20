@@ -4,6 +4,9 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 // Entities
 import { ReconciliationRun } from './entities/reconciliation-run.entity';
 import { ReconciliationMismatch } from './entities/reconciliation-mismatch.entity';
+import { HwImportedSale } from './entities/hw-imported-sale.entity';
+import { Transaction } from '../transactions/entities/transaction.entity';
+import { Machine } from '../machines/entities/machine.entity';
 
 // Services
 import { ReconciliationService } from './reconciliation.service';
@@ -26,7 +29,15 @@ import { ReconciliationController } from './reconciliation.controller';
  * - Score качества (0-6)
  */
 @Module({
-  imports: [TypeOrmModule.forFeature([ReconciliationRun, ReconciliationMismatch])],
+  imports: [
+    TypeOrmModule.forFeature([
+      ReconciliationRun,
+      ReconciliationMismatch,
+      HwImportedSale,
+      Transaction,
+      Machine,
+    ]),
+  ],
   controllers: [ReconciliationController],
   providers: [ReconciliationService],
   exports: [ReconciliationService],

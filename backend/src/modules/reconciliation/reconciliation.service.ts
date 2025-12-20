@@ -12,7 +12,10 @@ import {
   MismatchType,
   SourceData,
 } from './entities/reconciliation-mismatch.entity';
+import { HwImportedSale } from './entities/hw-imported-sale.entity';
 import { CreateReconciliationRunDto, ResolveMismatchDto } from './dto';
+import { Transaction, TransactionType, PaymentMethod } from '../transactions/entities/transaction.entity';
+import { Machine } from '../machines/entities/machine.entity';
 
 /**
  * Интерфейс записи для сопоставления.
@@ -59,6 +62,12 @@ export class ReconciliationService {
     private readonly runRepository: Repository<ReconciliationRun>,
     @InjectRepository(ReconciliationMismatch)
     private readonly mismatchRepository: Repository<ReconciliationMismatch>,
+    @InjectRepository(Transaction)
+    private readonly transactionRepository: Repository<Transaction>,
+    @InjectRepository(HwImportedSale)
+    private readonly hwImportedSaleRepository: Repository<HwImportedSale>,
+    @InjectRepository(Machine)
+    private readonly machineRepository: Repository<Machine>,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -162,36 +171,201 @@ export class ReconciliationService {
 
   /**
    * Загрузка данных из конкретного источника.
-   * Требуется реализация для каждого источника.
    */
   private async loadFromSource(
     source: ReconciliationSource,
-    _dateFrom: Date,
-    _dateTo: Date,
-    _machineIds: string[] | null,
+    dateFrom: Date,
+    dateTo: Date,
+    machineIds: string[] | null,
   ): Promise<MatchRecord[]> {
-    // TODO: Интеграция с реальными источниками данных
-    // - HW: Импорт из Excel (hw_reports таблица)
-    // - SALES_REPORT: Таблица transactions
-    // - FISCAL: Фискальные чеки
-    // - PAYME/CLICK/UZUM: Данные платёжных систем
-
     switch (source) {
       case ReconciliationSource.SALES_REPORT:
-        // Пример: загрузка из transactions
-        // return await this.loadFromTransactions(dateFrom, dateTo, machineIds);
-        break;
+        return await this.loadFromTransactions(dateFrom, dateTo, machineIds);
+
       case ReconciliationSource.HW:
-        // Загрузка из hw_reports
-        break;
+        return await this.loadFromHwReports(dateFrom, dateTo, machineIds);
+
       case ReconciliationSource.FISCAL:
-        // Загрузка фискальных данных
-        break;
+        // Fiscal data integration - placeholder for future implementation
+        this.logger.warn('FISCAL source not yet implemented');
+        return [];
+
+      case ReconciliationSource.PAYME:
+        return await this.loadFromPaymentSystem('payme', dateFrom, dateTo, machineIds);
+
+      case ReconciliationSource.CLICK:
+        return await this.loadFromPaymentSystem('click', dateFrom, dateTo, machineIds);
+
+      case ReconciliationSource.UZUM:
+        return await this.loadFromPaymentSystem('uzum', dateFrom, dateTo, machineIds);
+
       default:
-        break;
+        this.logger.warn(`Unknown source: ${source}`);
+        return [];
+    }
+  }
+
+  /**
+   * Загрузка данных из VendHub transactions (SALES_REPORT)
+   */
+  private async loadFromTransactions(
+    dateFrom: Date,
+    dateTo: Date,
+    machineIds: string[] | null,
+  ): Promise<MatchRecord[]> {
+    const queryBuilder = this.transactionRepository
+      .createQueryBuilder('t')
+      .leftJoinAndSelect('t.machine', 'machine')
+      .where('t.transaction_type = :type', { type: TransactionType.SALE })
+      .andWhere('t.transaction_date >= :dateFrom', { dateFrom })
+      .andWhere('t.transaction_date <= :dateTo', { dateTo });
+
+    if (machineIds && machineIds.length > 0) {
+      queryBuilder.andWhere('t.machine_id IN (:...machineIds)', { machineIds });
     }
 
-    return [];
+    const transactions = await queryBuilder.orderBy('t.transaction_date', 'ASC').getMany();
+
+    this.logger.log(`Loaded ${transactions.length} transactions from SALES_REPORT`);
+
+    return transactions.map((t) => ({
+      orderNumber: t.transaction_number,
+      machineCode: t.machine?.machine_number || null,
+      time: t.sale_date || t.transaction_date,
+      amount: Number(t.amount),
+      paymentMethod: t.payment_method ? this.mapPaymentMethod(t.payment_method) : null,
+      transactionId: t.id,
+      source: ReconciliationSource.SALES_REPORT,
+      additionalData: {
+        recipe_id: t.recipe_id,
+        quantity: t.quantity,
+        machine_id: t.machine_id,
+        metadata: t.metadata,
+      },
+    }));
+  }
+
+  /**
+   * Загрузка данных из HW импорта (Hardware Export)
+   */
+  private async loadFromHwReports(
+    dateFrom: Date,
+    dateTo: Date,
+    machineIds: string[] | null,
+  ): Promise<MatchRecord[]> {
+    const queryBuilder = this.hwImportedSaleRepository
+      .createQueryBuilder('hw')
+      .leftJoinAndSelect('hw.machine', 'machine')
+      .where('hw.sale_date >= :dateFrom', { dateFrom })
+      .andWhere('hw.sale_date <= :dateTo', { dateTo });
+
+    if (machineIds && machineIds.length > 0) {
+      // Check both machine_id and machine_code (for unlinked records)
+      queryBuilder.andWhere(
+        '(hw.machine_id IN (:...machineIds) OR hw.machine_code IN (SELECT machine_number FROM machines WHERE id IN (:...machineIds)))',
+        { machineIds },
+      );
+    }
+
+    const hwRecords = await queryBuilder.orderBy('hw.sale_date', 'ASC').getMany();
+
+    this.logger.log(`Loaded ${hwRecords.length} records from HW export`);
+
+    return hwRecords.map((hw) => ({
+      orderNumber: hw.order_number,
+      machineCode: hw.machine?.machine_number || hw.machine_code,
+      time: hw.sale_date,
+      amount: Number(hw.amount),
+      paymentMethod: hw.payment_method,
+      transactionId: hw.transaction_id || hw.id,
+      source: ReconciliationSource.HW,
+      additionalData: {
+        product_name: hw.product_name,
+        product_code: hw.product_code,
+        quantity: hw.quantity,
+        import_batch_id: hw.import_batch_id,
+        raw_data: hw.raw_data,
+      },
+    }));
+  }
+
+  /**
+   * Загрузка данных из платёжной системы (PAYME, CLICK, UZUM)
+   *
+   * В данной реализации ищем транзакции в VendHub, помеченные
+   * соответствующим методом оплаты. Для полной интеграции требуется
+   * подключение к API платёжных систем.
+   */
+  private async loadFromPaymentSystem(
+    system: 'payme' | 'click' | 'uzum',
+    dateFrom: Date,
+    dateTo: Date,
+    machineIds: string[] | null,
+  ): Promise<MatchRecord[]> {
+    // Map payment system to payment method
+    const paymentMethodMap: Record<string, PaymentMethod> = {
+      payme: PaymentMethod.MOBILE,
+      click: PaymentMethod.MOBILE,
+      uzum: PaymentMethod.QR,
+    };
+
+    const queryBuilder = this.transactionRepository
+      .createQueryBuilder('t')
+      .leftJoinAndSelect('t.machine', 'machine')
+      .where('t.transaction_type = :type', { type: TransactionType.SALE })
+      .andWhere('t.transaction_date >= :dateFrom', { dateFrom })
+      .andWhere('t.transaction_date <= :dateTo', { dateTo })
+      .andWhere('t.payment_method = :paymentMethod', {
+        paymentMethod: paymentMethodMap[system],
+      });
+
+    if (machineIds && machineIds.length > 0) {
+      queryBuilder.andWhere('t.machine_id IN (:...machineIds)', { machineIds });
+    }
+
+    // Also check metadata for specific payment system marker
+    queryBuilder.andWhere(
+      "(t.metadata->>'payment_system' = :system OR t.metadata->>'provider' = :system OR t.payment_method = :paymentMethod)",
+      { system, paymentMethod: paymentMethodMap[system] },
+    );
+
+    const transactions = await queryBuilder.orderBy('t.transaction_date', 'ASC').getMany();
+
+    const source =
+      system === 'payme'
+        ? ReconciliationSource.PAYME
+        : system === 'click'
+          ? ReconciliationSource.CLICK
+          : ReconciliationSource.UZUM;
+
+    this.logger.log(`Loaded ${transactions.length} transactions from ${system.toUpperCase()}`);
+
+    return transactions.map((t) => ({
+      orderNumber: t.transaction_number,
+      machineCode: t.machine?.machine_number || null,
+      time: t.sale_date || t.transaction_date,
+      amount: Number(t.amount),
+      paymentMethod: system,
+      transactionId: t.metadata?.external_transaction_id || t.id,
+      source,
+      additionalData: {
+        vendhub_transaction_id: t.id,
+        metadata: t.metadata,
+      },
+    }));
+  }
+
+  /**
+   * Маппинг VendHub PaymentMethod в строковое представление
+   */
+  private mapPaymentMethod(method: PaymentMethod): string {
+    const map: Record<PaymentMethod, string> = {
+      [PaymentMethod.CASH]: 'cash',
+      [PaymentMethod.CARD]: 'card',
+      [PaymentMethod.MOBILE]: 'mobile',
+      [PaymentMethod.QR]: 'qr',
+    };
+    return map[method] || method;
   }
 
   /**
