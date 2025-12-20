@@ -1,7 +1,7 @@
 # VendHub Manager - Authentication & Authorization Flows
 
-> **Version**: 1.0.0
-> **Last Updated**: 2025-12-19
+> **Version**: 1.1.0
+> **Last Updated**: 2025-12-21
 > **Security Level**: Confidential
 
 This document provides comprehensive documentation of all authentication and authorization flows in VendHub Manager, including all possible scenarios, edge cases, and security measures.
@@ -795,75 +795,119 @@ interface ClientTokenPayload {
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 5.2 Telegram Access Request Flow
+### 5.2 Telegram Registration Flow
+
+**Simplified Direct Registration via Telegram Bot**
+
+When a user sends `/start` to the Telegram bot, the system creates a PENDING user directly (no separate AccessRequest entity):
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────┐
-│                     TELEGRAM ACCESS REQUEST FLOW                              │
+│                     TELEGRAM REGISTRATION FLOW                               │
 │                                                                               │
 │   Telegram User            Bot                  Server                Admin  │
 │       │                     │                     │                    │     │
 │       │  /start             │                     │                    │     │
 │       │────────────────────►│                     │                    │     │
 │       │                     │                     │                    │     │
-│       │  Welcome! Request   │                     │                    │     │
-│       │  access to system?  │                     │                    │     │
-│       │◄────────────────────│                     │                    │     │
-│       │                     │                     │                    │     │
-│       │  [Request Access]   │                     │                    │     │
-│       │────────────────────►│                     │                    │     │
-│       │                     │                     │                    │     │
-│       │                     │  POST /access-      │                    │     │
-│       │                     │  requests           │                    │     │
-│       │                     │  {telegram_id,      │                    │     │
-│       │                     │   telegram_username,│                    │     │
-│       │                     │   first_name, ...}  │                    │     │
+│       │                     │  createPendingFrom  │                    │     │
+│       │                     │  Telegram()         │                    │     │
 │       │                     │────────────────────►│                    │     │
 │       │                     │                     │                    │     │
-│       │                     │                     │  Create access     │     │
-│       │                     │                     │  request with      │     │
-│       │                     │                     │  status: NEW       │     │
+│       │                     │                     │  Create User:      │     │
+│       │                     │                     │  - status: PENDING │     │
+│       │                     │                     │  - role: VIEWER    │     │
+│       │                     │                     │  - telegram_user_id│     │
+│       │                     │                     │  - email: temp     │     │
 │       │                     │                     │                    │     │
 │       │                     │◄────────────────────│                    │     │
-│       │                     │  201 Created        │                    │     │
+│       │                     │  User created       │                    │     │
 │       │                     │                     │                    │     │
-│       │  Request submitted! │                     │                    │     │
-│       │  Wait for approval  │                     │                    │     │
+│       │  Заявка отправлена! │                     │                    │     │
+│       │  Ожидайте одобрения │                     │                    │     │
 │       │◄────────────────────│                     │                    │     │
 │       │                     │                     │                    │     │
-│       │                     │                     │  Notify admin      │     │
+│       │                     │  notifyAdminAbout   │                    │     │
+│       │                     │  NewUser()          │                    │     │
+│       │                     │────────────────────►│                    │     │
+│       │                     │                     │                    │     │
+│       │                     │                     │  Send notification │     │
+│       │                     │                     │  with keyboard:    │     │
+│       │                     │                     │  ┌──────────────┐  │     │
+│       │                     │                     │  │📊 Менеджер   │  │     │
+│       │                     │                     │  │👨‍💼 Оператор │  │     │
+│       │                     │                     │  │❌ Отклонить  │  │     │
+│       │                     │                     │  └──────────────┘  │     │
 │       │                     │                     │──────────────────►│     │
 │       │                     │                     │                    │     │
-│       │                     │                     │                    │     │
-│       │                     │                     │  POST /access-     │     │
-│       │                     │                     │  requests/{id}/    │     │
-│       │                     │                     │  approve           │     │
-│       │                     │                     │  {role_names,      │     │
-│       │                     │                     │   email}           │     │
+│       │                     │                     │  Admin clicks     │     │
+│       │                     │                     │  "Одобрить как    │     │
+│       │                     │                     │   Менеджер"       │     │
 │       │                     │                     │◄───────────────────│     │
 │       │                     │                     │                    │     │
-│       │                     │                     │  1. Create user    │     │
-│       │                     │                     │  2. Assign roles   │     │
-│       │                     │                     │  3. Generate temp  │     │
-│       │                     │                     │     password       │     │
-│       │                     │                     │  4. Update request │     │
-│       │                     │                     │     status         │     │
+│       │                     │  approveUser()      │                    │     │
+│       │                     │  {role: MANAGER}    │                    │     │
+│       │                     │────────────────────►│                    │     │
 │       │                     │                     │                    │     │
-│       │  Your request was   │                     │                    │     │
-│       │  approved! Login    │                     │                    │     │
-│       │  with: email/pass   │                     │                    │     │
+│       │                     │                     │  1. Change status │     │
+│       │                     │                     │     PENDING→ACTIVE │     │
+│       │                     │                     │  2. Assign role   │     │
+│       │                     │                     │     MANAGER       │     │
+│       │                     │                     │  3. Generate      │     │
+│       │                     │                     │     username      │     │
+│       │                     │                     │  4. Generate temp │     │
+│       │                     │                     │     password      │     │
+│       │                     │                     │  5. Set requires_ │     │
+│       │                     │                     │     password_     │     │
+│       │                     │                     │     change=true   │     │
+│       │                     │                     │                    │     │
+│       │                     │◄────────────────────│                    │     │
+│       │                     │  {user, credentials}│                    │     │
+│       │                     │                     │                    │     │
+│       │  ✅ Ваша учетная    │                     │                    │     │
+│       │  запись одобрена!   │                     │                    │     │
+│       │                     │                     │                    │     │
+│       │  🔐 Ваши учетные    │                     │                    │     │
+│       │  данные:            │                     │                    │     │
+│       │  Username: xxx      │                     │                    │     │
+│       │  Password: xxx      │                     │                    │     │
+│       │                     │                     │                    │     │
+│       │  ⚠️ Пароль временный│                     │                    │     │
+│       │  Измените при входе│                     │                    │     │
 │       │◄────────────────────│                     │                    │     │
 │       │                     │                     │                    │     │
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 5.3 Access Request Statuses
+**Key Differences from Access Request Flow:**
+
+1. **Direct User Creation**: No intermediate `AccessRequest` entity - user is created directly with `PENDING` status
+2. **Immediate Admin Notification**: Admin receives notification with inline keyboard immediately after user sends `/start`
+3. **Role Selection at Approval**: Admin selects role (MANAGER or OPERATOR) when approving via button click
+4. **Automatic Credential Delivery**: Credentials are automatically sent to user via Telegram after approval
+5. **Simplified Workflow**: Fewer steps, faster approval process
+
+### 5.3 User Statuses (Telegram Registration)
 
 | Status | Description |
 |--------|-------------|
-| `NEW` | Request pending admin review |
-| `APPROVED` | Request approved, user account created |
-| `REJECTED` | Request rejected by admin |
+| `PENDING` | User created via `/start`, awaiting admin approval |
+| `ACTIVE` | User approved by admin, can log in |
+| `REJECTED` | User registration rejected by admin |
+| `INACTIVE` | User account deactivated |
+| `SUSPENDED` | User account temporarily suspended |
+
+**Status Transitions:**
+
+```
+PENDING ──[Admin Approves]──► ACTIVE
+   │
+   └──[Admin Rejects]──► REJECTED
+
+ACTIVE ──[Admin Deactivates]──► INACTIVE
+   │
+   └──[Admin Suspends]──► SUSPENDED
+```
 
 ---
 

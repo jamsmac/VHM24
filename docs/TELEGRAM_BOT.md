@@ -1,7 +1,7 @@
 # Telegram Bot Integration - VendHub Manager
 
-> **Version**: 1.0.0
-> **Last Updated**: 2025-12-20
+> **Version**: 1.1.0
+> **Last Updated**: 2025-12-21
 > **Module**: `backend/src/modules/telegram/`
 
 This document provides comprehensive documentation for the Telegram Bot integration, covering user management, notifications, task workflows, and the access request system.
@@ -215,7 +215,7 @@ export class TelegramUser extends BaseEntity {
 
 ### Overview
 
-New users go through an access request workflow:
+New users go through a simplified registration workflow via Telegram:
 
 ```
 ┌────────────────────────────────────────────────────────────────────┐
@@ -225,69 +225,63 @@ New users go through an access request workflow:
   1. USER: Sends /start to bot
      │
      ▼
-  2. BOT: Creates access request
+  2. BOT: Creates PENDING user directly
+     │     - Creates User with status: PENDING
      │     - Records telegram_id, username, first_name
-     │     - Status: PENDING
+     │     - Role: VIEWER (temporary)
      │
      ▼
-  3. BOT: Notifies admins
-     │     - Inline approve/reject buttons
+  3. BOT: Notifies super admin
+     │     - Inline keyboard with role selection:
+     │       • Одобрить как Менеджер (MANAGER)
+     │       • Одобрить как Оператор (OPERATOR)
+     │       • Отклонить (REJECT)
      │
      ▼
-  4. ADMIN: Reviews request
+  4. ADMIN: Clicks approval button
      │
-     ├──► APPROVE
-     │    - Create User account
-     │    - Create TelegramUser link
-     │    - Set is_verified = true
-     │    - Notify user of approval
+     ├──► APPROVE (MANAGER or OPERATOR)
+     │    - Change status: PENDING → ACTIVE
+     │    - Assign role (MANAGER or OPERATOR)
+     │    - Generate temporary password
+     │    - Generate username from full_name
+     │    - Send credentials to user via Telegram
      │
      └──► REJECT
-          - Set request status REJECTED
+          - Change status: PENDING → REJECTED
+          - Request rejection reason
           - Notify user of rejection
 ```
 
-### Access Request Entity
+### User Creation Flow
+
+When user sends `/start`, the bot directly creates a User entity (not an AccessRequest):
 
 ```typescript
-// From access-requests module
-@Entity('access_requests')
-export class AccessRequest extends BaseEntity {
-  @Column({ type: 'bigint' })
-  telegram_id: string;
+// In telegram-bot.service.ts - /start command handler
+this.bot.command('start', async (ctx) => {
+  // Case 3: New user - create pending user and notify admin
+  if (!ctx.telegramUser && ctx.from) {
+    // Create pending user directly (simplified flow)
+    const pendingUser = await this.usersService.createPendingFromTelegram({
+      telegram_id: ctx.from.id.toString(),
+      telegram_username: ctx.from.username,
+      telegram_first_name: ctx.from.first_name,
+      telegram_last_name: ctx.from.last_name,
+    });
 
-  @Column({ type: 'varchar', length: 255, nullable: true })
-  telegram_username: string | null;
-
-  @Column({ type: 'varchar', length: 255, nullable: true })
-  telegram_first_name: string | null;
-
-  @Column({ type: 'varchar', length: 255, nullable: true })
-  telegram_last_name: string | null;
-
-  @Column({
-    type: 'enum',
-    enum: AccessRequestStatus,
-    default: AccessRequestStatus.PENDING
-  })
-  status: AccessRequestStatus;
-
-  @Column({ type: 'uuid', nullable: true })
-  processed_by_user_id: string | null;
-
-  @Column({ type: 'timestamp', nullable: true })
-  processed_at: Date | null;
-
-  @Column({ type: 'text', nullable: true })
-  rejection_reason: string | null;
-
-  @Column({ type: 'varchar', length: 50, nullable: true })
-  assigned_role: string | null;
-
-  @Column({ type: 'uuid', nullable: true })
-  created_user_id: string | null;  // User created on approval
-}
+    // Notify admin about new pending user
+    await this.notifyAdminAboutNewUser(pendingUser.id, ctx.from);
+  }
+});
 ```
+
+The `createPendingFromTelegram` method creates a User with:
+- `status: UserStatus.PENDING`
+- `role: UserRole.VIEWER` (temporary, will be set on approval)
+- `telegram_user_id: string` (for sending notifications)
+- `email: telegram_{telegram_id}@vendhub.temp` (temporary email)
+- No password yet (will be generated on approval)
 
 ---
 
@@ -295,62 +289,112 @@ export class AccessRequest extends BaseEntity {
 
 ### Approval Workflow
 
+When a new user sends `/start`, the bot creates a PENDING user and immediately notifies the super admin with an inline keyboard:
+
 ```
 ┌────────────────────────────────────────────────────────────────────┐
 │                    ADMIN APPROVAL KEYBOARD                         │
 └────────────────────────────────────────────────────────────────────┘
 
-  📋 Новая заявка на доступ
+  🆕 Новая заявка на регистрацию
 
-  👤 Пользователь: John Doe
-  📱 Username: @johndoe
-  📅 Дата: 2025-12-20 10:30
+  👤 Имя: John Doe
+  📱 Telegram: @johndoe
+  🆔 ID: 123456789
 
-  ┌─────────────────────────────────────┐
-  │ ✅ Одобрить   │   ❌ Отклонить     │
-  └─────────────────────────────────────┘
+  Выберите действие:
+
+  ┌─────────────────────────────────────────┐
+  │  📊 Одобрить как Менеджер              │
+  └─────────────────────────────────────────┘
+  ┌─────────────────────────────────────────┐
+  │  👨‍💼 Одобрить как Оператор             │
+  └─────────────────────────────────────────┘
+  ┌─────────────────────────────────────────┐
+  │  ❌ Отклонить                           │
+  └─────────────────────────────────────────┘
 ```
 
 ### Approval Handler
 
+When admin clicks an approval button, the system:
+
+1. **Validates permissions** - Only super admin can approve
+2. **Approves user** - Calls `usersService.approveUser()` which:
+   - Changes status: `PENDING` → `ACTIVE`
+   - Assigns selected role (`MANAGER` or `OPERATOR`)
+   - Generates username from `full_name`
+   - Generates temporary password
+   - Sets `requires_password_change = true`
+   - Records approval metadata (`approved_by_id`, `approved_at`)
+3. **Sends credentials to user** - Automatically sends Telegram message with:
+   - Username
+   - Temporary password
+   - Link to VendHub Manager
+   - Warning about password change requirement
+
 ```typescript
-// Admin clicks "Approve"
-async handleApproveRequest(requestId: string, adminUserId: string) {
-  const request = await this.accessRequestsService.findOne(requestId);
+// Admin clicks "Одобрить как Менеджер" or "Одобрить как Оператор"
+private async handleApproveUserAction(
+  ctx: BotContext,
+  userId: string,
+  role: UserRole, // MANAGER or OPERATOR
+): Promise<void> {
+  // 1. Check super admin permission
+  if (!this.isSuperAdmin(ctx.from?.id.toString())) {
+    await ctx.answerCbQuery('Недостаточно прав', { show_alert: true });
+    return;
+  }
 
-  // 1. Create VendHub User account
-  const user = await this.usersService.create({
-    email: `tg_${request.telegram_id}@telegram.local`,
-    full_name: `${request.telegram_first_name} ${request.telegram_last_name || ''}`.trim(),
-    role: UserRole.OPERATOR,
-    telegram_id: request.telegram_id,
-    password: generateSecurePassword(),
-    require_password_change: true,
-  });
+  // 2. Get super admin user
+  const superAdmin = await this.usersService.findByTelegramId(
+    ctx.from?.id.toString() || ''
+  );
 
-  // 2. Create TelegramUser link
-  const telegramUser = await this.telegramUsersService.create({
-    telegram_id: request.telegram_id,
-    user_id: user.id,
-    chat_id: request.telegram_id,
-    username: request.telegram_username,
-    first_name: request.telegram_first_name,
-    last_name: request.telegram_last_name,
-    is_verified: true,
-  });
+  // 3. Approve user (generates credentials)
+  const result = await this.usersService.approveUser(
+    userId,
+    { role },
+    superAdmin.id
+  );
 
-  // 3. Update access request
-  await this.accessRequestsService.approve(requestId, adminUserId, user.id);
+  // 4. Send confirmation to admin
+  await ctx.editMessageText(
+    `✅ Пользователь одобрен\n\n` +
+    `👤 ${result.user.full_name}\n` +
+    `👨‍💼 Роль: ${this.formatRole(role, lang)}\n\n` +
+    `🔐 Учетные данные:\n` +
+    `Username: ${result.credentials.username}\n` +
+    `Password: ${result.credentials.password}\n\n` +
+    `📨 Письмо с учетными данными отправлено пользователю.`
+  );
 
-  // 4. Notify user
-  await this.telegramNotificationsService.sendNotification({
-    userId: user.id,
-    type: 'access_approved',
-    title: 'Access Approved',
-    message: 'Your access request has been approved. You can now use the bot.',
-  });
+  // 5. Send credentials to user via Telegram
+  if (result.user.telegram_user_id) {
+    await this.sendMessage(
+      result.user.telegram_user_id, // chat_id
+      `✅ Ваша учетная запись одобрена!\n\n` +
+      `🎉 Добро пожаловать в VendHub!\n\n` +
+      `🔐 Ваши учетные данные:\n` +
+      `Username: ${result.credentials.username}\n` +
+      `Password: ${result.credentials.password}\n\n` +
+      `⚠️ Важно: Пароль временный. Измените его при первом входе.\n\n` +
+      `🌐 Перейти в VendHub Manager`
+    );
+  }
 }
 ```
+
+### Rejection Workflow
+
+When admin clicks "Отклонить":
+
+1. Bot asks for rejection reason (minimum 10 characters)
+2. Admin enters reason via text message
+3. System calls `usersService.rejectUser()` which:
+   - Changes status: `PENDING` → `REJECTED`
+   - Records rejection metadata (`rejected_by_id`, `rejected_at`, `rejection_reason`)
+4. User is notified of rejection (if they have telegram_user_id)
 
 ---
 
