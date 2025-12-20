@@ -133,6 +133,34 @@ export class ClientLoyaltyService {
   }
 
   /**
+   * Refund points when order is cancelled
+   * This refunds points that were previously redeemed (used) for an order
+   */
+  async refundPoints(
+    clientUserId: string,
+    points: number,
+    orderId: string,
+    description?: string,
+  ): Promise<ClientLoyaltyLedger> {
+    if (points <= 0) {
+      this.logger.log(`No points to refund for order ${orderId}`);
+      return null as unknown as ClientLoyaltyLedger;
+    }
+
+    this.logger.log(
+      `Refunding ${points} points to user ${clientUserId} for cancelled order ${orderId}`,
+    );
+
+    return this.createTransaction(
+      clientUserId,
+      points, // Positive to add back to balance
+      LoyaltyTransactionReason.ORDER_REFUND,
+      orderId,
+      description || 'Points refunded due to order cancellation',
+    );
+  }
+
+  /**
    * Add bonus points (promo, referral, etc.)
    */
   async addBonusPoints(

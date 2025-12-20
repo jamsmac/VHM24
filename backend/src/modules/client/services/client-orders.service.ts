@@ -192,8 +192,15 @@ export class ClientOrdersService {
       throw new BadRequestException('Order cannot be cancelled');
     }
 
-    // TODO: Implement points refund if needed
-    // Currently loyalty_points_used is tracked but refund logic is not implemented
+    // Refund loyalty points if any were used for this order
+    if (order.loyalty_points_used > 0) {
+      await this.loyaltyService.refundPoints(
+        clientUser.id,
+        order.loyalty_points_used,
+        order.id,
+        `Points refunded for cancelled order #${order.id.substring(0, 8)}`,
+      );
+    }
 
     order.status = ClientOrderStatus.CANCELLED;
     await this.orderRepository.save(order);

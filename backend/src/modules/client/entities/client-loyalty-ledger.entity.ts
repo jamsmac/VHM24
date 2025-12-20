@@ -13,6 +13,7 @@ import { ClientOrder } from './client-order.entity';
 export enum LoyaltyTransactionReason {
   ORDER_EARNED = 'order_earned',
   ORDER_REDEEMED = 'order_redeemed',
+  ORDER_REFUND = 'order_refund',
   REFERRAL_BONUS = 'referral_bonus',
   PROMO_BONUS = 'promo_bonus',
   MANUAL_ADJUSTMENT = 'manual_adjustment',
