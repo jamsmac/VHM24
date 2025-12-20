@@ -20,6 +20,8 @@ import {
   NotificationType,
   NotificationChannel,
 } from '../../notifications/entities/notification.entity';
+import { UsersService } from '../../users/users.service';
+import { UserRole } from '../../users/entities/user.entity';
 
 /**
  * InventoryAdjustmentService
@@ -44,6 +46,7 @@ export class InventoryAdjustmentService {
     @InjectRepository(MachineInventory)
     private readonly machineInventoryRepository: Repository<MachineInventory>,
     private readonly notificationsService: NotificationsService,
+    private readonly usersService: UsersService,
   ) {}
 
   /**
@@ -346,32 +349,88 @@ export class InventoryAdjustmentService {
    */
   private async sendApprovalNotification(adjustment: InventoryAdjustment): Promise<void> {
     try {
-      // TODO: Получить список менеджеров/админов для уведомления
-      // Временно отправляем на admin
-      await this.notificationsService.create({
-        type: NotificationType.OTHER,
-        channel: NotificationChannel.IN_APP,
-        recipient_id: process.env.ADMIN_USER_ID || 'admin',
-        title: '📝 Требуется согласование корректировки',
-        message:
-          `Создана корректировка остатков, требующая согласования:\n\n` +
-          `Товар: ${adjustment.nomenclature?.name || adjustment.nomenclature_id}\n` +
-          `Уровень: ${adjustment.level_type}\n` +
-          `Старое значение: ${adjustment.old_quantity}\n` +
-          `Новое значение: ${adjustment.new_quantity}\n` +
-          `Изменение: ${adjustment.adjustment_quantity > 0 ? '+' : ''}${adjustment.adjustment_quantity}\n` +
-          `Причина: ${this.translateReason(adjustment.reason)}`,
-        data: {
-          adjustment_id: adjustment.id,
-          nomenclature_id: adjustment.nomenclature_id,
-          level_type: adjustment.level_type,
-          level_ref_id: adjustment.level_ref_id,
-        },
-        action_url: `/inventory/adjustments/${adjustment.id}`,
-      });
+      // Get managers and admins who can approve adjustments
+      const approvers = await this.usersService.findByRoles([
+        UserRole.SUPER_ADMIN,
+        UserRole.ADMIN,
+        UserRole.MANAGER,
+      ]);
+
+      if (approvers.length === 0) {
+        this.logger.warn('No approvers found for inventory adjustment notification');
+        return;
+      }
+
+      const title = '📝 Требуется согласование корректировки';
+      const message =
+        `Создана корректировка остатков, требующая согласования:\n\n` +
+        `Товар: ${adjustment.nomenclature?.name || adjustment.nomenclature_id}\n` +
+        `Уровень: ${this.translateLevelType(adjustment.level_type)}\n` +
+        `Старое значение: ${adjustment.old_quantity}\n` +
+        `Новое значение: ${adjustment.new_quantity}\n` +
+        `Изменение: ${adjustment.adjustment_quantity > 0 ? '+' : ''}${adjustment.adjustment_quantity}\n` +
+        `Причина: ${this.translateReason(adjustment.reason)}`;
+
+      const notificationData = {
+        adjustment_id: adjustment.id,
+        nomenclature_id: adjustment.nomenclature_id,
+        level_type: adjustment.level_type,
+        level_ref_id: adjustment.level_ref_id,
+      };
+
+      // Send notifications to all approvers
+      const notificationPromises: Promise<any>[] = [];
+
+      for (const approver of approvers) {
+        // Send in-app notification
+        notificationPromises.push(
+          this.notificationsService.create({
+            type: NotificationType.OTHER,
+            channel: NotificationChannel.IN_APP,
+            recipient_id: approver.id,
+            title,
+            message,
+            data: notificationData,
+            action_url: `/inventory/adjustments/${adjustment.id}`,
+          }),
+        );
+
+        // Send Telegram notification if user has telegram_user_id
+        if (approver.telegram_user_id) {
+          notificationPromises.push(
+            this.notificationsService.create({
+              type: NotificationType.OTHER,
+              channel: NotificationChannel.TELEGRAM,
+              recipient_id: approver.id,
+              title,
+              message,
+              data: notificationData,
+              action_url: `/inventory/adjustments/${adjustment.id}`,
+            }),
+          );
+        }
+      }
+
+      await Promise.allSettled(notificationPromises);
+
+      this.logger.log(
+        `Sent approval notifications for adjustment ${adjustment.id} to ${approvers.length} approvers`,
+      );
     } catch (error) {
       this.logger.error('Failed to send approval notification:', error.message);
     }
+  }
+
+  /**
+   * Translate level type to Russian
+   */
+  private translateLevelType(levelType: InventoryLevelType): string {
+    const translations = {
+      [InventoryLevelType.WAREHOUSE]: 'Склад',
+      [InventoryLevelType.OPERATOR]: 'Оператор',
+      [InventoryLevelType.MACHINE]: 'Аппарат',
+    };
+    return translations[levelType] || levelType;
   }
 
   /**
