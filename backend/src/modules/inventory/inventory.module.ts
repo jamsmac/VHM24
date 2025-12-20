@@ -44,6 +44,7 @@ import { TasksModule } from '../tasks/tasks.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { UsersModule } from '../users/users.module';
 import { MachinesModule } from '../machines/machines.module';
+import { MachineAccessModule } from '../machine-access/machine-access.module';
 import { TelegramModule } from '../telegram/telegram.module';
 
 @Module({
@@ -74,6 +75,7 @@ import { TelegramModule } from '../telegram/telegram.module';
     NotificationsModule,
     UsersModule,
     forwardRef(() => MachinesModule),
+    MachineAccessModule,
     forwardRef(() => TelegramModule),
   ],
   controllers: [

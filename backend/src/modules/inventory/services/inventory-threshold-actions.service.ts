@@ -5,6 +5,7 @@ import { NotificationsService } from '../../notifications/notifications.service'
 import { UsersService } from '../../users/users.service';
 import { UserRole } from '../../users/entities/user.entity';
 import { TelegramNotificationsService } from '../../telegram/services/telegram-notifications.service';
+import { MachineAccessService } from '../../machine-access/machine-access.service';
 import {
   InventoryDifferenceThreshold,
   SeverityLevel,
@@ -35,6 +36,7 @@ export class InventoryThresholdActionsService {
     private readonly notificationsService: NotificationsService,
     private readonly usersService: UsersService,
     private readonly telegramNotificationsService: TelegramNotificationsService,
+    private readonly machineAccessService: MachineAccessService,
   ) {}
 
   /**
@@ -220,15 +222,43 @@ export class InventoryThresholdActionsService {
     // Определить machine_id и тип задачи
     let machineId: string | undefined;
     let taskType: TaskType;
+    let assignedUserId = userId;
 
     if (difference.level_type === 'MACHINE') {
+      // For machine-level differences, use the machine directly
       machineId = difference.level_ref_id;
       taskType = TaskType.AUDIT; // Ревизия/проверка
-    } else {
-      // Для склада/оператора создаём задачу инспекции
+    } else if (difference.level_type === 'OPERATOR') {
+      // For operator-level differences, find a machine assigned to the operator
       taskType = TaskType.INSPECTION;
-      // TODO: Нужно решить, к какому аппарату привязывать задачу для WAREHOUSE/OPERATOR уровней
-      // Временно оставляем undefined - потребует доработки схемы
+      const operatorId = difference.level_ref_id;
+      assignedUserId = operatorId; // Assign task to the operator
+
+      try {
+        const machineAccess = await this.machineAccessService.findByUser(operatorId);
+        if (machineAccess.length > 0) {
+          // Use the first machine assigned to the operator
+          machineId = machineAccess[0].machine_id;
+          this.logger.log(
+            `Found ${machineAccess.length} machines for operator ${operatorId}, using machine ${machineId}`,
+          );
+        } else {
+          this.logger.warn(
+            `No machines assigned to operator ${operatorId}. Cannot create task.`,
+          );
+        }
+      } catch (error) {
+        this.logger.error(
+          `Failed to find machines for operator ${operatorId}: ${error.message}`,
+        );
+      }
+    } else {
+      // For warehouse-level differences, skip task creation
+      // Warehouse differences require a different workflow (e.g., warehouse audit)
+      taskType = TaskType.INSPECTION;
+      this.logger.log(
+        `Warehouse-level difference detected. Task creation skipped - use warehouse audit workflow.`,
+      );
     }
 
     const description = this.formatDifferenceDescription(difference);
@@ -236,15 +266,15 @@ export class InventoryThresholdActionsService {
     // Если нет machine_id, задачу создать не получится (требование схемы Task)
     if (!machineId) {
       this.logger.warn(
-        `Cannot create task for non-machine level: ${difference.level_type}. Skipping task creation.`,
+        `Cannot create task for ${difference.level_type} level: no machine found. Skipping task creation.`,
       );
-      throw new Error('Task creation requires machine_id');
+      throw new Error(`Task creation requires machine_id. Level: ${difference.level_type}`);
     }
 
     const task = await this.tasksService.create({
       type_code: taskType,
       machine_id: machineId,
-      assigned_to_user_id: userId, // Assign to creator by default
+      assigned_to_user_id: assignedUserId,
       created_by_user_id: userId,
       priority,
       description: `Расхождение остатков: ${difference.nomenclature_name}\n\n${description}`,
