@@ -8,6 +8,9 @@ import { WriteoffProcessor } from './processors/writeoff.processor';
 import { Machine } from './entities/machine.entity';
 import { MachineLocationHistory } from './entities/machine-location-history.entity';
 import { TransactionsModule } from '../transactions/transactions.module';
+import { NotificationsModule } from '../notifications/notifications.module';
+import { AuditLogModule } from '../audit-logs/audit-log.module';
+import { UsersModule } from '../users/users.module';
 
 @Module({
   imports: [
@@ -20,6 +23,9 @@ import { TransactionsModule } from '../transactions/transactions.module';
       },
     }),
     forwardRef(() => TransactionsModule),
+    NotificationsModule,
+    AuditLogModule,
+    UsersModule,
   ],
   controllers: [MachinesController],
   providers: [MachinesService, QrCodeService, WriteoffProcessor],

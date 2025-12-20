@@ -7,11 +7,17 @@ import { Machine, MachineStatus } from '../entities/machine.entity';
 import { TransactionsService } from '../../transactions/transactions.service';
 import { TransactionType, ExpenseCategory } from '../../transactions/entities/transaction.entity';
 import { WriteoffJobData, WriteoffJobResult } from '../interfaces/writeoff-job.interface';
+import { NotificationsService } from '../../notifications/notifications.service';
+import { AuditLogService } from '../../audit-logs/audit-log.service';
+import { UsersService } from '../../users/users.service';
 
 describe('WriteoffProcessor', () => {
   let processor: WriteoffProcessor;
   let machineRepository: jest.Mocked<Repository<Machine>>;
   let transactionsService: jest.Mocked<TransactionsService>;
+  let notificationsService: jest.Mocked<NotificationsService>;
+  let auditLogService: jest.Mocked<AuditLogService>;
+  let usersService: jest.Mocked<UsersService>;
 
   // Mock data - use function to create fresh mock each time
   const createMockMachine = (overrides: Partial<Machine> = {}): Machine =>
@@ -148,6 +154,23 @@ describe('WriteoffProcessor', () => {
       create: jest.fn(),
     };
 
+    // Mock Notifications Service
+    const mockNotificationsService = {
+      create: jest.fn().mockResolvedValue({}),
+      createBulk: jest.fn().mockResolvedValue([]),
+    };
+
+    // Mock Audit Log Service
+    const mockAuditLogService = {
+      create: jest.fn().mockResolvedValue({}),
+    };
+
+    // Mock Users Service
+    const mockUsersService = {
+      getAdminUserIds: jest.fn().mockResolvedValue(['admin-1', 'admin-2']),
+      getFirstAdminId: jest.fn().mockResolvedValue('admin-1'),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         WriteoffProcessor,
@@ -159,12 +182,27 @@ describe('WriteoffProcessor', () => {
           provide: TransactionsService,
           useValue: mockTransactionsService,
         },
+        {
+          provide: NotificationsService,
+          useValue: mockNotificationsService,
+        },
+        {
+          provide: AuditLogService,
+          useValue: mockAuditLogService,
+        },
+        {
+          provide: UsersService,
+          useValue: mockUsersService,
+        },
       ],
     }).compile();
 
     processor = module.get<WriteoffProcessor>(WriteoffProcessor);
     machineRepository = module.get(getRepositoryToken(Machine));
     transactionsService = module.get(TransactionsService);
+    notificationsService = module.get(NotificationsService);
+    auditLogService = module.get(AuditLogService);
+    usersService = module.get(UsersService);
   });
 
   afterEach(() => {
@@ -650,12 +688,177 @@ describe('WriteoffProcessor', () => {
       const job = createMockJob();
       job.attemptsMade = 3;
       const error = new Error('Database connection lost');
+      machineRepository.findOne.mockResolvedValue(mockMachine);
 
-      // Act - This just tests the method exists and can be called
+      // Act
       await processor.onFailed(job, error);
 
       // Assert - Method should complete without error
-      expect(true).toBe(true);
+      expect(usersService.getAdminUserIds).toHaveBeenCalled();
+    });
+
+    it('should send notifications to admins on job failure', async () => {
+      // Arrange
+      const job = createMockJob();
+      job.attemptsMade = 3;
+      const error = new Error('Critical database error');
+      machineRepository.findOne.mockResolvedValue(mockMachine);
+
+      // Act
+      await processor.onFailed(job, error);
+
+      // Assert - Should send both in-app and Telegram notifications
+      expect(notificationsService.createBulk).toHaveBeenCalledTimes(2);
+
+      // Verify in-app notification
+      expect(notificationsService.createBulk).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'system_alert',
+          channel: 'in_app',
+          recipient_ids: ['admin-1', 'admin-2'],
+          title: expect.stringContaining('Ошибка списания'),
+          message: expect.stringContaining('Critical database error'),
+        }),
+      );
+
+      // Verify Telegram notification
+      expect(notificationsService.createBulk).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'system_alert',
+          channel: 'telegram',
+          recipient_ids: ['admin-1', 'admin-2'],
+        }),
+      );
+    });
+
+    it('should create audit log entry on job failure', async () => {
+      // Arrange
+      const job = createMockJob();
+      job.attemptsMade = 2;
+      const error = new Error('Transaction rollback failed');
+      machineRepository.findOne.mockResolvedValue(mockMachine);
+
+      // Act
+      await processor.onFailed(job, error);
+
+      // Assert
+      expect(auditLogService.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          event_type: 'suspicious_activity',
+          severity: 'error',
+          user_id: 'user-1',
+          description: expect.stringContaining('Machine writeoff failed'),
+          metadata: expect.objectContaining({
+            machine_id: 'machine-1',
+            machine_number: 'M-001',
+            error_message: 'Transaction rollback failed',
+            attempts: 2,
+          }),
+          success: false,
+        }),
+      );
+    });
+
+    it('should handle missing machine gracefully in onFailed', async () => {
+      // Arrange
+      const job = createMockJob();
+      job.attemptsMade = 1;
+      const error = new Error('Machine not found');
+      machineRepository.findOne.mockResolvedValue(null);
+
+      // Act
+      await processor.onFailed(job, error);
+
+      // Assert - Should still send notification with 'Unknown' machine number
+      expect(notificationsService.createBulk).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining('Unknown'),
+        }),
+      );
+    });
+
+    it('should use system as userId when userId is undefined', async () => {
+      // Arrange
+      const job = createMockJob({ userId: undefined });
+      job.attemptsMade = 1;
+      const error = new Error('Test error');
+      machineRepository.findOne.mockResolvedValue(mockMachine);
+
+      // Act
+      await processor.onFailed(job, error);
+
+      // Assert
+      expect(auditLogService.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          user_id: 'system',
+        }),
+      );
+    });
+
+    it('should not throw when no admins are found', async () => {
+      // Arrange
+      const job = createMockJob();
+      job.attemptsMade = 1;
+      const error = new Error('Test error');
+      machineRepository.findOne.mockResolvedValue(mockMachine);
+      usersService.getAdminUserIds.mockResolvedValue([]);
+
+      // Act & Assert - Should not throw
+      await expect(processor.onFailed(job, error)).resolves.not.toThrow();
+    });
+  });
+
+  // ============================================================================
+  // TRANSACTION/MACHINE MISMATCH TESTS
+  // ============================================================================
+
+  describe('handleTransactionMachineMismatch', () => {
+    it('should send critical notifications when transaction created but machine update fails', async () => {
+      // Arrange
+      const job = createMockJob();
+      machineRepository.findOne.mockResolvedValue(mockMachine);
+      transactionsService.create.mockResolvedValue(mockTransaction as any);
+      machineRepository.save.mockRejectedValue(new Error('Database lock timeout'));
+
+      // Act
+      await processor.handleWriteoff(job);
+
+      // Assert - Should send notifications via all channels (in-app, telegram, email)
+      expect(notificationsService.createBulk).toHaveBeenCalledTimes(3);
+      expect(auditLogService.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          severity: 'critical',
+          description: expect.stringContaining('mismatch'),
+          metadata: expect.objectContaining({
+            transaction_id: 'transaction-1',
+            requires_manual_intervention: true,
+          }),
+        }),
+      );
+    });
+
+    it('should include transaction ID in mismatch notifications', async () => {
+      // Arrange
+      const job = createMockJob();
+      machineRepository.findOne.mockResolvedValue(mockMachine);
+      transactionsService.create.mockResolvedValue({
+        ...mockTransaction,
+        id: 'txn-mismatch-test',
+      } as any);
+      machineRepository.save.mockRejectedValue(new Error('Save failed'));
+
+      // Act
+      await processor.handleWriteoff(job);
+
+      // Assert
+      expect(notificationsService.createBulk).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining('txn-mismatch-test'),
+          data: expect.objectContaining({
+            transaction_id: 'txn-mismatch-test',
+          }),
+        }),
+      );
     });
   });
 

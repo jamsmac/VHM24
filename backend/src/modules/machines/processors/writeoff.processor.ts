@@ -1,4 +1,4 @@
-import { Process, Processor } from '@nestjs/bull';
+import { Process, Processor, OnQueueFailed } from '@nestjs/bull';
 import { Logger, Injectable } from '@nestjs/common';
 import { Job } from 'bull';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -7,6 +7,14 @@ import { Machine, MachineStatus } from '../entities/machine.entity';
 import { TransactionsService } from '../../transactions/transactions.service';
 import { TransactionType, ExpenseCategory } from '../../transactions/entities/transaction.entity';
 import { WriteoffJobData, WriteoffJobResult } from '../interfaces/writeoff-job.interface';
+import { NotificationsService } from '../../notifications/notifications.service';
+import { AuditLogService } from '../../audit-logs/audit-log.service';
+import { UsersService } from '../../users/users.service';
+import {
+  NotificationType,
+  NotificationChannel,
+} from '../../notifications/entities/notification.entity';
+import { AuditEventType, AuditSeverity } from '../../audit-logs/entities/audit-log.entity';
 
 /**
  * Background processor for machine writeoff operations
@@ -29,6 +37,9 @@ export class WriteoffProcessor {
     @InjectRepository(Machine)
     private readonly machineRepository: Repository<Machine>,
     private readonly transactionsService: TransactionsService,
+    private readonly notificationsService: NotificationsService,
+    private readonly auditLogService: AuditLogService,
+    private readonly usersService: UsersService,
   ) {}
 
   /**
@@ -181,7 +192,15 @@ export class WriteoffProcessor {
           this.logger.error(
             `CRITICAL: Transaction ${writeoffTransaction.id} created but machine update failed!`,
           );
-          // TODO: Implement compensation logic or manual intervention flag
+
+          // Mark transaction as requiring manual intervention
+          await this.handleTransactionMachineMismatch(
+            writeoffTransaction.id,
+            machineId,
+            machine.machine_number,
+            userId || 'system',
+            error.message,
+          );
         }
 
         throw new Error(`Machine status update failed: ${error.message}`);
@@ -252,14 +271,254 @@ export class WriteoffProcessor {
 
   /**
    * Handle job failure (after all retries exhausted)
+   * Uses Bull's @OnQueueFailed decorator for proper event handling
    */
+  @OnQueueFailed()
   async onFailed(job: Job<WriteoffJobData>, error: Error): Promise<void> {
+    const { machineId, userId, requestId } = job.data;
+
     this.logger.error(
       `Job ${job.id} failed permanently after ${job.attemptsMade} attempts: ${error.message}`,
       error.stack,
     );
 
-    // TODO: Send notification to admin about failed writeoff
-    // TODO: Create audit log entry for failed writeoff attempt
+    // Get machine details for better error reporting
+    let machineNumber = 'Unknown';
+    try {
+      const machine = await this.machineRepository.findOne({ where: { id: machineId } });
+      if (machine) {
+        machineNumber = machine.machine_number;
+      }
+    } catch {
+      // Ignore lookup errors
+    }
+
+    // Send notification to admins about failed writeoff
+    await this.sendFailedWriteoffNotification(
+      machineId,
+      machineNumber,
+      error.message,
+      job.attemptsMade,
+      String(job.id),
+    );
+
+    // Create audit log entry for failed writeoff attempt
+    await this.logFailedWriteoff(
+      machineId,
+      machineNumber,
+      userId || 'system',
+      error.message,
+      job.attemptsMade,
+      requestId,
+    );
+  }
+
+  /**
+   * Send notification to all admins about a failed writeoff operation
+   */
+  private async sendFailedWriteoffNotification(
+    machineId: string,
+    machineNumber: string,
+    errorMessage: string,
+    attempts: number,
+    jobId: string,
+  ): Promise<void> {
+    try {
+      const adminIds = await this.usersService.getAdminUserIds();
+
+      if (adminIds.length === 0) {
+        this.logger.warn('No admin users found to notify about failed writeoff');
+        return;
+      }
+
+      const title = `⚠️ Ошибка списания оборудования`;
+      const message =
+        `Не удалось списать машину ${machineNumber}\n\n` +
+        `🔧 ID машины: ${machineId}\n` +
+        `❌ Ошибка: ${errorMessage}\n` +
+        `🔄 Попыток: ${attempts}\n` +
+        `📋 Job ID: ${jobId}\n\n` +
+        `Требуется ручное вмешательство.`;
+
+      // Send to all admins via in-app notification
+      await this.notificationsService.createBulk({
+        type: NotificationType.SYSTEM_ALERT,
+        channel: NotificationChannel.IN_APP,
+        recipient_ids: adminIds,
+        title,
+        message,
+        data: {
+          machine_id: machineId,
+          machine_number: machineNumber,
+          error_message: errorMessage,
+          job_id: jobId,
+          attempts,
+          action_type: 'writeoff_failed',
+        },
+      });
+
+      // Also send via Telegram for urgent notification
+      await this.notificationsService.createBulk({
+        type: NotificationType.SYSTEM_ALERT,
+        channel: NotificationChannel.TELEGRAM,
+        recipient_ids: adminIds,
+        title,
+        message,
+        data: {
+          machine_id: machineId,
+          machine_number: machineNumber,
+          error_message: errorMessage,
+          job_id: jobId,
+        },
+      });
+
+      this.logger.log(`Sent failed writeoff notification to ${adminIds.length} admin(s)`);
+    } catch (notifyError) {
+      this.logger.error(
+        `Failed to send writeoff failure notification: ${notifyError.message}`,
+        notifyError.stack,
+      );
+    }
+  }
+
+  /**
+   * Create audit log entry for failed writeoff attempt
+   */
+  private async logFailedWriteoff(
+    machineId: string,
+    machineNumber: string,
+    userId: string,
+    errorMessage: string,
+    attempts: number,
+    requestId?: string,
+  ): Promise<void> {
+    try {
+      await this.auditLogService.create({
+        event_type: AuditEventType.SUSPICIOUS_ACTIVITY,
+        severity: AuditSeverity.ERROR,
+        user_id: userId,
+        description: `Machine writeoff failed: ${machineNumber} (${machineId})`,
+        metadata: {
+          machine_id: machineId,
+          machine_number: machineNumber,
+          error_message: errorMessage,
+          attempts,
+          request_id: requestId,
+          action_type: 'writeoff_failed',
+        },
+        success: false,
+        error_message: errorMessage,
+      });
+
+      this.logger.log(`Created audit log for failed writeoff of machine ${machineNumber}`);
+    } catch (auditError) {
+      this.logger.error(
+        `Failed to create audit log for writeoff failure: ${auditError.message}`,
+        auditError.stack,
+      );
+    }
+  }
+
+  /**
+   * Handle transaction/machine update mismatch
+   * This occurs when a writeoff transaction is created but the machine status update fails.
+   * Creates critical alerts and marks the transaction for manual review.
+   */
+  private async handleTransactionMachineMismatch(
+    transactionId: string,
+    machineId: string,
+    machineNumber: string,
+    userId: string,
+    errorMessage: string,
+  ): Promise<void> {
+    const title = `🚨 КРИТИЧЕСКАЯ ОШИБКА: Несоответствие транзакции`;
+    const message =
+      `Транзакция списания создана, но обновление машины не удалось!\n\n` +
+      `📋 Транзакция: ${transactionId}\n` +
+      `🔧 Машина: ${machineNumber} (${machineId})\n` +
+      `❌ Ошибка: ${errorMessage}\n\n` +
+      `⚠️ ТРЕБУЕТСЯ НЕМЕДЛЕННОЕ РУЧНОЕ ВМЕШАТЕЛЬСТВО!\n` +
+      `Необходимо либо завершить списание машины вручную, ` +
+      `либо отменить созданную транзакцию.`;
+
+    try {
+      // Get admin IDs for critical notification
+      const adminIds = await this.usersService.getAdminUserIds();
+
+      if (adminIds.length > 0) {
+        // Send critical notification via all channels
+        await Promise.all([
+          // In-app notification
+          this.notificationsService.createBulk({
+            type: NotificationType.SYSTEM_ALERT,
+            channel: NotificationChannel.IN_APP,
+            recipient_ids: adminIds,
+            title,
+            message,
+            data: {
+              transaction_id: transactionId,
+              machine_id: machineId,
+              machine_number: machineNumber,
+              error_message: errorMessage,
+              action_type: 'writeoff_mismatch',
+              requires_manual_intervention: true,
+            },
+          }),
+          // Telegram notification
+          this.notificationsService.createBulk({
+            type: NotificationType.SYSTEM_ALERT,
+            channel: NotificationChannel.TELEGRAM,
+            recipient_ids: adminIds,
+            title,
+            message,
+            data: {
+              transaction_id: transactionId,
+              machine_id: machineId,
+            },
+          }),
+          // Email notification for documentation
+          this.notificationsService.createBulk({
+            type: NotificationType.SYSTEM_ALERT,
+            channel: NotificationChannel.EMAIL,
+            recipient_ids: adminIds,
+            title,
+            message,
+            data: {
+              transaction_id: transactionId,
+              machine_id: machineId,
+              machine_number: machineNumber,
+              error_message: errorMessage,
+            },
+          }),
+        ]);
+      }
+
+      // Create critical audit log entry
+      await this.auditLogService.create({
+        event_type: AuditEventType.SUSPICIOUS_ACTIVITY,
+        severity: AuditSeverity.CRITICAL,
+        user_id: userId,
+        description: `CRITICAL: Writeoff transaction/machine mismatch for ${machineNumber}`,
+        metadata: {
+          transaction_id: transactionId,
+          machine_id: machineId,
+          machine_number: machineNumber,
+          error_message: errorMessage,
+          action_type: 'writeoff_mismatch',
+          requires_manual_intervention: true,
+        },
+        success: false,
+        error_message: `Transaction created but machine update failed: ${errorMessage}`,
+      });
+
+      this.logger.log(
+        `Sent mismatch alerts for transaction ${transactionId} / machine ${machineNumber}`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to handle transaction/machine mismatch: ${error.message}`,
+        error.stack,
+      );
+    }
   }
 }
