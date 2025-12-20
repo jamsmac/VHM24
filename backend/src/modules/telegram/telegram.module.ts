@@ -33,6 +33,9 @@ import { IncidentsModule } from '../incidents/incidents.module';
 import { TransactionsModule } from '../transactions/transactions.module';
 import { InventoryModule } from '../inventory/inventory.module';
 import { AccessRequestsModule } from '../access-requests/access-requests.module';
+import { RequestsModule } from '../requests/requests.module';
+import { CartHandler } from './handlers/cart.handler';
+import { CatalogHandler } from './handlers/catalog.handler';
 
 @Module({
   imports: [
@@ -49,6 +52,7 @@ import { AccessRequestsModule } from '../access-requests/access-requests.module'
     TransactionsModule,
     InventoryModule,
     AccessRequestsModule,
+    RequestsModule,
   ],
   controllers: [
     TelegramUsersController,
@@ -71,6 +75,8 @@ import { AccessRequestsModule } from '../access-requests/access-requests.module'
     TelegramPhotoCompressionService,
     CartStorageService,
     TelegramQueueProcessor,
+    CartHandler,
+    CatalogHandler,
   ],
   exports: [
     TelegramBotService,

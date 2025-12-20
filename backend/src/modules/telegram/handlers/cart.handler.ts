@@ -1,21 +1,17 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Context, Telegraf } from 'telegraf';
+import { TelegramSessionService } from '../services/telegram-session.service';
+import { TelegramNotificationsService } from '../services/telegram-notifications.service';
+import { CartStorageService, CartItem } from '../services/cart-storage.service';
+import { CartState, defaultSessionData } from './fsm-states';
+import { getCartKeyboard, getCartEmptyKeyboard, getCheckoutKeyboard } from './keyboards';
+import { UsersService } from '../../users/users.service';
+import { RequestsService } from '../../requests/requests.service';
+import { RequestPriority, Request } from '../../requests/entities/request.entity';
 
 /** Context with match groups from regex action handlers */
 interface ActionContext extends Context {
   match: RegExpExecArray;
-}
-import { TelegramSessionService } from '../services/telegram-session.service';
-import { CartStorageService, CartItem } from '../services/cart-storage.service';
-import { CartState, defaultSessionData } from './fsm-states';
-import { getCartKeyboard, getCartEmptyKeyboard, getCheckoutKeyboard } from './keyboards';
-
-// Temporary interface until RequestsService is implemented
-interface UserRequest {
-  request_number: string;
-  status: string;
-  created_at?: Date;
-  items?: unknown[];
 }
 
 /**
@@ -34,6 +30,9 @@ export class CartHandler {
   constructor(
     private readonly sessionService: TelegramSessionService,
     private readonly cartStorage: CartStorageService,
+    private readonly usersService: UsersService,
+    private readonly requestsService: RequestsService,
+    private readonly notificationsService: TelegramNotificationsService,
   ) {}
 
   /**
@@ -368,90 +367,173 @@ export class CartHandler {
    * Подтвердить и создать заявку.
    */
   private async handleConfirmCheckout(ctx: Context) {
-    const userId = ctx.from?.id?.toString();
-    if (!userId) return;
+    const telegramId = ctx.from?.id?.toString();
+    if (!telegramId) return;
 
-    const cart = await this.cartStorage.getCart(userId);
+    const cart = await this.cartStorage.getCart(telegramId);
 
     if (cart.length === 0) {
       await ctx.answerCbQuery('❌ Корзина пуста', { show_alert: true });
       return;
     }
 
-    const session = await this.sessionService.getSessionData(userId);
+    // Get user by telegram ID
+    const user = await this.usersService.findByTelegramId(telegramId);
+    if (!user) {
+      await ctx.answerCbQuery('❌ Пользователь не найден', { show_alert: true });
+      return;
+    }
+
+    const session = await this.sessionService.getSessionData(telegramId);
     const priority = session?.priority || 'normal';
-    // Note: comment available via session?.comment when request creation is implemented
+    const comment = session?.comment;
 
-    // TODO: Создать заявку через RequestsService
-    // const requestId = await this.requestsService.create(userId, {
-    //   priority,
-    //   comment,
-    //   items: cart.map(item => ({
-    //     material_id: item.materialId,
-    //     quantity: item.quantity,
-    //   })),
-    // });
-
-    const requestId = Math.floor(Math.random() * 10000); // Temporary
-
-    // Очищаем корзину и сессию
-    await this.cartStorage.clearCart(userId);
-    await this.sessionService.setSessionData(userId, defaultSessionData);
-
-    const priorityEmoji: Record<string, string> = {
-      normal: '🔵',
-      high: '🟡',
-      urgent: '🔴',
+    // Map priority to RequestPriority enum
+    const priorityMap: Record<string, RequestPriority> = {
+      normal: RequestPriority.NORMAL,
+      high: RequestPriority.HIGH,
+      urgent: RequestPriority.URGENT,
     };
 
-    // TODO: Уведомить администраторов
-    // await this.notifyAdmins(requestId, userId, cart, priority, comment);
+    try {
+      // Create request through RequestsService
+      const request = await this.requestsService.create(user.id, {
+        priority: priorityMap[priority] || RequestPriority.NORMAL,
+        comment: comment,
+        items: cart.map((item) => ({
+          material_id: item.materialId,
+          quantity: item.quantity,
+        })),
+      });
 
-    await ctx.editMessageText(
-      `✅ <b>Заявка #${requestId} создана!</b>\n\n` +
-        `📦 Позиций: ${cart.length}\n` +
-        `${priorityEmoji[priority] || '🔵'} Приоритет: ${priority}\n\n` +
-        'Администратор получил уведомление.\n' +
-        'Следите за статусом в разделе «📋 Мои заявки»',
-      {
-        parse_mode: 'HTML',
-      },
-    );
-    await ctx.answerCbQuery('✅ Заявка создана!');
+      // Clear cart and session
+      await this.cartStorage.clearCart(telegramId);
+      await this.sessionService.setSessionData(telegramId, defaultSessionData);
+
+      const priorityEmoji: Record<string, string> = {
+        normal: '🔵',
+        high: '🟡',
+        urgent: '🔴',
+      };
+
+      // Notify administrators about new request
+      await this.notifyAdminsAboutRequest(request, user.full_name || user.username || 'Пользователь', cart);
+
+      await ctx.editMessageText(
+        `✅ <b>Заявка ${request.request_number} создана!</b>\n\n` +
+          `📦 Позиций: ${cart.length}\n` +
+          `${priorityEmoji[priority] || '🔵'} Приоритет: ${priority}\n\n` +
+          'Администратор получил уведомление.\n' +
+          'Следите за статусом в разделе «📋 Мои заявки»',
+        {
+          parse_mode: 'HTML',
+        },
+      );
+      await ctx.answerCbQuery('✅ Заявка создана!');
+    } catch (error) {
+      this.logger.error('Failed to create request:', error);
+      await ctx.answerCbQuery('❌ Ошибка создания заявки', { show_alert: true });
+    }
+  }
+
+  /**
+   * Notify administrators about a new material request.
+   */
+  private async notifyAdminsAboutRequest(
+    request: Request,
+    userName: string,
+    cart: CartItem[],
+  ): Promise<void> {
+    try {
+      const priorityLabels: Record<string, string> = {
+        [RequestPriority.LOW]: '🟢 Низкий',
+        [RequestPriority.NORMAL]: '🔵 Обычный',
+        [RequestPriority.HIGH]: '🟡 Высокий',
+        [RequestPriority.URGENT]: '🔴 Срочный',
+      };
+
+      const itemsList = cart
+        .map((item, i) => `${i + 1}. ${item.name}: ${item.quantity} ${item.unit}`)
+        .join('\n');
+
+      await this.notificationsService.sendNotification({
+        broadcast: true, // Send to all admins with request notifications enabled
+        type: 'new_request',
+        title: '📋 Новая заявка на материалы',
+        message:
+          `<b>Заявка ${request.request_number}</b>\n\n` +
+          `👤 От: ${userName}\n` +
+          `📊 Приоритет: ${priorityLabels[request.priority] || 'Обычный'}\n` +
+          `📦 Позиций: ${cart.length}\n\n` +
+          `<b>Материалы:</b>\n${itemsList}` +
+          (request.comment ? `\n\n💬 Комментарий: ${request.comment}` : ''),
+        data: {
+          requestId: request.id,
+          requestNumber: request.request_number,
+        },
+      });
+    } catch (error) {
+      this.logger.error('Failed to notify admins about new request:', error);
+      // Don't throw - notification failure shouldn't block request creation
+    }
   }
 
   /**
    * Показать мои заявки.
    */
   private async handleMyRequests(ctx: Context) {
-    const userId = ctx.from?.id?.toString();
-    if (!userId) return;
+    const telegramId = ctx.from?.id?.toString();
+    if (!telegramId) return;
 
-    // TODO: Получить заявки пользователя через RequestsService
-    // const requests = await this.requestsService.findAll({
-    //   created_by_user_id: userId,
-    //   limit: 15,
-    // });
-
-    const requests: UserRequest[] = []; // Temporary until RequestsService is implemented
-
-    if (requests.length === 0) {
+    // Get user by telegram ID
+    const user = await this.usersService.findByTelegramId(telegramId);
+    if (!user) {
       await ctx.reply(
-        '📋 <b>У вас пока нет заявок</b>\n\n' + 'Создайте первую заявку через «📦 Создать заявку»',
+        '❌ <b>Пользователь не найден</b>\n\n' + 'Обратитесь к администратору.',
         { parse_mode: 'HTML' },
       );
       return;
     }
 
-    const lines = ['📋 <b>Ваши заявки</b>\n'];
+    try {
+      // Get user's requests through RequestsService
+      const { items: requests } = await this.requestsService.findAll({
+        created_by_user_id: user.id,
+        limit: 15,
+      });
 
-    for (const req of requests) {
-      const date = req.created_at?.toISOString().slice(0, 10) || '';
-      lines.push(`#${req.request_number} • ${req.status}`);
-      lines.push(`   📦 ${req.items?.length || 0} поз. • ${date}`);
+      if (requests.length === 0) {
+        await ctx.reply(
+          '📋 <b>У вас пока нет заявок</b>\n\n' + 'Создайте первую заявку через «📦 Создать заявку»',
+          { parse_mode: 'HTML' },
+        );
+        return;
+      }
+
+      const statusLabels: Record<string, string> = {
+        new: '🆕 Новая',
+        approved: '✅ Одобрена',
+        rejected: '❌ Отклонена',
+        sent: '📤 Отправлена',
+        partial_delivered: '📦 Частично',
+        completed: '✔️ Завершена',
+        cancelled: '🚫 Отменена',
+      };
+
+      const lines = ['📋 <b>Ваши заявки</b>\n'];
+
+      for (const req of requests) {
+        const date = req.created_at?.toISOString().slice(0, 10) || '';
+        const statusLabel = statusLabels[req.status] || req.status;
+        lines.push(`<b>${req.request_number}</b> • ${statusLabel}`);
+        lines.push(`   📦 ${req.items?.length || 0} поз. • ${date}`);
+      }
+
+      await ctx.reply(lines.join('\n'), { parse_mode: 'HTML' });
+    } catch (error) {
+      this.logger.error('Failed to fetch user requests:', error);
+      await ctx.reply('❌ Ошибка при загрузке заявок', { parse_mode: 'HTML' });
     }
-
-    await ctx.reply(lines.join('\n'), { parse_mode: 'HTML' });
   }
 
   /**
