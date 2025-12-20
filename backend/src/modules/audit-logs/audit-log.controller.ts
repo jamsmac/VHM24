@@ -1,6 +1,6 @@
 import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
-import { AuditLogService } from '@modules/security/services/audit-log.service';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse, ApiQuery } from '@nestjs/swagger';
+import { AuditLogService } from './audit-log.service';
 import { QueryAuditLogDto } from './dto/query-audit-log.dto';
 import { JwtAuthGuard } from '@modules/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '@modules/auth/guards/roles.guard';
@@ -28,9 +28,41 @@ export class AuditLogController {
    */
   @Get()
   @ApiOperation({ summary: 'Get audit logs (Admin only)' })
-  @ApiResponse({ status: 200, description: 'List of audit logs' })
+  @ApiResponse({ status: 200, description: 'List of audit logs with pagination' })
   findAll(@Query() queryDto: QueryAuditLogDto) {
     return this.auditLogService.findAll(queryDto);
+  }
+
+  /**
+   * Get audit statistics for dashboard
+   */
+  @Get('statistics')
+  @ApiOperation({ summary: 'Get audit statistics (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Audit statistics for dashboard' })
+  @ApiQuery({ name: 'from_date', required: false, type: String })
+  @ApiQuery({ name: 'to_date', required: false, type: String })
+  getStatistics(
+    @Query('from_date') fromDate?: string,
+    @Query('to_date') toDate?: string,
+  ) {
+    return this.auditLogService.getStatistics(
+      fromDate ? new Date(fromDate) : undefined,
+      toDate ? new Date(toDate) : undefined,
+    );
+  }
+
+  /**
+   * Get user activity summary
+   */
+  @Get('users/:userId/activity')
+  @ApiOperation({ summary: 'Get user activity summary (Admin only)' })
+  @ApiResponse({ status: 200, description: 'User activity summary' })
+  @ApiQuery({ name: 'days', required: false, type: Number })
+  getUserActivity(
+    @Param('userId') userId: string,
+    @Query('days') days?: number,
+  ) {
+    return this.auditLogService.getUserActivitySummary(userId, days || 30);
   }
 
   /**
