@@ -18,8 +18,8 @@ describe('TelegramManagerToolsService', () => {
   let userRepository: jest.Mocked<Repository<User>>;
   let taskRepository: jest.Mocked<Repository<Task>>;
   let resilientApi: jest.Mocked<TelegramResilientApiService>;
-  let i18nService: jest.Mocked<TelegramI18nService>;
-  let usersService: jest.Mocked<UsersService>;
+  let _i18nService: jest.Mocked<TelegramI18nService>;
+  let _usersService: jest.Mocked<UsersService>;
   let tasksService: jest.Mocked<TasksService>;
   let filesService: jest.Mocked<FilesService>;
 
@@ -148,8 +148,8 @@ describe('TelegramManagerToolsService', () => {
     userRepository = module.get(getRepositoryToken(User));
     taskRepository = module.get(getRepositoryToken(Task));
     resilientApi = module.get(TelegramResilientApiService);
-    i18nService = module.get(TelegramI18nService);
-    usersService = module.get(UsersService);
+    _i18nService = module.get(TelegramI18nService);
+    _usersService = module.get(UsersService);
     tasksService = module.get(TasksService);
     filesService = module.get(FilesService);
   });

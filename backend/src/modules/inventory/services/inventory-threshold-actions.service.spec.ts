@@ -3,6 +3,9 @@ import { InventoryThresholdActionsService } from './inventory-threshold-actions.
 import { IncidentsService } from '../../incidents/incidents.service';
 import { TasksService } from '../../tasks/tasks.service';
 import { NotificationsService } from '../../notifications/notifications.service';
+import { UsersService } from '../../users/users.service';
+import { UserRole } from '../../users/entities/user.entity';
+import { TelegramNotificationsService } from '../../telegram/services/telegram-notifications.service';
 import {
   InventoryDifferenceThreshold,
   SeverityLevel,
@@ -23,10 +26,14 @@ describe('InventoryThresholdActionsService', () => {
   let incidentsService: any;
   let tasksService: any;
   let notificationsService: any;
+  let usersService: any;
+  let telegramNotificationsService: any;
 
   // Test fixtures
   const testUserId = '11111111-1111-1111-1111-111111111111';
   const testMachineId = '22222222-2222-2222-2222-222222222222';
+  const testManagerId = '33333333-3333-3333-3333-333333333333';
+  const testAdminId = '44444444-4444-4444-4444-444444444444';
 
   const createDifferenceReportItem = (overrides = {}): DifferenceReportItem => ({
     actual_count_id: 'count-1',
@@ -85,6 +92,15 @@ describe('InventoryThresholdActionsService', () => {
       create: jest.fn().mockResolvedValue({}),
     };
 
+    usersService = {
+      findByRoles: jest.fn().mockResolvedValue([]),
+      findByRole: jest.fn().mockResolvedValue([]),
+    };
+
+    telegramNotificationsService = {
+      sendNotification: jest.fn().mockResolvedValue(undefined),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         InventoryThresholdActionsService,
@@ -99,6 +115,14 @@ describe('InventoryThresholdActionsService', () => {
         {
           provide: NotificationsService,
           useValue: notificationsService,
+        },
+        {
+          provide: UsersService,
+          useValue: usersService,
+        },
+        {
+          provide: TelegramNotificationsService,
+          useValue: telegramNotificationsService,
         },
       ],
     }).compile();
@@ -626,18 +650,240 @@ describe('InventoryThresholdActionsService', () => {
       expect(result.notificationsSent).toBe(0);
     });
 
-    it('should log notify_roles when configured', async () => {
+    it('should send role-based notifications when notify_roles configured', async () => {
       // Arrange
       const difference = createDifferenceReportItem();
       const threshold = createThreshold({
-        notify_roles: ['MANAGER', 'ADMIN'],
+        notify_roles: ['Manager', 'Admin'],
+        severity_level: SeverityLevel.WARNING,
       });
 
-      // Act - Currently this is a TODO in the service
+      // Mock users with roles
+      usersService.findByRoles.mockResolvedValue([
+        { id: testManagerId, full_name: 'Manager User', role: UserRole.MANAGER },
+        { id: testAdminId, full_name: 'Admin User', role: UserRole.ADMIN },
+      ]);
+
+      // Act
       const result = await service.executeThresholdActions(difference, threshold, testUserId);
 
       // Assert
-      expect(result.notificationsSent).toBe(0); // Roles-based notifications not implemented yet
+      expect(usersService.findByRoles).toHaveBeenCalledWith(
+        expect.arrayContaining([UserRole.MANAGER, UserRole.ADMIN]),
+        true,
+      );
+      expect(result.notificationsSent).toBe(2);
+      expect(notificationsService.create).toHaveBeenCalledTimes(2);
+    });
+
+    it('should exclude users who already receive direct notifications from role-based', async () => {
+      // Arrange
+      const difference = createDifferenceReportItem();
+      const threshold = createThreshold({
+        notify_users: [testManagerId], // Manager already gets direct notifications
+        notify_roles: ['Manager', 'Admin'],
+        severity_level: SeverityLevel.WARNING,
+      });
+
+      // Mock users with roles
+      usersService.findByRoles.mockResolvedValue([
+        { id: testManagerId, full_name: 'Manager User', role: UserRole.MANAGER },
+        { id: testAdminId, full_name: 'Admin User', role: UserRole.ADMIN },
+      ]);
+
+      // Act
+      const result = await service.executeThresholdActions(difference, threshold, testUserId);
+
+      // Assert - 1 direct (manager) + 1 role-based (admin, manager excluded as duplicate)
+      expect(result.notificationsSent).toBe(2);
+    });
+
+    it('should not send role-based notifications when no users found', async () => {
+      // Arrange
+      const difference = createDifferenceReportItem();
+      const threshold = createThreshold({
+        notify_roles: ['Manager'],
+        severity_level: SeverityLevel.WARNING,
+      });
+
+      // No users found for role
+      usersService.findByRoles.mockResolvedValue([]);
+
+      // Act
+      const result = await service.executeThresholdActions(difference, threshold, testUserId);
+
+      // Assert
+      expect(result.notificationsSent).toBe(0);
+      expect(notificationsService.create).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Telegram alerts', () => {
+    it('should send Telegram alert for CRITICAL severity', async () => {
+      // Arrange
+      const difference = createDifferenceReportItem();
+      const threshold = createThreshold({
+        severity_level: SeverityLevel.CRITICAL,
+        notify_users: [testUserId],
+      });
+
+      // Act
+      await service.executeThresholdActions(difference, threshold, testUserId);
+
+      // Assert
+      expect(telegramNotificationsService.sendNotification).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'inventory_critical_difference',
+          userIds: expect.arrayContaining([testUserId]),
+        }),
+      );
+    });
+
+    it('should not send Telegram alert for WARNING severity', async () => {
+      // Arrange
+      const difference = createDifferenceReportItem({ severity: SeverityLevel.WARNING });
+      const threshold = createThreshold({
+        severity_level: SeverityLevel.WARNING,
+        notify_users: [testUserId],
+      });
+
+      // Act
+      await service.executeThresholdActions(difference, threshold, testUserId);
+
+      // Assert
+      expect(telegramNotificationsService.sendNotification).not.toHaveBeenCalled();
+    });
+
+    it('should not send Telegram alert for INFO severity', async () => {
+      // Arrange
+      const difference = createDifferenceReportItem({ severity: SeverityLevel.INFO });
+      const threshold = createThreshold({
+        severity_level: SeverityLevel.INFO,
+        notify_users: [testUserId],
+      });
+
+      // Act
+      await service.executeThresholdActions(difference, threshold, testUserId);
+
+      // Assert
+      expect(telegramNotificationsService.sendNotification).not.toHaveBeenCalled();
+    });
+
+    it('should include role-based users in Telegram alert', async () => {
+      // Arrange
+      const difference = createDifferenceReportItem();
+      const threshold = createThreshold({
+        severity_level: SeverityLevel.CRITICAL,
+        notify_roles: ['Admin'],
+      });
+
+      usersService.findByRoles.mockResolvedValue([
+        { id: testAdminId, full_name: 'Admin User', role: UserRole.ADMIN },
+      ]);
+
+      // Act
+      await service.executeThresholdActions(difference, threshold, testUserId);
+
+      // Assert
+      expect(telegramNotificationsService.sendNotification).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userIds: expect.arrayContaining([testAdminId]),
+        }),
+      );
+    });
+
+    it('should send to admins and managers when no notify config', async () => {
+      // Arrange
+      const difference = createDifferenceReportItem();
+      const threshold = createThreshold({
+        severity_level: SeverityLevel.CRITICAL,
+        notify_users: null,
+        notify_roles: null,
+      });
+
+      usersService.findByRoles.mockResolvedValue([
+        { id: testAdminId, full_name: 'Admin User', role: UserRole.ADMIN },
+        { id: testManagerId, full_name: 'Manager User', role: UserRole.MANAGER },
+      ]);
+
+      // Act
+      await service.executeThresholdActions(difference, threshold, testUserId);
+
+      // Assert
+      expect(usersService.findByRoles).toHaveBeenCalledWith(
+        expect.arrayContaining([UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.MANAGER]),
+        true,
+      );
+      expect(telegramNotificationsService.sendNotification).toHaveBeenCalled();
+    });
+
+    it('should deduplicate users in Telegram alert', async () => {
+      // Arrange
+      const difference = createDifferenceReportItem();
+      const threshold = createThreshold({
+        severity_level: SeverityLevel.CRITICAL,
+        notify_users: [testAdminId], // Admin in direct list
+        notify_roles: ['Admin'], // Admin also in roles
+      });
+
+      usersService.findByRoles.mockResolvedValue([
+        { id: testAdminId, full_name: 'Admin User', role: UserRole.ADMIN },
+      ]);
+
+      // Act
+      await service.executeThresholdActions(difference, threshold, testUserId);
+
+      // Assert - Admin should only appear once
+      expect(telegramNotificationsService.sendNotification).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userIds: [testAdminId], // Only one admin, no duplicates
+        }),
+      );
+    });
+
+    it('should include action button in Telegram alert', async () => {
+      // Arrange
+      const difference = createDifferenceReportItem();
+      const threshold = createThreshold({
+        severity_level: SeverityLevel.CRITICAL,
+        notify_users: [testUserId],
+      });
+
+      // Act
+      await service.executeThresholdActions(difference, threshold, testUserId);
+
+      // Assert
+      expect(telegramNotificationsService.sendNotification).toHaveBeenCalledWith(
+        expect.objectContaining({
+          actions: expect.arrayContaining([
+            expect.objectContaining({
+              text: expect.any(String),
+              url: expect.stringContaining('count-1'),
+            }),
+          ]),
+        }),
+      );
+    });
+
+    it('should handle Telegram error gracefully', async () => {
+      // Arrange
+      const difference = createDifferenceReportItem();
+      const threshold = createThreshold({
+        severity_level: SeverityLevel.CRITICAL,
+        notify_users: [testUserId],
+      });
+
+      telegramNotificationsService.sendNotification.mockRejectedValue(
+        new Error('Telegram API error'),
+      );
+
+      // Act - should not throw
+      const result = await service.executeThresholdActions(difference, threshold, testUserId);
+
+      // Assert
+      expect(result).toBeDefined();
+      // Email notifications should still be sent
+      expect(result.notificationsSent).toBe(2); // IN_APP + EMAIL
     });
   });
 

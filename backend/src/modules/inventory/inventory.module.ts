@@ -42,6 +42,8 @@ import { Recipe } from '../recipes/entities/recipe.entity';
 import { IncidentsModule } from '../incidents/incidents.module';
 import { TasksModule } from '../tasks/tasks.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { UsersModule } from '../users/users.module';
+import { TelegramModule } from '../telegram/telegram.module';
 
 @Module({
   imports: [
@@ -69,6 +71,8 @@ import { NotificationsModule } from '../notifications/notifications.module';
     IncidentsModule,
     forwardRef(() => TasksModule),
     NotificationsModule,
+    UsersModule,
+    forwardRef(() => TelegramModule),
   ],
   controllers: [
     InventoryController,

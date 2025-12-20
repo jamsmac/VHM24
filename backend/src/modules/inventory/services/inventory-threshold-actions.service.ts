@@ -2,6 +2,9 @@ import { Injectable, Logger } from '@nestjs/common';
 import { IncidentsService } from '../../incidents/incidents.service';
 import { TasksService } from '../../tasks/tasks.service';
 import { NotificationsService } from '../../notifications/notifications.service';
+import { UsersService } from '../../users/users.service';
+import { UserRole } from '../../users/entities/user.entity';
+import { TelegramNotificationsService } from '../../telegram/services/telegram-notifications.service';
 import {
   InventoryDifferenceThreshold,
   SeverityLevel,
@@ -30,6 +33,8 @@ export class InventoryThresholdActionsService {
     private readonly incidentsService: IncidentsService,
     private readonly tasksService: TasksService,
     private readonly notificationsService: NotificationsService,
+    private readonly usersService: UsersService,
+    private readonly telegramNotificationsService: TelegramNotificationsService,
   ) {}
 
   /**
@@ -98,8 +103,26 @@ export class InventoryThresholdActionsService {
       this.logger.log(
         `Role-based notifications configured for: ${threshold.notify_roles.join(', ')}`,
       );
-      // TODO: Получить пользователей по ролям и отправить уведомления
-      // Требуется дополнительный метод в UsersService
+      try {
+        const roleBasedCount = await this.sendRoleBasedNotifications(
+          difference,
+          threshold,
+        );
+        results.notificationsSent += roleBasedCount;
+        this.logger.log(`Sent ${roleBasedCount} role-based notifications`);
+      } catch (error) {
+        this.logger.error(`Failed to send role-based notifications: ${error.message}`, error.stack);
+      }
+    }
+
+    // 5. Telegram уведомления для критических расхождений
+    if (threshold.severity_level === SeverityLevel.CRITICAL) {
+      try {
+        await this.sendTelegramAlert(difference, threshold);
+        this.logger.log('Sent Telegram alert for critical difference');
+      } catch (error) {
+        this.logger.error(`Failed to send Telegram alert: ${error.message}`, error.stack);
+      }
     }
 
     return results;
@@ -334,5 +357,166 @@ export class InventoryThresholdActionsService {
 
 Проверил: ${difference.counted_by.full_name}
 `.trim();
+  }
+
+  /**
+   * Отправить уведомления пользователям по ролям
+   */
+  private async sendRoleBasedNotifications(
+    difference: DifferenceReportItem,
+    threshold: InventoryDifferenceThreshold,
+  ): Promise<number> {
+    // Проверяем наличие ролей
+    if (!threshold.notify_roles || threshold.notify_roles.length === 0) {
+      return 0;
+    }
+
+    // Преобразуем строковые роли в UserRole enum
+    const roles = threshold.notify_roles
+      .map((role) => this.mapStringToUserRole(role))
+      .filter((role): role is UserRole => role !== null);
+
+    if (roles.length === 0) {
+      this.logger.warn('No valid roles found in notify_roles configuration');
+      return 0;
+    }
+
+    // Получаем активных пользователей с указанными ролями
+    const users = await this.usersService.findByRoles(roles, true);
+
+    if (users.length === 0) {
+      this.logger.log(`No active users found for roles: ${roles.join(', ')}`);
+      return 0;
+    }
+
+    // Извлекаем ID пользователей, исключая тех, кто уже получает уведомления напрямую
+    const existingUserIds = new Set(threshold.notify_users || []);
+    const userIds = users
+      .map((user) => user.id)
+      .filter((id) => !existingUserIds.has(id));
+
+    if (userIds.length === 0) {
+      this.logger.log('All role-based users already receive direct notifications');
+      return 0;
+    }
+
+    // Отправляем уведомления
+    return this.sendNotificationsForDifference(difference, threshold, userIds);
+  }
+
+  /**
+   * Преобразовать строковую роль в UserRole enum
+   */
+  private mapStringToUserRole(roleString: string): UserRole | null {
+    const roleMapping: Record<string, UserRole> = {
+      SuperAdmin: UserRole.SUPER_ADMIN,
+      SUPER_ADMIN: UserRole.SUPER_ADMIN,
+      Admin: UserRole.ADMIN,
+      ADMIN: UserRole.ADMIN,
+      Manager: UserRole.MANAGER,
+      MANAGER: UserRole.MANAGER,
+      Operator: UserRole.OPERATOR,
+      OPERATOR: UserRole.OPERATOR,
+      Collector: UserRole.COLLECTOR,
+      COLLECTOR: UserRole.COLLECTOR,
+      Technician: UserRole.TECHNICIAN,
+      TECHNICIAN: UserRole.TECHNICIAN,
+      Viewer: UserRole.VIEWER,
+      VIEWER: UserRole.VIEWER,
+    };
+
+    return roleMapping[roleString] || null;
+  }
+
+  /**
+   * Отправить Telegram уведомление о критическом расхождении
+   */
+  private async sendTelegramAlert(
+    difference: DifferenceReportItem,
+    threshold: InventoryDifferenceThreshold,
+  ): Promise<void> {
+    const title = `🚨 КРИТИЧЕСКОЕ РАСХОЖДЕНИЕ: ${difference.nomenclature_name}`;
+    const message = this.formatTelegramAlertMessage(difference);
+
+    // Определяем пользователей для уведомления
+    const userIds: string[] = [];
+
+    // Добавляем напрямую указанных пользователей
+    if (threshold.notify_users && threshold.notify_users.length > 0) {
+      userIds.push(...threshold.notify_users);
+    }
+
+    // Добавляем пользователей по ролям
+    if (threshold.notify_roles && threshold.notify_roles.length > 0) {
+      const roles = threshold.notify_roles
+        .map((role) => this.mapStringToUserRole(role))
+        .filter((role): role is UserRole => role !== null);
+
+      if (roles.length > 0) {
+        const roleUsers = await this.usersService.findByRoles(roles, true);
+        userIds.push(...roleUsers.map((u) => u.id));
+      }
+    }
+
+    // Если нет конкретных пользователей, отправляем всем админам и менеджерам
+    if (userIds.length === 0) {
+      const adminsAndManagers = await this.usersService.findByRoles(
+        [UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.MANAGER],
+        true,
+      );
+      userIds.push(...adminsAndManagers.map((u) => u.id));
+    }
+
+    // Убираем дубликаты
+    const uniqueUserIds = [...new Set(userIds)];
+
+    if (uniqueUserIds.length === 0) {
+      this.logger.warn('No users found for Telegram alert');
+      return;
+    }
+
+    await this.telegramNotificationsService.sendNotification({
+      userIds: uniqueUserIds,
+      type: 'inventory_critical_difference',
+      title,
+      message,
+      data: {
+        difference_report_item: {
+          actual_count_id: difference.actual_count_id,
+          nomenclature_id: difference.nomenclature_id,
+          nomenclature_name: difference.nomenclature_name,
+          level_type: difference.level_type,
+          calculated_quantity: difference.calculated_quantity,
+          actual_quantity: difference.actual_quantity,
+          difference_abs: difference.difference_abs,
+          difference_rel: difference.difference_rel,
+        },
+        threshold_id: threshold.id,
+        threshold_name: threshold.name,
+      },
+      actions: [
+        {
+          text: '📋 Открыть отчёт',
+          url: `/reports/inventory-differences?actual_count_id=${difference.actual_count_id}`,
+        },
+      ],
+    });
+  }
+
+  /**
+   * Форматировать сообщение для Telegram алерта
+   */
+  private formatTelegramAlertMessage(difference: DifferenceReportItem): string {
+    return `<b>Обнаружено критическое расхождение остатков!</b>
+
+<b>Товар:</b> ${difference.nomenclature_name}
+<b>Уровень:</b> ${difference.level_type}
+
+<b>Расчётный остаток:</b> ${difference.calculated_quantity}
+<b>Фактический остаток:</b> ${difference.actual_quantity}
+<b>Разница:</b> ${difference.difference_abs} (${difference.difference_rel.toFixed(2)}%)
+
+<b>Проверил:</b> ${difference.counted_by.full_name}
+<b>Дата:</b> ${new Date(difference.counted_at).toLocaleString('ru-RU')}`;
   }
 }
