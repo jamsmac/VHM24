@@ -1,10 +1,15 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { TelegramUser } from '../entities/telegram-user.entity';
+import { Repository, In, Between, MoreThan } from 'typeorm';
+import { TelegramUser, TelegramUserStatus } from '../entities/telegram-user.entity';
 import { TelegramResilientApiService } from './telegram-resilient-api.service';
 import { TelegramI18nService } from './telegram-i18n.service';
 import { Markup } from 'telegraf';
+import { UsersService } from '../../users/users.service';
+import { TasksService } from '../../tasks/tasks.service';
+import { FilesService } from '../../files/files.service';
+import { User, UserRole, UserStatus } from '../../users/entities/user.entity';
+import { Task, TaskStatus, TaskType } from '../../tasks/entities/task.entity';
 
 /**
  * Manager Tools Service for Telegram Bot
@@ -20,33 +25,37 @@ import { Markup } from 'telegraf';
  * - Only MANAGER and ADMIN roles can use these features
  * - Managers can only manage their assigned teams
  * - Admins can manage all teams
- *
- * **Use Cases:**
- * 1. Urgent task assignment - Manager assigns critical task to specific operator
- * 2. Team broadcast - Announce schedule change to all operators
- * 3. Performance review - View team stats for daily standup
- * 4. Emergency coordination - Monitor all active operators during incident
- *
- * **Example Flow:**
- * ```
- * Manager: /assign_task
- * Bot: "Select operator:"
- * Manager: [Selects operator]
- * Bot: "Select task:"
- * Manager: [Selects task]
- * Bot: "✅ Task assigned! Operator will be notified."
- * Operator: [Receives notification with task details]
- * ```
  */
 @Injectable()
 export class TelegramManagerToolsService {
   private readonly logger = new Logger(TelegramManagerToolsService.name);
 
+  // Roles allowed to use manager tools
+  private readonly MANAGER_ROLES = [
+    UserRole.SUPER_ADMIN,
+    UserRole.ADMIN,
+    UserRole.MANAGER,
+  ];
+
+  // Roles that can be assigned tasks
+  private readonly OPERATOR_ROLES = [
+    UserRole.OPERATOR,
+    UserRole.COLLECTOR,
+    UserRole.TECHNICIAN,
+  ];
+
   constructor(
     @InjectRepository(TelegramUser)
     private readonly telegramUserRepository: Repository<TelegramUser>,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
+    @InjectRepository(Task)
+    private readonly taskRepository: Repository<Task>,
     private readonly resilientApi: TelegramResilientApiService,
     private readonly i18nService: TelegramI18nService,
+    private readonly usersService: UsersService,
+    private readonly tasksService: TasksService,
+    private readonly filesService: FilesService,
   ) {}
 
   /**
@@ -55,20 +64,27 @@ export class TelegramManagerToolsService {
    * @param userId - VendHub user ID
    * @throws ForbiddenException if user is not manager/admin
    */
-  async verifyManagerAccess(userId: string): Promise<void> {
-    // TODO: Integrate with actual users service to check role
-    // For now, this is a placeholder that would check:
-    // - User role is MANAGER or ADMIN
-    // - User is verified in Telegram
-    // - User account is active
+  async verifyManagerAccess(userId: string): Promise<User> {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+    });
 
-    this.logger.log(`Verifying manager access for user ${userId}`);
+    if (!user) {
+      throw new ForbiddenException('User not found');
+    }
 
-    // Placeholder - in real implementation:
-    // const user = await this.usersService.findOne(userId);
-    // if (!['MANAGER', 'ADMIN'].includes(user.role)) {
-    //   throw new ForbiddenException('Only managers and admins can use this feature');
-    // }
+    if (!this.MANAGER_ROLES.includes(user.role)) {
+      throw new ForbiddenException(
+        'Only managers and admins can use this feature',
+      );
+    }
+
+    if (user.status !== UserStatus.ACTIVE) {
+      throw new ForbiddenException('User account is not active');
+    }
+
+    this.logger.log(`Manager access verified for user ${userId} (${user.role})`);
+    return user;
   }
 
   /**
@@ -79,15 +95,6 @@ export class TelegramManagerToolsService {
    *
    * @param managerId - Manager's VendHub user ID
    * @returns List of operators with Telegram info
-   *
-   * @example
-   * ```typescript
-   * const operators = await this.managerTools.getAvailableOperators(managerId);
-   * // Returns: [
-   * //   { id: 'uuid1', name: 'Ivan Petrov', chatId: '123456', status: MachineStatus.ACTIVE },
-   * //   { id: 'uuid2', name: 'Anna Ivanova', chatId: '789012', status: MachineStatus.ACTIVE },
-   * // ]
-   * ```
    */
   async getAvailableOperators(managerId: string): Promise<
     Array<{
@@ -101,17 +108,57 @@ export class TelegramManagerToolsService {
   > {
     await this.verifyManagerAccess(managerId);
 
-    // TODO: Implement actual query:
-    // 1. Get manager's team (if manager) or all operators (if admin)
-    // 2. Filter to only users with Telegram linked
-    // 3. Get current task counts
-    // 4. Get last activity timestamp
-    // 5. Sort by status (active first) and name
+    // Get operators with Telegram linked
+    const telegramUsers = await this.telegramUserRepository.find({
+      where: {
+        is_verified: true,
+        status: TelegramUserStatus.ACTIVE,
+      },
+      relations: ['user'],
+    });
 
-    this.logger.log(`Getting available operators for manager ${managerId}`);
+    // Filter to only operators
+    const operators = telegramUsers.filter(
+      (tu) =>
+        tu.user &&
+        this.OPERATOR_ROLES.includes(tu.user.role) &&
+        tu.user.status === UserStatus.ACTIVE,
+    );
 
-    // Placeholder
-    return [];
+    // Get task counts for each operator
+    const result = await Promise.all(
+      operators.map(async (op) => {
+        const tasksInProgress = await this.taskRepository.count({
+          where: {
+            assigned_to_user_id: op.user_id,
+            status: In([TaskStatus.ASSIGNED, TaskStatus.IN_PROGRESS]),
+          },
+        });
+
+        return {
+          id: op.user_id,
+          name: op.user?.full_name || op.first_name || 'Unknown',
+          chatId: op.chat_id,
+          status: op.user?.status || 'unknown',
+          tasksInProgress,
+          lastActive: op.last_interaction_at,
+        };
+      }),
+    );
+
+    // Sort by status (those with fewer tasks first) and name
+    result.sort((a, b) => {
+      if (a.tasksInProgress !== b.tasksInProgress) {
+        return a.tasksInProgress - b.tasksInProgress;
+      }
+      return a.name.localeCompare(b.name);
+    });
+
+    this.logger.log(
+      `Found ${result.length} available operators for manager ${managerId}`,
+    );
+
+    return result;
   }
 
   /**
@@ -133,16 +180,38 @@ export class TelegramManagerToolsService {
   > {
     await this.verifyManagerAccess(managerId);
 
-    // TODO: Implement actual query:
-    // 1. Get tasks with status 'created' (not assigned)
-    // 2. Filter to manager's area/machines (if manager)
-    // 3. Include machine and location info
-    // 4. Sort by priority and creation date
+    // Get tasks with status 'pending' (not yet assigned)
+    const tasks = await this.taskRepository.find({
+      where: {
+        status: TaskStatus.PENDING,
+        assigned_to_user_id: null as unknown as string,
+      },
+      relations: ['machine', 'machine.location'],
+      order: {
+        priority: 'DESC',
+        created_at: 'ASC',
+      },
+      take: 50, // Limit to 50 most urgent tasks
+    });
 
-    this.logger.log(`Getting unassigned tasks for manager ${managerId}`);
+    const result = tasks.map((task) => ({
+      id: task.id,
+      type: task.type_code,
+      machineNumber: task.machine?.machine_number || 'N/A',
+      machineName: task.machine?.name || 'Unknown',
+      location:
+        task.machine?.location?.name ||
+        task.machine?.location?.address ||
+        'Unknown',
+      priority: task.priority,
+      createdAt: task.created_at,
+    }));
 
-    // Placeholder
-    return [];
+    this.logger.log(
+      `Found ${result.length} unassigned tasks for manager ${managerId}`,
+    );
+
+    return result;
   }
 
   /**
@@ -154,19 +223,6 @@ export class TelegramManagerToolsService {
    * @param taskId - Task ID to assign
    * @param operatorId - Operator to assign to
    * @returns Success status and notification details
-   *
-   * @example
-   * ```typescript
-   * const result = await this.managerTools.assignTask(
-   *   'manager-uuid',
-   *   'task-uuid',
-   *   'operator-uuid'
-   * );
-   *
-   * if (result.success) {
-   *   // Task assigned, operator notified
-   * }
-   * ```
    */
   async assignTask(
     managerId: string,
@@ -180,38 +236,74 @@ export class TelegramManagerToolsService {
     try {
       await this.verifyManagerAccess(managerId);
 
-      // TODO: Implement actual assignment:
-      // 1. Validate task exists and is unassigned
-      // 2. Validate operator exists and is available
-      // 3. Check manager has permission to assign this task
-      // 4. Update task.assigned_user_id = operatorId
-      // 5. Send notification to operator
+      // Get the task
+      const task = await this.tasksService.findOne(taskId);
 
-      this.logger.log(`Manager ${managerId} assigning task ${taskId} to operator ${operatorId}`);
+      if (!task) {
+        return {
+          success: false,
+          notificationSent: false,
+          error: 'Task not found',
+        };
+      }
 
-      // Get operator's Telegram chat ID
+      if (task.status === TaskStatus.COMPLETED) {
+        return {
+          success: false,
+          notificationSent: false,
+          error: 'Cannot assign a completed task',
+        };
+      }
+
+      // Assign the task using TasksService
+      await this.tasksService.assignTask(taskId, operatorId);
+
+      this.logger.log(
+        `Manager ${managerId} assigned task ${taskId} to operator ${operatorId}`,
+      );
+
+      // Get operator's Telegram info
       const operator = await this.telegramUserRepository.findOne({
         where: { user_id: operatorId },
       });
 
       if (!operator || !operator.chat_id) {
         return {
-          success: false,
+          success: true,
           notificationSent: false,
           error: 'Operator does not have Telegram linked',
         };
       }
 
+      // Get task type emoji
+      const taskEmoji = this.getTaskTypeEmoji(task.type_code);
+
       // Send notification to operator
       const message = this.i18nService.t(operator.language, 'manager.task_assigned', {
-        taskType: 'Refill', // TODO: Get from actual task
-        machineNumber: 'M-001', // TODO: Get from actual task
+        taskType: this.i18nService.t(operator.language, `tasks.types.${task.type_code}`),
+        machineNumber: task.machine?.machine_number || 'N/A',
       });
+
+      const fullMessage =
+        `${taskEmoji} <b>${message}</b>\n\n` +
+        `📍 ${task.machine?.location?.name || task.machine?.location?.address || 'Unknown location'}\n` +
+        `📝 ${task.description || 'No description'}\n\n` +
+        `${this.i18nService.t(operator.language, 'manager.tap_to_view')}`;
 
       await this.resilientApi.sendText(
         operator.chat_id,
-        message,
-        { parse_mode: 'HTML' },
+        fullMessage,
+        {
+          parse_mode: 'HTML',
+          ...Markup.inlineKeyboard([
+            [
+              Markup.button.callback(
+                this.i18nService.t(operator.language, 'tasks.view_task'),
+                `task:${taskId}`,
+              ),
+            ],
+          ]),
+        },
         {
           priority: 1, // High priority for task assignments
           attempts: 5,
@@ -242,17 +334,6 @@ export class TelegramManagerToolsService {
    * @param message - Message to broadcast
    * @param options - Broadcast options
    * @returns Delivery statistics
-   *
-   * @example
-   * ```typescript
-   * const result = await this.managerTools.broadcastMessage(
-   *   'manager-uuid',
-   *   'Внимание! График работы изменен на завтра.',
-   *   { teamIds: ['team-1'], urgent: true }
-   * );
-   *
-   * console.log(`Sent: ${result.sent}, Failed: ${result.failed}`);
-   * ```
    */
   async broadcastMessage(
     managerId: string,
@@ -261,6 +342,7 @@ export class TelegramManagerToolsService {
       teamIds?: string[];
       urgent?: boolean;
       operatorIds?: string[];
+      roles?: UserRole[];
     },
   ): Promise<{
     sent: number;
@@ -269,30 +351,53 @@ export class TelegramManagerToolsService {
     failedRecipients: string[];
   }> {
     try {
-      await this.verifyManagerAccess(managerId);
+      const manager = await this.verifyManagerAccess(managerId);
 
-      // TODO: Implement actual broadcast:
-      // 1. Get list of operators to send to (based on teams/operatorIds)
-      // 2. Verify manager has permission to message these operators
-      // 3. Get Telegram chat IDs for all operators
-      // 4. Send message to each operator (use BullMQ for queuing)
-      // 5. Track successes and failures
+      // Build query for recipients
+      let recipients: TelegramUser[];
+
+      if (options?.operatorIds && options.operatorIds.length > 0) {
+        // Send to specific operators
+        recipients = await this.telegramUserRepository.find({
+          where: {
+            user_id: In(options.operatorIds),
+            is_verified: true,
+            status: TelegramUserStatus.ACTIVE,
+          },
+        });
+      } else {
+        // Get all verified telegram users
+        recipients = await this.telegramUserRepository.find({
+          where: {
+            is_verified: true,
+            status: TelegramUserStatus.ACTIVE,
+          },
+          relations: ['user'],
+        });
+
+        // Filter by roles if specified
+        if (options?.roles && options.roles.length > 0) {
+          recipients = recipients.filter(
+            (r) => r.user && options.roles!.includes(r.user.role),
+          );
+        } else {
+          // Default: send to operators only
+          recipients = recipients.filter(
+            (r) => r.user && this.OPERATOR_ROLES.includes(r.user.role),
+          );
+        }
+      }
 
       this.logger.log(
-        `Manager ${managerId} broadcasting message to ${options?.teamIds?.length || 'all'} teams`,
+        `Manager ${managerId} broadcasting message to ${recipients.length} recipients`,
       );
-
-      // Get recipients
-      const recipients = await this.telegramUserRepository.find({
-        where: {
-          is_verified: true,
-          // TODO: Add team filtering
-        },
-      });
 
       let sent = 0;
       let failed = 0;
       const failedRecipients: string[] = [];
+
+      const managerName = manager.full_name || 'Manager';
+      const urgentPrefix = options?.urgent ? '🚨 ' : '';
 
       for (const recipient of recipients) {
         if (!recipient.chat_id) {
@@ -302,9 +407,13 @@ export class TelegramManagerToolsService {
         }
 
         try {
+          const formattedMessage =
+            `${urgentPrefix}📢 <b>${this.i18nService.t(recipient.language, 'manager.broadcast_from', { name: managerName })}:</b>\n\n` +
+            message;
+
           await this.resilientApi.sendText(
             recipient.chat_id,
-            `📢 <b>Сообщение от менеджера:</b>\n\n${message}`,
+            formattedMessage,
             { parse_mode: 'HTML' },
             {
               priority: options?.urgent ? 2 : 0,
@@ -315,7 +424,10 @@ export class TelegramManagerToolsService {
         } catch (error) {
           failed++;
           failedRecipients.push(recipient.user_id);
-          this.logger.error(`Failed to send broadcast to ${recipient.user_id}`, error);
+          this.logger.error(
+            `Failed to send broadcast to ${recipient.user_id}`,
+            error,
+          );
         }
       }
 
@@ -343,18 +455,6 @@ export class TelegramManagerToolsService {
    * @param managerId - Manager requesting analytics
    * @param period - Time period ('today' | 'week' | 'month')
    * @returns Team analytics data
-   *
-   * @example
-   * ```typescript
-   * const analytics = await this.managerTools.getTeamAnalytics('manager-uuid', 'today');
-   * // Returns: {
-   * //   tasksCompleted: 24,
-   * //   tasksInProgress: 5,
-   * //   activeOperators: 8,
-   * //   avgCompletionTime: 35, // minutes
-   * //   topPerformers: [...],
-   * // }
-   * ```
    */
   async getTeamAnalytics(
     managerId: string,
@@ -373,24 +473,113 @@ export class TelegramManagerToolsService {
   }> {
     await this.verifyManagerAccess(managerId);
 
-    // TODO: Implement actual analytics query:
-    // 1. Get manager's team
-    // 2. Query tasks in specified period
-    // 3. Calculate completion times
-    // 4. Identify top performers
-    // 5. Group by task type
+    // Calculate date range
+    const now = new Date();
+    let startDate: Date;
 
-    this.logger.log(`Getting team analytics for manager ${managerId}, period: ${period}`);
+    switch (period) {
+      case 'today':
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        break;
+      case 'week':
+        startDate = new Date(now);
+        startDate.setDate(now.getDate() - 7);
+        break;
+      case 'month':
+        startDate = new Date(now);
+        startDate.setMonth(now.getMonth() - 1);
+        break;
+    }
 
-    // Placeholder
+    // Get completed tasks in period
+    const completedTasks = await this.taskRepository.find({
+      where: {
+        status: TaskStatus.COMPLETED,
+        completed_at: Between(startDate, now),
+      },
+      relations: ['assigned_to'],
+    });
+
+    // Get tasks in progress
+    const tasksInProgress = await this.taskRepository.count({
+      where: {
+        status: In([TaskStatus.ASSIGNED, TaskStatus.IN_PROGRESS]),
+      },
+    });
+
+    // Get operator counts
+    const totalOperators = await this.telegramUserRepository.count({
+      where: {
+        is_verified: true,
+        status: TelegramUserStatus.ACTIVE,
+      },
+    });
+
+    // Active operators (interacted in last 24 hours)
+    const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const activeOperators = await this.telegramUserRepository.count({
+      where: {
+        is_verified: true,
+        status: TelegramUserStatus.ACTIVE,
+        last_interaction_at: MoreThan(oneDayAgo),
+      },
+    });
+
+    // Calculate average completion time
+    let avgCompletionTimeMinutes = 0;
+    if (completedTasks.length > 0) {
+      const totalMinutes = completedTasks.reduce((sum, task) => {
+        if (task.started_at && task.completed_at) {
+          const duration =
+            (task.completed_at.getTime() - task.started_at.getTime()) /
+            (1000 * 60);
+          return sum + duration;
+        }
+        return sum;
+      }, 0);
+      avgCompletionTimeMinutes = Math.round(totalMinutes / completedTasks.length);
+    }
+
+    // Get top performers
+    const performerMap = new Map<string, { name: string; count: number }>();
+    for (const task of completedTasks) {
+      if (task.assigned_to) {
+        const key = task.assigned_to_user_id!;
+        const existing = performerMap.get(key);
+        if (existing) {
+          existing.count++;
+        } else {
+          performerMap.set(key, {
+            name: task.assigned_to.full_name,
+            count: 1,
+          });
+        }
+      }
+    }
+
+    const topPerformers = Array.from(performerMap.values())
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5)
+      .map((p) => ({ name: p.name, tasksCompleted: p.count }));
+
+    // Group by task type
+    const tasksByType: Record<string, number> = {};
+    for (const task of completedTasks) {
+      tasksByType[task.type_code] = (tasksByType[task.type_code] || 0) + 1;
+    }
+
+    this.logger.log(
+      `Generated analytics for manager ${managerId}: ${completedTasks.length} completed tasks in ${period}`,
+    );
+
     return {
-      tasksCompleted: 0,
-      tasksInProgress: 0,
-      activeOperators: 0,
-      totalOperators: 0,
-      avgCompletionTimeMinutes: 0,
-      topPerformers: [],
-      tasksByType: {},
+      tasksCompleted: completedTasks.length,
+      tasksInProgress,
+      activeOperators,
+      totalOperators,
+      avgCompletionTimeMinutes,
+      topPerformers,
+      tasksByType,
     };
   }
 
@@ -420,16 +609,84 @@ export class TelegramManagerToolsService {
   > {
     await this.verifyManagerAccess(managerId);
 
-    // TODO: Implement actual status query:
-    // 1. Get manager's team operators
-    // 2. Check who has Telegram active (recent activity)
-    // 3. Get current task for each operator
-    // 4. Get today's completion count
+    // Get all verified operators with Telegram
+    const operators = await this.telegramUserRepository.find({
+      where: {
+        is_verified: true,
+        status: TelegramUserStatus.ACTIVE,
+      },
+      relations: ['user'],
+    });
 
-    this.logger.log(`Getting active operators status for manager ${managerId}`);
+    // Filter to operators only
+    const filteredOperators = operators.filter(
+      (op) => op.user && this.OPERATOR_ROLES.includes(op.user.role),
+    );
 
-    // Placeholder
-    return [];
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+
+    const result = await Promise.all(
+      filteredOperators.map(async (op) => {
+        // Get current task (in progress)
+        const currentTask = await this.taskRepository.findOne({
+          where: {
+            assigned_to_user_id: op.user_id,
+            status: TaskStatus.IN_PROGRESS,
+          },
+          relations: ['machine'],
+        });
+
+        // Get tasks completed today
+        const tasksCompletedToday = await this.taskRepository.count({
+          where: {
+            assigned_to_user_id: op.user_id,
+            status: TaskStatus.COMPLETED,
+            completed_at: Between(todayStart, now),
+          },
+        });
+
+        // Determine status
+        let status: 'idle' | 'working' | 'offline';
+        if (currentTask) {
+          status = 'working';
+        } else if (
+          op.last_interaction_at &&
+          op.last_interaction_at > oneHourAgo
+        ) {
+          status = 'idle';
+        } else {
+          status = 'offline';
+        }
+
+        return {
+          id: op.user_id,
+          name: op.user?.full_name || op.first_name || 'Unknown',
+          status,
+          currentTask: currentTask
+            ? {
+                id: currentTask.id,
+                type: currentTask.type_code,
+                machineNumber: currentTask.machine?.machine_number || 'N/A',
+                startedAt: currentTask.started_at!,
+              }
+            : undefined,
+          lastSeen: op.last_interaction_at || op.created_at,
+          tasksCompletedToday,
+        };
+      }),
+    );
+
+    // Sort: working first, then idle, then offline
+    const statusOrder = { working: 0, idle: 1, offline: 2 };
+    result.sort((a, b) => statusOrder[a.status] - statusOrder[b.status]);
+
+    this.logger.log(
+      `Got status for ${result.length} operators for manager ${managerId}`,
+    );
+
+    return result;
   }
 
   /**
@@ -454,16 +711,56 @@ export class TelegramManagerToolsService {
   > {
     await this.verifyManagerAccess(managerId);
 
-    // TODO: Implement actual query:
-    // 1. Get tasks with status 'completed' but not approved
-    // 2. Filter to manager's area
-    // 3. Include operator and machine info
-    // 4. Count photos for review
+    // Get completed tasks that might need review
+    // Tasks with pending_photos or recently completed
+    const tasks = await this.taskRepository.find({
+      where: [
+        { status: TaskStatus.COMPLETED, pending_photos: true },
+        {
+          status: TaskStatus.COMPLETED,
+          completed_at: MoreThan(
+            new Date(Date.now() - 24 * 60 * 60 * 1000), // Last 24 hours
+          ),
+        },
+      ],
+      relations: ['machine', 'assigned_to'],
+      order: { completed_at: 'DESC' },
+      take: 50,
+    });
 
-    this.logger.log(`Getting pending approvals for manager ${managerId}`);
+    const result = await Promise.all(
+      tasks.map(async (task) => {
+        // Get photo count for task
+        const photos = await this.filesService.findByEntity('task', task.id);
 
-    // Placeholder
-    return [];
+        return {
+          taskId: task.id,
+          type: task.type_code,
+          operatorName: task.assigned_to?.full_name || 'Unknown',
+          machineNumber: task.machine?.machine_number || 'N/A',
+          completedAt: task.completed_at!,
+          photosCount: photos.length,
+          requiresReview:
+            task.pending_photos ||
+            !task.has_photo_before ||
+            !task.has_photo_after,
+        };
+      }),
+    );
+
+    // Sort: tasks requiring review first
+    result.sort((a, b) => {
+      if (a.requiresReview !== b.requiresReview) {
+        return a.requiresReview ? -1 : 1;
+      }
+      return b.completedAt.getTime() - a.completedAt.getTime();
+    });
+
+    this.logger.log(
+      `Found ${result.length} pending approvals for manager ${managerId}`,
+    );
+
+    return result;
   }
 
   /**
@@ -481,31 +778,89 @@ export class TelegramManagerToolsService {
     managerId: string,
     taskId: string,
     approved: boolean,
-    _comment?: string,
+    comment?: string,
   ): Promise<{
     success: boolean;
     notifiedOperator: boolean;
   }> {
     try {
-      await this.verifyManagerAccess(managerId);
+      const manager = await this.verifyManagerAccess(managerId);
 
-      // TODO: Implement actual approval:
-      // 1. Validate task exists and is pending approval
-      // 2. Update task status (approved/rejected)
-      // 3. Add comment to task history
-      // 4. Notify operator of decision
+      const task = await this.tasksService.findOne(taskId);
 
-      this.logger.log(`Manager ${managerId} ${approved ? 'approved' : 'rejected'} task ${taskId}`);
+      if (!task) {
+        this.logger.warn(`Task ${taskId} not found for approval`);
+        return { success: false, notifiedOperator: false };
+      }
 
-      // Get task and operator info
-      // TODO: Actual implementation
+      if (task.status !== TaskStatus.COMPLETED) {
+        this.logger.warn(
+          `Task ${taskId} is not in completed status, cannot approve/reject`,
+        );
+        return { success: false, notifiedOperator: false };
+      }
 
-      // Send notification to operator
-      // TODO: Send via resilient API
+      // Update task metadata with approval info
+      const metadata = task.metadata || {};
+      metadata.reviewed_by = managerId;
+      metadata.reviewed_at = new Date().toISOString();
+      metadata.approved = approved;
+      if (comment) {
+        metadata.review_comment = comment;
+      }
+
+      await this.taskRepository.update(taskId, {
+        metadata,
+        pending_photos: false, // Clear pending flag after review
+      });
+
+      this.logger.log(
+        `Manager ${managerId} ${approved ? 'approved' : 'rejected'} task ${taskId}`,
+      );
+
+      // Notify operator if they have Telegram
+      let notifiedOperator = false;
+      if (task.assigned_to_user_id) {
+        const operator = await this.telegramUserRepository.findOne({
+          where: { user_id: task.assigned_to_user_id },
+        });
+
+        if (operator?.chat_id) {
+          const emoji = approved ? '✅' : '❌';
+          const statusKey = approved
+            ? 'manager.task_approved'
+            : 'manager.task_rejected';
+
+          let message =
+            `${emoji} <b>${this.i18nService.t(operator.language, statusKey)}</b>\n\n` +
+            `📋 ${this.i18nService.t(operator.language, `tasks.types.${task.type_code}`)}\n` +
+            `🏭 ${task.machine?.machine_number || 'N/A'}\n` +
+            `👤 ${this.i18nService.t(operator.language, 'manager.reviewed_by')}: ${manager.full_name}`;
+
+          if (comment) {
+            message += `\n\n💬 ${comment}`;
+          }
+
+          try {
+            await this.resilientApi.sendText(
+              operator.chat_id,
+              message,
+              { parse_mode: 'HTML' },
+              { priority: 1, attempts: 3 },
+            );
+            notifiedOperator = true;
+          } catch (error) {
+            this.logger.error(
+              `Failed to notify operator about task approval`,
+              error,
+            );
+          }
+        }
+      }
 
       return {
         success: true,
-        notifiedOperator: true,
+        notifiedOperator,
       };
     } catch (error) {
       this.logger.error('Failed to approve task', error);
@@ -514,6 +869,27 @@ export class TelegramManagerToolsService {
         notifiedOperator: false,
       };
     }
+  }
+
+  /**
+   * Get task type emoji
+   */
+  private getTaskTypeEmoji(type: TaskType): string {
+    const emojis: Record<TaskType, string> = {
+      [TaskType.REFILL]: '📦',
+      [TaskType.COLLECTION]: '💰',
+      [TaskType.CLEANING]: '🧹',
+      [TaskType.REPAIR]: '🔧',
+      [TaskType.INSTALL]: '🔌',
+      [TaskType.REMOVAL]: '📤',
+      [TaskType.AUDIT]: '📊',
+      [TaskType.INSPECTION]: '🔍',
+      [TaskType.REPLACE_HOPPER]: '🥤',
+      [TaskType.REPLACE_GRINDER]: '⚙️',
+      [TaskType.REPLACE_BREW_UNIT]: '☕',
+      [TaskType.REPLACE_MIXER]: '🔄',
+    };
+    return emojis[type] || '📌';
   }
 
   /**
@@ -558,15 +934,7 @@ export class TelegramManagerToolsService {
     if (Object.keys(analytics.tasksByType).length > 0) {
       message += `📋 <b>${t('manager.tasks_by_type')}:</b>\n`;
       Object.entries(analytics.tasksByType).forEach(([type, count]) => {
-        const emoji =
-          {
-            refill: '📦',
-            collection: '💰',
-            maintenance: '🔧',
-            inspection: '🔍',
-            repair: '🛠',
-            cleaning: '🧹',
-          }[type] || '📌';
+        const emoji = this.getTaskTypeEmoji(type as TaskType);
         message += `${emoji} ${t(`tasks.types.${type}`)}: ${count}\n`;
       });
     }
@@ -587,13 +955,16 @@ export class TelegramManagerToolsService {
   ) {
     const buttons = operators.map((operator) => [
       Markup.button.callback(
-        `${operator.name} (${operator.tasksInProgress} задач)`,
+        `${operator.name} (${operator.tasksInProgress} ${this.i18nService.t(language, 'manager.tasks')})`,
         `assign_operator:${operator.id}`,
       ),
     ]);
 
     buttons.push([
-      Markup.button.callback(this.i18nService.t(language, 'common.cancel'), 'assign_cancel'),
+      Markup.button.callback(
+        this.i18nService.t(language, 'common.cancel'),
+        'assign_cancel',
+      ),
     ]);
 
     return Markup.inlineKeyboard(buttons);
@@ -616,14 +987,8 @@ export class TelegramManagerToolsService {
     language: string = 'ru',
   ) {
     const buttons = tasks.slice(0, 10).map((task) => {
-      const emoji =
-        {
-          refill: '📦',
-          collection: '💰',
-          maintenance: '🔧',
-        }[task.type] || '📌';
-
-      const priorityEmoji = task.priority === 'high' ? '🔴 ' : '';
+      const emoji = this.getTaskTypeEmoji(task.type as TaskType);
+      const priorityEmoji = task.priority === 'high' || task.priority === 'urgent' ? '🔴 ' : '';
 
       return [
         Markup.button.callback(
@@ -634,9 +999,48 @@ export class TelegramManagerToolsService {
     });
 
     buttons.push([
-      Markup.button.callback(this.i18nService.t(language, 'common.cancel'), 'assign_cancel'),
+      Markup.button.callback(
+        this.i18nService.t(language, 'common.cancel'),
+        'assign_cancel',
+      ),
     ]);
 
     return Markup.inlineKeyboard(buttons);
+  }
+
+  /**
+   * Format operators status as Telegram message
+   */
+  formatOperatorsStatusMessage(
+    operators: Array<{
+      name: string;
+      status: 'idle' | 'working' | 'offline';
+      currentTask?: { type: string; machineNumber: string };
+      tasksCompletedToday: number;
+    }>,
+    language: string = 'ru',
+  ): string {
+    const t = this.i18nService.getFixedT(language);
+
+    let message = `👥 <b>${t('manager.operators_status')}</b>\n\n`;
+
+    const statusEmoji = {
+      working: '🟢',
+      idle: '🟡',
+      offline: '⚫',
+    };
+
+    for (const op of operators) {
+      message += `${statusEmoji[op.status]} <b>${op.name}</b>`;
+
+      if (op.status === 'working' && op.currentTask) {
+        const taskEmoji = this.getTaskTypeEmoji(op.currentTask.type as TaskType);
+        message += ` - ${taskEmoji} ${op.currentTask.machineNumber}`;
+      }
+
+      message += ` (${op.tasksCompletedToday} ${t('manager.today')})\n`;
+    }
+
+    return message;
   }
 }
