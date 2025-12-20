@@ -1,8 +1,12 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import * as i18next from 'i18next';
-import { TFunction } from 'i18next';
+import i18next, { TFunction } from 'i18next';
 import { format } from 'date-fns';
 import { TelegramLanguage } from '../entities/telegram-user.entity';
+
+// Import translations directly for reliability (avoids filesystem path issues)
+import * as ruTranslations from '../locales/ru.json';
+import * as enTranslations from '../locales/en.json';
+import * as uzTranslations from '../locales/uz.json';
 
 /**
  * i18n Service for Telegram Bot
@@ -22,32 +26,24 @@ export class TelegramI18nService implements OnModuleInit {
   private isInitialized = false;
 
   async onModuleInit() {
-    // Temporarily disabled due to i18next v25 API compatibility issues
-    // await this.initialize();
-    this.logger.warn('i18n initialization disabled - using fallback translations');
+    await this.initialize();
   }
 
   /**
-   * Initialize i18next with file system backend
-   *
-   * TEMPORARILY DISABLED: i18next v25 API changes require refactoring
+   * Initialize i18next with inline resources
    */
   private async initialize(): Promise<void> {
-    // Disabled due to i18next v25 API compatibility issues
-    // TODO: Refactor to use i18next v25 API or downgrade to v23
-    this.logger.warn('i18n initialization disabled - using fallback translations');
-    return;
-
-    /*
     try {
-      await i18next.use(Backend).init({
+      await i18next.init({
         lng: 'ru', // Default language
         fallbackLng: 'ru', // Fallback if translation missing
         supportedLngs: ['ru', 'en', 'uz'],
-        preload: ['ru', 'en', 'uz'], // Load all languages on init
 
-        backend: {
-          loadPath: join(__dirname, '../locales/{{lng}}.json'),
+        // Inline resources (more reliable than filesystem loading)
+        resources: {
+          ru: { translation: ruTranslations },
+          en: { translation: enTranslations },
+          uz: { translation: uzTranslations },
         },
 
         // Interpolation options
@@ -56,19 +52,17 @@ export class TelegramI18nService implements OnModuleInit {
         },
 
         // Return key if translation missing (for debugging)
-        saveMissing: false,
-        missingKeyHandler: (lngs, ns, key) => {
-          this.logger.warn(`Missing translation: [${lngs}] ${key}`);
-        },
+        returnNull: false,
+        returnEmptyString: false,
       });
 
       this.isInitialized = true;
       this.logger.log('i18next initialized successfully with languages: ru, en, uz');
     } catch (error) {
       this.logger.error('Failed to initialize i18next', error);
-      throw error;
+      // Don't throw - allow service to work with fallback
+      this.isInitialized = false;
     }
-    */
   }
 
   /**
@@ -91,8 +85,8 @@ export class TelegramI18nService implements OnModuleInit {
    */
   t(language: TelegramLanguage | string, key: string, options?: Record<string, unknown>): string {
     if (!this.isInitialized) {
-      this.logger.warn('i18next not initialized yet, returning key');
-      return key;
+      // Return fallback from inline translations if not initialized
+      return this.getFallbackTranslation(language, key, options) || key;
     }
 
     try {
@@ -101,6 +95,50 @@ export class TelegramI18nService implements OnModuleInit {
       this.logger.error(`Translation error for key "${key}" in language "${language}"`, error);
       return key; // Return key as fallback
     }
+  }
+
+  /**
+   * Get fallback translation directly from imported JSON
+   */
+  private getFallbackTranslation(
+    language: string,
+    key: string,
+    options?: Record<string, unknown>,
+  ): string | null {
+    const translations: Record<string, Record<string, unknown>> = {
+      ru: ruTranslations as unknown as Record<string, unknown>,
+      en: enTranslations as unknown as Record<string, unknown>,
+      uz: uzTranslations as unknown as Record<string, unknown>,
+    };
+
+    const langTranslations = translations[language] || translations['ru'];
+
+    // Navigate nested keys (e.g., 'welcome.title')
+    const keys = key.split('.');
+    let value: unknown = langTranslations;
+
+    for (const k of keys) {
+      if (value && typeof value === 'object' && k in value) {
+        value = (value as Record<string, unknown>)[k];
+      } else {
+        return null;
+      }
+    }
+
+    if (typeof value !== 'string') {
+      return null;
+    }
+
+    // Simple interpolation for fallback
+    if (options) {
+      let result = value;
+      for (const [optKey, optValue] of Object.entries(options)) {
+        result = result.replace(new RegExp(`\\{\\{${optKey}\\}\\}`, 'g'), String(optValue));
+      }
+      return result;
+    }
+
+    return value;
   }
 
   /**
@@ -120,9 +158,10 @@ export class TelegramI18nService implements OnModuleInit {
    */
   getFixedT(language: TelegramLanguage | string): TFunction {
     if (!this.isInitialized) {
-      this.logger.warn('i18next not initialized yet');
-      // Return fallback function that returns the key itself
-      return ((key: string) => key) as unknown as TFunction;
+      this.logger.warn('i18next not initialized yet, using fallback');
+      // Return fallback function
+      return ((key: string, options?: Record<string, unknown>) =>
+        this.t(language, key, options)) as unknown as TFunction;
     }
 
     return i18next.getFixedT(language);
@@ -137,7 +176,7 @@ export class TelegramI18nService implements OnModuleInit {
    */
   exists(language: TelegramLanguage | string, key: string): boolean {
     if (!this.isInitialized) {
-      return false;
+      return this.getFallbackTranslation(language, key) !== null;
     }
 
     return i18next.exists(key, { lng: language });
@@ -262,7 +301,7 @@ export class TelegramI18nService implements OnModuleInit {
    * @returns Localized task type name
    */
   getTaskTypeName(taskType: string, language: TelegramLanguage | string): string {
-    return this.t(language, `tasks.types.${taskType.toLowerCase()}` || taskType);
+    return this.t(language, `tasks.types.${taskType.toLowerCase()}`) || taskType;
   }
 
   /**
