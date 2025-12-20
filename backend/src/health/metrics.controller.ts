@@ -54,7 +54,7 @@ export class MetricsController {
       metrics.push('# HELP database_connections_active Active database connections');
       metrics.push('# TYPE database_connections_active gauge');
       metrics.push(`database_connections_active ${activeConnections}`);
-    } catch (error) {
+    } catch {
       // Database might be down, skip metrics
     }
 
@@ -100,7 +100,7 @@ export class MetricsController {
         `bullmq_queue_delayed{queue="commission-calculations"} ${commissionCounts.delayed}`,
       );
       metrics.push(`bullmq_queue_delayed{queue="sales-import"} ${salesCounts.delayed}`);
-    } catch (error) {
+    } catch {
       // Queue might be down, skip metrics
     }
 

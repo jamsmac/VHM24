@@ -4,7 +4,7 @@ import { Cache } from 'cache-manager';
 
 describe('RateLimiterService', () => {
   let service: RateLimiterService;
-  let cacheManager: Cache;
+  let _cacheManager: Cache;
 
   beforeEach(async () => {
     const mockCacheManager = {
@@ -24,7 +24,7 @@ describe('RateLimiterService', () => {
     }).compile();
 
     service = module.get<RateLimiterService>(RateLimiterService);
-    cacheManager = module.get('CACHE_MANAGER');
+    _cacheManager = module.get('CACHE_MANAGER');
   });
 
   it('should be defined', () => {

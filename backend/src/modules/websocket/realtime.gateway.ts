@@ -122,7 +122,7 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection, OnGa
           const payload = this.jwtService.verify(token as string) as JwtPayload;
           (client as AuthenticatedSocket).user = payload;
           this.logger.log(`Client ${client.id} authenticated as user ${payload.sub}`);
-        } catch (error) {
+        } catch {
           this.logger.warn(`Client ${client.id} provided invalid token - disconnecting`);
           client.emit('error', { message: 'Invalid authentication token' });
           client.disconnect();

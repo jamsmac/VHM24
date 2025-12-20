@@ -289,7 +289,7 @@ export class CatalogHandler {
   private async updateQuantityKeyboard(ctx: Context, materialId: string, quantity: number) {
     try {
       await ctx.editMessageReplyMarkup(getQuantityKeyboard(materialId, quantity).reply_markup);
-    } catch (e) {
+    } catch {
       // Ignore if keyboard didn't change
     }
     await ctx.answerCbQuery(`📦 Количество: ${quantity}`);

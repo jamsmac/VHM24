@@ -365,7 +365,7 @@ describe('UniversalParser', () => {
 
       try {
         await parser.parse(buffer, { autoDetect: true });
-      } catch (error) {
+      } catch {
         // We're testing input handling, not parsing success
         expect(buffer).toBeInstanceOf(Buffer);
       }

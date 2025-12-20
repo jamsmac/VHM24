@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Task, TaskStatus, TaskType, TaskPriority } from '../entities/task.entity';
+import { Task, TaskStatus, TaskPriority } from '../entities/task.entity';
 import { IncidentsService } from '../../incidents/incidents.service';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { AuditLogService } from '../../security/services/audit-log.service';

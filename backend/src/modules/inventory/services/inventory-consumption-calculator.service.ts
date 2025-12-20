@@ -138,7 +138,7 @@ export class InventoryConsumptionCalculatorService {
         if (snapshot && snapshot.snapshot?.items) {
           return snapshot.snapshot.items as NormalizedIngredient[];
         }
-      } catch (error) {
+      } catch {
         this.logger.warn(`Failed to load snapshot ${snapshotId}, falling back to current recipe`);
       }
     }

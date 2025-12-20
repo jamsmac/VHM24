@@ -68,8 +68,6 @@ export class ClientAuthService {
       where: { telegram_id: userData.id },
     });
 
-    const isNewUser = !clientUser;
-
     if (!clientUser) {
       // Create new client user
       clientUser = this.clientUserRepository.create({
@@ -144,7 +142,7 @@ export class ClientAuthService {
         ...tokens,
         user: this.mapToUserResponse(clientUser, loyaltyAccount?.points_balance || 0),
       };
-    } catch (error) {
+    } catch {
       throw new UnauthorizedException('Invalid refresh token');
     }
   }

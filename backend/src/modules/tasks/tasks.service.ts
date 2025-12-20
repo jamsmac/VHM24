@@ -229,7 +229,7 @@ export class TasksService {
 
     try {
       await this.inventoryService.cancelReservation(task.id);
-    } catch (error) {
+    } catch {
       this.logger.warn(`Не удалось отменить резервацию при удалении задачи ${task.id}`);
     }
 
@@ -319,7 +319,7 @@ export class TasksService {
 
     try {
       await this.inventoryService.cancelReservation(task.id);
-    } catch (error) {
+    } catch {
       this.logger.warn(`Не удалось отменить резервацию для задачи ${task.id}`);
     }
 

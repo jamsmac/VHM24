@@ -64,6 +64,7 @@ export class ClientPublicController {
   ): Promise<{ success: boolean; message: string }> {
     // TODO: Implement cooperation request handling (email/notification)
     // For now, just log and return success
+    // eslint-disable-next-line no-console
     console.log('Cooperation request received:', dto);
 
     return {

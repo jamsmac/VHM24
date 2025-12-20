@@ -399,7 +399,7 @@ export class AuthService {
       await this.sessionService.rotateRefreshToken(session.id, tokens.refresh_token);
 
       return tokens;
-    } catch (error) {
+    } catch {
       throw new UnauthorizedException('Неверный refresh token');
     }
   }

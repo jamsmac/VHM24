@@ -14,7 +14,7 @@ import { Repository } from 'typeorm';
 import { Context } from 'telegraf';
 import { TelegramUser, TelegramLanguage } from '../entities/telegram-user.entity';
 import { TelegramMessageLog, TelegramMessageType } from '../entities/telegram-message-log.entity';
-import { TelegramSessionService, ConversationState } from '../services/telegram-session.service';
+import { TelegramSessionService } from '../services/telegram-session.service';
 import { TasksService } from '../../tasks/tasks.service';
 import { UsersService } from '../../users/users.service';
 import { TaskStatus, Task } from '../../tasks/entities/task.entity';

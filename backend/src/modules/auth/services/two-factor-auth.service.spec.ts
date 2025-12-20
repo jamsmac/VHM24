@@ -196,7 +196,7 @@ describe('TwoFactorAuthService', () => {
 
       try {
         await service.enable2FA(mockUserId, mockSecret, 'invalid-token', mockIp);
-      } catch (e) {
+      } catch {
         // Expected to throw
       }
 
@@ -305,7 +305,7 @@ describe('TwoFactorAuthService', () => {
 
       try {
         await service.disable2FA(mockUserId, 'invalid-token', mockIp);
-      } catch (e) {
+      } catch {
         // Expected to throw
       }
 

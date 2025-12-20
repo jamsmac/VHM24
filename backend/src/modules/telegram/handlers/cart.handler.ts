@@ -256,7 +256,7 @@ export class CartHandler {
         parse_mode: 'HTML',
         reply_markup: getCartKeyboard(cart).reply_markup,
       });
-    } catch (e) {
+    } catch {
       // Ignore if nothing changed
     }
   }

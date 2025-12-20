@@ -320,7 +320,7 @@ export class InventoryCalculationService {
       );
 
     switch (levelType) {
-      case InventoryLevelType.WAREHOUSE:
+      case InventoryLevelType.WAREHOUSE: {
         // Добавить из начальных остатков
         const openingBalances = await this.openingBalanceRepository.find({
           where: { warehouse_id: levelRefId, is_applied: true },
@@ -338,6 +338,7 @@ export class InventoryCalculationService {
         // Добавить из движений
         movementsQuery.andWhere('m.operator_id IS NULL AND m.machine_id IS NULL');
         break;
+      }
       case InventoryLevelType.OPERATOR:
         movementsQuery.andWhere('m.operator_id = :levelRefId', { levelRefId });
         break;

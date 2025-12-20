@@ -13,7 +13,7 @@ describe('MachineAccessService', () => {
   let service: MachineAccessService;
   let machineAccessRepository: jest.Mocked<Repository<MachineAccess>>;
   let templateRepository: jest.Mocked<Repository<AccessTemplate>>;
-  let templateRowRepository: jest.Mocked<Repository<AccessTemplateRow>>;
+  let _templateRowRepository: jest.Mocked<Repository<AccessTemplateRow>>;
   let machineRepository: jest.Mocked<Repository<Machine>>;
   let userRepository: jest.Mocked<Repository<User>>;
   let dataSource: jest.Mocked<DataSource>;
@@ -124,7 +124,7 @@ describe('MachineAccessService', () => {
     service = module.get<MachineAccessService>(MachineAccessService);
     machineAccessRepository = module.get(getRepositoryToken(MachineAccess));
     templateRepository = module.get(getRepositoryToken(AccessTemplate));
-    templateRowRepository = module.get(getRepositoryToken(AccessTemplateRow));
+    _templateRowRepository = module.get(getRepositoryToken(AccessTemplateRow));
     machineRepository = module.get(getRepositoryToken(Machine));
     userRepository = module.get(getRepositoryToken(User));
   });
@@ -218,7 +218,7 @@ describe('MachineAccessService', () => {
       machineAccessRepository.findOne.mockResolvedValue(existingAccess as MachineAccess);
       machineAccessRepository.save.mockResolvedValue({ ...existingAccess, role: dto.role } as MachineAccess);
 
-      const result = await service.create(dto, 'admin-id');
+      await service.create(dto, 'admin-id');
 
       expect(existingAccess.role).toBe(dto.role);
       expect(machineAccessRepository.save).toHaveBeenCalledWith(existingAccess);

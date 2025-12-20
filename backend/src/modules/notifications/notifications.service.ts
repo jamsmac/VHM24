@@ -283,10 +283,11 @@ export class NotificationsService {
         }
         break;
 
-      default:
+      default: {
         // Для остальных типов отправляем простое сообщение
         const message = `**${notification.title}**\n\n${notification.message}`;
         success = await this.telegramBotService.sendNotification(telegramUserId, message);
+      }
     }
 
     if (!success) {

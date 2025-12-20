@@ -4,7 +4,7 @@ import * as csv from 'csv-parser';
 import { Readable } from 'stream';
 import { MachineAccessService } from './machine-access.service';
 import { MachineAccess, MachineAccessRole } from './entities/machine-access.entity';
-import { ImportMachineAccessResponseDto, ImportErrorDto } from './dto';
+import { ImportMachineAccessResponseDto } from './dto';
 
 interface ImportRow {
   machine_number?: string;

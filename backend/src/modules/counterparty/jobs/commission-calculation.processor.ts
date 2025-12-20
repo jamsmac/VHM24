@@ -177,12 +177,13 @@ export class CommissionCalculationProcessor {
           case 'monthly':
             processed = await this.schedulerService.calculateMonthlyCommissions();
             break;
-          case 'all':
+          case 'all': {
             const daily = await this.schedulerService.calculateDailyCommissions();
             const weekly = await this.schedulerService.calculateWeeklyCommissions();
             const monthly = await this.schedulerService.calculateMonthlyCommissions();
             processed = daily + weekly + monthly;
             break;
+          }
         }
       } else {
         throw new Error('Invalid manual calculation parameters');

@@ -39,7 +39,8 @@ import { IntegrationModule } from './modules/integration/integration.module';
 import { SecurityModule } from './modules/security/security.module';
 import { AlertsModule } from './modules/alerts/alerts.module';
 import { ReportsModule } from './modules/reports/reports.module';
-import { TelegramBotModule } from './modules/telegram-bot/telegram-bot.module';
+// TelegramBotModule is conditionally loaded - kept for reference
+// import { TelegramBotModule } from './modules/telegram-bot/telegram-bot.module';
 import { WebPushModule } from './modules/web-push/web-push.module';
 import { SalesImportModule } from './modules/sales-import/sales-import.module';
 import { CounterpartyModule } from './modules/counterparty/counterparty.module';

@@ -14,8 +14,8 @@ import { EmailService } from '../email/email.service';
 import { SessionService } from './services/session.service';
 import { TokenBlacklistService } from './services/token-blacklist.service';
 import { AuditLogService } from '../security/services/audit-log.service';
-// Repository type imported for type annotations
-import type { Repository } from 'typeorm';
+// Repository type - not currently used but kept for future type annotations
+// import type { Repository } from 'typeorm';
 
 // Note: Test files use Record<string, jest.Mock> pattern for mock services
 // This provides flexibility in mock return values, which is standard Jest practice

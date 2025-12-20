@@ -5,7 +5,6 @@ import * as crypto from 'crypto';
 import {
   WebhookSignatureGuard,
   WebhookSignatureOptions,
-  WEBHOOK_SIGNATURE_KEY,
 } from './webhook-signature.guard';
 
 describe('WebhookSignatureGuard', () => {

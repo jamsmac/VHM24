@@ -348,60 +348,67 @@ export class DataValidationService {
           converted: String(value),
         };
 
-      case 'number':
+      case 'number': {
         const num = Number(value);
         return {
           isValid: !isNaN(num),
           converted: num,
           message: 'Значение должно быть числом',
         };
+      }
 
-      case 'boolean':
+      case 'boolean': {
         const boolValue = ['true', '1', 'yes', 'да', 'on'].includes(String(value).toLowerCase());
         return {
           isValid: true,
           converted: boolValue,
         };
+      }
 
-      case 'date':
+      case 'date': {
         const date = this.parseDate(value);
         return {
           isValid: date !== null,
           converted: date,
           message: 'Неверный формат даты',
         };
+      }
 
-      case 'email':
+      case 'email': {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         return {
           isValid: emailRegex.test(String(value)),
           converted: String(value).toLowerCase(),
           message: 'Неверный формат email',
         };
+      }
 
-      case 'phone':
+      case 'phone': {
         const cleanedPhone = this.cleanPhone(String(value));
         return {
           isValid: this.validators.phone(cleanedPhone),
           converted: cleanedPhone,
           message: 'Неверный формат телефона (ожидается +998XXXXXXXXX)',
         };
+      }
 
-      case 'inn':
+      case 'inn': {
         const cleanedINN = String(value).replace(/\D/g, '');
         return {
           isValid: this.validators.inn(cleanedINN),
           converted: cleanedINN,
           message: 'Неверный формат ИНН (9 цифр для компаний, 14 для физлиц)',
         };
+      }
 
-      case 'amount':
+      case 'amount': {
         const amount = this.cleanAmount(String(value));
         return {
           isValid: !isNaN(amount) && amount >= 0,
           converted: amount,
           message: 'Неверный формат суммы',
         };
+      }
 
       default:
         return {

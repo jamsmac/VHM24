@@ -16,7 +16,7 @@ import { UserRole } from '../../users/entities/user.entity';
 
 describe('TaskRejectionService', () => {
   let service: TaskRejectionService;
-  let taskRepository: jest.Mocked<Repository<Task>>;
+  let _taskRepository: jest.Mocked<Repository<Task>>;
   let taskCommentRepository: jest.Mocked<Repository<TaskComment>>;
   let machinesService: jest.Mocked<MachinesService>;
   let inventoryService: jest.Mocked<InventoryService>;
@@ -122,7 +122,7 @@ describe('TaskRejectionService', () => {
     }).compile();
 
     service = module.get<TaskRejectionService>(TaskRejectionService);
-    taskRepository = module.get(getRepositoryToken(Task));
+    _taskRepository = module.get(getRepositoryToken(Task));
     taskCommentRepository = module.get(getRepositoryToken(TaskComment));
     machinesService = module.get(MachinesService);
     inventoryService = module.get(InventoryService);

@@ -51,8 +51,8 @@ describe('ScheduledTasksService', () => {
   let transactionsService: jest.Mocked<TransactionsService>;
   let commissionSchedulerService: jest.Mocked<CommissionSchedulerService>;
   let operatorRatingsService: jest.Mocked<OperatorRatingsService>;
-  let alertsService: jest.Mocked<AlertsService>;
-  let usersService: jest.Mocked<UsersService>;
+  let _alertsService: jest.Mocked<AlertsService>;
+  let _usersService: jest.Mocked<UsersService>;
 
   // Store original env
   const originalEnv = process.env;
@@ -309,8 +309,8 @@ describe('ScheduledTasksService', () => {
     transactionsService = module.get(TransactionsService);
     commissionSchedulerService = module.get(CommissionSchedulerService);
     operatorRatingsService = module.get(OperatorRatingsService);
-    alertsService = module.get(AlertsService);
-    usersService = module.get(UsersService);
+    _alertsService = module.get(AlertsService);
+    _usersService = module.get(UsersService);
 
     jest.clearAllMocks();
   });

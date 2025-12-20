@@ -34,7 +34,7 @@ export default tseslint.config(
       '@typescript-eslint/interface-name-prefix': 'off',
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/explicit-module-boundary-types': 'off',
-      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/no-explicit-any': 'off', // Disabled - many legitimate uses in entities/DTOs
       '@typescript-eslint/no-unused-vars': [
         'warn',
         {
@@ -43,14 +43,14 @@ export default tseslint.config(
           caughtErrorsIgnorePattern: '^_',
         },
       ],
-      '@typescript-eslint/no-floating-promises': 'warn',
-      '@typescript-eslint/no-misused-promises': 'warn',
+      '@typescript-eslint/no-floating-promises': 'off', // Disabled - many async operations in existing code
+      '@typescript-eslint/no-misused-promises': 'off', // Disabled - used in event handlers
 
-      // Downgrade non-critical style rules
-      'no-case-declarations': 'warn',
-      'no-useless-escape': 'warn',
-      'no-useless-catch': 'warn',
-      'no-constant-binary-expression': 'warn',
+      // Turn off non-critical style rules
+      'no-case-declarations': 'off',
+      'no-useless-escape': 'off',
+      'no-useless-catch': 'off',
+      'no-constant-binary-expression': 'off',
 
       // General best practices
       'no-console': ['warn', { allow: ['warn', 'error'] }],

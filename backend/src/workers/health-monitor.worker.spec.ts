@@ -265,7 +265,7 @@ describe('HealthMonitorWorker', () => {
             connected: isConnected,
             activeConnections,
           };
-        } catch (error) {
+        } catch {
           return {
             connected: false,
             activeConnections: 0,
@@ -307,7 +307,7 @@ describe('HealthMonitorWorker', () => {
             connected: isConnected,
             activeConnections,
           };
-        } catch (error) {
+        } catch {
           return {
             connected: false,
             activeConnections: 0,
@@ -338,7 +338,7 @@ describe('HealthMonitorWorker', () => {
             connected: true,
             activeConnections: parseInt(result[0]?.count || '0'),
           };
-        } catch (error) {
+        } catch {
           return {
             connected: false,
             activeConnections: 0,
@@ -393,7 +393,7 @@ describe('HealthMonitorWorker', () => {
             connected: true,
             usedMemory,
           };
-        } catch (error) {
+        } catch {
           return {
             connected: false,
             usedMemory: 'unknown',
@@ -422,7 +422,7 @@ describe('HealthMonitorWorker', () => {
             connected: true,
             usedMemory: info,
           };
-        } catch (error) {
+        } catch {
           return {
             connected: false,
             usedMemory: 'unknown',
@@ -456,7 +456,7 @@ describe('HealthMonitorWorker', () => {
             connected: true,
             usedMemory,
           };
-        } catch (error) {
+        } catch {
           return {
             connected: false,
             usedMemory: 'unknown',

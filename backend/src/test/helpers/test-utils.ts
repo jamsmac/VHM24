@@ -6,7 +6,7 @@ import { Logger } from '@nestjs/common';
  * General-purpose testing helper functions
  */
 
-const logger = new Logger('TestUtils');
+const _logger = new Logger('TestUtils');
 
 /**
  * Sleep for a specified duration

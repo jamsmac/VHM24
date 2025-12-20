@@ -156,7 +156,7 @@ describe('SalesImportWorker', () => {
       const shutdown = async (_signal: string) => {
         try {
           await mockSalesImportQueue.close();
-        } catch (error) {
+        } catch {
           // Log error but continue with app close
         }
         await mockApp.close();
@@ -178,7 +178,7 @@ describe('SalesImportWorker', () => {
         await mockSalesImportQueue.close();
         try {
           await mockApp.close();
-        } catch (error) {
+        } catch {
           // Error logged but not thrown
         }
       };
@@ -542,7 +542,7 @@ describe('SalesImportWorker', () => {
       // Act
       try {
         await mockNestFactory.createApplicationContext({});
-      } catch (error) {
+      } catch {
         process.exit(1);
       }
 
