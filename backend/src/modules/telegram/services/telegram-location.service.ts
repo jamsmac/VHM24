@@ -1,5 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { NearbyTaskResult } from '../types/telegram.types';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Task, TaskStatus } from '../../tasks/entities/task.entity';
+import { NearbyTaskResult, TelegramTaskInfo, TelegramMachineInfo } from '../types/telegram.types';
 
 /**
  * Location Service for Telegram Bot
@@ -39,6 +42,11 @@ export class TelegramLocationService {
 
   // Proximity threshold for task verification (meters)
   private readonly TASK_VERIFICATION_RADIUS = 100; // 100m
+
+  constructor(
+    @InjectRepository(Task)
+    private readonly taskRepository: Repository<Task>,
+  ) {}
 
   /**
    * Calculate distance between two GPS coordinates using Haversine formula
@@ -112,22 +120,90 @@ export class TelegramLocationService {
     radiusMeters: number = this.DEFAULT_SEARCH_RADIUS,
   ): Promise<NearbyTaskResult[]> {
     try {
-      // This would integrate with TasksService in real implementation
-      // For now, returning type-safe structure
-
-      // TODO: Implement actual query:
-      // 1. Get tasks assigned to user with status 'created' or 'in_progress'
-      // 2. Load machine locations for each task
-      // 3. Calculate distance for each
-      // 4. Filter by radius
-      // 5. Sort by distance
-
       this.logger.log(
         `Finding tasks near (${latitude}, ${longitude}) within ${radiusMeters}m for user ${userId}`,
       );
 
-      // Placeholder - in real implementation, would query database
+      // Get active tasks assigned to user with machine and location data
+      const activeStatuses = [TaskStatus.PENDING, TaskStatus.ASSIGNED, TaskStatus.IN_PROGRESS];
+
+      const tasks = await this.taskRepository
+        .createQueryBuilder('task')
+        .leftJoinAndSelect('task.machine', 'machine')
+        .leftJoinAndSelect('machine.location', 'location')
+        .where('task.assigned_to_user_id = :userId', { userId })
+        .andWhere('task.status IN (:...statuses)', { statuses: activeStatuses })
+        .andWhere('task.deleted_at IS NULL')
+        .andWhere('machine.deleted_at IS NULL')
+        .andWhere('location.latitude IS NOT NULL')
+        .andWhere('location.longitude IS NOT NULL')
+        .orderBy('task.priority', 'DESC')
+        .addOrderBy('task.scheduled_date', 'ASC')
+        .getMany();
+
+      // Calculate distance for each task and filter by radius
       const nearbyTasks: NearbyTaskResult[] = [];
+
+      for (const task of tasks) {
+        const location = task.machine?.location;
+        if (!location?.latitude || !location?.longitude) {
+          continue;
+        }
+
+        const distance = this.calculateDistance(
+          latitude,
+          longitude,
+          Number(location.latitude),
+          Number(location.longitude),
+        );
+
+        // Only include tasks within radius
+        if (distance <= radiusMeters) {
+          const taskInfo: TelegramTaskInfo = {
+            id: task.id,
+            type_code: task.type_code,
+            status: task.status,
+            scheduled_date: task.scheduled_date,
+            machine: task.machine
+              ? {
+                  id: task.machine.id,
+                  machine_number: task.machine.machine_number,
+                  name: task.machine.name,
+                  location: location
+                    ? {
+                        id: location.id,
+                        name: location.name,
+                      }
+                    : null,
+                }
+              : null,
+            has_photo_before: task.has_photo_before,
+            has_photo_after: task.has_photo_after,
+          };
+
+          const machineInfo: TelegramMachineInfo = {
+            id: task.machine?.id || '',
+            name: task.machine?.name || '',
+            machine_number: task.machine?.machine_number,
+            status: task.machine?.status || 'unknown',
+            location: location?.name,
+            latitude: Number(location.latitude),
+            longitude: Number(location.longitude),
+          };
+
+          nearbyTasks.push({
+            task: taskInfo,
+            machine: machineInfo,
+            distance,
+            distanceFormatted: this.formatDistance(distance),
+          });
+        }
+      }
+
+      // Sort by distance (nearest first)
+      nearbyTasks.sort((a, b) => a.distance - b.distance);
+
+      this.logger.log(`Found ${nearbyTasks.length} tasks within ${radiusMeters}m`);
 
       return nearbyTasks;
     } catch (error) {
@@ -171,21 +247,60 @@ export class TelegramLocationService {
     distance: number;
     threshold: number;
     machineLocation?: { latitude: number; longitude: number };
+    machineName?: string;
+    locationName?: string;
   }> {
     try {
-      // TODO: Implement actual verification:
-      // 1. Load task with machine and location
-      // 2. Get machine's GPS coordinates
-      // 3. Calculate distance
-      // 4. Compare with threshold
-
       this.logger.log(`Verifying location for task ${taskId} at (${operatorLat}, ${operatorLon})`);
 
-      // Placeholder response
+      // Load task with machine and location
+      const task = await this.taskRepository.findOne({
+        where: { id: taskId },
+        relations: ['machine', 'machine.location'],
+      });
+
+      if (!task) {
+        this.logger.warn(`Task ${taskId} not found for location verification`);
+        return {
+          isValid: false,
+          distance: 0,
+          threshold: this.TASK_VERIFICATION_RADIUS,
+        };
+      }
+
+      const location = task.machine?.location;
+      if (!location?.latitude || !location?.longitude) {
+        this.logger.warn(`Machine location not available for task ${taskId}`);
+        return {
+          isValid: false,
+          distance: 0,
+          threshold: this.TASK_VERIFICATION_RADIUS,
+          machineName: task.machine?.name,
+        };
+      }
+
+      const machineLat = Number(location.latitude);
+      const machineLon = Number(location.longitude);
+
+      // Calculate distance between operator and machine
+      const distance = this.calculateDistance(operatorLat, operatorLon, machineLat, machineLon);
+
+      const isValid = distance <= this.TASK_VERIFICATION_RADIUS;
+
+      this.logger.log(
+        `Location verification: distance=${distance}m, threshold=${this.TASK_VERIFICATION_RADIUS}m, valid=${isValid}`,
+      );
+
       return {
-        isValid: false,
-        distance: 0,
+        isValid,
+        distance,
         threshold: this.TASK_VERIFICATION_RADIUS,
+        machineLocation: {
+          latitude: machineLat,
+          longitude: machineLon,
+        },
+        machineName: task.machine?.name,
+        locationName: location.name,
       };
     } catch (error) {
       this.logger.error('Location verification failed', error);
@@ -241,17 +356,87 @@ export class TelegramLocationService {
    */
   async storeTaskLocation(taskId: string, latitude: number, longitude: number): Promise<boolean> {
     try {
-      // TODO: Implement storage:
-      // 1. Validate task exists and is active
-      // 2. Store coordinates in task metadata JSON field
-      // 3. Add timestamp
-
       this.logger.log(`Storing location for task ${taskId}: (${latitude}, ${longitude})`);
 
+      // Validate task exists and is active
+      const task = await this.taskRepository.findOne({
+        where: { id: taskId },
+      });
+
+      if (!task) {
+        this.logger.warn(`Task ${taskId} not found for location storage`);
+        return false;
+      }
+
+      // Only store location for active tasks
+      const activeStatuses = [TaskStatus.PENDING, TaskStatus.ASSIGNED, TaskStatus.IN_PROGRESS];
+      if (!activeStatuses.includes(task.status)) {
+        this.logger.warn(`Task ${taskId} is not active (status: ${task.status})`);
+        return false;
+      }
+
+      // Store coordinates in task metadata
+      const currentMetadata = (task.metadata || {}) as Record<string, unknown>;
+      const locationHistory = (currentMetadata.location_history as Array<unknown>) || [];
+      locationHistory.push({
+        latitude,
+        longitude,
+        timestamp: new Date().toISOString(),
+      });
+
+      // Keep only last 10 location entries
+      const trimmedHistory = locationHistory.slice(-10);
+
+      const updatedMetadata: Record<string, unknown> = {
+        ...currentMetadata,
+        last_operator_location: {
+          latitude,
+          longitude,
+          timestamp: new Date().toISOString(),
+        },
+        location_history: trimmedHistory,
+      };
+
+      // Update task metadata directly
+      task.metadata = updatedMetadata as Record<string, any>;
+      await this.taskRepository.save(task);
+
+      this.logger.log(`Location stored for task ${taskId}`);
       return true;
     } catch (error) {
       this.logger.error('Failed to store task location', error);
       return false;
+    }
+  }
+
+  /**
+   * Get operator's last known location for a task
+   *
+   * @param taskId - Task ID
+   * @returns Last known location or null
+   */
+  async getLastTaskLocation(
+    taskId: string,
+  ): Promise<{ latitude: number; longitude: number; timestamp: string } | null> {
+    try {
+      const task = await this.taskRepository.findOne({
+        where: { id: taskId },
+        select: ['id', 'metadata'],
+      });
+
+      const metadata = task?.metadata as Record<string, unknown> | null;
+      const lastLocation = metadata?.last_operator_location as
+        | { latitude: number; longitude: number; timestamp: string }
+        | undefined;
+
+      if (!lastLocation) {
+        return null;
+      }
+
+      return lastLocation;
+    } catch (error) {
+      this.logger.error('Failed to get last task location', error);
+      return null;
     }
   }
 
@@ -345,6 +530,68 @@ export class TelegramLocationService {
     }
 
     return { orderedTasks: ordered, totalDistance };
+  }
+
+  /**
+   * Find nearby tasks and calculate optimal route
+   *
+   * Combines findNearbyTasks and calculateOptimalRoute for convenience.
+   *
+   * @param userId - VendHub user ID
+   * @param latitude - Operator's latitude
+   * @param longitude - Operator's longitude
+   * @param radiusMeters - Search radius in meters
+   * @returns Nearby tasks in optimal order with route info
+   */
+  async findNearbyTasksWithOptimalRoute(
+    userId: string,
+    latitude: number,
+    longitude: number,
+    radiusMeters: number = this.DEFAULT_SEARCH_RADIUS,
+  ): Promise<{
+    tasks: NearbyTaskResult[];
+    totalDistance: number;
+    totalDistanceFormatted: string;
+  }> {
+    const nearbyTasks = await this.findNearbyTasks(userId, latitude, longitude, radiusMeters);
+
+    if (nearbyTasks.length === 0) {
+      return {
+        tasks: [],
+        totalDistance: 0,
+        totalDistanceFormatted: '0м',
+      };
+    }
+
+    // Prepare tasks for route optimization
+    const tasksForRoute = nearbyTasks.map((t) => ({
+      id: t.task.id,
+      machine: {
+        latitude: t.machine.latitude || 0,
+        longitude: t.machine.longitude || 0,
+      },
+    }));
+
+    const route = this.calculateOptimalRoute(latitude, longitude, tasksForRoute);
+
+    // Reorder nearbyTasks according to optimal route
+    const orderedTasks: NearbyTaskResult[] = [];
+    for (const routeTask of route.orderedTasks) {
+      const task = nearbyTasks.find((t) => t.task.id === routeTask.id);
+      if (task) {
+        orderedTasks.push({
+          ...task,
+          distance: routeTask.distance,
+          distanceFormatted: this.formatDistance(routeTask.distance),
+        });
+      }
+    }
+
+    return {
+      tasks: orderedTasks,
+      totalDistance: route.totalDistance,
+      totalDistanceFormatted: this.formatDistance(route.totalDistance),
+    };
   }
 
   /**
