@@ -13,6 +13,8 @@ import {
 import { InventoryCalculationService } from './inventory-calculation.service';
 import { InventoryThresholdActionsService } from './inventory-threshold-actions.service';
 import { InventoryThresholdService } from './inventory-threshold.service';
+import { MachinesService } from '../../machines/machines.service';
+import { UsersService } from '../../users/users.service';
 
 /**
  * Difference Report Item
@@ -104,6 +106,9 @@ export class InventoryDifferenceService {
     private readonly thresholdActionsService: InventoryThresholdActionsService,
     @Inject(forwardRef(() => InventoryThresholdService))
     private readonly thresholdService: InventoryThresholdService,
+    @Inject(forwardRef(() => MachinesService))
+    private readonly machinesService: MachinesService,
+    private readonly usersService: UsersService,
   ) {}
 
   /**
@@ -440,10 +445,14 @@ export class InventoryDifferenceService {
       machineMap.get(item.level_ref_id)!.push(item);
     });
 
+    // Load machine names in bulk
+    const machineIds = Array.from(machineMap.keys());
+    const machineNameMap = await this.loadMachineNames(machineIds);
+
     const topMachines = Array.from(machineMap.entries())
       .map(([id, items]) => ({
         machine_id: id,
-        machine_name: `Machine ${id.substring(0, 8)}`, // TODO: загрузить имя аппарата
+        machine_name: machineNameMap.get(id) || `Machine ${id.substring(0, 8)}`,
         total_difference_abs: items.reduce((sum, i) => sum + Math.abs(i.difference_abs), 0),
         avg_difference_rel:
           items.reduce((sum, i) => sum + Math.abs(i.difference_rel), 0) / items.length,
@@ -462,10 +471,14 @@ export class InventoryDifferenceService {
       operatorMap.get(item.level_ref_id)!.push(item);
     });
 
+    // Load operator names in bulk
+    const operatorIds = Array.from(operatorMap.keys());
+    const operatorNameMap = await this.loadOperatorNames(operatorIds);
+
     const topOperators = Array.from(operatorMap.entries())
       .map(([id, items]) => ({
         operator_id: id,
-        operator_name: `Operator ${id.substring(0, 8)}`, // TODO: загрузить имя оператора
+        operator_name: operatorNameMap.get(id) || `Operator ${id.substring(0, 8)}`,
         total_difference_abs: items.reduce((sum, i) => sum + Math.abs(i.difference_abs), 0),
         avg_difference_rel:
           items.reduce((sum, i) => sum + Math.abs(i.difference_rel), 0) / items.length,
@@ -531,5 +544,61 @@ export class InventoryDifferenceService {
       threshold,
       userId,
     );
+  }
+
+  /**
+   * Load machine names in bulk for a list of machine IDs
+   * @param machineIds - Array of machine UUIDs
+   * @returns Map of machine ID to display name (machine_number + name)
+   */
+  private async loadMachineNames(machineIds: string[]): Promise<Map<string, string>> {
+    const nameMap = new Map<string, string>();
+
+    if (machineIds.length === 0) {
+      return nameMap;
+    }
+
+    try {
+      const machines = await this.machinesService.findByIds(machineIds);
+
+      for (const machine of machines) {
+        // Use machine_number + name for display
+        const displayName = machine.machine_number
+          ? `${machine.machine_number} - ${machine.name}`
+          : machine.name;
+        nameMap.set(machine.id, displayName);
+      }
+    } catch (error) {
+      this.logger.warn(`Failed to load machine names: ${error.message}`);
+      // Return empty map, fallback to substring will be used
+    }
+
+    return nameMap;
+  }
+
+  /**
+   * Load operator names in bulk for a list of user IDs
+   * @param operatorIds - Array of user UUIDs
+   * @returns Map of user ID to full name
+   */
+  private async loadOperatorNames(operatorIds: string[]): Promise<Map<string, string>> {
+    const nameMap = new Map<string, string>();
+
+    if (operatorIds.length === 0) {
+      return nameMap;
+    }
+
+    try {
+      const users = await this.usersService.findByIds(operatorIds);
+
+      for (const user of users) {
+        nameMap.set(user.id, user.full_name || user.username || 'Unknown');
+      }
+    } catch (error) {
+      this.logger.warn(`Failed to load operator names: ${error.message}`);
+      // Return empty map, fallback to substring will be used
+    }
+
+    return nameMap;
   }
 }

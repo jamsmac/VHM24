@@ -129,6 +129,22 @@ export class MachinesService {
   }
 
   /**
+   * Find multiple machines by IDs
+   * @param ids - Array of machine UUIDs
+   * @returns Array of machines (may be less than input if some IDs not found)
+   */
+  async findByIds(ids: string[]): Promise<Machine[]> {
+    if (ids.length === 0) {
+      return [];
+    }
+
+    return this.machineRepository.find({
+      where: { id: In(ids) },
+      relations: ['location'],
+    });
+  }
+
+  /**
    * Find machine by machine number
    */
   async findByMachineNumber(machineNumber: string): Promise<Machine> {

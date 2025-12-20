@@ -5,7 +5,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, FindOptionsWhere } from 'typeorm';
+import { Repository, FindOptionsWhere, In } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
 import * as bcrypt from 'bcrypt';
 import { User, UserStatus, UserRole } from './entities/user.entity';
@@ -130,6 +130,21 @@ export class UsersService {
     }
 
     return user;
+  }
+
+  /**
+   * Find multiple users by IDs
+   * @param ids - Array of user UUIDs
+   * @returns Array of users (may be less than input if some IDs not found)
+   */
+  async findByIds(ids: string[]): Promise<User[]> {
+    if (ids.length === 0) {
+      return [];
+    }
+
+    return this.userRepository.find({
+      where: { id: In(ids) },
+    });
   }
 
   /**

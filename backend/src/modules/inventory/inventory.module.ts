@@ -43,6 +43,7 @@ import { IncidentsModule } from '../incidents/incidents.module';
 import { TasksModule } from '../tasks/tasks.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { UsersModule } from '../users/users.module';
+import { MachinesModule } from '../machines/machines.module';
 import { TelegramModule } from '../telegram/telegram.module';
 
 @Module({
@@ -72,6 +73,7 @@ import { TelegramModule } from '../telegram/telegram.module';
     forwardRef(() => TasksModule),
     NotificationsModule,
     UsersModule,
+    forwardRef(() => MachinesModule),
     forwardRef(() => TelegramModule),
   ],
   controllers: [
