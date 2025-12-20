@@ -291,7 +291,7 @@ async function bootstrap() {
   await runHealthCheck();
 
   // Schedule periodic health checks
-  const healthCheckInterval = setInterval(runHealthCheck, CHECK_INTERVAL);
+  const healthCheckInterval = setInterval(() => void runHealthCheck(), CHECK_INTERVAL);
 
   logger.log(`Health Monitor Worker started. Checking every ${CHECK_INTERVAL / 1000} seconds`);
 
@@ -307,8 +307,8 @@ async function bootstrap() {
     process.exit(0);
   };
 
-  process.on('SIGTERM', () => shutdown('SIGTERM'));
-  process.on('SIGINT', () => shutdown('SIGINT'));
+  process.on('SIGTERM', () => void shutdown('SIGTERM'));
+  process.on('SIGINT', () => void shutdown('SIGINT'));
 }
 
 bootstrap().catch((error) => {

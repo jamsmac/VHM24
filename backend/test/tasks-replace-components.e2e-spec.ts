@@ -115,7 +115,7 @@ describe('REPLACE_* Tasks Component Workflow (E2E)', () => {
         if (operatorId) {
           await dataSource.query('DELETE FROM users WHERE id = $1', [operatorId]);
         }
-      } catch (error) {
+      } catch (_error) {
         // Ignore cleanup errors
         console.warn('Cleanup error:', error.message);
       }
@@ -499,7 +499,7 @@ describe('REPLACE_* Tasks Component Workflow (E2E)', () => {
           await dataSource.query('DELETE FROM equipment_components WHERE id = $1', [
             componentToCleanId,
           ]);
-        } catch (error) {
+        } catch (_error) {
           // Ignore cleanup errors
         }
       }
@@ -596,7 +596,7 @@ describe('REPLACE_* Tasks Component Workflow (E2E)', () => {
           await dataSource.query('DELETE FROM equipment_components WHERE id = $1', [
             componentToRepairId,
           ]);
-        } catch (error) {
+        } catch (_error) {
           // Ignore cleanup errors
         }
       }

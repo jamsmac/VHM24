@@ -94,7 +94,7 @@ export class ClientOrdersService {
     }
 
     // Calculate final amount
-    let discountAmount = discountFromPoints;
+    const discountAmount = discountFromPoints;
     const finalAmount = Math.max(0, totalAmount - discountAmount);
 
     // Calculate points to earn (1% of final amount)

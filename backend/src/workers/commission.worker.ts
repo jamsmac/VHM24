@@ -46,7 +46,7 @@ async function bootstrap() {
     logger.log('Waiting for jobs...');
 
     // Process jobs
-    commissionQueue.process('calculate-daily', 2, async (job: Job) => {
+    void commissionQueue.process('calculate-daily', 2, async (job: Job) => {
       logger.log(`[Job ${job.id}] Processing daily commission calculation...`);
 
       // Emit job started
@@ -85,7 +85,7 @@ async function bootstrap() {
       }
     });
 
-    commissionQueue.process('calculate-weekly', 2, async (job: Job) => {
+    void commissionQueue.process('calculate-weekly', 2, async (job: Job) => {
       logger.log(`[Job ${job.id}] Processing weekly commission calculation...`);
 
       realtimeGateway.emitJobProgress({
@@ -121,7 +121,7 @@ async function bootstrap() {
       }
     });
 
-    commissionQueue.process('calculate-monthly', 2, async (job: Job) => {
+    void commissionQueue.process('calculate-monthly', 2, async (job: Job) => {
       logger.log(`[Job ${job.id}] Processing monthly commission calculation...`);
 
       realtimeGateway.emitJobProgress({
@@ -157,7 +157,7 @@ async function bootstrap() {
       }
     });
 
-    commissionQueue.process('check-overdue', 1, async (job: Job) => {
+    void commissionQueue.process('check-overdue', 1, async (job: Job) => {
       logger.log(`[Job ${job.id}] Checking for overdue payments...`);
 
       realtimeGateway.emitJobProgress({
@@ -191,7 +191,7 @@ async function bootstrap() {
       }
     });
 
-    commissionQueue.process('calculate-manual', 2, async (job: Job) => {
+    void commissionQueue.process('calculate-manual', 2, async (job: Job) => {
       logger.log(`[Job ${job.id}] Processing manual commission calculation...`);
       const { period, contractId, periodStart, periodEnd } = job.data;
 
@@ -232,7 +232,7 @@ async function bootstrap() {
             case 'monthly':
               processed = await schedulerService.calculateMonthlyCommissions();
               break;
-            case 'all':
+            case 'all': {
               realtimeGateway.emitJobProgress({
                 jobId: job.id.toString(),
                 type: 'calculate-manual',
@@ -259,6 +259,7 @@ async function bootstrap() {
 
               processed = daily + weekly + monthly;
               break;
+            }
           }
         }
 
@@ -294,8 +295,8 @@ async function bootstrap() {
       process.exit(0);
     };
 
-    process.on('SIGTERM', () => shutdown('SIGTERM'));
-    process.on('SIGINT', () => shutdown('SIGINT'));
+    process.on('SIGTERM', () => void shutdown('SIGTERM'));
+    process.on('SIGINT', () => void shutdown('SIGINT'));
 
     // Handle uncaught errors
     process.on('uncaughtException', (error) => {
@@ -313,4 +314,4 @@ async function bootstrap() {
   }
 }
 
-bootstrap();
+void bootstrap();

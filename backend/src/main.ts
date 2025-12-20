@@ -149,4 +149,4 @@ async function bootstrap() {
   logger.log(`API Documentation: http://localhost:${port}/api/docs`);
 }
 
-bootstrap();
+void bootstrap();

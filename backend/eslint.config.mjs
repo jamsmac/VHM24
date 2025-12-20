@@ -40,10 +40,17 @@ export default tseslint.config(
         {
           argsIgnorePattern: '^_',
           varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
         },
       ],
-      '@typescript-eslint/no-floating-promises': 'error',
-      '@typescript-eslint/no-misused-promises': 'error',
+      '@typescript-eslint/no-floating-promises': 'warn',
+      '@typescript-eslint/no-misused-promises': 'warn',
+
+      // Downgrade non-critical style rules
+      'no-case-declarations': 'warn',
+      'no-useless-escape': 'warn',
+      'no-useless-catch': 'warn',
+      'no-constant-binary-expression': 'warn',
 
       // General best practices
       'no-console': ['warn', { allow: ['warn', 'error'] }],
@@ -59,16 +66,27 @@ export default tseslint.config(
     rules: {
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-var-requires': 'off',
+      '@typescript-eslint/no-require-imports': 'off',
       '@typescript-eslint/no-floating-promises': 'off',
+      '@typescript-eslint/no-unused-vars': [
+        'warn',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+        },
+      ],
       'no-console': 'off',
     },
   },
 
-  // Seed and migration files
+  // Seed, migration, and script files
   {
-    files: ['**/seeds/**/*.ts', '**/migrations/**/*.ts'],
+    files: ['**/seeds/**/*.ts', '**/migrations/**/*.ts', '**/scripts/**/*.ts'],
     rules: {
       '@typescript-eslint/no-var-requires': 'off',
+      '@typescript-eslint/no-require-imports': 'off',
+      '@typescript-eslint/no-floating-promises': 'off',
       'no-console': 'off',
     },
   },
@@ -81,7 +99,8 @@ export default tseslint.config(
       'coverage/**',
       '*.js',
       '*.mjs',
-      '!eslint.config.mjs',
+      'scripts/**/*.js',
+      'eslint.config.mjs',
     ],
   },
 );

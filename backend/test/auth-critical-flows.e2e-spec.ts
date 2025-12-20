@@ -56,7 +56,7 @@ describe('Authentication Critical Flows (E2E)', () => {
     if (dataSource && testUserId) {
       try {
         await dataSource.query('DELETE FROM users WHERE id = $1', [testUserId]);
-      } catch (error) {
+      } catch (_error) {
         // Ignore cleanup errors
       }
     }
@@ -371,7 +371,7 @@ describe('Authentication Critical Flows (E2E)', () => {
       if (dataSource && ipTestUserId) {
         try {
           await dataSource.query('DELETE FROM users WHERE id = $1', [ipTestUserId]);
-        } catch (error) {
+        } catch (_error) {
           // Ignore cleanup errors
         }
       }
@@ -475,7 +475,7 @@ describe('Authentication Critical Flows (E2E)', () => {
           }
 
           await dataSource.query('DELETE FROM access_requests WHERE id = $1', [accessRequestId]);
-        } catch (error) {
+        } catch (_error) {
           // Ignore cleanup errors
         }
       }
