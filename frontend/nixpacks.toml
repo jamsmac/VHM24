@@ -1,10 +1,14 @@
 # Nixpacks configuration for Next.js standalone
+# Root Directory must be set to "frontend" in Railway Dashboard
+
 [phases.setup]
 nixPkgs = ["nodejs_20"]
 
+[phases.install]
+cmds = ["npm ci"]
+
 [phases.build]
 cmds = [
-  "npm ci",
   "npm run build",
   "cp -r .next/static .next/standalone/.next/static",
   "cp -r public .next/standalone/public"
