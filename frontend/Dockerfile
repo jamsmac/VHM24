@@ -54,7 +54,8 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 USER nextjs
 
 EXPOSE 3000
-# PORT is set by Railway at runtime - do not hardcode here
+# PORT is set by Railway at runtime, HOSTNAME must be 0.0.0.0 for Railway proxy
+ENV HOSTNAME=0.0.0.0
 
 # Health check for container orchestration
 # Note: Railway has its own health check mechanism, but this provides local container health
