@@ -1,12 +1,3 @@
-# Nixpacks configuration for Next.js standalone
-# Copy static assets after build, then run standalone server
-[phases.build]
-cmds = [
-  "npm ci",
-  "npm run build",
-  "cp -r .next/static .next/standalone/.next/static",
-  "cp -r public .next/standalone/public"
-]
-
+# Nixpacks configuration for Next.js
 [start]
-cmd = "node .next/standalone/server.js"
+cmd = "npm start"
