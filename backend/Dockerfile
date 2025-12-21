@@ -17,13 +17,21 @@ WORKDIR /app
 COPY package*.json ./
 
 # Force fresh install (cache buster: ${CACHEBUST})
-RUN echo "Cache bust: ${CACHEBUST}" && npm install --legacy-peer-deps
+RUN echo "Cache bust: ${CACHEBUST}" && \
+    npm cache clean --force && \
+    rm -rf node_modules && \
+    npm install --legacy-peer-deps && \
+    echo "=== Checking node_modules/.bin ===" && \
+    ls -la node_modules/.bin/ | head -20 && \
+    echo "=== Checking @nestjs/cli ===" && \
+    ls -la node_modules/@nestjs/cli/bin/ 2>/dev/null || echo "CLI bin not found"
 
 # Copy source code
 COPY . .
 
 # Build the application
-RUN ./node_modules/.bin/nest build
+RUN ls -la node_modules/.bin/nest 2>/dev/null || echo "nest not in .bin" && \
+    ./node_modules/.bin/nest build || npx @nestjs/cli build
 
 # Remove dev dependencies after build
 RUN npm prune --production --legacy-peer-deps
