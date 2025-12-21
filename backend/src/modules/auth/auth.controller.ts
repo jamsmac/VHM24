@@ -11,6 +11,7 @@ import {
   BadRequestException,
   Param,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { Request, Response } from 'express';
 import { AuthService, AuthResponse, AuthTokens } from './auth.service';
@@ -45,6 +46,7 @@ export class AuthController {
     private readonly securityTwoFactorAuthService: SecurityTwoFactorAuthService,
     private readonly sessionService: SessionService,
     private readonly cookieService: CookieService,
+    private readonly configService: ConfigService,
   ) {}
 
   @Post('login')
@@ -191,10 +193,29 @@ export class AuthController {
   @ApiOperation({ summary: 'Debug: Get cookie configuration (temporary)' })
   @ApiResponse({ status: 200, description: 'Cookie configuration' })
   getDebugCookieConfig(): Record<string, unknown> {
+    const fromProcessEnv = process.env.COOKIE_SAME_SITE;
+    const fromConfigService = this.configService.get<string>('COOKIE_SAME_SITE');
+    const allCookieEnvVars = Object.keys(process.env)
+      .filter(k => k.includes('COOKIE'))
+      .reduce((acc, k) => ({ ...acc, [k]: process.env[k] }), {});
+    
     return {
-      processEnv: process.env.COOKIE_SAME_SITE,
-      accessOptions: this.cookieService.getAccessTokenCookieOptions(),
-      refreshOptions: this.cookieService.getRefreshTokenCookieOptions(),
+      debug: {
+        processEnv_COOKIE_SAME_SITE: fromProcessEnv,
+        configService_COOKIE_SAME_SITE: fromConfigService,
+        allCookieEnvironmentVariables: allCookieEnvVars,
+        nodeEnv: process.env.NODE_ENV,
+        isProduction: this.configService.get<string>('NODE_ENV') === 'production',
+      },
+      cookieOptions: {
+        accessToken: this.cookieService.getAccessTokenCookieOptions(),
+        refreshToken: this.cookieService.getRefreshTokenCookieOptions(),
+      },
+      recommendation: fromProcessEnv 
+        ? `✅ Variable found in process.env: "${fromProcessEnv}"`
+        : fromConfigService
+        ? `⚠️ Variable found in ConfigService: "${fromConfigService}" (but not in process.env)`
+        : `❌ Variable COOKIE_SAME_SITE not found. Using default: "strict"`,
     };
   }
 

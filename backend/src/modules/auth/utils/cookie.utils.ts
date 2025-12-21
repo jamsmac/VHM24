@@ -3,21 +3,28 @@ import { Response, CookieOptions } from 'express';
 /**
  * Cookie utility for secure httpOnly token storage
  * SEC-1: XSS-proof token storage via httpOnly cookies
+ * 
+ * NOTE: This file is legacy. Use CookieService instead for proper environment variable support.
+ * This file is kept for backward compatibility but should not be used in new code.
  */
 
 const isProduction = process.env.NODE_ENV === 'production';
+// Use 'none' for cross-origin (different domains), 'strict' for same-origin
+// Set COOKIE_SAME_SITE=none in Railway for cross-origin cookie support
+const sameSitePolicy = (process.env.COOKIE_SAME_SITE || 'strict') as 'strict' | 'lax' | 'none';
 
 /**
  * Common cookie options for access token
  * - httpOnly: Prevents XSS attacks (JavaScript cannot read)
- * - secure: HTTPS only in production
- * - sameSite: Prevents CSRF attacks
+ * - secure: HTTPS only in production (or when sameSite is 'none')
+ * - sameSite: Prevents CSRF attacks (configurable via COOKIE_SAME_SITE env var)
  * - path: Cookie sent to all API routes
  */
 export const ACCESS_TOKEN_COOKIE_OPTIONS: CookieOptions = {
   httpOnly: true,
-  secure: isProduction,
-  sameSite: 'strict',
+  // secure must be true when sameSite is 'none'
+  secure: isProduction || sameSitePolicy === 'none',
+  sameSite: sameSitePolicy,
   path: '/',
   maxAge: 15 * 60 * 1000, // 15 minutes
 };
@@ -29,8 +36,9 @@ export const ACCESS_TOKEN_COOKIE_OPTIONS: CookieOptions = {
  */
 export const REFRESH_TOKEN_COOKIE_OPTIONS: CookieOptions = {
   httpOnly: true,
-  secure: isProduction,
-  sameSite: 'strict',
+  // secure must be true when sameSite is 'none'
+  secure: isProduction || sameSitePolicy === 'none',
+  sameSite: sameSitePolicy,
   path: '/api/v1/auth/refresh',
   maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
 };

@@ -25,12 +25,30 @@ export class CsrfMiddleware implements NestMiddleware {
   private readonly isProduction: boolean;
   private readonly cookieDomain: string | undefined;
   private readonly tokenMaxAge: number;
+  private readonly sameSitePolicy: 'strict' | 'lax' | 'none';
 
   constructor(private readonly configService: ConfigService) {
     this.isProduction = this.configService.get<string>('NODE_ENV') === 'production';
     this.cookieDomain = this.configService.get<string>('COOKIE_DOMAIN');
     // CSRF token valid for 24 hours
     this.tokenMaxAge = 24 * 60 * 60 * 1000;
+    // Use 'none' for cross-origin (different domains), 'strict' for same-origin
+    // Set COOKIE_SAME_SITE=none in Railway for cross-origin cookie support
+    // CRITICAL: Read directly from process.env first, as ConfigService may apply default 'strict'
+    const fromProcessEnv = process.env.COOKIE_SAME_SITE;
+    const fromConfigService = this.configService.get<string>('COOKIE_SAME_SITE');
+    
+    // Priority: process.env > ConfigService > default
+    const sameSiteEnv = fromProcessEnv || fromConfigService || 'strict';
+    this.sameSitePolicy = sameSiteEnv.toLowerCase().trim() as 'strict' | 'lax' | 'none';
+    
+    // Validate the value
+    if (!['strict', 'lax', 'none'].includes(this.sameSitePolicy)) {
+      this.logger.warn(`Invalid COOKIE_SAME_SITE value "${sameSiteEnv}", defaulting to 'strict'`);
+      this.sameSitePolicy = 'strict';
+    }
+    
+    this.logger.log(`[CsrfMiddleware] Using sameSitePolicy: ${this.sameSitePolicy} (from env: ${fromProcessEnv || 'not set'})`);
   }
 
   use(req: Request, res: Response, next: NextFunction): void {
@@ -58,8 +76,9 @@ export class CsrfMiddleware implements NestMiddleware {
     res.cookie(CSRF_TOKEN_COOKIE, csrfToken, {
       // NOT httpOnly - must be readable by JavaScript
       httpOnly: false,
-      secure: this.isProduction,
-      sameSite: 'strict',
+      // secure must be true when sameSite is 'none'
+      secure: this.isProduction || this.sameSitePolicy === 'none',
+      sameSite: this.sameSitePolicy,
       path: '/',
       domain: this.cookieDomain,
       maxAge: this.tokenMaxAge,

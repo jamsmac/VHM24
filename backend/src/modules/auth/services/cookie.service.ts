@@ -28,14 +28,30 @@ export class CookieService {
     this.cookieDomain = this.configService.get<string>('COOKIE_DOMAIN');
     // Use 'none' for cross-origin (different domains), 'strict' for same-origin
     // Set COOKIE_SAME_SITE=none in Railway for cross-origin cookie support
-    // Use process.env directly as fallback for Railway compatibility
+    // CRITICAL: Read directly from process.env first, as ConfigService may apply default 'strict'
     const fromProcessEnv = process.env.COOKIE_SAME_SITE;
     const fromConfigService = this.configService.get<string>('COOKIE_SAME_SITE');
-    console.log('[CookieService] COOKIE_SAME_SITE from process.env:', fromProcessEnv);
-    console.log('[CookieService] COOKIE_SAME_SITE from ConfigService:', fromConfigService);
+    
+    // Debug logging - show all sources
+    console.log('[CookieService] ===== COOKIE_SAME_SITE DEBUG =====');
+    console.log('[CookieService] process.env.COOKIE_SAME_SITE:', fromProcessEnv, `(type: ${typeof fromProcessEnv})`);
+    console.log('[CookieService] configService.get("COOKIE_SAME_SITE"):', fromConfigService, `(type: ${typeof fromConfigService})`);
+    console.log('[CookieService] All process.env keys containing COOKIE:', 
+      Object.keys(process.env).filter(k => k.includes('COOKIE')).join(', '));
+    
+    // Priority: process.env > ConfigService > default
+    // process.env is most reliable for Railway environment variables
     const sameSiteEnv = fromProcessEnv || fromConfigService || 'strict';
-    console.log('[CookieService] Using sameSitePolicy:', sameSiteEnv);
-    this.sameSitePolicy = sameSiteEnv as 'strict' | 'lax' | 'none';
+    console.log('[CookieService] Final sameSitePolicy value:', sameSiteEnv);
+    console.log('[CookieService] ====================================');
+    
+    this.sameSitePolicy = sameSiteEnv.toLowerCase().trim() as 'strict' | 'lax' | 'none';
+    
+    // Validate the value
+    if (!['strict', 'lax', 'none'].includes(this.sameSitePolicy)) {
+      console.warn(`[CookieService] WARNING: Invalid COOKIE_SAME_SITE value "${sameSiteEnv}", defaulting to 'strict'`);
+      this.sameSitePolicy = 'strict';
+    }
   }
 
   /**
