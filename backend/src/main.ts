@@ -4,6 +4,7 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import helmet from 'helmet';
 import * as cookieParser from 'cookie-parser';
 import * as compression from 'compression';
+import { useContainer } from 'class-validator';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { CorsOptions } from '@nestjs/common/interfaces/external/cors-options.interface';
@@ -12,6 +13,10 @@ const logger = new Logger('Bootstrap');
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  // Enable class-validator to use NestJS DI container
+  // This is required for custom validators like IsDictionaryCodeConstraint
+  useContainer(app.select(AppModule), { fallbackOnErrors: true });
 
   // SEC-1: Cookie parser for httpOnly cookie-based authentication
   app.use(cookieParser());
