@@ -1192,8 +1192,92 @@ Before committing code, ensure:
 
 ---
 
-**Last Updated**: 2025-12-19
-**Version**: 2.1.0
+## Specialized Agents
+
+VendHub Manager has 10 specialized Claude Code agents for different development domains. Use these agents for focused, expert-level assistance.
+
+### Available Agents
+
+| Agent | File | Use For |
+|-------|------|---------|
+| **vendhub-dev-architect** | `.claude/agents/vendhub-dev-architect.md` | Architecture, feature planning, Sprint requirements |
+| **vendhub-auth-security** | `.claude/agents/vendhub-auth-security.md` | JWT, RBAC, 2FA, security audits |
+| **vendhub-database-expert** | `.claude/agents/vendhub-database-expert.md` | Migrations, queries, optimization |
+| **vendhub-frontend-specialist** | `.claude/agents/vendhub-frontend-specialist.md` | React, Next.js, components |
+| **vendhub-telegram-bot** | `.claude/agents/vendhub-telegram-bot.md` | Telegram commands, keyboards |
+| **vendhub-tester** | `.claude/agents/vendhub-tester.md` | Unit, integration, E2E tests |
+| **vendhub-api-developer** | `.claude/agents/vendhub-api-developer.md` | REST endpoints, DTOs, Swagger |
+| **vendhub-devops** | `.claude/agents/vendhub-devops.md` | Docker, Railway, CI/CD, monitoring |
+| **vendhub-mobile** | `.claude/agents/vendhub-mobile.md` | Expo, React Native, offline mode |
+| **vendhub-qa-lead** | `.claude/agents/vendhub-qa-lead.md` | Releases, testing, quality metrics |
+
+### When to Use Agents
+
+```typescript
+// Example: Implementing new authentication feature
+// Use: vendhub-auth-security
+
+// Example: Creating database migration
+// Use: vendhub-database-expert
+
+// Example: Deploying to Railway
+// Use: vendhub-devops
+
+// Example: Adding mobile offline support
+// Use: vendhub-mobile
+
+// Example: Planning a release
+// Use: vendhub-qa-lead
+```
+
+### Agent Selection Guide
+
+1. **New Feature** → `vendhub-dev-architect`
+2. **Security/Auth** → `vendhub-auth-security`
+3. **Database Changes** → `vendhub-database-expert`
+4. **Frontend UI** → `vendhub-frontend-specialist`
+5. **Mobile App** → `vendhub-mobile`
+6. **Telegram Bot** → `vendhub-telegram-bot`
+7. **API Endpoints** → `vendhub-api-developer`
+8. **Testing** → `vendhub-tester`
+9. **Deployment** → `vendhub-devops`
+10. **Release/QA** → `vendhub-qa-lead`
+
+---
+
+## Project Status & Roadmap
+
+### Current Status (2025-12-21)
+
+| Component | Completion | Status |
+|-----------|------------|--------|
+| Backend API | 95% | Production Ready |
+| Frontend Web | 62% | Active Development |
+| Mobile App | 25% | Foundation Complete |
+| Telegram Bot | 80% | Needs Commission Commands |
+| DevOps/Infra | 90% | Railway Deployed |
+| Documentation | 85% | Actively Maintained |
+
+### Key Milestones
+
+- **MVP Complete**: Backend + Frontend core functionality
+- **Production Deploy**: Railway deployment active
+- **Mobile Foundation**: Auth + API integration ready
+- **Commission System**: Phase 1-3 complete with BullMQ
+
+### Next Steps
+
+1. **Week 1-2**: Stabilization and bug fixes
+2. **Week 3-6**: Mobile app implementation
+3. **Week 7**: Production launch preparation
+4. **Week 8+**: Monitoring and support
+
+See `.claude/ACTION_PLAN_100.md` for detailed roadmap.
+
+---
+
+**Last Updated**: 2025-12-21
+**Version**: 2.2.0
 **Maintained By**: VendHub Development Team
 **For**: AI Assistants (Claude Code, GitHub Copilot, etc.)
 
