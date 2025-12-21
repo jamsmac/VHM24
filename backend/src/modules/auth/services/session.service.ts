@@ -60,7 +60,7 @@ export class SessionService {
     const deviceInfo = this.parseUserAgent(data.userAgent);
 
     // Hash refresh token
-    const refreshTokenHash = await bcrypt.hash(data.refreshToken, 10);
+    const refreshTokenHash = await bcrypt.hash(data.refreshToken, 12);
 
     // Calculate expiration date
     const expiresAt = new Date();
@@ -116,7 +116,7 @@ export class SessionService {
    * @param newRefreshToken - New refresh token
    */
   async rotateRefreshToken(sessionId: string, newRefreshToken: string): Promise<void> {
-    const refreshTokenHash = await bcrypt.hash(newRefreshToken, 10);
+    const refreshTokenHash = await bcrypt.hash(newRefreshToken, 12);
     await this.sessionRepository.update(sessionId, {
       refresh_token_hash: refreshTokenHash,
       last_used_at: new Date(),

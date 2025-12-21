@@ -740,7 +740,7 @@ export class AuthService {
     const user = resetToken.user;
 
     // Hash new password
-    const passwordHash = await bcrypt.hash(newPassword, 10);
+    const passwordHash = await bcrypt.hash(newPassword, 12);
 
     // Update user password directly (UpdateUserDto doesn't include password_hash)
     user.password_hash = passwordHash;

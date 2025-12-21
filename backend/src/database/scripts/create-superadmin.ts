@@ -166,7 +166,7 @@ async function createSuperAdmin(input: CreateSuperAdminInput): Promise<void> {
     }
 
     // Hash password
-    const password_hash = await bcrypt.hash(input.password, 10);
+    const password_hash = await bcrypt.hash(input.password, 12);
 
     // Create user
     const user = userRepository.create({
