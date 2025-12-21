@@ -1,4 +1,4 @@
-import { httpClient } from './axios'
+import { apiClient } from './axios'
 import type {
   PublicLocation,
   MenuItem,
@@ -25,18 +25,18 @@ export const clientApi = {
     page: number
     limit: number
   }> => {
-    const { data } = await httpClient.get('/client/public/locations', { params })
+    const { data } = await apiClient.get('/client/public/locations', { params })
     return data
   },
 
   getCities: async (): Promise<string[]> => {
-    const { data } = await httpClient.get('/client/public/cities')
+    const { data } = await apiClient.get('/client/public/cities')
     return data
   },
 
   // Menu
   getMenu: async (machineId: string, category?: string): Promise<MenuItem[]> => {
-    const { data } = await httpClient.get('/client/public/menu', {
+    const { data } = await apiClient.get('/client/public/menu', {
       params: { machine_id: machineId, category },
     })
     return data
@@ -44,7 +44,7 @@ export const clientApi = {
 
   // QR code resolution
   resolveQr: async (qrCode: string): Promise<QrResolveResult> => {
-    const { data } = await httpClient.post('/client/public/qr/resolve', {
+    const { data } = await apiClient.post('/client/public/qr/resolve', {
       qr_code: qrCode,
     })
     return data
@@ -54,7 +54,7 @@ export const clientApi = {
   submitCooperationRequest: async (
     request: CooperationRequest
   ): Promise<{ success: boolean; message: string }> => {
-    const { data } = await httpClient.post('/client/public/cooperation', request)
+    const { data } = await apiClient.post('/client/public/cooperation', request)
     return data
   },
 }

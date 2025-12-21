@@ -143,14 +143,17 @@ export default function MachineAccessPage({ params }: MachineAccessPageProps) {
       />
 
       <ConfirmDialog
-        open={!!deletingAccess}
-        onOpenChange={(open) => !open && setDeletingAccess(null)}
+        isOpen={!!deletingAccess}
+        onClose={() => setDeletingAccess(null)}
         title="Удалить доступ?"
-        description={`Вы уверены, что хотите удалить доступ пользователя ${
+        message={`Вы уверены, что хотите удалить доступ пользователя ${
           deletingAccess?.user?.full_name || deletingAccess?.user?.username
         }?`}
-        onConfirm={() => deletingAccess && deleteMutation.mutate(deletingAccess.id)}
+        onConfirm={() => {
+          if (deletingAccess) deleteMutation.mutate(deletingAccess.id)
+        }}
         isLoading={deleteMutation.isPending}
+        variant="danger"
       />
     </div>
   )

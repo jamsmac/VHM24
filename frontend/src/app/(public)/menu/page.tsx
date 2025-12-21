@@ -1,15 +1,16 @@
 'use client'
 
+import { Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
-import { Coffee, MapPin, AlertCircle, Star } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Coffee, AlertCircle, Star } from 'lucide-react'
+import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { clientApi } from '@/lib/client-api'
 import { MenuItem } from '@/types/client'
 
-export default function MenuPage() {
+function MenuContent() {
   const searchParams = useSearchParams()
   const machineId = searchParams.get('machine_id')
 
@@ -162,5 +163,35 @@ export default function MenuPage() {
         </Button>
       </div>
     </div>
+  )
+}
+
+function MenuLoading() {
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <div className="mb-8">
+        <div className="h-10 bg-muted rounded w-48 mb-2 animate-pulse"></div>
+        <div className="h-5 bg-muted rounded w-64 animate-pulse"></div>
+      </div>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <Card key={i} className="animate-pulse">
+            <div className="h-48 bg-muted"></div>
+            <CardContent className="p-4">
+              <div className="h-6 bg-muted rounded w-3/4 mb-2"></div>
+              <div className="h-4 bg-muted rounded w-1/2"></div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+export default function MenuPage() {
+  return (
+    <Suspense fallback={<MenuLoading />}>
+      <MenuContent />
+    </Suspense>
   )
 }

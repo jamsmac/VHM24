@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Coffee, MapPin, Phone, Menu } from 'lucide-react'
+import { QueryProvider } from '@/providers/QueryProvider'
+import { Toaster } from 'sonner'
 
 export const metadata: Metadata = {
   title: 'VendHub - Вендинговые автоматы',
@@ -13,6 +15,7 @@ export default function PublicLayout({
   children: React.ReactNode
 }) {
   return (
+    <QueryProvider>
     <div className="min-h-screen flex flex-col">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b">
@@ -96,5 +99,7 @@ export default function PublicLayout({
         </div>
       </footer>
     </div>
+    <Toaster position="top-right" richColors />
+    </QueryProvider>
   )
 }

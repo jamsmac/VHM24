@@ -2,6 +2,10 @@
 const nextConfig = {
   output: 'standalone', // Required for Docker deployment
   reactStrictMode: true,
+  // Set turbopack root to fix Cyrillic path issues
+  turbopack: {
+    root: __dirname,
+  },
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1',
   },

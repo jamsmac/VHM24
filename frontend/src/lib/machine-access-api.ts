@@ -1,4 +1,4 @@
-import { httpClient } from './axios'
+import { apiClient } from './axios'
 import type {
   MachineAccess,
   CreateMachineAccessDto,
@@ -17,12 +17,12 @@ import type {
 export const machineAccessApi = {
   // Access entries
   getByMachine: async (machineId: string): Promise<MachineAccess[]> => {
-    const { data } = await httpClient.get(`/machines/access/machine/${machineId}`)
+    const { data } = await apiClient.get(`/machines/access/machine/${machineId}`)
     return data
   },
 
   getByUser: async (userId: string): Promise<MachineAccess[]> => {
-    const { data } = await httpClient.get(`/machines/access/user/${userId}`)
+    const { data } = await apiClient.get(`/machines/access/user/${userId}`)
     return data
   },
 
@@ -31,32 +31,32 @@ export const machineAccessApi = {
     user_id?: string
     role?: string
   }): Promise<MachineAccess[]> => {
-    const { data } = await httpClient.get('/machines/access', { params })
+    const { data } = await apiClient.get('/machines/access', { params })
     return data
   },
 
   create: async (dto: CreateMachineAccessDto): Promise<MachineAccess> => {
-    const { data } = await httpClient.post('/machines/access', dto)
+    const { data } = await apiClient.post('/machines/access', dto)
     return data
   },
 
   update: async (id: string, dto: UpdateMachineAccessDto): Promise<MachineAccess> => {
-    const { data } = await httpClient.patch(`/machines/access/${id}`, dto)
+    const { data } = await apiClient.patch(`/machines/access/${id}`, dto)
     return data
   },
 
   delete: async (id: string): Promise<void> => {
-    await httpClient.delete(`/machines/access/${id}`)
+    await apiClient.delete(`/machines/access/${id}`)
   },
 
   // Bulk operations
   assignOwnerToAll: async (): Promise<{ count: number }> => {
-    const { data } = await httpClient.post('/machines/access/assign-me-owner-all')
+    const { data } = await apiClient.post('/machines/access/assign-me-owner-all')
     return data
   },
 
   bulkAssign: async (dto: BulkAssignDto): Promise<ImportMachineAccessResult> => {
-    const { data } = await httpClient.post('/machines/access/bulk-assign', dto)
+    const { data } = await apiClient.post('/machines/access/bulk-assign', dto)
     return data
   },
 
@@ -64,7 +64,7 @@ export const machineAccessApi = {
   importFromFile: async (file: File): Promise<ImportMachineAccessResult> => {
     const formData = new FormData()
     formData.append('file', file)
-    const { data } = await httpClient.post('/machines/access/import', formData, {
+    const { data } = await apiClient.post('/machines/access/import', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -74,17 +74,17 @@ export const machineAccessApi = {
 
   // Templates
   getTemplates: async (): Promise<AccessTemplate[]> => {
-    const { data } = await httpClient.get('/machines/access/templates')
+    const { data } = await apiClient.get('/machines/access/templates')
     return data
   },
 
   getTemplateById: async (id: string): Promise<AccessTemplate> => {
-    const { data } = await httpClient.get(`/machines/access/templates/${id}`)
+    const { data } = await apiClient.get(`/machines/access/templates/${id}`)
     return data
   },
 
   createTemplate: async (dto: CreateAccessTemplateDto): Promise<AccessTemplate> => {
-    const { data } = await httpClient.post('/machines/access/templates', dto)
+    const { data } = await apiClient.post('/machines/access/templates', dto)
     return data
   },
 
@@ -92,16 +92,16 @@ export const machineAccessApi = {
     id: string,
     dto: Partial<CreateAccessTemplateDto>
   ): Promise<AccessTemplate> => {
-    const { data } = await httpClient.patch(`/machines/access/templates/${id}`, dto)
+    const { data } = await apiClient.patch(`/machines/access/templates/${id}`, dto)
     return data
   },
 
   deleteTemplate: async (id: string): Promise<void> => {
-    await httpClient.delete(`/machines/access/templates/${id}`)
+    await apiClient.delete(`/machines/access/templates/${id}`)
   },
 
   applyTemplate: async (dto: ApplyTemplateDto): Promise<ImportMachineAccessResult> => {
-    const { data } = await httpClient.post('/machines/access/templates/apply', dto)
+    const { data } = await apiClient.post('/machines/access/templates/apply', dto)
     return data
   },
 }
