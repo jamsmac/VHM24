@@ -187,6 +187,17 @@ export class AuthController {
     return user;
   }
 
+  @Get('debug/cookie-config')
+  @ApiOperation({ summary: 'Debug: Get cookie configuration (temporary)' })
+  @ApiResponse({ status: 200, description: 'Cookie configuration' })
+  getDebugCookieConfig(): Record<string, unknown> {
+    return {
+      processEnv: process.env.COOKIE_SAME_SITE,
+      accessOptions: this.cookieService.getAccessTokenCookieOptions(),
+      refreshOptions: this.cookieService.getRefreshTokenCookieOptions(),
+    };
+  }
+
   // ============================================================================
   // PASSWORD RECOVERY (REQ-AUTH-45)
   // ============================================================================
