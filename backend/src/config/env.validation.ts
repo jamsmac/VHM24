@@ -182,6 +182,15 @@ class EnvironmentVariables {
   @IsOptional()
   CORS_ORIGINS?: string;
 
+  // Cookie configuration (for cross-origin authentication)
+  @IsIn(['strict', 'lax', 'none'])
+  @IsOptional()
+  COOKIE_SAME_SITE?: string = 'strict';
+
+  @IsString()
+  @IsOptional()
+  COOKIE_DOMAIN?: string;
+
   // File upload
   @IsNumber()
   @IsOptional()
