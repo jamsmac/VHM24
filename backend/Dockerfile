@@ -8,13 +8,16 @@
 # ----------------------------------------------------------------------------
 FROM node:20-alpine AS build
 
+# Cache buster - change this value to force rebuild
+ARG CACHEBUST=2024122201
+
 WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
 
-# Install ALL dependencies (dev + prod) for building
-RUN npm install --legacy-peer-deps
+# Force fresh install (cache buster: ${CACHEBUST})
+RUN echo "Cache bust: ${CACHEBUST}" && npm install --legacy-peer-deps
 
 # Copy source code
 COPY . .
