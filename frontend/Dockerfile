@@ -54,11 +54,12 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 USER nextjs
 
 EXPOSE 3000
-ENV PORT=3000
+# PORT is set by Railway at runtime - do not hardcode here
 
 # Health check for container orchestration
+# Note: Railway has its own health check mechanism, but this provides local container health
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/ || exit 1
+  CMD wget --no-verbose --tries=1 --spider http://localhost:${PORT:-3000}/ || exit 1
 
 # Use dumb-init to properly handle signals
 ENTRYPOINT ["dumb-init", "--"]
