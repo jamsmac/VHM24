@@ -1,7 +1,7 @@
 # ============================================================================
 # VendHub Manager Backend - Production Dockerfile
 # ============================================================================
-# Build context: backend/ directory
+# Build context: repository root (Railway uses full repo)
 
 # ----------------------------------------------------------------------------
 # Stage 1: Build
@@ -9,18 +9,18 @@
 FROM node:20-alpine AS build
 
 # Cache buster - change this value to force rebuild
-ARG CACHEBUST=2024122202
+ARG CACHEBUST=2024122203
 
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
+# Copy package files from backend directory
+COPY backend/package*.json ./
 
 # Install dependencies
 RUN npm cache clean --force && npm install --legacy-peer-deps
 
-# Copy source code
-COPY . .
+# Copy source code from backend directory
+COPY backend/ .
 
 # Build the application (use npx as fallback for symlink issues)
 RUN ./node_modules/.bin/nest build || npx @nestjs/cli build
@@ -45,10 +45,10 @@ WORKDIR /app
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nestjs -u 1001
 
-# Copy package files and configs directly from context
-COPY --chown=nestjs:nodejs package*.json ./
-COPY --chown=nestjs:nodejs startup.sh ./startup.sh
-COPY --chown=nestjs:nodejs typeorm-migrations-only.config.js ./typeorm-migrations-only.config.js
+# Copy package files and configs directly from context (backend directory)
+COPY --chown=nestjs:nodejs backend/package*.json ./
+COPY --chown=nestjs:nodejs backend/startup.sh ./startup.sh
+COPY --chown=nestjs:nodejs backend/typeorm-migrations-only.config.js ./typeorm-migrations-only.config.js
 RUN chmod +x ./startup.sh
 
 # Copy production dependencies from build stage
