@@ -8,6 +8,7 @@ import { TelegramMessageLog } from './entities/telegram-message-log.entity';
 import { TelegramBotAnalytics } from './entities/telegram-bot-analytics.entity';
 import { User } from '../users/entities/user.entity';
 import { Task } from '../tasks/entities/task.entity';
+import { Material } from '../requests/entities/material.entity';
 import { TelegramBotService } from './services/telegram-bot.service';
 import { TelegramUsersService } from './services/telegram-users.service';
 import { TelegramSettingsService } from './services/telegram-settings.service';
@@ -47,6 +48,7 @@ import { CatalogHandler } from './handlers/catalog.handler';
       TelegramBotAnalytics,
       User,
       Task,
+      Material,
     ]),
     BullModule.registerQueue({
       name: 'telegram-messages',
