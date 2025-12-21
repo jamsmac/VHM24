@@ -112,7 +112,7 @@ describe('SessionService', () => {
       const result = await service.createSession(createSessionData);
 
       expect(result).toEqual(expectedSession);
-      expect(mockedBcrypt.hash).toHaveBeenCalledWith(mockRefreshToken, 10);
+      expect(mockedBcrypt.hash).toHaveBeenCalledWith(mockRefreshToken, 12);
       expect(mockSessionRepository.create).toHaveBeenCalled();
       expect(mockSessionRepository.save).toHaveBeenCalled();
     });
@@ -125,7 +125,7 @@ describe('SessionService', () => {
 
       await service.createSession(createSessionData);
 
-      expect(mockedBcrypt.hash).toHaveBeenCalledWith(mockRefreshToken, 10);
+      expect(mockedBcrypt.hash).toHaveBeenCalledWith(mockRefreshToken, 12);
     });
 
     it('should parse user agent and extract device information', async () => {
@@ -282,7 +282,7 @@ describe('SessionService', () => {
 
       await service.rotateRefreshToken(mockSessionId, newRefreshToken);
 
-      expect(mockedBcrypt.hash).toHaveBeenCalledWith(newRefreshToken, 10);
+      expect(mockedBcrypt.hash).toHaveBeenCalledWith(newRefreshToken, 12);
       expect(mockSessionRepository.update).toHaveBeenCalledWith(mockSessionId, {
         refresh_token_hash: newHashedToken,
         last_used_at: expect.any(Date),
