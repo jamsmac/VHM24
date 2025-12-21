@@ -351,7 +351,7 @@ export class InventoryAdjustmentService {
     try {
       // Get managers and admins who can approve adjustments
       const approvers = await this.usersService.findByRoles([
-        UserRole.SUPER_ADMIN,
+        UserRole.OWNER,
         UserRole.ADMIN,
         UserRole.MANAGER,
       ]);

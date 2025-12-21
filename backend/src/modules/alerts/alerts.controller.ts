@@ -45,7 +45,7 @@ export class AlertsController {
   // ============================================================================
 
   @Post('rules')
-  @Roles('ADMIN', 'SUPER_ADMIN')
+  @Roles('Admin', 'Owner')
   @ApiOperation({ summary: 'Create a new alert rule' })
   @ApiResponse({ status: 201, description: 'Alert rule created successfully' })
   async createRule(
@@ -56,7 +56,7 @@ export class AlertsController {
   }
 
   @Get('rules')
-  @Roles('ADMIN', 'MANAGER', 'SUPER_ADMIN')
+  @Roles('Admin', 'MANAGER', 'Owner')
   @ApiOperation({ summary: 'Get all alert rules' })
   @ApiQuery({ name: 'is_enabled', required: false, type: Boolean })
   @ApiQuery({ name: 'metric', required: false, enum: AlertMetric })
@@ -77,14 +77,14 @@ export class AlertsController {
   }
 
   @Get('rules/:id')
-  @Roles('ADMIN', 'MANAGER', 'SUPER_ADMIN')
+  @Roles('Admin', 'MANAGER', 'Owner')
   @ApiOperation({ summary: 'Get alert rule by ID' })
   async findRuleById(@Param('id', ParseUUIDPipe) id: string) {
     return this.alertsService.findRuleById(id);
   }
 
   @Patch('rules/:id')
-  @Roles('ADMIN', 'SUPER_ADMIN')
+  @Roles('Admin', 'Owner')
   @ApiOperation({ summary: 'Update alert rule' })
   async updateRule(
     @Param('id', ParseUUIDPipe) id: string,
@@ -95,7 +95,7 @@ export class AlertsController {
   }
 
   @Delete('rules/:id')
-  @Roles('ADMIN', 'SUPER_ADMIN')
+  @Roles('Admin', 'Owner')
   @ApiOperation({ summary: 'Delete alert rule' })
   async deleteRule(@Param('id', ParseUUIDPipe) id: string) {
     await this.alertsService.deleteRule(id);
@@ -103,7 +103,7 @@ export class AlertsController {
   }
 
   @Patch('rules/:id/toggle')
-  @Roles('ADMIN', 'SUPER_ADMIN')
+  @Roles('Admin', 'Owner')
   @ApiOperation({ summary: 'Enable or disable alert rule' })
   @ApiQuery({ name: 'enabled', required: true, type: Boolean })
   async toggleRule(
@@ -118,21 +118,21 @@ export class AlertsController {
   // ============================================================================
 
   @Get('history')
-  @Roles('ADMIN', 'MANAGER', 'OPERATOR', 'SUPER_ADMIN')
+  @Roles('Admin', 'MANAGER', 'OPERATOR', 'Owner')
   @ApiOperation({ summary: 'Get alert history with filters' })
   async getAlertHistory(@Query() filters: FilterAlertHistoryDto) {
     return this.alertsService.getAlertHistory(filters);
   }
 
   @Get('history/active')
-  @Roles('ADMIN', 'MANAGER', 'OPERATOR', 'SUPER_ADMIN')
+  @Roles('Admin', 'MANAGER', 'OPERATOR', 'Owner')
   @ApiOperation({ summary: 'Get active alerts' })
   async getActiveAlerts() {
     return this.alertsService.getAlertHistory({ status: AlertStatus.ACTIVE });
   }
 
   @Get('history/count')
-  @Roles('ADMIN', 'MANAGER', 'OPERATOR', 'SUPER_ADMIN')
+  @Roles('Admin', 'MANAGER', 'OPERATOR', 'Owner')
   @ApiOperation({ summary: 'Get active alerts count' })
   async getActiveAlertsCount() {
     const count = await this.alertsService.getActiveAlertsCount();
@@ -140,14 +140,14 @@ export class AlertsController {
   }
 
   @Get('history/:id')
-  @Roles('ADMIN', 'MANAGER', 'OPERATOR', 'SUPER_ADMIN')
+  @Roles('Admin', 'MANAGER', 'OPERATOR', 'Owner')
   @ApiOperation({ summary: 'Get alert by ID' })
   async findAlertById(@Param('id', ParseUUIDPipe) id: string) {
     return this.alertsService.findAlertById(id);
   }
 
   @Post('history/:id/acknowledge')
-  @Roles('ADMIN', 'MANAGER', 'OPERATOR', 'SUPER_ADMIN')
+  @Roles('Admin', 'MANAGER', 'OPERATOR', 'Owner')
   @ApiOperation({ summary: 'Acknowledge an alert' })
   async acknowledgeAlert(
     @Param('id', ParseUUIDPipe) id: string,
@@ -158,7 +158,7 @@ export class AlertsController {
   }
 
   @Post('history/:id/resolve')
-  @Roles('ADMIN', 'MANAGER', 'OPERATOR', 'SUPER_ADMIN')
+  @Roles('Admin', 'MANAGER', 'OPERATOR', 'Owner')
   @ApiOperation({ summary: 'Resolve an alert' })
   async resolveAlert(
     @Param('id', ParseUUIDPipe) id: string,
@@ -173,7 +173,7 @@ export class AlertsController {
   // ============================================================================
 
   @Get('statistics')
-  @Roles('ADMIN', 'MANAGER', 'SUPER_ADMIN')
+  @Roles('Admin', 'MANAGER', 'Owner')
   @ApiOperation({ summary: 'Get alert statistics' })
   @ApiQuery({ name: 'date_from', required: false, type: String })
   @ApiQuery({ name: 'date_to', required: false, type: String })
@@ -192,7 +192,7 @@ export class AlertsController {
   // ============================================================================
 
   @Post('rules/:id/test')
-  @Roles('ADMIN', 'SUPER_ADMIN')
+  @Roles('Admin', 'Owner')
   @ApiOperation({ summary: 'Test trigger an alert rule (for testing purposes)' })
   async testTriggerRule(
     @Param('id', ParseUUIDPipe) id: string,

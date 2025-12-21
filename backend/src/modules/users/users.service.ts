@@ -598,12 +598,12 @@ export class UsersService {
 
   /**
    * Get admin user IDs for notifications
-   * Returns IDs of all active SuperAdmin and Admin users
+   * Returns IDs of all active Owner and Admin users
    *
    * @returns Array of admin user IDs
    */
   async getAdminUserIds(): Promise<string[]> {
-    const admins = await this.findByRoles([UserRole.SUPER_ADMIN, UserRole.ADMIN]);
+    const admins = await this.findByRoles([UserRole.OWNER, UserRole.ADMIN]);
     return admins.map((user) => user.id);
   }
 
@@ -625,7 +625,7 @@ export class UsersService {
    * @returns First admin user ID or null
    */
   async getFirstAdminId(): Promise<string | null> {
-    const admins = await this.findByRoles([UserRole.SUPER_ADMIN, UserRole.ADMIN]);
+    const admins = await this.findByRoles([UserRole.OWNER, UserRole.ADMIN]);
     return admins.length > 0 ? admins[0].id : null;
   }
 }

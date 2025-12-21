@@ -358,14 +358,14 @@ export async function seedRBAC(dataSource: DataSource): Promise<void> {
 
   const rolesData: RoleData[] = [
     {
-      name: 'SuperAdmin',
-      description: 'Full system access - God mode. Can manage everything including other admins.',
+      name: 'Owner',
+      description: 'Full system access - Owner of the system. Can manage everything including admins.',
       permissions: permissionsData.map((p) => p.name), // ALL permissions
     },
     {
       name: 'Admin',
       description:
-        'Administrator - Can manage users, assign roles (except SuperAdmin), view audit logs',
+        'Administrator - Can manage users, assign roles (except Owner), view audit logs',
       permissions: [
         // Users
         'users:create',

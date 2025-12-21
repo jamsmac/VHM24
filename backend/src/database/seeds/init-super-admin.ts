@@ -3,32 +3,32 @@ import { Logger } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
 
-const logger = new Logger('InitSuperAdmin');
+const logger = new Logger('InitOwner');
 
 /**
- * Initialize Super Admin User
+ * Initialize Owner User
  *
- * Creates the initial super admin account with Telegram integration
+ * Creates the initial owner account with Telegram integration
  */
-export async function initSuperAdmin(dataSource: DataSource) {
+export async function initOwner(dataSource: DataSource) {
   const queryRunner = dataSource.createQueryRunner();
   await queryRunner.connect();
   await queryRunner.startTransaction();
 
   try {
-    // Check if super admin already exists
-    const existingAdmin = await queryRunner.query(
+    // Check if owner already exists
+    const existingOwner = await queryRunner.query(
       `SELECT id FROM users WHERE telegram_user_id = $1 OR email = $2`,
       ['42283329', 'admin@vendhub.com'],
     );
 
-    if (existingAdmin.length > 0) {
-      logger.log('✅ Super Admin already exists');
+    if (existingOwner.length > 0) {
+      logger.log('✅ Owner already exists');
       await queryRunner.commitTransaction();
       return;
     }
 
-    // Create super admin user
+    // Create owner user
     const userId = uuidv4();
     const initialPassword = process.env.INITIAL_ADMIN_PASSWORD;
     if (!initialPassword) {
@@ -63,14 +63,14 @@ export async function initSuperAdmin(dataSource: DataSource) {
         '+998901234567',
         '42283329',
         'Jamshiddin',
-        'SuperAdmin',
+        'Owner',
         'active',
         false,
         false,
       ],
     );
 
-    logger.log('✅ Super Admin created successfully!');
+    logger.log('✅ Owner created successfully!');
     logger.log('📧 Email: admin@vendhub.com');
     logger.log('🔑 Password: [set via INITIAL_ADMIN_PASSWORD env var]');
     logger.log('🤖 Telegram: @Jamshiddin (ID: 42283329)');
@@ -79,7 +79,7 @@ export async function initSuperAdmin(dataSource: DataSource) {
     await queryRunner.commitTransaction();
   } catch (error) {
     await queryRunner.rollbackTransaction();
-    logger.error('❌ Failed to create super admin:', error);
+    logger.error('❌ Failed to create owner:', error);
     throw error;
   } finally {
     await queryRunner.release();
@@ -120,7 +120,7 @@ if (require.main === module) {
 
   AppDataSource.initialize()
     .then(async () => {
-      await initSuperAdmin(AppDataSource);
+      await initOwner(AppDataSource);
       await AppDataSource.destroy();
       process.exit(0);
     })

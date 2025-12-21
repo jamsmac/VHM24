@@ -32,7 +32,7 @@ export class TelegramManagerToolsService {
 
   // Roles allowed to use manager tools
   private readonly MANAGER_ROLES = [
-    UserRole.SUPER_ADMIN,
+    UserRole.OWNER,
     UserRole.ADMIN,
     UserRole.MANAGER,
   ];

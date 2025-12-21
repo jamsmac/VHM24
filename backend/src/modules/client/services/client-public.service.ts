@@ -279,7 +279,7 @@ export class ClientPublicService {
     try {
       // Get admins and managers to notify
       const recipients = await this.usersService.findByRoles([
-        UserRole.SUPER_ADMIN,
+        UserRole.OWNER,
         UserRole.ADMIN,
         UserRole.MANAGER,
       ]);

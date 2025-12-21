@@ -123,7 +123,7 @@ export class TaskCompletionService {
 
     if (skipPhotos) {
       const user = await this.usersService.findOne(userId);
-      if (!user || ![UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.MANAGER].includes(user.role)) {
+      if (!user || ![UserRole.ADMIN, UserRole.OWNER, UserRole.MANAGER].includes(user.role)) {
         throw new ForbiddenException(
           'Только администраторы и менеджеры могут пропускать проверку фото',
         );

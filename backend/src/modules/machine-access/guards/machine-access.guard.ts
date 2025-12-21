@@ -35,7 +35,7 @@ export const MachineAccessRoles = (...roles: MachineAccessRole[]) => {
  * - machineId parameter in request params
  * - @MachineAccessRoles decorator on route
  *
- * Global admins (SUPER_ADMIN, ADMIN) bypass this check.
+ * Global admins (OWNER, ADMIN) bypass this check.
  */
 @Injectable()
 export class MachineAccessGuard implements CanActivate {
@@ -64,7 +64,7 @@ export class MachineAccessGuard implements CanActivate {
     }
 
     // Global admins bypass machine-level access checks
-    if (user.role === UserRole.SUPER_ADMIN || user.role === UserRole.ADMIN) {
+    if (user.role === UserRole.OWNER || user.role === UserRole.ADMIN) {
       return true;
     }
 

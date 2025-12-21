@@ -58,7 +58,7 @@ export class EmployeeController {
   }
 
   @Put(':id/status')
-  @Roles('ADMIN', 'MANAGER', 'SUPER_ADMIN')
+  @Roles('ADMIN', 'MANAGER', 'Owner')
   async updateStatus(
     @Param('id', ParseUUIDPipe) id: string,
     @Body('status') status: EmploymentStatus,

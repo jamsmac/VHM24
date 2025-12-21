@@ -27,7 +27,7 @@ export class TelegramUsersController {
   constructor(private readonly telegramUsersService: TelegramUsersService) {}
 
   @Get()
-  @Roles('ADMIN', 'SUPER_ADMIN')
+  @Roles('Admin', 'Owner')
   @ApiOperation({ summary: 'Get all Telegram users (admin only)' })
   @ApiResponse({ status: 200, description: 'Returns all Telegram users', type: [TelegramUser] })
   async findAll(): Promise<TelegramUser[]> {
@@ -35,7 +35,7 @@ export class TelegramUsersController {
   }
 
   @Get('statistics')
-  @Roles('ADMIN', 'MANAGER', 'SUPER_ADMIN')
+  @Roles('Admin', 'MANAGER', 'Owner')
   @ApiOperation({ summary: 'Get Telegram users statistics' })
   @ApiResponse({ status: 200, description: 'Returns statistics' })
   async getStatistics() {
@@ -84,7 +84,7 @@ export class TelegramUsersController {
   }
 
   @Get(':id')
-  @Roles('ADMIN', 'SUPER_ADMIN')
+  @Roles('Admin', 'Owner')
   @ApiOperation({ summary: 'Get Telegram user by ID (admin only)' })
   @ApiParam({ name: 'id', description: 'Telegram user UUID' })
   @ApiResponse({ status: 200, description: 'Returns Telegram user', type: TelegramUser })
@@ -94,7 +94,7 @@ export class TelegramUsersController {
   }
 
   @Patch(':id')
-  @Roles('ADMIN', 'SUPER_ADMIN')
+  @Roles('Admin', 'Owner')
   @ApiOperation({ summary: 'Update Telegram user (admin only)' })
   @ApiParam({ name: 'id', description: 'Telegram user UUID' })
   @ApiResponse({ status: 200, description: 'Telegram user updated', type: TelegramUser })
@@ -107,7 +107,7 @@ export class TelegramUsersController {
   }
 
   @Delete(':id')
-  @Roles('ADMIN', 'SUPER_ADMIN')
+  @Roles('Admin', 'Owner')
   @ApiOperation({ summary: 'Delete Telegram user (admin only)' })
   @ApiParam({ name: 'id', description: 'Telegram user UUID' })
   @ApiResponse({ status: 200, description: 'Telegram user deleted' })

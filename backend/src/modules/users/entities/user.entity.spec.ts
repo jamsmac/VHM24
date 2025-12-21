@@ -167,7 +167,7 @@ describe('User Entity', () => {
 
   describe('UserRole enum', () => {
     it('should have all expected roles', () => {
-      expect(UserRole.SUPER_ADMIN).toBe('SuperAdmin');
+      expect(UserRole.OWNER).toBe('Owner');
       expect(UserRole.ADMIN).toBe('Admin');
       expect(UserRole.MANAGER).toBe('Manager');
       expect(UserRole.OPERATOR).toBe('Operator');

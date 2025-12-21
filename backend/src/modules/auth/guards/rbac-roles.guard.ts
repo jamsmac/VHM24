@@ -46,8 +46,8 @@ export class RbacRolesGuard implements CanActivate {
     // Check if user has any of the required roles
     const userRoleNames = userWithRoles.roles?.map((role) => role.name) || [];
 
-    // SuperAdmin always has access (REQ-AUTH-04)
-    if (userRoleNames.includes('SuperAdmin')) {
+    // Owner always has access (REQ-AUTH-04)
+    if (userRoleNames.includes('Owner')) {
       return true;
     }
 

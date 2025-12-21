@@ -56,6 +56,7 @@ import { CommonModule } from './common/common.module';
 import { RateLimitModule } from './common/modules/rate-limit.module';
 import { MachineAccessModule } from './modules/machine-access/machine-access.module';
 import { ClientModule } from './modules/client/client.module';
+import { SettingsModule } from './modules/settings/settings.module';
 
 @Module({
   imports: [
@@ -221,6 +222,9 @@ import { ClientModule } from './modules/client/client.module';
 
     // Client-facing module (public API, Telegram auth, loyalty)
     ClientModule,
+
+    // Settings module (AI provider keys, system settings)
+    SettingsModule,
   ],
   controllers: [AppController],
   providers: [

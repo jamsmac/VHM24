@@ -33,7 +33,7 @@ export class TwoFactorAuthController {
    * Get 2FA status for a specific user (admin only)
    */
   @Get('status/:userId')
-  @Roles('ADMIN', 'SUPER_ADMIN')
+  @Roles('Admin', 'Owner')
   @ApiOperation({ summary: 'Get 2FA status for a specific user (admin only)' })
   @ApiResponse({
     status: 200,
@@ -44,34 +44,34 @@ export class TwoFactorAuthController {
   }
 
   @Post('setup')
-  @Roles('ADMIN', 'SUPER_ADMIN')
+  @Roles('Admin', 'Owner')
   async setup(@Body() dto: Enable2FADto) {
     return this.twoFactorAuthService.generateSecret(dto.user_id, dto.email);
   }
 
   @Post('enable')
-  @Roles('ADMIN', 'SUPER_ADMIN')
+  @Roles('Admin', 'Owner')
   async enable(@Body() dto: Verify2FADto) {
     const verified = await this.twoFactorAuthService.verifyAndEnable(dto.user_id, dto.token);
     return { verified };
   }
 
   @Post('verify')
-  @Roles('ADMIN', 'SUPER_ADMIN')
+  @Roles('Admin', 'Owner')
   async verify(@Body() dto: Verify2FADto) {
     const verified = await this.twoFactorAuthService.verify(dto.user_id, dto.token);
     return { verified };
   }
 
   @Post('verify-backup-code')
-  @Roles('ADMIN', 'SUPER_ADMIN')
+  @Roles('Admin', 'Owner')
   async verifyBackupCode(@Body() dto: VerifyBackupCodeDto) {
     const verified = await this.twoFactorAuthService.verifyBackupCode(dto.user_id, dto.code);
     return { verified };
   }
 
   @Delete(':userId')
-  @Roles('ADMIN', 'SUPER_ADMIN')
+  @Roles('Admin', 'Owner')
   async disable(@Param('userId', ParseUUIDPipe) userId: string) {
     await this.twoFactorAuthService.disable(userId);
     return { disabled: true };

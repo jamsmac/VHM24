@@ -34,7 +34,7 @@ export class CatalogHandler {
 
   /** Roles that are allowed to create material requests */
   private static readonly ALLOWED_REQUEST_ROLES: UserRole[] = [
-    UserRole.SUPER_ADMIN,
+    UserRole.OWNER,
     UserRole.ADMIN,
     UserRole.MANAGER,
     UserRole.OPERATOR,

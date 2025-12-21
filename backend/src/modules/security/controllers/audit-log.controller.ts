@@ -19,7 +19,7 @@ import { Roles } from '@modules/auth/decorators/roles.decorator';
 @ApiBearerAuth('JWT-auth')
 @Controller('audit-logs')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('ADMIN', 'SUPER_ADMIN')
+@Roles('Admin', 'Owner')
 export class AuditLogController {
   constructor(private readonly auditLogService: AuditLogService) {}
 

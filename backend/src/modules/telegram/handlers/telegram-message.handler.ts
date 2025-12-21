@@ -201,7 +201,7 @@ export class TelegramMessageHandler {
    */
   formatRole(role: UserRole, lang: TelegramLanguage): string {
     const roleMap: Record<string, string> = {
-      [UserRole.SUPER_ADMIN]: lang === TelegramLanguage.RU ? 'Супер администратор' : 'Super Admin',
+      [UserRole.OWNER]: lang === TelegramLanguage.RU ? 'Владелец' : 'Owner',
       [UserRole.ADMIN]: lang === TelegramLanguage.RU ? 'Администратор' : 'Admin',
       [UserRole.MANAGER]: lang === TelegramLanguage.RU ? 'Менеджер' : 'Manager',
       [UserRole.OPERATOR]: lang === TelegramLanguage.RU ? 'Оператор' : 'Operator',

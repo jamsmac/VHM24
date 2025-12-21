@@ -32,7 +32,7 @@ export class MaintenanceController {
   constructor(private readonly maintenanceService: MaintenanceService) {}
 
   @Post()
-  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SUPER_ADMIN, UserRole.TECHNICIAN)
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.OWNER, UserRole.TECHNICIAN)
   @ApiOperation({ summary: 'Создать запись обслуживания' })
   @ApiResponse({
     status: 201,

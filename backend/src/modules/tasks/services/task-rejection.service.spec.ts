@@ -156,9 +156,9 @@ describe('TaskRejectionService', () => {
       ).rejects.toThrow(ForbiddenException);
     });
 
-    it('should allow SUPER_ADMIN to reject tasks', async () => {
+    it('should allow OWNER to reject tasks', async () => {
       const task = createMockTask();
-      usersService.findOne.mockResolvedValue({ role: UserRole.SUPER_ADMIN } as any);
+      usersService.findOne.mockResolvedValue({ role: UserRole.OWNER } as any);
 
       await service.rejectTask(task, mockAdminId, 'Test reason');
 

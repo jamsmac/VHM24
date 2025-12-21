@@ -92,7 +92,7 @@ export class InventoryController {
   }
 
   @Post('warehouse/add')
-  @Roles('ADMIN', 'MANAGER', 'SUPER_ADMIN')
+  @Roles('ADMIN', 'MANAGER', 'Owner')
   @ApiOperation({ summary: 'Добавить товар на склад (поступление)' })
   @ApiResponse({
     status: 201,
@@ -108,7 +108,7 @@ export class InventoryController {
   }
 
   @Post('warehouse/remove')
-  @Roles('ADMIN', 'MANAGER', 'SUPER_ADMIN')
+  @Roles('ADMIN', 'MANAGER', 'Owner')
   @ApiOperation({ summary: 'Списать товар со склада' })
   @ApiResponse({
     status: 201,
@@ -124,7 +124,7 @@ export class InventoryController {
   }
 
   @Patch('warehouse/:nomenclatureId')
-  @Roles('ADMIN', 'MANAGER', 'SUPER_ADMIN')
+  @Roles('ADMIN', 'MANAGER', 'Owner')
   @ApiOperation({ summary: 'Обновить настройки складского инвентаря' })
   @ApiParam({ name: 'nomenclatureId', description: 'UUID товара' })
   @ApiResponse({
@@ -223,7 +223,7 @@ export class InventoryController {
   }
 
   @Patch('machine/:machineId/:nomenclatureId')
-  @Roles('ADMIN', 'MANAGER', 'SUPER_ADMIN')
+  @Roles('ADMIN', 'MANAGER', 'Owner')
   @ApiOperation({ summary: 'Обновить настройки инвентаря аппарата' })
   @ApiParam({ name: 'machineId', description: 'UUID аппарата' })
   @ApiParam({ name: 'nomenclatureId', description: 'UUID товара' })
@@ -241,7 +241,7 @@ export class InventoryController {
   }
 
   @Post('machine/:machineId/:nomenclatureId/adjust')
-  @Roles('ADMIN', 'MANAGER', 'SUPER_ADMIN')
+  @Roles('ADMIN', 'MANAGER', 'Owner')
   @ApiOperation({
     summary: 'Корректировка инвентаря (инвентаризация)',
   })
@@ -267,7 +267,7 @@ export class InventoryController {
   // ============================================================================
 
   @Post('transfer/warehouse-to-operator')
-  @Roles('ADMIN', 'MANAGER', 'SUPER_ADMIN')
+  @Roles('ADMIN', 'MANAGER', 'Owner')
   @ApiOperation({ summary: 'Выдать товар оператору со склада' })
   @ApiResponse({
     status: 201,
@@ -282,7 +282,7 @@ export class InventoryController {
   }
 
   @Post('transfer/operator-to-warehouse')
-  @Roles('ADMIN', 'MANAGER', 'SUPER_ADMIN')
+  @Roles('ADMIN', 'MANAGER', 'Owner')
   @ApiOperation({ summary: 'Вернуть товар на склад от оператора' })
   @ApiResponse({
     status: 201,
@@ -297,7 +297,7 @@ export class InventoryController {
   }
 
   @Post('transfer/operator-to-machine')
-  @Roles('ADMIN', 'MANAGER', 'SUPER_ADMIN')
+  @Roles('ADMIN', 'MANAGER', 'Owner')
   @ApiOperation({
     summary: 'Пополнить аппарат (обычно вызывается автоматически при завершении задачи)',
   })
@@ -314,7 +314,7 @@ export class InventoryController {
   }
 
   @Post('transfer/machine-to-operator')
-  @Roles('ADMIN', 'MANAGER', 'SUPER_ADMIN')
+  @Roles('ADMIN', 'MANAGER', 'Owner')
   @ApiOperation({ summary: 'Изъять товар из аппарата (брак, просрочка)' })
   @ApiResponse({
     status: 201,
@@ -329,7 +329,7 @@ export class InventoryController {
   }
 
   @Post('sale')
-  @Roles('ADMIN', 'MANAGER', 'SUPER_ADMIN')
+  @Roles('ADMIN', 'MANAGER', 'Owner')
   @ApiOperation({
     summary: 'Зарегистрировать продажу (расход ингредиента)',
   })

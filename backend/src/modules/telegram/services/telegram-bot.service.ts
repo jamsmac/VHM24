@@ -1460,32 +1460,32 @@ export class TelegramBotService implements OnModuleInit {
   }
 
   /**
-   * Check if user is the super admin (Jamshiddin)
-   * Super admin Telegram ID: 42283329
+   * Check if user is the owner (Jamshiddin)
+   * Owner Telegram ID: 42283329
    */
   private isSuperAdmin(telegramId: string | undefined): boolean {
-    const SUPER_ADMIN_TELEGRAM_ID = '42283329';
-    return telegramId === SUPER_ADMIN_TELEGRAM_ID;
+    const OWNER_TELEGRAM_ID = '42283329';
+    return telegramId === OWNER_TELEGRAM_ID;
   }
 
   /**
-   * Notify super admin about new pending user registration
+   * Notify owner about new pending user registration
    * Sends a message with user info and role selection buttons
    */
   private async notifyAdminAboutNewUser(
     userId: string,
     telegramFrom: { id: number; first_name?: string; last_name?: string; username?: string },
   ): Promise<void> {
-    const SUPER_ADMIN_TELEGRAM_ID = '42283329';
+    const OWNER_TELEGRAM_ID = '42283329';
 
     try {
-      // Get super admin's TelegramUser to find their chat_id
+      // Get owner's TelegramUser to find their chat_id
       const adminTelegramUser = await this.telegramUserRepository.findOne({
-        where: { telegram_id: SUPER_ADMIN_TELEGRAM_ID },
+        where: { telegram_id: OWNER_TELEGRAM_ID },
       });
 
       if (!adminTelegramUser) {
-        this.logger.warn('Super admin TelegramUser not found, cannot send notification');
+        this.logger.warn('Owner TelegramUser not found, cannot send notification');
         return;
       }
 
@@ -2184,7 +2184,7 @@ export class TelegramBotService implements OnModuleInit {
    */
   private formatRole(role: UserRole, lang: TelegramLanguage): string {
     const roleMap = {
-      [UserRole.SUPER_ADMIN]: lang === TelegramLanguage.RU ? 'Супер администратор' : 'Super Admin',
+      [UserRole.OWNER]: lang === TelegramLanguage.RU ? 'Владелец' : 'Owner',
       [UserRole.ADMIN]: lang === TelegramLanguage.RU ? 'Администратор' : 'Admin',
       [UserRole.MANAGER]: lang === TelegramLanguage.RU ? 'Менеджер' : 'Manager',
       [UserRole.OPERATOR]: lang === TelegramLanguage.RU ? 'Оператор' : 'Operator',

@@ -24,19 +24,19 @@ export class StockMovementController {
   constructor(private readonly movementService: StockMovementService) {}
 
   @Post('receipt')
-  @Roles('ADMIN', 'MANAGER', 'SUPER_ADMIN')
+  @Roles('ADMIN', 'MANAGER', 'Owner')
   async createReceipt(@Body() dto: CreateReceiptDto) {
     return this.movementService.createReceipt(dto);
   }
 
   @Post('shipment')
-  @Roles('ADMIN', 'MANAGER', 'SUPER_ADMIN')
+  @Roles('ADMIN', 'MANAGER', 'Owner')
   async createShipment(@Body() dto: CreateShipmentDto) {
     return this.movementService.createShipment(dto);
   }
 
   @Post('transfer')
-  @Roles('ADMIN', 'MANAGER', 'SUPER_ADMIN')
+  @Roles('ADMIN', 'MANAGER', 'Owner')
   async createTransfer(@Body() dto: CreateTransferDto) {
     return this.movementService.createTransfer(dto);
   }

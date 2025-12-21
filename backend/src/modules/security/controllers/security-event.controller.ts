@@ -20,7 +20,7 @@ import { Roles } from '@modules/auth/decorators/roles.decorator';
 @ApiBearerAuth('JWT-auth')
 @Controller('security-events')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('ADMIN', 'SUPER_ADMIN')
+@Roles('Admin', 'Owner')
 export class SecurityEventController {
   constructor(private readonly securityEventService: SecurityEventService) {}
 

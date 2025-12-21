@@ -30,7 +30,7 @@ export class IntegrationController {
   constructor(private readonly integrationService: IntegrationService) {}
 
   @Get()
-  @Roles('ADMIN', 'SUPER_ADMIN')
+  @Roles('Admin', 'Owner')
   @ApiOperation({ summary: 'Get all integrations' })
   @ApiQuery({ name: 'type', required: false, enum: IntegrationType })
   @ApiResponse({ status: 200, description: 'List of integrations', type: [Integration] })
@@ -39,7 +39,7 @@ export class IntegrationController {
   }
 
   @Get('active')
-  @Roles('ADMIN', 'SUPER_ADMIN')
+  @Roles('Admin', 'Owner')
   @ApiOperation({ summary: 'Get active integrations' })
   @ApiResponse({ status: 200, description: 'List of active integrations', type: [Integration] })
   async getActive(): Promise<Integration[]> {
@@ -47,7 +47,7 @@ export class IntegrationController {
   }
 
   @Get('due-for-sync')
-  @Roles('ADMIN', 'SUPER_ADMIN')
+  @Roles('Admin', 'Owner')
   @ApiOperation({ summary: 'Get integrations due for sync' })
   @ApiResponse({
     status: 200,
@@ -59,7 +59,7 @@ export class IntegrationController {
   }
 
   @Get(':id')
-  @Roles('ADMIN', 'SUPER_ADMIN')
+  @Roles('Admin', 'Owner')
   @ApiOperation({ summary: 'Get integration by ID' })
   @ApiParam({ name: 'id', description: 'Integration UUID' })
   @ApiResponse({ status: 200, description: 'Integration details', type: Integration })
@@ -69,7 +69,7 @@ export class IntegrationController {
   }
 
   @Get('code/:code')
-  @Roles('ADMIN', 'SUPER_ADMIN')
+  @Roles('Admin', 'Owner')
   @ApiOperation({ summary: 'Get integration by code' })
   @ApiParam({ name: 'code', description: 'Integration code' })
   @ApiResponse({ status: 200, description: 'Integration details', type: Integration })
@@ -79,7 +79,7 @@ export class IntegrationController {
   }
 
   @Patch(':id/activate')
-  @Roles('ADMIN', 'SUPER_ADMIN')
+  @Roles('Admin', 'Owner')
   @ApiOperation({ summary: 'Activate integration' })
   @ApiParam({ name: 'id', description: 'Integration UUID' })
   @ApiResponse({ status: 200, description: 'Integration activated', type: Integration })
@@ -89,7 +89,7 @@ export class IntegrationController {
   }
 
   @Patch(':id/deactivate')
-  @Roles('ADMIN', 'SUPER_ADMIN')
+  @Roles('Admin', 'Owner')
   @ApiOperation({ summary: 'Deactivate integration' })
   @ApiParam({ name: 'id', description: 'Integration UUID' })
   @ApiResponse({ status: 200, description: 'Integration deactivated', type: Integration })
@@ -99,7 +99,7 @@ export class IntegrationController {
   }
 
   @Post(':id/sync')
-  @Roles('ADMIN', 'SUPER_ADMIN')
+  @Roles('Admin', 'Owner')
   @ApiOperation({ summary: 'Trigger sync for integration' })
   @ApiParam({ name: 'id', description: 'Integration UUID' })
   @ApiResponse({ status: 200, description: 'Sync triggered', type: Integration })

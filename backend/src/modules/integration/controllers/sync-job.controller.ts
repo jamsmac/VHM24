@@ -32,7 +32,7 @@ export class SyncJobController {
   constructor(private readonly syncJobService: SyncJobService) {}
 
   @Post()
-  @Roles('ADMIN', 'SUPER_ADMIN')
+  @Roles('Admin', 'Owner')
   @ApiOperation({ summary: 'Create sync job' })
   @ApiResponse({ status: 201, description: 'Sync job created', type: SyncJob })
   async create(@Body() dto: CreateSyncJobDto): Promise<SyncJob> {
@@ -40,7 +40,7 @@ export class SyncJobController {
   }
 
   @Get('scheduled')
-  @Roles('ADMIN', 'SUPER_ADMIN')
+  @Roles('Admin', 'Owner')
   @ApiOperation({ summary: 'Get scheduled sync jobs' })
   @ApiResponse({ status: 200, description: 'List of scheduled jobs', type: [SyncJob] })
   async getScheduled(): Promise<SyncJob[]> {
@@ -48,7 +48,7 @@ export class SyncJobController {
   }
 
   @Get('integration/:integrationId')
-  @Roles('ADMIN', 'SUPER_ADMIN')
+  @Roles('Admin', 'Owner')
   @ApiOperation({ summary: 'Get sync jobs by integration' })
   @ApiParam({ name: 'integrationId', description: 'Integration UUID' })
   @ApiQuery({
@@ -66,7 +66,7 @@ export class SyncJobController {
   }
 
   @Get('integration/:integrationId/history')
-  @Roles('ADMIN', 'SUPER_ADMIN')
+  @Roles('Admin', 'Owner')
   @ApiOperation({ summary: 'Get sync job history' })
   @ApiParam({ name: 'integrationId', description: 'Integration UUID' })
   @ApiQuery({
@@ -84,7 +84,7 @@ export class SyncJobController {
   }
 
   @Post(':id/start')
-  @Roles('ADMIN', 'SUPER_ADMIN')
+  @Roles('Admin', 'Owner')
   @ApiOperation({ summary: 'Start sync job' })
   @ApiParam({ name: 'id', description: 'Sync job UUID' })
   @ApiResponse({ status: 200, description: 'Sync job started', type: SyncJob })
@@ -94,7 +94,7 @@ export class SyncJobController {
   }
 
   @Patch(':id/complete')
-  @Roles('ADMIN', 'SUPER_ADMIN')
+  @Roles('Admin', 'Owner')
   @ApiOperation({ summary: 'Complete sync job' })
   @ApiParam({ name: 'id', description: 'Sync job UUID' })
   @ApiResponse({ status: 200, description: 'Sync job completed', type: SyncJob })
@@ -107,7 +107,7 @@ export class SyncJobController {
   }
 
   @Patch(':id/fail')
-  @Roles('ADMIN', 'SUPER_ADMIN')
+  @Roles('Admin', 'Owner')
   @ApiOperation({ summary: 'Mark sync job as failed' })
   @ApiParam({ name: 'id', description: 'Sync job UUID' })
   @ApiResponse({ status: 200, description: 'Sync job marked as failed', type: SyncJob })
@@ -120,7 +120,7 @@ export class SyncJobController {
   }
 
   @Patch(':id/progress')
-  @Roles('ADMIN', 'SUPER_ADMIN')
+  @Roles('Admin', 'Owner')
   @ApiOperation({ summary: 'Update sync job progress' })
   @ApiParam({ name: 'id', description: 'Sync job UUID' })
   @ApiResponse({ status: 200, description: 'Progress updated', type: SyncJob })

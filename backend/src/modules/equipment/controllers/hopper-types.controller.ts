@@ -36,7 +36,7 @@ export class HopperTypesController {
   constructor(private readonly hopperTypesService: HopperTypesService) {}
 
   @Post()
-  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SUPER_ADMIN, UserRole.TECHNICIAN)
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.OWNER, UserRole.TECHNICIAN)
   @ApiOperation({
     summary: 'Создать новый тип бункера',
     description: 'Создаёт новый тип ингредиента для бункеров (REQ-ASSET-BH-01)',
@@ -120,7 +120,7 @@ export class HopperTypesController {
   }
 
   @Patch(':id')
-  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SUPER_ADMIN, UserRole.TECHNICIAN)
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.OWNER, UserRole.TECHNICIAN)
   @ApiOperation({
     summary: 'Обновить тип бункера',
     description: 'Обновляет данные типа бункера (code изменить нельзя)',
@@ -140,7 +140,7 @@ export class HopperTypesController {
   }
 
   @Delete(':id')
-  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SUPER_ADMIN, UserRole.TECHNICIAN)
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.OWNER, UserRole.TECHNICIAN)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: 'Удалить тип бункера (soft delete)',

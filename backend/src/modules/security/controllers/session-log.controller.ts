@@ -9,7 +9,7 @@ import { Roles } from '@modules/auth/decorators/roles.decorator';
 @ApiBearerAuth('JWT-auth')
 @Controller('session-logs')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('ADMIN', 'SUPER_ADMIN')
+@Roles('Admin', 'Owner')
 export class SessionLogController {
   constructor(private readonly sessionLogService: SessionLogService) {}
 

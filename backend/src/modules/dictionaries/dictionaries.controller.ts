@@ -43,7 +43,7 @@ export class DictionariesController {
   // ==================== DICTIONARIES ====================
 
   @Post()
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN)
   @ApiOperation({ summary: 'Создать новый справочник' })
   @ApiResponse({
     status: 201,
@@ -57,7 +57,7 @@ export class DictionariesController {
   }
 
   @Get()
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.OPERATOR, UserRole.VIEWER)
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER, UserRole.OPERATOR, UserRole.VIEWER)
   @ApiOperation({ summary: 'Получить список всех справочников' })
   @ApiQuery({
     name: 'includeItems',
@@ -75,7 +75,7 @@ export class DictionariesController {
   }
 
   @Get(':id')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.OPERATOR, UserRole.VIEWER)
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER, UserRole.OPERATOR, UserRole.VIEWER)
   @ApiOperation({ summary: 'Получить справочник по ID' })
   @ApiParam({ name: 'id', description: 'UUID справочника' })
   @ApiQuery({
@@ -99,7 +99,7 @@ export class DictionariesController {
   }
 
   @Get('by-code/:code')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.OPERATOR, UserRole.VIEWER)
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER, UserRole.OPERATOR, UserRole.VIEWER)
   @ApiOperation({ summary: 'Получить справочник по коду' })
   @ApiParam({ name: 'code', description: 'Код справочника', example: 'machine_types' })
   @ApiQuery({
@@ -123,7 +123,7 @@ export class DictionariesController {
   }
 
   @Patch(':id')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN)
   @ApiOperation({ summary: 'Обновить справочник' })
   @ApiParam({ name: 'id', description: 'UUID справочника' })
   @ApiResponse({
@@ -142,7 +142,7 @@ export class DictionariesController {
   }
 
   @Delete(':id')
-  @Roles(UserRole.SUPER_ADMIN)
+  @Roles(UserRole.OWNER)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Удалить справочник' })
   @ApiParam({ name: 'id', description: 'UUID справочника' })
@@ -157,7 +157,7 @@ export class DictionariesController {
   // ==================== DICTIONARY ITEMS ====================
 
   @Post(':dictionaryId/items')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN)
   @ApiOperation({ summary: 'Создать элемент справочника' })
   @ApiParam({ name: 'dictionaryId', description: 'UUID справочника' })
   @ApiResponse({
@@ -176,7 +176,7 @@ export class DictionariesController {
   }
 
   @Get(':dictionaryId/items')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.OPERATOR, UserRole.VIEWER)
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER, UserRole.OPERATOR, UserRole.VIEWER)
   @ApiOperation({ summary: 'Получить все элементы справочника' })
   @ApiParam({ name: 'dictionaryId', description: 'UUID справочника' })
   @ApiResponse({
@@ -190,7 +190,7 @@ export class DictionariesController {
   }
 
   @Get('items/:id')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.OPERATOR, UserRole.VIEWER)
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER, UserRole.OPERATOR, UserRole.VIEWER)
   @ApiOperation({ summary: 'Получить элемент справочника по ID' })
   @ApiParam({ name: 'id', description: 'UUID элемента справочника' })
   @ApiResponse({
@@ -205,7 +205,7 @@ export class DictionariesController {
   }
 
   @Patch('items/:id')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN)
   @ApiOperation({ summary: 'Обновить элемент справочника' })
   @ApiParam({ name: 'id', description: 'UUID элемента справочника' })
   @ApiResponse({
@@ -223,7 +223,7 @@ export class DictionariesController {
   }
 
   @Delete('items/:id')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Удалить элемент справочника' })
   @ApiParam({ name: 'id', description: 'UUID элемента справочника' })

@@ -24,13 +24,13 @@ export class StockReservationController {
   constructor(private readonly reservationService: StockReservationService) {}
 
   @Post()
-  @Roles('ADMIN', 'MANAGER', 'SUPER_ADMIN')
+  @Roles('ADMIN', 'MANAGER', 'Owner')
   async createReservation(@Body() dto: CreateReservationDto) {
     return this.reservationService.createReservation(dto);
   }
 
   @Put(':id/fulfill')
-  @Roles('ADMIN', 'MANAGER', 'SUPER_ADMIN')
+  @Roles('ADMIN', 'MANAGER', 'Owner')
   async fulfillReservation(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: FulfillReservationDto,
@@ -39,7 +39,7 @@ export class StockReservationController {
   }
 
   @Delete(':id')
-  @Roles('ADMIN', 'MANAGER', 'SUPER_ADMIN')
+  @Roles('ADMIN', 'MANAGER', 'Owner')
   async cancelReservation(@Param('id', ParseUUIDPipe) id: string) {
     return this.reservationService.cancelReservation(id);
   }
@@ -50,7 +50,7 @@ export class StockReservationController {
   }
 
   @Post('expire-old')
-  @Roles('ADMIN', 'MANAGER', 'SUPER_ADMIN')
+  @Roles('ADMIN', 'MANAGER', 'Owner')
   async expireOldReservations() {
     const count = await this.reservationService.expireOldReservations();
     return { expired_count: count };

@@ -10,7 +10,7 @@ import { User, UserRole, UserStatus } from '../../users/entities/user.entity';
 describe('Telegram Approval Workflow', () => {
   let usersService: any;
 
-  const SUPER_ADMIN_ID = '42283329';
+  const OWNER_TELEGRAM_ID = '42283329';
 
   const mockPendingUser: User = {
     id: 'pending-1',
@@ -77,19 +77,19 @@ describe('Telegram Approval Workflow', () => {
     jest.clearAllMocks();
   });
 
-  describe('Super Admin Approval Command', () => {
-    it('should only be accessible to super admin (hardcoded ID)', () => {
-      // Super admin identification is based on hardcoded Telegram ID
-      const superAdminId = '42283329';
-      const isSuperAdmin = superAdminId === '42283329';
+  describe('Owner Approval Command', () => {
+    it('should only be accessible to owner (hardcoded ID)', () => {
+      // Owner identification is based on hardcoded Telegram ID
+      const ownerId = '42283329';
+      const isOwner = ownerId === '42283329';
 
-      expect(isSuperAdmin).toBe(true);
+      expect(isOwner).toBe(true);
     });
 
-    it('should reject access from non-super admin users', () => {
-      // Regular users should not have access - only hardcoded super admin ID works
-      const superAdminIdCheck = '42283329' === '42283329';
-      expect(superAdminIdCheck).toBe(true);
+    it('should reject access from non-owner users', () => {
+      // Regular users should not have access - only hardcoded owner ID works
+      const ownerIdCheck = '42283329' === '42283329';
+      expect(ownerIdCheck).toBe(true);
     });
   });
 
@@ -286,15 +286,15 @@ describe('Telegram Approval Workflow', () => {
   });
 
   describe('Permission Control', () => {
-    it('should require super admin access for pending users command', () => {
-      const superAdminId = SUPER_ADMIN_ID;
+    it('should require owner access for pending users command', () => {
+      const ownerId = OWNER_TELEGRAM_ID;
 
-      // Super admin check - only hardcoded ID has access
-      const superAdminHasAccess = superAdminId === '42283329';
-      expect(superAdminHasAccess).toBe(true);
+      // Owner check - only hardcoded ID has access
+      const ownerHasAccess = ownerId === '42283329';
+      expect(ownerHasAccess).toBe(true);
 
       // Regular users would not match the hardcoded ID
-      expect(superAdminId).toBe('42283329');
+      expect(ownerId).toBe('42283329');
     });
   });
 

@@ -306,7 +306,7 @@ export class CommissionController {
    * Mark commission as paid
    */
   @Patch(':id/mark-paid')
-  @Roles('ADMIN', 'MANAGER', 'SUPER_ADMIN')
+  @Roles('Admin', 'MANAGER', 'Owner')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Mark commission calculation as paid' })
   @ApiResponse({
@@ -333,7 +333,7 @@ export class CommissionController {
    * Update payment details
    */
   @Patch(':id/payment')
-  @Roles('ADMIN', 'MANAGER', 'SUPER_ADMIN')
+  @Roles('Admin', 'MANAGER', 'Owner')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Update payment details' })
   @ApiResponse({
@@ -384,7 +384,7 @@ export class CommissionController {
    * Returns immediately with job ID for tracking.
    */
   @Post('calculate-now')
-  @Roles('ADMIN', 'SUPER_ADMIN')
+  @Roles('Admin', 'Owner')
   @HttpCode(HttpStatus.ACCEPTED)
   @ApiOperation({
     summary: 'Trigger manual commission calculation (admin only)',
@@ -454,7 +454,7 @@ export class CommissionController {
    * Check and update overdue payments
    */
   @Post('check-overdue')
-  @Roles('ADMIN', 'MANAGER', 'SUPER_ADMIN')
+  @Roles('Admin', 'MANAGER', 'Owner')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Check and mark overdue payments' })
   @ApiResponse({

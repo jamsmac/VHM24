@@ -21,7 +21,7 @@ export class IntegrationLogController {
   constructor(private readonly logService: IntegrationLogService) {}
 
   @Get('integration/:integrationId')
-  @Roles('ADMIN', 'SUPER_ADMIN')
+  @Roles('Admin', 'Owner')
   @ApiOperation({ summary: 'Get logs by integration' })
   @ApiParam({ name: 'integrationId', description: 'Integration UUID' })
   @ApiQuery({
@@ -39,7 +39,7 @@ export class IntegrationLogController {
   }
 
   @Get('integration/:integrationId/errors')
-  @Roles('ADMIN', 'SUPER_ADMIN')
+  @Roles('Admin', 'Owner')
   @ApiOperation({ summary: 'Get error logs by integration' })
   @ApiParam({ name: 'integrationId', description: 'Integration UUID' })
   @ApiQuery({
@@ -57,7 +57,7 @@ export class IntegrationLogController {
   }
 
   @Get('integration/:integrationId/stats')
-  @Roles('ADMIN', 'SUPER_ADMIN')
+  @Roles('Admin', 'Owner')
   @ApiOperation({ summary: 'Get integration statistics' })
   @ApiParam({ name: 'integrationId', description: 'Integration UUID' })
   @ApiQuery({
@@ -75,7 +75,7 @@ export class IntegrationLogController {
   }
 
   @Get('date-range')
-  @Roles('ADMIN', 'SUPER_ADMIN')
+  @Roles('Admin', 'Owner')
   @ApiOperation({ summary: 'Get logs by date range' })
   @ApiQuery({
     name: 'start_date',

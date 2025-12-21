@@ -821,7 +821,7 @@ describe('InventoryThresholdActionsService', () => {
 
       // Assert
       expect(usersService.findByRoles).toHaveBeenCalledWith(
-        expect.arrayContaining([UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.MANAGER]),
+        expect.arrayContaining([UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER]),
         true,
       );
       expect(telegramNotificationsService.sendNotification).toHaveBeenCalled();

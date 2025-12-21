@@ -68,14 +68,14 @@ export class MachineAccessController {
   }
 
   @Post()
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN)
   @ApiOperation({ summary: 'Create or update access entry' })
   async create(@Body() dto: CreateMachineAccessDto, @Req() req: any) {
     return this.machineAccessService.create(dto, req.user.id);
   }
 
   @Patch(':id')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN)
   @ApiOperation({ summary: 'Update access entry role' })
   async update(
     @Param('id', ParseUUIDPipe) id: string,
@@ -85,7 +85,7 @@ export class MachineAccessController {
   }
 
   @Delete(':id')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN)
   @ApiOperation({ summary: 'Delete access entry' })
   async remove(@Param('id', ParseUUIDPipe) id: string) {
     await this.machineAccessService.remove(id);
@@ -95,14 +95,14 @@ export class MachineAccessController {
   // ==================== BULK OPERATIONS ====================
 
   @Post('assign-me-owner-all')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN)
   @ApiOperation({ summary: 'Assign current user as owner to all machines' })
   async assignMeOwnerAll(@Req() req: any) {
     return this.machineAccessService.assignOwnerToAllMachines(req.user.id, req.user.id);
   }
 
   @Post('bulk-assign')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN)
   @ApiOperation({ summary: 'Bulk assign user to multiple machines' })
   async bulkAssign(@Body() dto: BulkAssignDto, @Req() req: any) {
     return this.machineAccessService.bulkAssign(dto, req.user.id);
@@ -111,7 +111,7 @@ export class MachineAccessController {
   // ==================== IMPORT ====================
 
   @Post('import')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN)
   @UseInterceptors(FileInterceptor('file'))
   @ApiOperation({ summary: 'Import access entries from CSV/XLSX file' })
   @ApiConsumes('multipart/form-data')
@@ -158,14 +158,14 @@ export class MachineAccessController {
   }
 
   @Post('templates')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN)
   @ApiOperation({ summary: 'Create new access template' })
   async createTemplate(@Body() dto: CreateAccessTemplateDto, @Req() req: any) {
     return this.machineAccessService.createTemplate(dto, req.user.id);
   }
 
   @Patch('templates/:id')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN)
   @ApiOperation({ summary: 'Update template' })
   async updateTemplate(
     @Param('id', ParseUUIDPipe) id: string,
@@ -175,7 +175,7 @@ export class MachineAccessController {
   }
 
   @Delete('templates/:id')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN)
   @ApiOperation({ summary: 'Delete template' })
   async deleteTemplate(@Param('id', ParseUUIDPipe) id: string) {
     await this.machineAccessService.deleteTemplate(id);
@@ -183,7 +183,7 @@ export class MachineAccessController {
   }
 
   @Post('templates/:id/rows')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN)
   @ApiOperation({ summary: 'Add row to template' })
   async addTemplateRow(
     @Param('id', ParseUUIDPipe) id: string,
@@ -193,7 +193,7 @@ export class MachineAccessController {
   }
 
   @Delete('templates/:id/rows/:rowId')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN)
   @ApiOperation({ summary: 'Remove row from template' })
   async removeTemplateRow(
     @Param('id', ParseUUIDPipe) id: string,
@@ -204,7 +204,7 @@ export class MachineAccessController {
   }
 
   @Post('templates/:id/apply')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN)
   @ApiOperation({ summary: 'Apply template to machines' })
   async applyTemplate(
     @Param('id', ParseUUIDPipe) id: string,

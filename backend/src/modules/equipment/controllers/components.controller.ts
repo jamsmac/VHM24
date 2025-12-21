@@ -49,7 +49,7 @@ export class ComponentsController {
   ) {}
 
   @Post()
-  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SUPER_ADMIN, UserRole.TECHNICIAN)
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.OWNER, UserRole.TECHNICIAN)
   @ApiOperation({ summary: 'Создать новый компонент оборудования' })
   @ApiResponse({
     status: 201,
@@ -118,7 +118,7 @@ export class ComponentsController {
   }
 
   @Patch(':id')
-  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SUPER_ADMIN, UserRole.TECHNICIAN)
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.OWNER, UserRole.TECHNICIAN)
   @ApiOperation({ summary: 'Обновить компонент' })
   @ApiParam({ name: 'id', description: 'UUID компонента' })
   @ApiResponse({ status: 200, description: 'Компонент обновлен', type: EquipmentComponent })
@@ -130,7 +130,7 @@ export class ComponentsController {
   }
 
   @Post(':id/replace')
-  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SUPER_ADMIN, UserRole.TECHNICIAN)
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.OWNER, UserRole.TECHNICIAN)
   @ApiOperation({ summary: 'Заменить компонент' })
   @ApiParam({ name: 'id', description: 'UUID старого компонента' })
   @ApiResponse({ status: 200, description: 'Компонент заменен', type: EquipmentComponent })
@@ -142,7 +142,7 @@ export class ComponentsController {
   }
 
   @Delete(':id')
-  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SUPER_ADMIN, UserRole.TECHNICIAN)
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.OWNER, UserRole.TECHNICIAN)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Удалить компонент (soft delete)' })
   @ApiParam({ name: 'id', description: 'UUID компонента' })
@@ -156,7 +156,7 @@ export class ComponentsController {
   // ============================================================================
 
   @Post(':id/move')
-  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SUPER_ADMIN, UserRole.TECHNICIAN)
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.OWNER, UserRole.TECHNICIAN)
   @ApiOperation({
     summary: 'Переместить компонент между локациями',
     description:
@@ -189,7 +189,7 @@ export class ComponentsController {
   }
 
   @Post(':id/install')
-  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SUPER_ADMIN, UserRole.TECHNICIAN)
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.OWNER, UserRole.TECHNICIAN)
   @ApiOperation({
     summary: 'Установить компонент в машину',
     description:
@@ -218,7 +218,7 @@ export class ComponentsController {
   }
 
   @Post(':id/remove')
-  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SUPER_ADMIN, UserRole.TECHNICIAN)
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.OWNER, UserRole.TECHNICIAN)
   @ApiOperation({
     summary: 'Снять компонент с машины',
     description:

@@ -15,7 +15,7 @@ export class TelegramSettingsController {
   constructor(private readonly telegramSettingsService: TelegramSettingsService) {}
 
   @Get()
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN)
   @ApiOperation({ summary: 'Get Telegram bot settings' })
   @ApiResponse({ status: 200, description: 'Returns Telegram settings' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -31,7 +31,7 @@ export class TelegramSettingsController {
   }
 
   @Get('info')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.OPERATOR)
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER, UserRole.OPERATOR)
   @ApiOperation({ summary: 'Get bot configuration info' })
   @ApiResponse({ status: 200, description: 'Returns bot info' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -41,11 +41,11 @@ export class TelegramSettingsController {
   }
 
   @Put()
-  @Roles(UserRole.SUPER_ADMIN)
+  @Roles(UserRole.OWNER)
   @ApiOperation({ summary: 'Update Telegram bot settings' })
   @ApiResponse({ status: 200, description: 'Settings updated' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Only super admin can update settings' })
+  @ApiResponse({ status: 403, description: 'Only owner can update settings' })
   async updateSettings(@Body() dto: UpdateTelegramSettingsDto) {
     const settings = await this.telegramSettingsService.updateSettings(dto);
 

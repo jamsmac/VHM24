@@ -11,7 +11,7 @@ import * as readline from 'readline';
 // Load environment variables
 config();
 
-const logger = new Logger('CreateSuperAdmin');
+const logger = new Logger('CreateOwner');
 
 const AppDataSource = new DataSource({
   type: 'postgres',
@@ -24,7 +24,7 @@ const AppDataSource = new DataSource({
   synchronize: false,
 });
 
-interface CreateSuperAdminInput {
+interface CreateOwnerInput {
   email: string;
   password: string;
   full_name: string;
@@ -33,26 +33,26 @@ interface CreateSuperAdminInput {
 }
 
 /**
- * Create SuperAdmin user
+ * Create Owner user
  *
- * REQ-AUTH-04: Bootstrap first SuperAdmin
+ * REQ-AUTH-04: Bootstrap first Owner
  *
- * This script creates the first SuperAdmin user in the system.
+ * This script creates the first Owner user in the system.
  * It should ONLY be run when the system is first set up.
  *
  * Usage:
- *   npm run create-superadmin
+ *   npm run create-owner
  *
  * Or with arguments:
- *   npm run create-superadmin -- --email admin@vendhub.ru --password SecurePass123! --name "Admin User"
+ *   npm run create-owner -- --email admin@vendhub.ru --password SecurePass123! --name "Admin User"
  *
  * Or with Telegram:
- *   npm run create-superadmin -- --email admin@vendhub.ru --password SecurePass123! --name "Admin User" --telegram-id 42283329 --telegram-username Jamshiddin
+ *   npm run create-owner -- --email admin@vendhub.ru --password SecurePass123! --name "Admin User" --telegram-id 42283329 --telegram-username Jamshiddin
  */
 
-function parseArguments(): Partial<CreateSuperAdminInput> | null {
+function parseArguments(): Partial<CreateOwnerInput> | null {
   const args = process.argv.slice(2);
-  const input: Partial<CreateSuperAdminInput> = {};
+  const input: Partial<CreateOwnerInput> = {};
 
   for (let i = 0; i < args.length; i++) {
     switch (args[i]) {
@@ -77,14 +77,14 @@ function parseArguments(): Partial<CreateSuperAdminInput> | null {
   return Object.keys(input).length > 0 ? input : null;
 }
 
-async function promptForInput(): Promise<CreateSuperAdminInput> {
+async function promptForInput(): Promise<CreateOwnerInput> {
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,
   });
 
   return new Promise((resolve) => {
-    const input: Partial<CreateSuperAdminInput> = {};
+    const input: Partial<CreateOwnerInput> = {};
 
     rl.question('Email: ', (email) => {
       input.email = email;
@@ -110,7 +110,7 @@ async function promptForInput(): Promise<CreateSuperAdminInput> {
                   }
 
                   rl.close();
-                  resolve(input as CreateSuperAdminInput);
+                  resolve(input as CreateOwnerInput);
                 },
               );
             },
@@ -121,8 +121,8 @@ async function promptForInput(): Promise<CreateSuperAdminInput> {
   });
 }
 
-async function createSuperAdmin(input: CreateSuperAdminInput): Promise<void> {
-  logger.log('\n🚀 Создание SuperAdmin пользователя...\n');
+async function createOwner(input: CreateOwnerInput): Promise<void> {
+  logger.log('\n🚀 Создание Owner пользователя...\n');
 
   try {
     // Initialize connection
@@ -132,13 +132,13 @@ async function createSuperAdmin(input: CreateSuperAdminInput): Promise<void> {
     const userRepository = AppDataSource.getRepository(User);
     const roleRepository = AppDataSource.getRepository(Role);
 
-    // Check if SuperAdmin role exists
-    const superAdminRole = await roleRepository.findOne({
-      where: { name: 'SuperAdmin' },
+    // Check if Owner role exists
+    const ownerRole = await roleRepository.findOne({
+      where: { name: 'Owner' },
     });
 
-    if (!superAdminRole) {
-      logger.error('❌ Роль SuperAdmin не найдена в БД!');
+    if (!ownerRole) {
+      logger.error('❌ Роль Owner не найдена в БД!');
       logger.warn('⚠️  Сначала запустите: npm run seed');
       process.exit(1);
     }
@@ -173,18 +173,18 @@ async function createSuperAdmin(input: CreateSuperAdminInput): Promise<void> {
       email: input.email,
       password_hash,
       full_name: input.full_name,
-      role: UserRole.SUPER_ADMIN,
+      role: UserRole.OWNER,
       status: UserStatus.ACTIVE,
       telegram_user_id: input.telegram_user_id || null,
       telegram_username: input.telegram_username || null,
-      requires_password_change: false, // SuperAdmin doesn't need to change password
+      requires_password_change: false, // Owner doesn't need to change password
       is_2fa_enabled: false,
-      roles: [superAdminRole],
+      roles: [ownerRole],
     });
 
     await userRepository.save(user);
 
-    logger.log('\n✅ SuperAdmin успешно создан!');
+    logger.log('\n✅ Owner успешно создан!');
     logger.log('\n📋 Данные пользователя:');
     logger.log(`   Email:             ${user.email}`);
     logger.log(`   Full Name:         ${user.full_name}`);
@@ -201,14 +201,14 @@ async function createSuperAdmin(input: CreateSuperAdminInput): Promise<void> {
     logger.log(`   URL:      ${process.env.FRONTEND_URL || 'http://localhost:3001'}/login`);
     logger.log(`   Email:    ${user.email}`);
     logger.log(`   Password: [указанный при создании]`);
-    logger.log('\n✨ SuperAdmin может:');
+    logger.log('\n✨ Owner может:');
     logger.log('   - Управлять всеми пользователями');
     logger.log('   - Назначать любые роли (включая Admin)');
     logger.log('   - Просматривать audit logs');
     logger.log('   - Полный доступ ко всем функциям системы');
     logger.log('\n');
   } catch (error) {
-    logger.error('❌ Ошибка при создании SuperAdmin:', error);
+    logger.error('❌ Ошибка при создании Owner:', error);
     throw error;
   } finally {
     await AppDataSource.destroy();
@@ -217,22 +217,22 @@ async function createSuperAdmin(input: CreateSuperAdminInput): Promise<void> {
 
 async function main() {
   logger.log('═══════════════════════════════════════════════════════════');
-  logger.log('   VendHub Manager - Create SuperAdmin User');
+  logger.log('   VendHub Manager - Create Owner User');
   logger.log('═══════════════════════════════════════════════════════════\n');
 
   try {
     // Parse command line arguments
     const argsInput = parseArguments();
 
-    let input: CreateSuperAdminInput;
+    let input: CreateOwnerInput;
 
     if (argsInput && argsInput.email && argsInput.password && argsInput.full_name) {
       // Use provided arguments
-      input = argsInput as CreateSuperAdminInput;
+      input = argsInput as CreateOwnerInput;
       logger.log('📝 Используются параметры из командной строки\n');
     } else {
       // Prompt for input
-      logger.log('📝 Введите данные SuperAdmin пользователя:\n');
+      logger.log('📝 Введите данные Owner пользователя:\n');
       input = await promptForInput();
     }
 
@@ -252,8 +252,8 @@ async function main() {
       process.exit(1);
     }
 
-    // Create SuperAdmin
-    await createSuperAdmin(input);
+    // Create Owner
+    await createOwner(input);
 
     process.exit(0);
   } catch (error) {

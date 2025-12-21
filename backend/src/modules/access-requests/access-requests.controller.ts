@@ -54,7 +54,7 @@ export class AccessRequestsController {
    */
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Get all access requests (Admin only)' })
   @ApiResponse({ status: 200, description: 'List of access requests' })
@@ -69,7 +69,7 @@ export class AccessRequestsController {
    */
   @Get(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Get access request by ID (Admin only)' })
   @ApiResponse({ status: 200, description: 'Access request details' })
@@ -86,7 +86,7 @@ export class AccessRequestsController {
    */
   @Patch(':id/approve')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Approve access request and create user (Admin only)' })
   @ApiResponse({ status: 200, description: 'Access request approved, user created' })
@@ -108,7 +108,7 @@ export class AccessRequestsController {
    */
   @Patch(':id/reject')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Reject access request (Admin only)' })
   @ApiResponse({ status: 200, description: 'Access request rejected' })
@@ -129,9 +129,9 @@ export class AccessRequestsController {
    */
   @Delete(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SUPER_ADMIN)
+  @Roles(UserRole.OWNER)
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Delete access request (SuperAdmin only)' })
+  @ApiOperation({ summary: 'Delete access request (Owner only)' })
   @ApiResponse({ status: 200, description: 'Access request deleted' })
   @ApiResponse({ status: 404, description: 'Access request not found' })
   remove(@Param('id') id: string) {

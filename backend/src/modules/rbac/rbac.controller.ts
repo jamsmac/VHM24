@@ -49,7 +49,7 @@ export class RbacController {
   // ============================================================================
 
   @Post('roles')
-  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.OWNER)
   @ApiOperation({ summary: 'Create new role' })
   @ApiResponse({ status: 201, description: 'Role created successfully' })
   @ApiResponse({ status: 409, description: 'Role name already exists' })
@@ -58,7 +58,7 @@ export class RbacController {
   }
 
   @Get('roles')
-  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.MANAGER)
+  @Roles(UserRole.ADMIN, UserRole.OWNER, UserRole.MANAGER)
   @ApiOperation({ summary: 'Get all roles' })
   @ApiQuery({
     name: 'isActive',
@@ -72,7 +72,7 @@ export class RbacController {
   }
 
   @Get('roles/:id')
-  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.MANAGER)
+  @Roles(UserRole.ADMIN, UserRole.OWNER, UserRole.MANAGER)
   @ApiOperation({ summary: 'Get role by ID' })
   @ApiParam({ name: 'id', description: 'Role UUID' })
   @ApiResponse({ status: 200, description: 'Returns role with permissions' })
@@ -82,7 +82,7 @@ export class RbacController {
   }
 
   @Patch('roles/:id')
-  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.OWNER)
   @ApiOperation({ summary: 'Update role' })
   @ApiParam({ name: 'id', description: 'Role UUID' })
   @ApiResponse({ status: 200, description: 'Role updated successfully' })
@@ -93,7 +93,7 @@ export class RbacController {
   }
 
   @Delete('roles/:id')
-  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.OWNER)
   @ApiOperation({ summary: 'Delete role' })
   @ApiParam({ name: 'id', description: 'Role UUID' })
   @ApiResponse({ status: 200, description: 'Role deleted successfully' })
@@ -103,7 +103,7 @@ export class RbacController {
   }
 
   @Post('roles/:id/permissions')
-  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.OWNER)
   @ApiOperation({ summary: 'Add permissions to role' })
   @ApiParam({ name: 'id', description: 'Role UUID' })
   @ApiResponse({ status: 200, description: 'Permissions added successfully' })
@@ -114,7 +114,7 @@ export class RbacController {
   }
 
   @Delete('roles/:id/permissions')
-  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.OWNER)
   @ApiOperation({ summary: 'Remove permissions from role' })
   @ApiParam({ name: 'id', description: 'Role UUID' })
   @ApiResponse({ status: 200, description: 'Permissions removed successfully' })
@@ -131,7 +131,7 @@ export class RbacController {
   // ============================================================================
 
   @Post('permissions')
-  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.OWNER)
   @ApiOperation({ summary: 'Create new permission' })
   @ApiResponse({ status: 201, description: 'Permission created successfully' })
   @ApiResponse({ status: 409, description: 'Permission name already exists' })
@@ -140,7 +140,7 @@ export class RbacController {
   }
 
   @Get('permissions')
-  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.MANAGER)
+  @Roles(UserRole.ADMIN, UserRole.OWNER, UserRole.MANAGER)
   @ApiOperation({ summary: 'Get all permissions' })
   @ApiResponse({ status: 200, description: 'Returns array of permissions' })
   findAllPermissions() {
@@ -148,7 +148,7 @@ export class RbacController {
   }
 
   @Get('permissions/:id')
-  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.MANAGER)
+  @Roles(UserRole.ADMIN, UserRole.OWNER, UserRole.MANAGER)
   @ApiOperation({ summary: 'Get permission by ID' })
   @ApiParam({ name: 'id', description: 'Permission UUID' })
   @ApiResponse({ status: 200, description: 'Returns permission' })
@@ -158,7 +158,7 @@ export class RbacController {
   }
 
   @Patch('permissions/:id')
-  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.OWNER)
   @ApiOperation({ summary: 'Update permission' })
   @ApiParam({ name: 'id', description: 'Permission UUID' })
   @ApiResponse({ status: 200, description: 'Permission updated successfully' })
@@ -169,7 +169,7 @@ export class RbacController {
   }
 
   @Delete('permissions/:id')
-  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.OWNER)
   @ApiOperation({ summary: 'Delete permission' })
   @ApiParam({ name: 'id', description: 'Permission UUID' })
   @ApiResponse({ status: 200, description: 'Permission deleted successfully' })
@@ -183,7 +183,7 @@ export class RbacController {
   // ============================================================================
 
   @Post('users/assign-roles')
-  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.OWNER)
   @ApiOperation({
     summary: 'Assign roles to user',
     description: 'Note: Full implementation pending User-Role relationship',
@@ -195,7 +195,7 @@ export class RbacController {
   }
 
   @Delete('users/:userId/roles')
-  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.OWNER)
   @ApiOperation({
     summary: 'Remove roles from user',
     description: 'Note: Full implementation pending User-Role relationship',
@@ -207,7 +207,7 @@ export class RbacController {
   }
 
   @Get('users/:userId/roles')
-  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.MANAGER)
+  @Roles(UserRole.ADMIN, UserRole.OWNER, UserRole.MANAGER)
   @ApiOperation({
     summary: 'Get user roles',
     description: 'Note: Full implementation pending User-Role relationship',
@@ -219,7 +219,7 @@ export class RbacController {
   }
 
   @Get('users/:userId/permissions')
-  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.MANAGER)
+  @Roles(UserRole.ADMIN, UserRole.OWNER, UserRole.MANAGER)
   @ApiOperation({
     summary: 'Get user permissions',
     description: 'Note: Full implementation pending User-Role relationship',

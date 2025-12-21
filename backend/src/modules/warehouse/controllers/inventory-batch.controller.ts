@@ -50,13 +50,13 @@ export class InventoryBatchController {
   }
 
   @Put(':id/quarantine')
-  @Roles('ADMIN', 'MANAGER', 'SUPER_ADMIN')
+  @Roles('ADMIN', 'MANAGER', 'Owner')
   async quarantineBatch(@Param('id', ParseUUIDPipe) id: string, @Body('reason') reason: string) {
     return this.batchService.quarantineBatch(id, reason);
   }
 
   @Put(':id/release')
-  @Roles('ADMIN', 'MANAGER', 'SUPER_ADMIN')
+  @Roles('ADMIN', 'MANAGER', 'Owner')
   async releaseFromQuarantine(@Param('id', ParseUUIDPipe) id: string) {
     return this.batchService.releaseFromQuarantine(id);
   }

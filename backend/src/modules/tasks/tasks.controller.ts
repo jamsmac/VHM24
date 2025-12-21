@@ -52,7 +52,7 @@ export class TasksController {
   ) {}
 
   @Post()
-  @Roles('ADMIN', 'MANAGER', 'SUPER_ADMIN')
+  @Roles('Admin', 'MANAGER', 'Owner')
   @ApiOperation({ summary: 'Создать новую задачу' })
   @ApiResponse({
     status: 201,
@@ -197,7 +197,7 @@ export class TasksController {
   }
 
   @Post(':id/assign')
-  @Roles('ADMIN', 'MANAGER', 'SUPER_ADMIN')
+  @Roles('Admin', 'MANAGER', 'Owner')
   @ApiOperation({ summary: 'Назначить задачу оператору' })
   @ApiParam({ name: 'id', description: 'UUID задачи' })
   @ApiResponse({
@@ -337,7 +337,7 @@ export class TasksController {
   }
 
   @Post(':id/reject')
-  @Roles('ADMIN', 'SUPER_ADMIN')
+  @Roles('Admin', 'Owner')
   @ApiOperation({
     summary: 'Отклонить завершенную задачу (только админы)',
     description:
@@ -426,7 +426,7 @@ export class TasksController {
   }
 
   @Delete(':id')
-  @Roles('ADMIN', 'SUPER_ADMIN')
+  @Roles('Admin', 'Owner')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Удалить задачу (soft delete)' })
   @ApiParam({ name: 'id', description: 'UUID задачи' })

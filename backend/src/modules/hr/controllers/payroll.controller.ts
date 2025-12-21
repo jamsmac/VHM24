@@ -23,7 +23,7 @@ export class PayrollController {
   constructor(private readonly payrollService: PayrollService) {}
 
   @Post('calculate')
-  @Roles('ADMIN', 'MANAGER', 'SUPER_ADMIN')
+  @Roles('ADMIN', 'MANAGER', 'Owner')
   async calculate(
     @Body('employee_id') employeeId: string,
     @Body('period') period: string,
@@ -33,13 +33,13 @@ export class PayrollController {
   }
 
   @Put(':id/approve')
-  @Roles('ADMIN', 'MANAGER', 'SUPER_ADMIN')
+  @Roles('ADMIN', 'MANAGER', 'Owner')
   async approve(@Param('id', ParseUUIDPipe) id: string) {
     return this.payrollService.approvePayroll(id);
   }
 
   @Put(':id/pay')
-  @Roles('ADMIN', 'MANAGER', 'SUPER_ADMIN')
+  @Roles('ADMIN', 'MANAGER', 'Owner')
   async markAsPaid(@Param('id', ParseUUIDPipe) id: string) {
     return this.payrollService.markAsPaid(id);
   }

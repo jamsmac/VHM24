@@ -439,8 +439,8 @@ export class InventoryThresholdActionsService {
    */
   private mapStringToUserRole(roleString: string): UserRole | null {
     const roleMapping: Record<string, UserRole> = {
-      SuperAdmin: UserRole.SUPER_ADMIN,
-      SUPER_ADMIN: UserRole.SUPER_ADMIN,
+      Owner: UserRole.OWNER,
+      OWNER: UserRole.OWNER,
       Admin: UserRole.ADMIN,
       ADMIN: UserRole.ADMIN,
       Manager: UserRole.MANAGER,
@@ -491,7 +491,7 @@ export class InventoryThresholdActionsService {
     // Если нет конкретных пользователей, отправляем всем админам и менеджерам
     if (userIds.length === 0) {
       const adminsAndManagers = await this.usersService.findByRoles(
-        [UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.MANAGER],
+        [UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER],
         true,
       );
       userIds.push(...adminsAndManagers.map((u) => u.id));

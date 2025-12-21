@@ -243,11 +243,11 @@ describe('CatalogHandler', () => {
         expect(sessionService.setSessionData).toHaveBeenCalled();
       });
 
-      it('should allow access for SUPER_ADMIN role', async () => {
+      it('should allow access for OWNER role', async () => {
         // Arrange
         const ctx = createMockContext(mockUserId) as Context;
         usersService.findByTelegramId.mockResolvedValue(
-          createMockUser(UserRole.SUPER_ADMIN) as any,
+          createMockUser(UserRole.OWNER) as any,
         );
         cartStorage.getItemCount.mockResolvedValue(0);
 
@@ -274,7 +274,7 @@ describe('CatalogHandler', () => {
     describe('canCreateRequests', () => {
       it('should return true for allowed roles', () => {
         const allowedRoles = [
-          UserRole.SUPER_ADMIN,
+          UserRole.OWNER,
           UserRole.ADMIN,
           UserRole.MANAGER,
           UserRole.OPERATOR,

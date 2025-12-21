@@ -75,7 +75,7 @@ export const accessRequestsApi = {
     return response.data
   },
 
-  // Delete access request (SuperAdmin only)
+  // Delete access request (Owner only)
   delete: async (id: string): Promise<void> => {
     await apiClient.delete(`/access-requests/${id}`)
   },

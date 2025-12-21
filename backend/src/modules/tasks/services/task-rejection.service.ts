@@ -73,7 +73,7 @@ export class TaskRejectionService {
 
     // Проверка 2: Только администраторы могут отклонять задачи
     const user = await this.usersService.findOne(userId);
-    if (user.role !== UserRole.ADMIN && user.role !== UserRole.SUPER_ADMIN) {
+    if (user.role !== UserRole.ADMIN && user.role !== UserRole.OWNER) {
       throw new ForbiddenException('Только администраторы могут отклонять задачи');
     }
 

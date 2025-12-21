@@ -33,7 +33,7 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Post()
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN)
   @ApiOperation({ summary: 'Создать нового пользователя' })
   @ApiResponse({
     status: 201,
@@ -46,7 +46,7 @@ export class UsersController {
   }
 
   @Get()
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN)
   @ApiOperation({ summary: 'Получить список всех пользователей' })
   @ApiResponse({
     status: 200,
@@ -58,7 +58,7 @@ export class UsersController {
   }
 
   @Get(':id')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN)
   @ApiOperation({ summary: 'Получить пользователя по ID' })
   @ApiParam({ name: 'id', description: 'UUID пользователя' })
   @ApiResponse({
@@ -72,7 +72,7 @@ export class UsersController {
   }
 
   @Patch(':id')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN)
   @ApiOperation({ summary: 'Обновить данные пользователя' })
   @ApiParam({ name: 'id', description: 'UUID пользователя' })
   @ApiResponse({
@@ -88,7 +88,7 @@ export class UsersController {
   }
 
   @Get('pending/approvals')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN)
   @ApiOperation({ summary: 'Получить список пользователей в ожидании одобрения' })
   @ApiResponse({
     status: 200,
@@ -101,7 +101,7 @@ export class UsersController {
   }
 
   @Post(':id/approve')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN)
   @ApiOperation({ summary: 'Одобрить пользователя и сгенерировать учетные данные' })
   @ApiParam({ name: 'id', description: 'UUID пользователя' })
   @ApiResponse({
@@ -121,7 +121,7 @@ export class UsersController {
   }
 
   @Post(':id/reject')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Отклонить заявку пользователя' })
   @ApiParam({ name: 'id', description: 'UUID пользователя' })
@@ -142,7 +142,7 @@ export class UsersController {
   }
 
   @Delete(':id')
-  @Roles(UserRole.SUPER_ADMIN)
+  @Roles(UserRole.OWNER)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Удалить пользователя (soft delete)' })
   @ApiParam({ name: 'id', description: 'UUID пользователя' })
@@ -154,7 +154,7 @@ export class UsersController {
   }
 
   @Patch(':id/ip-whitelist')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN)
   @ApiOperation({ summary: 'Обновить настройки IP Whitelist для пользователя' })
   @ApiParam({ name: 'id', description: 'UUID пользователя' })
   @ApiResponse({
@@ -179,7 +179,7 @@ export class UsersController {
    * REQ-AUTH-34: SuperAdmin/Admin должны иметь возможность временно блокировать учётную запись
    */
   @Patch(':id/block')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN)
   @ApiOperation({
     summary: 'Заблокировать учетную запись пользователя',
     description:
@@ -205,7 +205,7 @@ export class UsersController {
    * REQ-AUTH-35: При блокировке все активные сессии аннулируются, вход невозможен до разблокировки
    */
   @Patch(':id/unblock')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN)
   @ApiOperation({
     summary: 'Разблокировать учетную запись пользователя',
     description:
@@ -228,7 +228,7 @@ export class UsersController {
    * REQ-AUTH-34: Деактивировать учётную запись (без физического удаления истории)
    */
   @Patch(':id/deactivate')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN)
   @ApiOperation({
     summary: 'Деактивировать учетную запись пользователя',
     description:
@@ -250,7 +250,7 @@ export class UsersController {
    * Activate user account
    */
   @Patch(':id/activate')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN)
   @ApiOperation({
     summary: 'Активировать учетную запись пользователя',
     description: 'Активирует ранее деактивированную учетную запись',

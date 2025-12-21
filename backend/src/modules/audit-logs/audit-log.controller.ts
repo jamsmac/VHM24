@@ -16,7 +16,7 @@ import { UserRole } from '@modules/users/entities/user.entity';
 @ApiTags('audit-logs')
 @Controller('audit-logs')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+@Roles(UserRole.OWNER, UserRole.ADMIN)
 @ApiBearerAuth('JWT-auth')
 export class AuditLogController {
   constructor(private readonly auditLogService: AuditLogService) {}

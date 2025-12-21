@@ -40,7 +40,7 @@ export class WashingSchedulesController {
   constructor(private readonly washingSchedulesService: WashingSchedulesService) {}
 
   @Post()
-  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SUPER_ADMIN, UserRole.TECHNICIAN)
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.OWNER, UserRole.TECHNICIAN)
   @ApiOperation({ summary: 'Создать график мойки' })
   @ApiResponse({
     status: 201,
@@ -120,7 +120,7 @@ export class WashingSchedulesController {
   }
 
   @Patch(':id')
-  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SUPER_ADMIN, UserRole.TECHNICIAN)
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.OWNER, UserRole.TECHNICIAN)
   @ApiOperation({ summary: 'Обновить график мойки' })
   @ApiParam({ name: 'id', description: 'UUID графика мойки' })
   @ApiResponse({
@@ -136,7 +136,7 @@ export class WashingSchedulesController {
   }
 
   @Post(':id/complete')
-  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SUPER_ADMIN, UserRole.TECHNICIAN)
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.OWNER, UserRole.TECHNICIAN)
   @ApiOperation({ summary: 'Отметить мойку как выполненную' })
   @ApiParam({ name: 'id', description: 'UUID графика мойки' })
   @ApiResponse({
@@ -152,7 +152,7 @@ export class WashingSchedulesController {
   }
 
   @Delete(':id')
-  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SUPER_ADMIN, UserRole.TECHNICIAN)
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.OWNER, UserRole.TECHNICIAN)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Удалить график мойки (soft delete)' })
   @ApiParam({ name: 'id', description: 'UUID графика мойки' })

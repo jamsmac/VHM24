@@ -32,7 +32,7 @@ export class WebhookController {
   constructor(private readonly webhookService: WebhookService) {}
 
   @Post()
-  @Roles('ADMIN', 'SUPER_ADMIN')
+  @Roles('Admin', 'Owner')
   @ApiOperation({ summary: 'Create webhook event' })
   @ApiResponse({ status: 201, description: 'Webhook created', type: Webhook })
   async create(@Body() dto: CreateWebhookDto): Promise<Webhook> {
@@ -40,7 +40,7 @@ export class WebhookController {
   }
 
   @Get('pending')
-  @Roles('ADMIN', 'SUPER_ADMIN')
+  @Roles('Admin', 'Owner')
   @ApiOperation({ summary: 'Get pending webhooks' })
   @ApiQuery({
     name: 'limit',
@@ -54,7 +54,7 @@ export class WebhookController {
   }
 
   @Get('integration/:integrationId')
-  @Roles('ADMIN', 'SUPER_ADMIN')
+  @Roles('Admin', 'Owner')
   @ApiOperation({ summary: 'Get webhooks by integration' })
   @ApiParam({ name: 'integrationId', description: 'Integration UUID' })
   @ApiQuery({
@@ -72,7 +72,7 @@ export class WebhookController {
   }
 
   @Get('event-type/:eventType')
-  @Roles('ADMIN', 'SUPER_ADMIN')
+  @Roles('Admin', 'Owner')
   @ApiOperation({ summary: 'Get webhooks by event type' })
   @ApiParam({ name: 'eventType', description: 'Event type' })
   @ApiQuery({
@@ -90,7 +90,7 @@ export class WebhookController {
   }
 
   @Post(':id/process')
-  @Roles('ADMIN', 'SUPER_ADMIN')
+  @Roles('Admin', 'Owner')
   @ApiOperation({ summary: 'Process webhook' })
   @ApiParam({ name: 'id', description: 'Webhook UUID' })
   @ApiResponse({ status: 200, description: 'Webhook processed', type: Webhook })
@@ -100,7 +100,7 @@ export class WebhookController {
   }
 
   @Patch(':id/complete')
-  @Roles('ADMIN', 'SUPER_ADMIN')
+  @Roles('Admin', 'Owner')
   @ApiOperation({ summary: 'Mark webhook as completed' })
   @ApiParam({ name: 'id', description: 'Webhook UUID' })
   @ApiResponse({ status: 200, description: 'Webhook completed', type: Webhook })
@@ -110,7 +110,7 @@ export class WebhookController {
   }
 
   @Patch(':id/fail')
-  @Roles('ADMIN', 'SUPER_ADMIN')
+  @Roles('Admin', 'Owner')
   @ApiOperation({ summary: 'Mark webhook as failed' })
   @ApiParam({ name: 'id', description: 'Webhook UUID' })
   @ApiResponse({ status: 200, description: 'Webhook marked as failed', type: Webhook })

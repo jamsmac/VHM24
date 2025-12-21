@@ -37,7 +37,7 @@ export class SparePartsController {
   constructor(private readonly sparePartsService: SparePartsService) {}
 
   @Post()
-  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SUPER_ADMIN, UserRole.TECHNICIAN)
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.OWNER, UserRole.TECHNICIAN)
   @ApiOperation({ summary: 'Создать запасную часть' })
   @ApiResponse({
     status: 201,
@@ -97,7 +97,7 @@ export class SparePartsController {
   }
 
   @Patch(':id')
-  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SUPER_ADMIN, UserRole.TECHNICIAN)
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.OWNER, UserRole.TECHNICIAN)
   @ApiOperation({ summary: 'Обновить запасную часть' })
   @ApiParam({ name: 'id', description: 'UUID запасной части' })
   @ApiResponse({
@@ -113,7 +113,7 @@ export class SparePartsController {
   }
 
   @Post(':id/adjust-stock')
-  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SUPER_ADMIN, UserRole.TECHNICIAN)
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.OWNER, UserRole.TECHNICIAN)
   @ApiOperation({ summary: 'Изменить остаток запасной части' })
   @ApiParam({ name: 'id', description: 'UUID запасной части' })
   @ApiResponse({
@@ -129,7 +129,7 @@ export class SparePartsController {
   }
 
   @Delete(':id')
-  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SUPER_ADMIN, UserRole.TECHNICIAN)
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.OWNER, UserRole.TECHNICIAN)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Удалить запасную часть (soft delete)' })
   @ApiParam({ name: 'id', description: 'UUID запасной части' })

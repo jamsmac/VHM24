@@ -44,7 +44,7 @@ export class IncidentsController {
   constructor(private readonly incidentsService: IncidentsService) {}
 
   @Post()
-  @Roles('ADMIN', 'MANAGER', 'SUPER_ADMIN')
+  @Roles('ADMIN', 'MANAGER', 'Owner')
   @ApiOperation({ summary: 'Создать инцидент' })
   @ApiResponse({
     status: 201,
@@ -137,7 +137,7 @@ export class IncidentsController {
   }
 
   @Patch(':id')
-  @Roles('ADMIN', 'MANAGER', 'SUPER_ADMIN')
+  @Roles('ADMIN', 'MANAGER', 'Owner')
   @ApiOperation({ summary: 'Обновить инцидент' })
   @ApiParam({ name: 'id', description: 'UUID инцидента' })
   @ApiResponse({
@@ -153,7 +153,7 @@ export class IncidentsController {
   }
 
   @Post(':id/assign')
-  @Roles('ADMIN', 'MANAGER', 'SUPER_ADMIN')
+  @Roles('ADMIN', 'MANAGER', 'Owner')
   @ApiOperation({ summary: 'Назначить инцидент специалисту' })
   @ApiParam({ name: 'id', description: 'UUID инцидента' })
   @ApiResponse({
@@ -169,7 +169,7 @@ export class IncidentsController {
   }
 
   @Post(':id/resolve')
-  @Roles('ADMIN', 'MANAGER', 'SUPER_ADMIN')
+  @Roles('ADMIN', 'MANAGER', 'Owner')
   @ApiOperation({ summary: 'Решить инцидент' })
   @ApiParam({ name: 'id', description: 'UUID инцидента' })
   @ApiResponse({
@@ -185,7 +185,7 @@ export class IncidentsController {
   }
 
   @Post(':id/close')
-  @Roles('ADMIN', 'MANAGER', 'SUPER_ADMIN')
+  @Roles('ADMIN', 'MANAGER', 'Owner')
   @ApiOperation({ summary: 'Закрыть инцидент' })
   @ApiParam({ name: 'id', description: 'UUID инцидента' })
   @ApiResponse({
@@ -198,7 +198,7 @@ export class IncidentsController {
   }
 
   @Post(':id/reopen')
-  @Roles('ADMIN', 'MANAGER', 'SUPER_ADMIN')
+  @Roles('ADMIN', 'MANAGER', 'Owner')
   @ApiOperation({ summary: 'Переоткрыть инцидент' })
   @ApiParam({ name: 'id', description: 'UUID инцидента' })
   @ApiResponse({
@@ -214,7 +214,7 @@ export class IncidentsController {
   }
 
   @Delete(':id')
-  @Roles('ADMIN', 'MANAGER', 'SUPER_ADMIN')
+  @Roles('ADMIN', 'MANAGER', 'Owner')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Удалить инцидент (soft delete)' })
   @ApiParam({ name: 'id', description: 'UUID инцидента' })

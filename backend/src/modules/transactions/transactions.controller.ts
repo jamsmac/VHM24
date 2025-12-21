@@ -47,7 +47,7 @@ export class TransactionsController {
   constructor(private readonly transactionsService: TransactionsService) {}
 
   @Post()
-  @Roles('ADMIN', 'MANAGER', 'SUPER_ADMIN')
+  @Roles('ADMIN', 'MANAGER', 'Owner')
   @ApiOperation({ summary: 'Создать транзакцию' })
   @ApiResponse({
     status: 201,
@@ -59,7 +59,7 @@ export class TransactionsController {
   }
 
   @Post('sale')
-  @Roles('ADMIN', 'MANAGER', 'SUPER_ADMIN')
+  @Roles('ADMIN', 'MANAGER', 'Owner')
   @ApiOperation({ summary: 'Зарегистрировать продажу' })
   @ApiResponse({
     status: 201,
@@ -71,7 +71,7 @@ export class TransactionsController {
   }
 
   @Post('collection')
-  @Roles('ADMIN', 'MANAGER', 'SUPER_ADMIN')
+  @Roles('ADMIN', 'MANAGER', 'Owner')
   @ApiOperation({ summary: 'Зарегистрировать инкассацию' })
   @ApiResponse({
     status: 201,
@@ -83,7 +83,7 @@ export class TransactionsController {
   }
 
   @Post('expense')
-  @Roles('ADMIN', 'MANAGER', 'SUPER_ADMIN')
+  @Roles('ADMIN', 'MANAGER', 'Owner')
   @ApiOperation({ summary: 'Зарегистрировать расход' })
   @ApiResponse({
     status: 201,
@@ -240,7 +240,7 @@ export class TransactionsController {
   }
 
   @Delete(':id')
-  @Roles('ADMIN', 'MANAGER', 'SUPER_ADMIN')
+  @Roles('ADMIN', 'MANAGER', 'Owner')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Удалить транзакцию (soft delete)' })
   @ApiParam({ name: 'id', description: 'UUID транзакции' })

@@ -3,7 +3,7 @@ import { BaseEntity } from '@/common/entities/base.entity';
 import { Role } from '@modules/rbac/entities/role.entity';
 
 export enum UserRole {
-  SUPER_ADMIN = 'SuperAdmin',
+  OWNER = 'Owner',
   ADMIN = 'Admin',
   MANAGER = 'Manager',
   OPERATOR = 'Operator',

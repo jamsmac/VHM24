@@ -23,19 +23,19 @@ export class AttendanceController {
   constructor(private readonly attendanceService: AttendanceService) {}
 
   @Post('check-in')
-  @Roles('ADMIN', 'MANAGER', 'SUPER_ADMIN')
+  @Roles('ADMIN', 'MANAGER', 'Owner')
   async checkIn(@Body() dto: CheckInDto) {
     return this.attendanceService.checkIn(dto);
   }
 
   @Post('check-out')
-  @Roles('ADMIN', 'MANAGER', 'SUPER_ADMIN')
+  @Roles('ADMIN', 'MANAGER', 'Owner')
   async checkOut(@Body() dto: CheckOutDto) {
     return this.attendanceService.checkOut(dto.employee_id, dto.date);
   }
 
   @Post('mark-absent')
-  @Roles('ADMIN', 'MANAGER', 'SUPER_ADMIN')
+  @Roles('ADMIN', 'MANAGER', 'Owner')
   async markAbsent(@Body() dto: MarkAbsentDto) {
     return this.attendanceService.markAbsent(dto.employee_id, dto.date, dto.notes);
   }

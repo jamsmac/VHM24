@@ -25,25 +25,25 @@ export class LeaveRequestController {
   constructor(private readonly leaveService: LeaveRequestService) {}
 
   @Post()
-  @Roles('ADMIN', 'MANAGER', 'SUPER_ADMIN')
+  @Roles('ADMIN', 'MANAGER', 'Owner')
   async create(@Body() dto: CreateLeaveRequestDto) {
     return this.leaveService.createLeaveRequest(dto);
   }
 
   @Put(':id/approve')
-  @Roles('ADMIN', 'MANAGER', 'SUPER_ADMIN')
+  @Roles('ADMIN', 'MANAGER', 'Owner')
   async approve(@Param('id', ParseUUIDPipe) id: string, @Body() dto: ApproveLeaveDto) {
     return this.leaveService.approveLeave(id, dto.approved_by_id);
   }
 
   @Put(':id/reject')
-  @Roles('ADMIN', 'MANAGER', 'SUPER_ADMIN')
+  @Roles('ADMIN', 'MANAGER', 'Owner')
   async reject(@Param('id', ParseUUIDPipe) id: string, @Body() dto: RejectLeaveDto) {
     return this.leaveService.rejectLeave(id, dto.approved_by_id, dto.rejection_reason);
   }
 
   @Delete(':id')
-  @Roles('ADMIN', 'MANAGER', 'SUPER_ADMIN')
+  @Roles('ADMIN', 'MANAGER', 'Owner')
   async cancel(@Param('id', ParseUUIDPipe) id: string) {
     return this.leaveService.cancelLeave(id);
   }
