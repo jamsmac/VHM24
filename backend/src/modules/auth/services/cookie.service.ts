@@ -29,7 +29,12 @@ export class CookieService {
     // Use 'none' for cross-origin (different domains), 'strict' for same-origin
     // Set COOKIE_SAME_SITE=none in Railway for cross-origin cookie support
     // Use process.env directly as fallback for Railway compatibility
-    const sameSiteEnv = process.env.COOKIE_SAME_SITE || this.configService.get<string>('COOKIE_SAME_SITE') || 'strict';
+    const fromProcessEnv = process.env.COOKIE_SAME_SITE;
+    const fromConfigService = this.configService.get<string>('COOKIE_SAME_SITE');
+    console.log('[CookieService] COOKIE_SAME_SITE from process.env:', fromProcessEnv);
+    console.log('[CookieService] COOKIE_SAME_SITE from ConfigService:', fromConfigService);
+    const sameSiteEnv = fromProcessEnv || fromConfigService || 'strict';
+    console.log('[CookieService] Using sameSitePolicy:', sameSiteEnv);
     this.sameSitePolicy = sameSiteEnv as 'strict' | 'lax' | 'none';
   }
 
