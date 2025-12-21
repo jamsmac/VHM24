@@ -17,6 +17,7 @@ import { Response, CookieOptions } from 'express';
 export class CookieService {
   private readonly isProduction: boolean;
   private readonly cookieDomain: string | undefined;
+  private readonly sameSitePolicy: 'strict' | 'lax' | 'none';
 
   // Cookie names
   readonly ACCESS_TOKEN_COOKIE = 'access_token';
@@ -25,6 +26,9 @@ export class CookieService {
   constructor(private readonly configService: ConfigService) {
     this.isProduction = this.configService.get<string>('NODE_ENV') === 'production';
     this.cookieDomain = this.configService.get<string>('COOKIE_DOMAIN');
+    // Use 'none' for cross-origin (different domains), 'strict' for same-origin
+    // Set COOKIE_SAME_SITE=none in Railway for cross-origin cookie support
+    this.sameSitePolicy = this.configService.get<'strict' | 'lax' | 'none'>('COOKIE_SAME_SITE', 'strict');
   }
 
   /**
@@ -33,8 +37,9 @@ export class CookieService {
   private getBaseCookieOptions(): CookieOptions {
     return {
       httpOnly: true,
-      secure: this.isProduction,
-      sameSite: 'strict',
+      // secure must be true when sameSite is 'none'
+      secure: this.isProduction || this.sameSitePolicy === 'none',
+      sameSite: this.sameSitePolicy,
       path: '/',
       domain: this.cookieDomain,
     };
