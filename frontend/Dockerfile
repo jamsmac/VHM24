@@ -1,22 +1,22 @@
 # ============================================================================
 # VendHub Manager Frontend - Production Dockerfile
 # ============================================================================
-# Build context: frontend/ directory
+# Build context: repository root (Railway uses full repo)
 
 FROM node:20-alpine AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-# Copy package files
-COPY package.json package-lock.json* ./
+# Copy frontend package files (from repo root context)
+COPY frontend/package.json frontend/package-lock.json* ./
 RUN npm install
 
 FROM node:20-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 
-# Copy source
-COPY . .
+# Copy frontend source
+COPY frontend/ .
 
 # Optional build-time args to override .env.production if provided
 ARG NEXT_PUBLIC_API_URL
@@ -54,11 +54,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 USER nextjs
 
 EXPOSE 3000
-# PORT is set by Railway at runtime, HOSTNAME must be 0.0.0.0 for Railway proxy
 ENV HOSTNAME=0.0.0.0
 
-# Railway has its own health check mechanism via railway.toml healthcheckPath
-
-# Use dumb-init to properly handle signals
 ENTRYPOINT ["dumb-init", "--"]
 CMD ["node", "server.js"]
