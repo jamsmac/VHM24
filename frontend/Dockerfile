@@ -1,22 +1,22 @@
 # ============================================================================
 # VendHub Manager Frontend - Production Dockerfile
 # ============================================================================
-# Build context: repository root (Railway monorepo)
+# Build context: frontend directory
 
 FROM node:20-alpine AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-# Copy only frontend package files
-COPY frontend/package.json frontend/package-lock.json* ./
+# Copy package files from frontend directory (build context)
+COPY package.json package-lock.json* ./
 RUN npm install
 
 FROM node:20-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 
-# Copy only frontend source
-COPY frontend/ .
+# Copy frontend source
+COPY . .
 
 # Optional build-time args to override .env.production if provided
 ARG NEXT_PUBLIC_API_URL
