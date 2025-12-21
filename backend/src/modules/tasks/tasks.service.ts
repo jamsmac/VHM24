@@ -52,7 +52,9 @@ export class TasksService {
     private readonly taskCommentRepository: Repository<TaskComment>,
     @InjectRepository(TaskComponent)
     private readonly taskComponentRepository: Repository<TaskComponent>,
+    @Inject(forwardRef(() => InventoryService))
     private readonly inventoryService: InventoryService,
+    @Inject(forwardRef(() => NotificationsService))
     private readonly notificationsService: NotificationsService,
     @Inject(forwardRef(() => TaskCompletionService))
     private readonly taskCompletionService: TaskCompletionService,

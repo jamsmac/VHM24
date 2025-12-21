@@ -27,7 +27,7 @@ import { EquipmentModule } from '../equipment/equipment.module';
     FilesModule,
     forwardRef(() => MachinesModule),
     forwardRef(() => InventoryModule),
-    NotificationsModule,
+    forwardRef(() => NotificationsModule),
     forwardRef(() => TransactionsModule),
     IncidentsModule,
     SecurityModule,
