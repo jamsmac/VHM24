@@ -1,6 +1,7 @@
 [build]
-builder = "NIXPACKS"
-watchPatterns = ["**"]
+builder = "DOCKERFILE"
+dockerfilePath = "frontend/Dockerfile"
+watchPatterns = ["frontend/**"]
 
 [deploy]
 healthcheckPath = "/"
