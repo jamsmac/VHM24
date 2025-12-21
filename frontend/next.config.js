@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // output: 'standalone', // Disabled for Railway - using default Next.js server
+  output: 'standalone', // Required for optimized Railway deployment
   reactStrictMode: true,
   // Set turbopack root to fix Cyrillic path issues
   turbopack: {

@@ -1,3 +1,14 @@
-# Nixpacks configuration for Next.js
+# Nixpacks configuration for Next.js standalone
+[phases.setup]
+nixPkgs = ["nodejs_20"]
+
+[phases.build]
+cmds = [
+  "npm ci",
+  "npm run build",
+  "cp -r .next/static .next/standalone/.next/static",
+  "cp -r public .next/standalone/public"
+]
+
 [start]
-cmd = "npm start"
+cmd = "node .next/standalone/server.js"
