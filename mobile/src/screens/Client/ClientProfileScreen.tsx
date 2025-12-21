@@ -54,7 +54,7 @@ export default function ClientProfileScreen() {
             Авторизуйтесь через Telegram, чтобы накапливать баллы и видеть историю заказов
           </Text>
           <TouchableOpacity style={styles.loginButton}>
-            <Ionicons name="logo-telegram" size={24} color="#fff" />
+            <Ionicons name={"logo-telegram" as any} size={24} color="#fff" />
             <Text style={styles.loginButtonText}>Войти через Telegram</Text>
           </TouchableOpacity>
         </View>
