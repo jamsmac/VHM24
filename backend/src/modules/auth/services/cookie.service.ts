@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Response, CookieOptions } from 'express';
 
@@ -15,6 +15,7 @@ import { Response, CookieOptions } from 'express';
  */
 @Injectable()
 export class CookieService {
+  private readonly logger = new Logger(CookieService.name);
   private readonly isProduction: boolean;
   private readonly cookieDomain: string | undefined;
   private readonly sameSitePolicy: 'strict' | 'lax' | 'none';
@@ -26,31 +27,45 @@ export class CookieService {
   constructor(private readonly configService: ConfigService) {
     this.isProduction = this.configService.get<string>('NODE_ENV') === 'production';
     this.cookieDomain = this.configService.get<string>('COOKIE_DOMAIN');
-    // Use 'none' for cross-origin (different domains), 'strict' for same-origin
-    // Set COOKIE_SAME_SITE=none in Railway for cross-origin cookie support
-    // CRITICAL: Read directly from process.env first, as ConfigService may apply default 'strict'
+
+    // CRITICAL: Read directly from process.env first, as ConfigService may transform values
     const fromProcessEnv = process.env.COOKIE_SAME_SITE;
     const fromConfigService = this.configService.get<string>('COOKIE_SAME_SITE');
-    
-    // Debug logging - show all sources
-    console.log('[CookieService] ===== COOKIE_SAME_SITE DEBUG =====');
-    console.log('[CookieService] process.env.COOKIE_SAME_SITE:', fromProcessEnv, `(type: ${typeof fromProcessEnv})`);
-    console.log('[CookieService] configService.get("COOKIE_SAME_SITE"):', fromConfigService, `(type: ${typeof fromConfigService})`);
-    console.log('[CookieService] All process.env keys containing COOKIE:', 
-      Object.keys(process.env).filter(k => k.includes('COOKIE')).join(', '));
-    
+
+    // Enhanced debug logging using Logger (appears in Railway logs)
+    this.logger.warn('========== COOKIE_SAME_SITE CONFIGURATION ==========');
+    this.logger.warn(`process.env.COOKIE_SAME_SITE: "${fromProcessEnv ?? 'undefined'}" (${typeof fromProcessEnv})`);
+    this.logger.warn(`configService.get(): "${fromConfigService ?? 'undefined'}" (${typeof fromConfigService})`);
+    this.logger.warn(`NODE_ENV: "${process.env.NODE_ENV}"`);
+    this.logger.warn(`COOKIE_DOMAIN: "${this.cookieDomain ?? 'undefined'}"`);
+
+    // Show all COOKIE-related env vars for debugging
+    const cookieVars = Object.keys(process.env)
+      .filter(k => k.toUpperCase().includes('COOKIE'))
+      .map(k => `${k}=${process.env[k]}`)
+      .join(', ');
+    this.logger.warn(`All COOKIE env vars: ${cookieVars || 'none found'}`);
+
     // Priority: process.env > ConfigService > default
-    // process.env is most reliable for Railway environment variables
     const sameSiteEnv = fromProcessEnv || fromConfigService || 'strict';
-    console.log('[CookieService] Final sameSitePolicy value:', sameSiteEnv);
-    console.log('[CookieService] ====================================');
-    
+    const source = fromProcessEnv ? 'process.env' : fromConfigService ? 'ConfigService' : 'default';
+
+    this.logger.warn(`SELECTED VALUE: "${sameSiteEnv}" (from: ${source})`);
+    this.logger.warn('====================================================');
+
     this.sameSitePolicy = sameSiteEnv.toLowerCase().trim() as 'strict' | 'lax' | 'none';
-    
+
     // Validate the value
     if (!['strict', 'lax', 'none'].includes(this.sameSitePolicy)) {
-      console.warn(`[CookieService] WARNING: Invalid COOKIE_SAME_SITE value "${sameSiteEnv}", defaulting to 'strict'`);
+      this.logger.error(`Invalid COOKIE_SAME_SITE value "${sameSiteEnv}", defaulting to 'strict'`);
       this.sameSitePolicy = 'strict';
+    }
+
+    // Final confirmation
+    if (this.sameSitePolicy === 'none') {
+      this.logger.warn('Cross-origin cookies ENABLED (sameSite=none, secure=true)');
+    } else {
+      this.logger.warn(`Using sameSite=${this.sameSitePolicy} (same-origin mode)`);
     }
   }
 

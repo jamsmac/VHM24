@@ -183,9 +183,11 @@ class EnvironmentVariables {
   CORS_ORIGINS?: string;
 
   // Cookie configuration (for cross-origin authentication)
+  // NOTE: Default is intentionally NOT set here to allow CookieService to read from process.env directly
+  // If default is set, plainToInstance() may override the env variable value
   @IsIn(['strict', 'lax', 'none'])
   @IsOptional()
-  COOKIE_SAME_SITE?: string = 'strict';
+  COOKIE_SAME_SITE?: string;
 
   @IsString()
   @IsOptional()
