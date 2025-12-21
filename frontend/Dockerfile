@@ -57,10 +57,7 @@ EXPOSE 3000
 # PORT is set by Railway at runtime, HOSTNAME must be 0.0.0.0 for Railway proxy
 ENV HOSTNAME=0.0.0.0
 
-# Health check for container orchestration
-# Note: Railway has its own health check mechanism, but this provides local container health
-HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:${PORT:-3000}/ || exit 1
+# Railway has its own health check mechanism via railway.toml healthcheckPath
 
 # Use dumb-init to properly handle signals
 ENTRYPOINT ["dumb-init", "--"]
