@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { BullModule } from '@nestjs/bull';
 import { RedisCacheModule } from '@/common/cache/redis-cache.module';
@@ -52,13 +52,13 @@ import { CatalogHandler } from './handlers/catalog.handler';
       name: 'telegram-messages',
     }),
     RedisCacheModule,
-    TasksModule,
+    forwardRef(() => TasksModule),
     FilesModule,
     UsersModule,
-    MachinesModule,
-    IncidentsModule,
-    TransactionsModule,
-    InventoryModule,
+    forwardRef(() => MachinesModule),
+    forwardRef(() => IncidentsModule),
+    forwardRef(() => TransactionsModule),
+    forwardRef(() => InventoryModule),
     AccessRequestsModule,
     RequestsModule,
   ],
