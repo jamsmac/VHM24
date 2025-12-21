@@ -40,15 +40,36 @@ export class CookieService {
     this.logger.warn(`COOKIE_DOMAIN: "${this.cookieDomain ?? 'undefined'}"`);
 
     // Show all COOKIE-related env vars for debugging
-    const cookieVars = Object.keys(process.env)
-      .filter(k => k.toUpperCase().includes('COOKIE'))
-      .map(k => `${k}=${process.env[k]}`)
-      .join(', ');
-    this.logger.warn(`All COOKIE env vars: ${cookieVars || 'none found'}`);
+    const cookieKeys = Object.keys(process.env).filter(k => k.toUpperCase().includes('COOKIE'));
+    this.logger.warn(`All COOKIE env vars: ${cookieKeys.map(k => `${k}=${process.env[k]}`).join(', ') || 'none found'}`);
 
-    // Priority: process.env > ConfigService > default
-    const sameSiteEnv = fromProcessEnv || fromConfigService || 'strict';
-    const source = fromProcessEnv ? 'process.env' : fromConfigService ? 'ConfigService' : 'default';
+    // Check for hidden characters in key names
+    cookieKeys.forEach(k => {
+      if (k.includes('SAME_SITE') || k.includes('SAMESITE')) {
+        const charCodes = [...k].map(c => c.charCodeAt(0));
+        this.logger.warn(`Key "${k}" charCodes: [${charCodes.join(', ')}]`);
+        this.logger.warn(`Key length: ${k.length}, expected: ${('COOKIE_SAME_SITE').length}`);
+        this.logger.warn(`Key === 'COOKIE_SAME_SITE': ${k === 'COOKIE_SAME_SITE'}`);
+        this.logger.warn(`Key.trim() === 'COOKIE_SAME_SITE': ${k.trim() === 'COOKIE_SAME_SITE'}`);
+      }
+    });
+
+    // Try to find the key flexibly (handles spaces/case issues)
+    const sameSiteKey = cookieKeys.find(k => k.trim().toUpperCase() === 'COOKIE_SAME_SITE');
+    const fromFlexibleLookup = sameSiteKey ? process.env[sameSiteKey] : undefined;
+    if (fromFlexibleLookup) {
+      this.logger.warn(`Found via flexible lookup: "${fromFlexibleLookup}" (key: "${sameSiteKey}")`);
+    }
+
+    // Priority: process.env direct > flexible lookup > ConfigService > default
+    const sameSiteEnv = fromProcessEnv || fromFlexibleLookup || fromConfigService || 'strict';
+    const source = fromProcessEnv
+      ? 'process.env'
+      : fromFlexibleLookup
+        ? `flexible lookup (key: "${sameSiteKey}")`
+        : fromConfigService
+          ? 'ConfigService'
+          : 'default';
 
     this.logger.warn(`SELECTED VALUE: "${sameSiteEnv}" (from: ${source})`);
     this.logger.warn('====================================================');
