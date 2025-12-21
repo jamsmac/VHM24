@@ -9,29 +9,21 @@
 FROM node:20-alpine AS build
 
 # Cache buster - change this value to force rebuild
-ARG CACHEBUST=2024122201
+ARG CACHEBUST=2024122202
 
 WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
 
-# Force fresh install (cache buster: ${CACHEBUST})
-RUN echo "Cache bust: ${CACHEBUST}" && \
-    npm cache clean --force && \
-    rm -rf node_modules && \
-    npm install --legacy-peer-deps && \
-    echo "=== Checking node_modules/.bin ===" && \
-    ls -la node_modules/.bin/ | head -20 && \
-    echo "=== Checking @nestjs/cli ===" && \
-    ls -la node_modules/@nestjs/cli/bin/ 2>/dev/null || echo "CLI bin not found"
+# Install dependencies
+RUN npm cache clean --force && npm install --legacy-peer-deps
 
 # Copy source code
 COPY . .
 
-# Build the application
-RUN ls -la node_modules/.bin/nest 2>/dev/null || echo "nest not in .bin" && \
-    ./node_modules/.bin/nest build || npx @nestjs/cli build
+# Build the application (use npx as fallback for symlink issues)
+RUN ./node_modules/.bin/nest build || npx @nestjs/cli build
 
 # Remove dev dependencies after build
 RUN npm prune --production --legacy-peer-deps
@@ -53,21 +45,17 @@ WORKDIR /app
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nestjs -u 1001
 
-# Copy package files
+# Copy package files and configs directly from context
 COPY --chown=nestjs:nodejs package*.json ./
-
-# Copy production dependencies
-COPY --chown=nestjs:nodejs --from=build /app/node_modules ./node_modules
-
-# Copy built application
-COPY --chown=nestjs:nodejs --from=build /app/dist ./dist
-
-# Copy startup script
-COPY --chown=nestjs:nodejs --from=build /app/startup.sh ./startup.sh
+COPY --chown=nestjs:nodejs startup.sh ./startup.sh
+COPY --chown=nestjs:nodejs typeorm-migrations-only.config.js ./typeorm-migrations-only.config.js
 RUN chmod +x ./startup.sh
 
-# Copy TypeORM config for migrations
-COPY --chown=nestjs:nodejs --from=build /app/typeorm-migrations-only.config.js ./typeorm-migrations-only.config.js
+# Copy production dependencies from build stage
+COPY --chown=nestjs:nodejs --from=build /app/node_modules ./node_modules
+
+# Copy built application from build stage
+COPY --chown=nestjs:nodejs --from=build /app/dist ./dist
 
 # Create necessary directories with proper permissions
 RUN mkdir -p /app/uploads /app/temp/voice && \
