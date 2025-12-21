@@ -116,13 +116,9 @@ export function MachineMap({ height = '500px', showLegend = true, onLocationClic
   useEffect(() => {
     if (typeof window === 'undefined' || !mapRef.current || mapInstanceRef.current) return
 
-    // Dynamically import Leaflet
+    // Dynamically import Leaflet (CSS is loaded globally in dashboard/layout.tsx)
     const initMap = async () => {
       const L = (await import('leaflet')).default
-
-      // Import Leaflet CSS
-      // @ts-ignore - CSS import
-      await import('leaflet/dist/leaflet.css')
 
       // Create map
       const map = L.map(mapRef.current!, {

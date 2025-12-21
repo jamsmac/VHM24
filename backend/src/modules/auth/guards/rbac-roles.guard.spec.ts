@@ -128,14 +128,14 @@ describe('RbacRolesGuard', () => {
       expect(result).toBe(false);
     });
 
-    it('should always allow SuperAdmin access regardless of required roles', async () => {
+    it('should always allow Owner access regardless of required roles', async () => {
       reflector.getAllAndOverride.mockReturnValue(['SpecificRole']);
-      const superAdminUser = {
-        id: 'admin-uuid',
-        roles: [{ name: 'SuperAdmin' }],
+      const ownerUser = {
+        id: 'owner-uuid',
+        roles: [{ name: 'Owner' }],
       };
-      usersService.findOneWithRoles.mockResolvedValue(superAdminUser as any);
-      const context = mockExecutionContext({ id: 'admin-uuid' });
+      usersService.findOneWithRoles.mockResolvedValue(ownerUser as any);
+      const context = mockExecutionContext({ id: 'owner-uuid' });
 
       const result = await guard.canActivate(context);
 

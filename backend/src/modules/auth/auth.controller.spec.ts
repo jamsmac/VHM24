@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Request, Response } from 'express';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { AuthController } from './auth.controller';
@@ -20,6 +21,7 @@ describe('AuthController', () => {
   let mockSecurityTwoFactorAuthService: jest.Mocked<SecurityTwoFactorAuthService>;
   let mockSessionService: jest.Mocked<SessionService>;
   let mockCookieService: jest.Mocked<CookieService>;
+  let mockConfigService: jest.Mocked<ConfigService>;
 
   const mockUser: Partial<User> = {
     id: 'user-123',
@@ -90,6 +92,10 @@ describe('AuthController', () => {
       clearAuthCookies: jest.fn(),
     } as any;
 
+    mockConfigService = {
+      get: jest.fn().mockReturnValue('test-value'),
+    } as any;
+
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AuthController],
       providers: [
@@ -98,6 +104,7 @@ describe('AuthController', () => {
         { provide: SecurityTwoFactorAuthService, useValue: mockSecurityTwoFactorAuthService },
         { provide: SessionService, useValue: mockSessionService },
         { provide: CookieService, useValue: mockCookieService },
+        { provide: ConfigService, useValue: mockConfigService },
       ],
     })
       .overrideGuard(ThrottlerGuard)
