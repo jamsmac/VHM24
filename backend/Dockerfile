@@ -4,47 +4,29 @@
 # Build context: backend/ directory
 
 # ----------------------------------------------------------------------------
-# Stage 1: Dependencies
+# Stage 1: Build
 # ----------------------------------------------------------------------------
-FROM node:20-alpine AS dependencies
+FROM node:20-alpine AS build
 
 WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
 
-# Install all dependencies (including dev dependencies for build)
-# Cache bust: 2024-12-22-v1
-RUN npm ci --legacy-peer-deps || npm install --legacy-peer-deps
-
-# ----------------------------------------------------------------------------
-# Stage 2: Build
-# ----------------------------------------------------------------------------
-FROM node:20-alpine AS build
-
-WORKDIR /app
-
-# Copy package files first for proper caching
-COPY package*.json ./
-
-# Copy dependencies from previous stage
-COPY --from=dependencies /app/node_modules ./node_modules
-
-# Verify nest CLI exists
-RUN ls -la node_modules/.bin/ | head -20 && \
-    test -f node_modules/.bin/nest || (echo "Nest CLI not found, reinstalling..." && npm install --legacy-peer-deps)
+# Install ALL dependencies (dev + prod) for building
+RUN npm install --legacy-peer-deps
 
 # Copy source code
 COPY . .
 
 # Build the application
-RUN npx nest build
+RUN ./node_modules/.bin/nest build
 
-# Remove dev dependencies
+# Remove dev dependencies after build
 RUN npm prune --production --legacy-peer-deps
 
 # ----------------------------------------------------------------------------
-# Stage 3: Production
+# Stage 2: Production
 # ----------------------------------------------------------------------------
 FROM node:20-alpine AS production
 
