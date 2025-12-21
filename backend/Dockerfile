@@ -14,7 +14,8 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install all dependencies (including dev dependencies for build)
-RUN npm install --legacy-peer-deps
+# Cache bust: 2024-12-22-v1
+RUN npm ci --legacy-peer-deps || npm install --legacy-peer-deps
 
 # ----------------------------------------------------------------------------
 # Stage 2: Build
