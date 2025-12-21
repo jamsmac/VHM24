@@ -24,14 +24,21 @@ FROM node:20-alpine AS build
 
 WORKDIR /app
 
+# Copy package files first for proper caching
+COPY package*.json ./
+
 # Copy dependencies from previous stage
 COPY --from=dependencies /app/node_modules ./node_modules
+
+# Verify nest CLI exists
+RUN ls -la node_modules/.bin/ | head -20 && \
+    test -f node_modules/.bin/nest || (echo "Nest CLI not found, reinstalling..." && npm install --legacy-peer-deps)
 
 # Copy source code
 COPY . .
 
-# Build the application using nest CLI directly
-RUN ./node_modules/.bin/nest build
+# Build the application
+RUN npx nest build
 
 # Remove dev dependencies
 RUN npm prune --production --legacy-peer-deps
