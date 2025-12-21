@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Task, TaskStatus, TaskPriority } from '../entities/task.entity';
@@ -27,7 +27,9 @@ export class TaskEscalationService {
   constructor(
     @InjectRepository(Task)
     private readonly taskRepository: Repository<Task>,
+    @Inject(forwardRef(() => IncidentsService))
     private readonly incidentsService: IncidentsService,
+    @Inject(forwardRef(() => NotificationsService))
     private readonly notificationsService: NotificationsService,
     private readonly auditLogService: AuditLogService,
   ) {}

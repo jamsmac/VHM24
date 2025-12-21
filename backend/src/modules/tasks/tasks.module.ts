@@ -29,7 +29,7 @@ import { EquipmentModule } from '../equipment/equipment.module';
     forwardRef(() => InventoryModule),
     forwardRef(() => NotificationsModule),
     forwardRef(() => TransactionsModule),
-    IncidentsModule,
+    forwardRef(() => IncidentsModule),
     SecurityModule,
     UsersModule,
     forwardRef(() => EquipmentModule),

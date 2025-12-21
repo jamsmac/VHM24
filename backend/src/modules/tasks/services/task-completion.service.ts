@@ -3,6 +3,8 @@ import {
   BadRequestException,
   ForbiddenException,
   Logger,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
@@ -56,10 +58,15 @@ export class TaskCompletionService {
     @InjectRepository(TaskComment)
     private readonly taskCommentRepository: Repository<TaskComment>,
     private readonly filesService: FilesService,
+    @Inject(forwardRef(() => MachinesService))
     private readonly machinesService: MachinesService,
+    @Inject(forwardRef(() => InventoryService))
     private readonly inventoryService: InventoryService,
+    @Inject(forwardRef(() => NotificationsService))
     private readonly notificationsService: NotificationsService,
+    @Inject(forwardRef(() => TransactionsService))
     private readonly transactionsService: TransactionsService,
+    @Inject(forwardRef(() => IncidentsService))
     private readonly incidentsService: IncidentsService,
     private readonly auditLogService: AuditLogService,
     private readonly usersService: UsersService,
