@@ -28,9 +28,9 @@
     "create-superadmin": "ts-node src/database/scripts/create-superadmin.ts"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.932.0",
-    "@aws-sdk/lib-storage": "^3.932.0",
-    "@aws-sdk/s3-request-presigner": "^3.936.0",
+    "@aws-sdk/client-s3": "^3.956.0",
+    "@aws-sdk/lib-storage": "^3.956.0",
+    "@aws-sdk/s3-request-presigner": "^3.956.0",
     "@bull-board/api": "^6.14.2",
     "@bull-board/express": "^6.14.2",
     "@bull-board/ui": "^6.14.2",
@@ -50,7 +50,7 @@
     "@nestjs/throttler": "^6.5.0",
     "@nestjs/typeorm": "^11.0.0",
     "@nestjs/websockets": "^11.1.9",
-    "@sentry/node": "^10.30.0",
+    "@sentry/node": "^10.32.1",
     "@types/speakeasy": "^2.0.10",
     "@willsoto/nestjs-prometheus": "^6.0.2",
     "ajv": "^8.17.1",
@@ -68,7 +68,7 @@
     "decimal.js": "^10.6.0",
     "exceljs": "^4.4.0",
     "helmet": "^8.1.0",
-    "i18next": "^25.6.3",
+    "i18next": "^25.7.3",
     "i18next-fs-backend": "^2.6.1",
     "ioredis": "^5.8.2",
     "jsqr": "^1.4.0",
@@ -77,7 +77,7 @@
     "multer": "^2.0.2",
     "nest-winston": "^1.10.2",
     "nodemailer": "^7.0.11",
-    "openai": "^6.10.0",
+    "openai": "^6.15.0",
     "otplib": "^12.0.1",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
@@ -102,7 +102,7 @@
     "xml2js": "^0.6.2"
   },
   "optionalDependencies": {
-    "puppeteer": "^24.31.0"
+    "puppeteer": "^24.34.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",
