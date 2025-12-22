@@ -36,7 +36,7 @@ export class LocationsController {
   constructor(private readonly locationsService: LocationsService) {}
 
   @Post()
-  @Roles('ADMIN', 'MANAGER', 'Owner')
+  @Roles('Admin', 'Manager', 'Owner')
   @ApiOperation({ summary: 'Создать новую локацию' })
   @ApiResponse({
     status: 201,
@@ -126,7 +126,7 @@ export class LocationsController {
   }
 
   @Patch(':id')
-  @Roles('ADMIN', 'MANAGER', 'Owner')
+  @Roles('Admin', 'Manager', 'Owner')
   @ApiOperation({ summary: 'Обновить локацию' })
   @ApiParam({ name: 'id', description: 'UUID локации' })
   @ApiResponse({
@@ -147,7 +147,7 @@ export class LocationsController {
   }
 
   @Delete(':id')
-  @Roles('ADMIN', 'MANAGER', 'Owner')
+  @Roles('Admin', 'Manager', 'Owner')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Удалить локацию (soft delete)' })
   @ApiParam({ name: 'id', description: 'UUID локации' })
