@@ -285,6 +285,7 @@ describe('SessionService', () => {
       expect(mockedBcrypt.hash).toHaveBeenCalledWith(newRefreshToken, 12);
       expect(mockSessionRepository.update).toHaveBeenCalledWith(mockSessionId, {
         refresh_token_hash: newHashedToken,
+        refresh_token_hint: expect.any(String), // HIGH-002: Added for O(1) session lookup
         last_used_at: expect.any(Date),
       });
     });
