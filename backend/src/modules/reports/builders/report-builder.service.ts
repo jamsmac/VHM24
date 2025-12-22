@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import {
   Report,
@@ -68,6 +68,117 @@ type ColumnType = 'string' | 'number' | 'date' | 'boolean' | 'currency';
 
 /** Raw query results container */
 type RawQueryResults = Record<string, Record<string, unknown>[]>;
+
+/**
+ * Whitelist of allowed entities (tables) for report queries.
+ * This prevents SQL injection by only allowing known safe table names.
+ */
+const ALLOWED_ENTITIES = new Set([
+  'transactions',
+  'tasks',
+  'machines',
+  'incidents',
+  'complaints',
+  'users',
+  'inventory_movements',
+  'locations',
+  'nomenclature',
+  'recipes',
+  'operator_inventory',
+  'machine_inventory',
+  'warehouse_inventory',
+  'audit_logs',
+  'equipment',
+  'components',
+]);
+
+/**
+ * Whitelist of allowed columns per entity for report queries.
+ * Columns not in this list will be rejected to prevent SQL injection.
+ */
+const ALLOWED_COLUMNS: Record<string, Set<string>> = {
+  transactions: new Set([
+    'id', 'created_at', 'updated_at', 'deleted_at', 'sale_date', 'amount',
+    'transaction_type', 'payment_method', 'machine_id', 'user_id', 'recipe_id',
+    'transaction_number', 'quantity', 'notes', 'counterparty_id', 'contract_id',
+  ]),
+  tasks: new Set([
+    'id', 'created_at', 'updated_at', 'deleted_at', 'completed_at', 'started_at',
+    'type', 'status', 'priority', 'machine_id', 'assigned_to_user_id', 'created_by_id',
+    'scheduled_date', 'due_date', 'notes', 'rejection_reason', 'actual_cash_amount',
+  ]),
+  machines: new Set([
+    'id', 'created_at', 'updated_at', 'deleted_at', 'machine_number', 'name',
+    'status', 'location_id', 'type_code', 'model', 'manufacturer', 'serial_number',
+    'installation_date', 'total_sales_count', 'total_revenue', 'current_cash_amount',
+  ]),
+  incidents: new Set([
+    'id', 'created_at', 'updated_at', 'deleted_at', 'resolved_at', 'incident_type',
+    'severity', 'status', 'machine_id', 'reported_by_id', 'assigned_to_id',
+    'description', 'resolution_notes',
+  ]),
+  complaints: new Set([
+    'id', 'created_at', 'updated_at', 'deleted_at', 'resolved_at', 'complaint_type',
+    'status', 'machine_id', 'customer_name', 'customer_phone', 'description',
+    'resolution_notes', 'refund_amount',
+  ]),
+  users: new Set([
+    'id', 'created_at', 'updated_at', 'deleted_at', 'username', 'email',
+    'first_name', 'last_name', 'role', 'status', 'last_login_at',
+  ]),
+  inventory_movements: new Set([
+    'id', 'created_at', 'updated_at', 'deleted_at', 'operation_date', 'movement_type',
+    'quantity', 'nomenclature_id', 'machine_id', 'operator_id', 'task_id', 'notes',
+  ]),
+  locations: new Set([
+    'id', 'created_at', 'updated_at', 'deleted_at', 'name', 'address',
+    'type_code', 'latitude', 'longitude', 'city', 'region',
+  ]),
+  nomenclature: new Set([
+    'id', 'created_at', 'updated_at', 'deleted_at', 'name', 'sku',
+    'category_code', 'unit', 'price', 'cost_price', 'is_active',
+  ]),
+  recipes: new Set([
+    'id', 'created_at', 'updated_at', 'deleted_at', 'name', 'type_code',
+    'price', 'cost_price', 'is_active', 'version',
+  ]),
+  operator_inventory: new Set([
+    'id', 'created_at', 'updated_at', 'deleted_at', 'operator_id',
+    'nomenclature_id', 'quantity', 'reserved_quantity',
+  ]),
+  machine_inventory: new Set([
+    'id', 'created_at', 'updated_at', 'deleted_at', 'machine_id',
+    'nomenclature_id', 'quantity', 'min_quantity', 'max_quantity',
+  ]),
+  warehouse_inventory: new Set([
+    'id', 'created_at', 'updated_at', 'deleted_at', 'warehouse_id',
+    'nomenclature_id', 'quantity', 'reserved_quantity', 'batch_number',
+  ]),
+  audit_logs: new Set([
+    'id', 'created_at', 'user_id', 'event_type', 'severity',
+    'ip_address', 'user_agent', 'entity_type', 'entity_id',
+  ]),
+  equipment: new Set([
+    'id', 'created_at', 'updated_at', 'deleted_at', 'name', 'type',
+    'serial_number', 'status', 'machine_id', 'purchase_date',
+  ]),
+  components: new Set([
+    'id', 'created_at', 'updated_at', 'deleted_at', 'name', 'type',
+    'serial_number', 'status', 'equipment_id', 'installation_date',
+  ]),
+};
+
+/**
+ * Allowed SQL aggregate functions for SELECT
+ */
+const ALLOWED_AGGREGATES = new Set([
+  'COUNT', 'SUM', 'AVG', 'MIN', 'MAX', 'COALESCE',
+]);
+
+/**
+ * Allowed ORDER BY directions
+ */
+const ALLOWED_ORDER_DIRECTIONS = new Set(['ASC', 'DESC', 'asc', 'desc']);
 
 /**
  * Report Builder Engine
@@ -566,13 +677,182 @@ export class ReportBuilderService {
   }
 
   /**
-   * Build SQL query from template
+   * Validate entity name against whitelist
+   * @throws Error if entity is not allowed
+   */
+  private validateEntity(entity: string): void {
+    if (!ALLOWED_ENTITIES.has(entity)) {
+      this.logger.error(`SQL Injection attempt blocked: invalid entity "${entity}"`);
+      throw new BadRequestException(`Invalid entity: ${entity}. Entity not in allowed list.`);
+    }
+  }
+
+  /**
+   * Validate and sanitize a column name for a specific entity
+   * Supports aggregate functions like COUNT(*), SUM(amount), etc.
+   * @returns sanitized column expression or throws error
+   */
+  private validateColumn(column: string, entity: string): string {
+    const trimmed = column.trim();
+    const allowedColumns = ALLOWED_COLUMNS[entity];
+
+    if (!allowedColumns) {
+      throw new BadRequestException(`No column whitelist defined for entity: ${entity}`);
+    }
+
+    // Handle SELECT * case
+    if (trimmed === '*') {
+      return '*';
+    }
+
+    // Handle aggregate functions: COUNT(*), SUM(column), AVG(column) as alias
+    const aggregateMatch = trimmed.match(
+      /^(COUNT|SUM|AVG|MIN|MAX|COALESCE)\s*\(\s*(\*|[a-z_][a-z0-9_]*)\s*\)(?:\s+as\s+([a-z_][a-z0-9_]*))?$/i,
+    );
+
+    if (aggregateMatch) {
+      const [, func, innerColumn, alias] = aggregateMatch;
+      const upperFunc = func.toUpperCase();
+
+      if (!ALLOWED_AGGREGATES.has(upperFunc)) {
+        throw new BadRequestException(`Invalid aggregate function: ${func}`);
+      }
+
+      // Validate inner column (unless it's *)
+      if (innerColumn !== '*' && !allowedColumns.has(innerColumn.toLowerCase())) {
+        this.logger.error(
+          `SQL Injection attempt blocked: invalid column "${innerColumn}" in aggregate for entity "${entity}"`,
+        );
+        throw new BadRequestException(`Invalid column in aggregate: ${innerColumn}`);
+      }
+
+      // Return sanitized aggregate expression
+      const sanitizedInner = innerColumn === '*' ? '*' : innerColumn.toLowerCase();
+      return alias
+        ? `${upperFunc}(${sanitizedInner}) as ${alias.toLowerCase()}`
+        : `${upperFunc}(${sanitizedInner})`;
+    }
+
+    // Handle DATE(column) function
+    const dateMatch = trimmed.match(/^DATE\s*\(\s*([a-z_][a-z0-9_]*)\s*\)(?:\s+as\s+([a-z_][a-z0-9_]*))?$/i);
+    if (dateMatch) {
+      const [, innerColumn, alias] = dateMatch;
+      if (!allowedColumns.has(innerColumn.toLowerCase())) {
+        throw new BadRequestException(`Invalid column in DATE function: ${innerColumn}`);
+      }
+      return alias
+        ? `DATE(${innerColumn.toLowerCase()}) as ${alias.toLowerCase()}`
+        : `DATE(${innerColumn.toLowerCase()})`;
+    }
+
+    // Handle EXTRACT function: EXTRACT(EPOCH FROM (col1 - col2))/3600
+    const extractMatch = trimmed.match(
+      /^EXTRACT\s*\(\s*EPOCH\s+FROM\s+\(\s*([a-z_][a-z0-9_]*)\s*-\s*([a-z_][a-z0-9_]*)\s*\)\s*\)\s*\/\s*(\d+)(?:\s+as\s+([a-z_][a-z0-9_]*))?$/i,
+    );
+    if (extractMatch) {
+      const [, col1, col2, divisor, alias] = extractMatch;
+      if (!allowedColumns.has(col1.toLowerCase()) || !allowedColumns.has(col2.toLowerCase())) {
+        throw new BadRequestException(`Invalid column in EXTRACT: ${col1} or ${col2}`);
+      }
+      const expr = `EXTRACT(EPOCH FROM (${col1.toLowerCase()} - ${col2.toLowerCase()}))/${divisor}`;
+      return alias ? `${expr} as ${alias.toLowerCase()}` : expr;
+    }
+
+    // Handle simple "column as alias" syntax
+    const aliasMatch = trimmed.match(/^([a-z_][a-z0-9_]*)\s+as\s+([a-z_][a-z0-9_]*)$/i);
+    if (aliasMatch) {
+      const [, col, alias] = aliasMatch;
+      if (!allowedColumns.has(col.toLowerCase())) {
+        this.logger.error(
+          `SQL Injection attempt blocked: invalid column "${col}" for entity "${entity}"`,
+        );
+        throw new BadRequestException(`Invalid column: ${col}`);
+      }
+      return `${col.toLowerCase()} as ${alias.toLowerCase()}`;
+    }
+
+    // Handle simple column name
+    const simpleMatch = trimmed.match(/^[a-z_][a-z0-9_]*$/i);
+    if (simpleMatch && allowedColumns.has(trimmed.toLowerCase())) {
+      return trimmed.toLowerCase();
+    }
+
+    this.logger.error(
+      `SQL Injection attempt blocked: invalid column expression "${column}" for entity "${entity}"`,
+    );
+    throw new BadRequestException(`Invalid column expression: ${column}`);
+  }
+
+  /**
+   * Validate ORDER BY clause
+   * @returns sanitized ORDER BY expression or throws error
+   */
+  private validateOrderBy(orderBy: string, entity: string): string {
+    const trimmed = orderBy.trim();
+    const allowedColumns = ALLOWED_COLUMNS[entity];
+
+    if (!allowedColumns) {
+      throw new BadRequestException(`No column whitelist defined for entity: ${entity}`);
+    }
+
+    // Parse "column [ASC|DESC]" format
+    const match = trimmed.match(/^([a-z_][a-z0-9_]*)(?:\s+(ASC|DESC))?$/i);
+    if (!match) {
+      this.logger.error(`SQL Injection attempt blocked: invalid ORDER BY "${orderBy}"`);
+      throw new BadRequestException(`Invalid ORDER BY format: ${orderBy}`);
+    }
+
+    const [, column, direction] = match;
+
+    if (!allowedColumns.has(column.toLowerCase())) {
+      this.logger.error(
+        `SQL Injection attempt blocked: invalid ORDER BY column "${column}" for entity "${entity}"`,
+      );
+      throw new BadRequestException(`Invalid ORDER BY column: ${column}`);
+    }
+
+    const sanitizedDirection = direction?.toUpperCase() || 'ASC';
+    if (!ALLOWED_ORDER_DIRECTIONS.has(sanitizedDirection)) {
+      throw new BadRequestException(`Invalid ORDER BY direction: ${direction}`);
+    }
+
+    return `${column.toLowerCase()} ${sanitizedDirection}`;
+  }
+
+  /**
+   * Validate LIMIT value
+   * @returns validated limit number or throws error
+   */
+  private validateLimit(limit: number): number {
+    if (!Number.isInteger(limit) || limit < 1 || limit > 10000) {
+      throw new BadRequestException(`Invalid LIMIT value: ${limit}. Must be integer between 1 and 10000.`);
+    }
+    return limit;
+  }
+
+  /**
+   * Build SQL query from template with full validation
+   * All inputs are validated against whitelists to prevent SQL injection
    */
   private buildQuery(
     query: QueryDefinition,
     params: ReportParams,
   ): { query: string; params: unknown[] } {
-    let sql = `SELECT ${query.select?.join(', ') || '*'} FROM ${query.entity}`;
+    // Validate entity
+    this.validateEntity(query.entity);
+
+    // Validate and build SELECT clause
+    let selectClause: string;
+    if (query.select && query.select.length > 0) {
+      const validatedColumns = query.select.map((col) =>
+        this.validateColumn(col, query.entity),
+      );
+      selectClause = validatedColumns.join(', ');
+    } else {
+      selectClause = '*';
+    }
+
+    let sql = `SELECT ${selectClause} FROM ${query.entity}`;
     const sqlParams: unknown[] = [];
     let paramIndex = 1;
 
@@ -597,19 +877,41 @@ export class ReportBuilderService {
       sql += ` WHERE ${conditions.join(' AND ')}`;
     }
 
-    // Add GROUP BY
+    // Add GROUP BY with validation
     if (query.groupBy && query.groupBy.length > 0) {
-      sql += ` GROUP BY ${query.groupBy.join(', ')}`;
+      const validatedGroupBy = query.groupBy.map((col) => {
+        // GroupBy can be simple column or DATE(column)
+        const dateMatch = col.match(/^DATE\s*\(\s*([a-z_][a-z0-9_]*)\s*\)$/i);
+        if (dateMatch) {
+          const allowedColumns = ALLOWED_COLUMNS[query.entity];
+          if (!allowedColumns?.has(dateMatch[1].toLowerCase())) {
+            throw new BadRequestException(`Invalid GROUP BY column: ${dateMatch[1]}`);
+          }
+          return `DATE(${dateMatch[1].toLowerCase()})`;
+        }
+
+        const allowedColumns = ALLOWED_COLUMNS[query.entity];
+        if (!allowedColumns?.has(col.toLowerCase())) {
+          this.logger.error(
+            `SQL Injection attempt blocked: invalid GROUP BY column "${col}" for entity "${query.entity}"`,
+          );
+          throw new BadRequestException(`Invalid GROUP BY column: ${col}`);
+        }
+        return col.toLowerCase();
+      });
+      sql += ` GROUP BY ${validatedGroupBy.join(', ')}`;
     }
 
-    // Add ORDER BY
+    // Add ORDER BY with validation
     if (query.orderBy) {
-      sql += ` ORDER BY ${query.orderBy}`;
+      const validatedOrderBy = this.validateOrderBy(query.orderBy, query.entity);
+      sql += ` ORDER BY ${validatedOrderBy}`;
     }
 
-    // Add LIMIT
+    // Add LIMIT with validation
     if (query.limit) {
-      sql += ` LIMIT ${query.limit}`;
+      const validatedLimit = this.validateLimit(query.limit);
+      sql += ` LIMIT ${validatedLimit}`;
     }
 
     return { query: sql, params: sqlParams };

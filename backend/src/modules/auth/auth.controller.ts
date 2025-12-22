@@ -11,7 +11,6 @@ import {
   BadRequestException,
   Param,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { Request, Response } from 'express';
 import { AuthService, AuthResponse, AuthTokens } from './auth.service';
@@ -46,7 +45,6 @@ export class AuthController {
     private readonly securityTwoFactorAuthService: SecurityTwoFactorAuthService,
     private readonly sessionService: SessionService,
     private readonly cookieService: CookieService,
-    private readonly configService: ConfigService,
   ) {}
 
   @Post('login')
@@ -187,125 +185,6 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Не авторизован' })
   getProfile(@CurrentUser() user: User): User {
     return user;
-  }
-
-  @Get('debug/cookie-config')
-  @ApiOperation({ summary: 'Debug: Get cookie configuration (temporary)' })
-  @ApiResponse({ status: 200, description: 'Cookie configuration' })
-  getDebugCookieConfig(): Record<string, unknown> {
-    const fromProcessEnv = process.env.COOKIE_SAME_SITE;
-    const fromConfigService = this.configService.get<string>('COOKIE_SAME_SITE');
-
-    // Get all env vars containing COOKIE (case-insensitive)
-    const allCookieEnvVars = Object.keys(process.env)
-      .filter(k => k.toUpperCase().includes('COOKIE'))
-      .reduce((acc, k) => ({ ...acc, [k]: process.env[k] }), {});
-
-    // Determine the effective value and source
-    const effectiveValue = fromProcessEnv || fromConfigService || 'strict';
-    const source = fromProcessEnv ? 'process.env' : fromConfigService ? 'ConfigService' : 'default';
-
-    // Get actual cookie options being used
-    const accessTokenOptions = this.cookieService.getAccessTokenCookieOptions();
-    const refreshTokenOptions = this.cookieService.getRefreshTokenCookieOptions();
-
-    return {
-      timestamp: new Date().toISOString(),
-      environment: {
-        NODE_ENV: process.env.NODE_ENV,
-        isProduction: process.env.NODE_ENV === 'production',
-        RAILWAY_ENVIRONMENT: process.env.RAILWAY_ENVIRONMENT || 'not set',
-      },
-      cookieSameSite: {
-        processEnv: {
-          value: fromProcessEnv ?? null,
-          type: typeof fromProcessEnv,
-          length: fromProcessEnv?.length ?? 0,
-          charCodes: fromProcessEnv ? [...fromProcessEnv].map(c => c.charCodeAt(0)) : [],
-        },
-        configService: {
-          value: fromConfigService ?? null,
-          type: typeof fromConfigService,
-        },
-        effective: {
-          value: effectiveValue,
-          source: source,
-          normalized: effectiveValue.toLowerCase().trim(),
-        },
-      },
-      allCookieEnvironmentVariables: allCookieEnvVars,
-      actualCookieOptions: {
-        accessToken: {
-          sameSite: accessTokenOptions.sameSite,
-          secure: accessTokenOptions.secure,
-          httpOnly: accessTokenOptions.httpOnly,
-          path: accessTokenOptions.path,
-          domain: accessTokenOptions.domain,
-        },
-        refreshToken: {
-          sameSite: refreshTokenOptions.sameSite,
-          secure: refreshTokenOptions.secure,
-          httpOnly: refreshTokenOptions.httpOnly,
-          path: refreshTokenOptions.path,
-          domain: refreshTokenOptions.domain,
-        },
-      },
-      diagnosis: this.getDiagnosis(fromProcessEnv, fromConfigService, accessTokenOptions.sameSite as string),
-    };
-  }
-
-  private getDiagnosis(
-    fromProcessEnv: string | undefined,
-    fromConfigService: string | undefined,
-    actualSameSite: string,
-  ): { status: string; message: string; suggestions: string[] } {
-    const suggestions: string[] = [];
-
-    if (!fromProcessEnv && !fromConfigService) {
-      return {
-        status: '❌ NOT_SET',
-        message: 'COOKIE_SAME_SITE is not set anywhere. Using default "strict".',
-        suggestions: [
-          'Set COOKIE_SAME_SITE=none in Railway variables',
-          'Redeploy the service after setting the variable',
-          'Verify the variable is set in the correct service (backend)',
-        ],
-      };
-    }
-
-    if (fromProcessEnv && fromProcessEnv.toLowerCase().trim() === 'none' && actualSameSite === 'none') {
-      return {
-        status: '✅ CONFIGURED_CORRECTLY',
-        message: 'Cross-origin cookies are enabled correctly.',
-        suggestions: [],
-      };
-    }
-
-    if (fromProcessEnv && fromProcessEnv !== fromProcessEnv.toLowerCase().trim()) {
-      suggestions.push(`Variable has unexpected format: "${fromProcessEnv}". Should be lowercase without spaces.`);
-    }
-
-    if (fromConfigService && !fromProcessEnv) {
-      suggestions.push('Variable is in ConfigService but not in process.env. This might indicate a loading order issue.');
-    }
-
-    if (actualSameSite === 'strict' && (fromProcessEnv === 'none' || fromConfigService === 'none')) {
-      return {
-        status: '⚠️ MISMATCH',
-        message: 'Variable is set to "none" but cookies are using "strict".',
-        suggestions: [
-          'Restart the service to reload environment variables',
-          'Check for spaces or special characters in the variable value',
-          ...suggestions,
-        ],
-      };
-    }
-
-    return {
-      status: 'ℹ️ CHECK_NEEDED',
-      message: `Current sameSite: "${actualSameSite}". Review the configuration.`,
-      suggestions,
-    };
   }
 
   // ============================================================================
