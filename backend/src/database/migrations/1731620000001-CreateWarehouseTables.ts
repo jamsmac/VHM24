@@ -2,45 +2,63 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
 
 export class CreateWarehouseTables1731620000001 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
-    // Create warehouse_type enum
+    // Create warehouse_type enum (idempotent)
     await queryRunner.query(`
-      CREATE TYPE warehouse_type AS ENUM ('main', 'regional', 'transit', 'virtual');
+      DO $$ BEGIN
+        CREATE TYPE warehouse_type AS ENUM ('main', 'regional', 'transit', 'virtual');
+      EXCEPTION WHEN duplicate_object THEN null;
+      END $$;
     `);
 
-    // Create zone_type enum
+    // Create zone_type enum (idempotent)
     await queryRunner.query(`
-      CREATE TYPE zone_type AS ENUM (
-        'receiving', 'storage', 'picking', 'packing', 'shipping', 'quarantine', 'returns'
-      );
+      DO $$ BEGIN
+        CREATE TYPE zone_type AS ENUM (
+          'receiving', 'storage', 'picking', 'packing', 'shipping', 'quarantine', 'returns'
+        );
+      EXCEPTION WHEN duplicate_object THEN null;
+      END $$;
     `);
 
-    // Create movement_type enum
+    // Create movement_type enum (idempotent)
     await queryRunner.query(`
-      CREATE TYPE movement_type AS ENUM (
-        'receipt', 'shipment', 'transfer', 'adjustment', 'return', 'write_off', 'production', 'assembly'
-      );
+      DO $$ BEGIN
+        CREATE TYPE movement_type AS ENUM (
+          'receipt', 'shipment', 'transfer', 'adjustment', 'return', 'write_off', 'production', 'assembly'
+        );
+      EXCEPTION WHEN duplicate_object THEN null;
+      END $$;
     `);
 
-    // Create movement_status enum
+    // Create movement_status enum (idempotent)
     await queryRunner.query(`
-      CREATE TYPE movement_status AS ENUM ('pending', 'completed', 'cancelled');
+      DO $$ BEGIN
+        CREATE TYPE movement_status AS ENUM ('pending', 'completed', 'cancelled');
+      EXCEPTION WHEN duplicate_object THEN null;
+      END $$;
     `);
 
-    // Create reservation_status enum
+    // Create reservation_status enum (idempotent)
     await queryRunner.query(`
-      CREATE TYPE reservation_status AS ENUM (
-        'pending', 'confirmed', 'partially_fulfilled', 'fulfilled', 'cancelled', 'expired'
-      );
+      DO $$ BEGIN
+        CREATE TYPE reservation_status AS ENUM (
+          'pending', 'confirmed', 'partially_fulfilled', 'fulfilled', 'cancelled', 'expired'
+        );
+      EXCEPTION WHEN duplicate_object THEN null;
+      END $$;
     `);
 
-    // Create stock_take_status enum
+    // Create stock_take_status enum (idempotent)
     await queryRunner.query(`
-      CREATE TYPE stock_take_status AS ENUM ('planned', 'in_progress', 'completed', 'cancelled');
+      DO $$ BEGIN
+        CREATE TYPE stock_take_status AS ENUM ('planned', 'in_progress', 'completed', 'cancelled');
+      EXCEPTION WHEN duplicate_object THEN null;
+      END $$;
     `);
 
-    // Create warehouses table
+    // Create warehouses table (idempotent)
     await queryRunner.query(`
-      CREATE TABLE warehouses (
+      CREATE TABLE IF NOT EXISTS warehouses (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         name VARCHAR(200) NOT NULL,
         code VARCHAR(50) UNIQUE NOT NULL,
@@ -60,16 +78,16 @@ export class CreateWarehouseTables1731620000001 implements MigrationInterface {
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_warehouses_location ON warehouses(location_id);
+      CREATE INDEX IF NOT EXISTS idx_warehouses_location ON warehouses(location_id);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_warehouses_active ON warehouses(is_active) WHERE deleted_at IS NULL;
+      CREATE INDEX IF NOT EXISTS idx_warehouses_active ON warehouses(is_active) WHERE deleted_at IS NULL;
     `);
 
-    // Create warehouse_zones table
+    // Create warehouse_zones table (idempotent)
     await queryRunner.query(`
-      CREATE TABLE warehouse_zones (
+      CREATE TABLE IF NOT EXISTS warehouse_zones (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         warehouse_id UUID NOT NULL REFERENCES warehouses(id) ON DELETE CASCADE,
         name VARCHAR(100) NOT NULL,
@@ -88,16 +106,16 @@ export class CreateWarehouseTables1731620000001 implements MigrationInterface {
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_zones_warehouse ON warehouse_zones(warehouse_id);
+      CREATE INDEX IF NOT EXISTS idx_zones_warehouse ON warehouse_zones(warehouse_id);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_zones_active ON warehouse_zones(is_active) WHERE deleted_at IS NULL;
+      CREATE INDEX IF NOT EXISTS idx_zones_active ON warehouse_zones(is_active) WHERE deleted_at IS NULL;
     `);
 
-    // Create inventory_batches table
+    // Create inventory_batches table (idempotent)
     await queryRunner.query(`
-      CREATE TABLE inventory_batches (
+      CREATE TABLE IF NOT EXISTS inventory_batches (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         batch_number VARCHAR(100) NOT NULL,
         warehouse_id UUID NOT NULL REFERENCES warehouses(id),
@@ -124,32 +142,32 @@ export class CreateWarehouseTables1731620000001 implements MigrationInterface {
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_batches_warehouse ON inventory_batches(warehouse_id);
+      CREATE INDEX IF NOT EXISTS idx_batches_warehouse ON inventory_batches(warehouse_id);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_batches_product ON inventory_batches(product_id);
+      CREATE INDEX IF NOT EXISTS idx_batches_product ON inventory_batches(product_id);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_batches_batch_number ON inventory_batches(batch_number);
+      CREATE INDEX IF NOT EXISTS idx_batches_batch_number ON inventory_batches(batch_number);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_batches_expiry ON inventory_batches(expiry_date) WHERE expiry_date IS NOT NULL;
+      CREATE INDEX IF NOT EXISTS idx_batches_expiry ON inventory_batches(expiry_date) WHERE expiry_date IS NOT NULL;
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_batches_warehouse_product ON inventory_batches(warehouse_id, product_id);
+      CREATE INDEX IF NOT EXISTS idx_batches_warehouse_product ON inventory_batches(warehouse_id, product_id);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_batches_active ON inventory_batches(is_active, is_quarantined) WHERE deleted_at IS NULL;
+      CREATE INDEX IF NOT EXISTS idx_batches_active ON inventory_batches(is_active, is_quarantined) WHERE deleted_at IS NULL;
     `);
 
-    // Create stock_movements table
+    // Create stock_movements table (idempotent)
     await queryRunner.query(`
-      CREATE TABLE stock_movements (
+      CREATE TABLE IF NOT EXISTS stock_movements (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         movement_number VARCHAR(50) UNIQUE NOT NULL,
         movement_type movement_type NOT NULL,
@@ -174,32 +192,32 @@ export class CreateWarehouseTables1731620000001 implements MigrationInterface {
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_movements_warehouse ON stock_movements(warehouse_id);
+      CREATE INDEX IF NOT EXISTS idx_movements_warehouse ON stock_movements(warehouse_id);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_movements_product ON stock_movements(product_id);
+      CREATE INDEX IF NOT EXISTS idx_movements_product ON stock_movements(product_id);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_movements_batch ON stock_movements(batch_id);
+      CREATE INDEX IF NOT EXISTS idx_movements_batch ON stock_movements(batch_id);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_movements_date ON stock_movements(movement_date);
+      CREATE INDEX IF NOT EXISTS idx_movements_date ON stock_movements(movement_date);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_movements_type ON stock_movements(movement_type);
+      CREATE INDEX IF NOT EXISTS idx_movements_type ON stock_movements(movement_type);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_movements_warehouse_product ON stock_movements(warehouse_id, product_id);
+      CREATE INDEX IF NOT EXISTS idx_movements_warehouse_product ON stock_movements(warehouse_id, product_id);
     `);
 
-    // Create stock_reservations table
+    // Create stock_reservations table (idempotent)
     await queryRunner.query(`
-      CREATE TABLE stock_reservations (
+      CREATE TABLE IF NOT EXISTS stock_reservations (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         reservation_number VARCHAR(50) UNIQUE NOT NULL,
         warehouse_id UUID NOT NULL REFERENCES warehouses(id),
@@ -222,28 +240,28 @@ export class CreateWarehouseTables1731620000001 implements MigrationInterface {
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_reservations_warehouse ON stock_reservations(warehouse_id);
+      CREATE INDEX IF NOT EXISTS idx_reservations_warehouse ON stock_reservations(warehouse_id);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_reservations_product ON stock_reservations(product_id);
+      CREATE INDEX IF NOT EXISTS idx_reservations_product ON stock_reservations(product_id);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_reservations_batch ON stock_reservations(batch_id);
+      CREATE INDEX IF NOT EXISTS idx_reservations_batch ON stock_reservations(batch_id);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_reservations_status ON stock_reservations(status);
+      CREATE INDEX IF NOT EXISTS idx_reservations_status ON stock_reservations(status);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_reservations_expires ON stock_reservations(expires_at) WHERE expires_at IS NOT NULL;
+      CREATE INDEX IF NOT EXISTS idx_reservations_expires ON stock_reservations(expires_at) WHERE expires_at IS NOT NULL;
     `);
 
-    // Create stock_takes table
+    // Create stock_takes table (idempotent)
     await queryRunner.query(`
-      CREATE TABLE stock_takes (
+      CREATE TABLE IF NOT EXISTS stock_takes (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         stock_take_number VARCHAR(50) UNIQUE NOT NULL,
         warehouse_id UUID NOT NULL REFERENCES warehouses(id),
@@ -265,15 +283,15 @@ export class CreateWarehouseTables1731620000001 implements MigrationInterface {
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_stock_takes_warehouse ON stock_takes(warehouse_id);
+      CREATE INDEX IF NOT EXISTS idx_stock_takes_warehouse ON stock_takes(warehouse_id);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_stock_takes_status ON stock_takes(status);
+      CREATE INDEX IF NOT EXISTS idx_stock_takes_status ON stock_takes(status);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_stock_takes_date ON stock_takes(scheduled_date);
+      CREATE INDEX IF NOT EXISTS idx_stock_takes_date ON stock_takes(scheduled_date);
     `);
   }
 

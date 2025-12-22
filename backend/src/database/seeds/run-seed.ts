@@ -1,5 +1,10 @@
-// Register ts-paths before imports
-import 'tsconfig-paths/register';
+// Register ts-paths before imports (only needed in development with ts-node)
+// In production, paths are resolved at build time
+try {
+  require('tsconfig-paths/register');
+} catch {
+  // tsconfig-paths not available in production build - this is expected
+}
 
 import { DataSource } from 'typeorm';
 import { config } from 'dotenv';
