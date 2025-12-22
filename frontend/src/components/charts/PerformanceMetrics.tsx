@@ -133,7 +133,7 @@ export function MachineRankingChart({
               border: '1px solid hsl(var(--border))',
               borderRadius: '8px',
             }}
-            formatter={(value: number) => [formatValue(value), metricLabels[metric]]}
+            formatter={(value) => [formatValue(Number(value) || 0), metricLabels[metric]]}
           />
           <Bar dataKey="value" radius={[0, 4, 4, 0]}>
             {sortedData.map((_, index) => (
@@ -390,8 +390,8 @@ export function CategoryDonut({
                 border: '1px solid hsl(var(--border))',
                 borderRadius: '8px',
               }}
-              formatter={(value: number) => [
-                `${((value / total) * 100).toFixed(1)}%`,
+              formatter={(value) => [
+                `${(((Number(value) || 0) / total) * 100).toFixed(1)}%`,
                 '',
               ]}
             />

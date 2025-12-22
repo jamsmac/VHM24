@@ -40,9 +40,10 @@ export const MachineStatusChart = memo(function MachineStatusChart({
 }: MachineStatusChartProps) {
   const total = useMemo(() => data.reduce((sum, item) => sum + item.count, 0), [data])
 
-  const formatTooltip = useCallback((value: number) => {
-    const percentage = ((value / total) * 100).toFixed(1)
-    return `${value} (${percentage}%)`
+  const formatTooltip = useCallback((value: number | undefined) => {
+    const numValue = Number(value) || 0
+    const percentage = ((numValue / total) * 100).toFixed(1)
+    return `${numValue} (${percentage}%)`
   }, [total])
 
   return (

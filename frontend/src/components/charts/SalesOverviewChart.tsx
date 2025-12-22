@@ -94,11 +94,12 @@ export const SalesOverviewChart = memo(function SalesOverviewChart({
                 borderRadius: '8px',
                 color: isDark ? '#f9fafb' : '#111827',
               }}
-              formatter={(value: number, name: string) => {
+              formatter={(value, name) => {
+                const numValue = Number(value) || 0
                 if (name === 'revenue') {
-                  return [formatCurrency(value), 'Выручка']
+                  return [formatCurrency(numValue), 'Выручка']
                 }
-                return [value, 'Транзакции']
+                return [numValue, 'Транзакции']
               }}
             />
             <Legend wrapperStyle={{ fontSize: '14px' }} iconType="line" />

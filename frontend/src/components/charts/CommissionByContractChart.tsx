@@ -111,8 +111,8 @@ export function CommissionByContractChart({
               border: '1px solid #e5e7eb',
               borderRadius: '8px',
             }}
-            formatter={(value: number, name: string) => [
-              formatCurrency(value),
+            formatter={(value, name) => [
+              formatCurrency(Number(value) || 0),
               name === 'commission' ? 'Комиссия' : 'Выручка',
             ]}
             labelFormatter={(label) => `Договор: ${label}`}

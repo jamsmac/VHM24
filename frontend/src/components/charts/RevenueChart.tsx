@@ -80,7 +80,7 @@ export const RevenueChart = memo(function RevenueChart({ data, title, height = 3
               border: '1px solid #e5e7eb',
               borderRadius: '8px',
             }}
-            formatter={(value: number) => [formatCurrency(value), '']}
+            formatter={(value) => [formatCurrency(Number(value) || 0), '']}
           />
           <Legend
             wrapperStyle={{ fontSize: '14px' }}

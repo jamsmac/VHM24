@@ -80,7 +80,7 @@ export default function SalesReportPage() {
           <LineChart data={data}>
             <XAxis dataKey="date" />
             <YAxis />
-            <Tooltip formatter={(value: number) => formatCurrency(value)} />
+            <Tooltip formatter={(value) => formatCurrency(Number(value) || 0)} />
             <Line type="monotone" dataKey="sales" stroke="#10b981" strokeWidth={2} />
           </LineChart>
         </ResponsiveContainer>

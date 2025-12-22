@@ -180,7 +180,7 @@ export default function TransactionReportsPage() {
                   border: '1px solid #e5e7eb',
                   borderRadius: '8px',
                 }}
-                formatter={(value: number) => formatCurrency(value)}
+                formatter={(value) => formatCurrency(Number(value) || 0)}
               />
               <Legend />
               <Line
@@ -239,7 +239,7 @@ export default function TransactionReportsPage() {
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                <Tooltip formatter={(value) => formatCurrency(Number(value) || 0)} />
               </PieChart>
             </ResponsiveContainer>
           </div>

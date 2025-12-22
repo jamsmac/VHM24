@@ -63,7 +63,7 @@ export default function FinancialReportPage() {
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="month" />
             <YAxis />
-            <Tooltip formatter={(value: number) => formatCurrency(value)} />
+            <Tooltip formatter={(value) => formatCurrency(Number(value) || 0)} />
             <Legend />
             <Line type="monotone" dataKey="revenue" stroke="#10b981" name="Выручка" strokeWidth={2} />
             <Line type="monotone" dataKey="expenses" stroke="#ef4444" name="Расходы" strokeWidth={2} />

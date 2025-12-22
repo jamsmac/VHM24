@@ -181,7 +181,7 @@ export function RealTimeChart({
               border: '1px solid hsl(var(--border))',
               borderRadius: '8px',
             }}
-            formatter={(value: number) => [`${value.toFixed(2)}${unit}`, label]}
+            formatter={(value) => [`${(Number(value) || 0).toFixed(2)}${unit}`, label]}
           />
           {thresholds?.warning && (
             <ReferenceLine
