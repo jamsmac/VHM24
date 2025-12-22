@@ -102,10 +102,20 @@ export class RedisCacheService {
 
   /**
    * Clear all cache entries (use with caution!)
+   * Note: cache-manager 7.x removed reset() method, using pattern delete instead
    */
   async reset(): Promise<void> {
     try {
-      await this.cacheManager.reset();
+      // In cache-manager 7.x, reset() is removed. Use pattern delete instead.
+      const store = (this.cacheManager as unknown as { stores?: RedisStore[] }).stores?.[0];
+      const client = store?.client || store?.getClient?.();
+
+      if (client && typeof client.keys === 'function') {
+        const keys = await client.keys('vendhub:cache:*');
+        if (keys.length > 0) {
+          await Promise.all(keys.map((key: string) => this.cacheManager.del(key)));
+        }
+      }
       this.logger.warn('Cache RESET: All entries cleared');
     } catch (error) {
       this.logger.error(`Cache RESET error: ${error.message}`);
@@ -118,9 +128,9 @@ export class RedisCacheService {
    */
   async delByPattern(pattern: string): Promise<number> {
     try {
-      // Get underlying Redis client from cache manager
-      const store = this.cacheManager.store as unknown as RedisStore;
-      const client = store.client || store.getClient?.();
+      // Get underlying Redis client from cache manager (cache-manager 7.x uses stores array)
+      const store = (this.cacheManager as unknown as { stores?: RedisStore[] }).stores?.[0];
+      const client = store?.client || store?.getClient?.();
 
       if (!client || typeof client.keys !== 'function') {
         this.logger.warn('Pattern delete not available - Redis client not accessible');

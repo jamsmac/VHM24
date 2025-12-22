@@ -183,8 +183,9 @@ export class ReportsCacheInterceptor implements NestInterceptor {
    */
   async clearAll(): Promise<void> {
     try {
-      // Get underlying Redis client to clear by pattern
-      const store = this.cacheManager?.store as RedisLikeCacheStore | undefined;
+      // Get underlying Redis client to clear by pattern (cache-manager 7.x uses stores array)
+      const stores = (this.cacheManager as unknown as { stores?: RedisLikeCacheStore[] })?.stores;
+      const store = stores?.[0];
       const client = store?.client || store?.getClient?.();
 
       if (client && typeof client.keys === 'function') {
@@ -206,7 +207,9 @@ export class ReportsCacheInterceptor implements NestInterceptor {
    */
   async clearPattern(pattern: string): Promise<number> {
     try {
-      const store = this.cacheManager?.store as RedisLikeCacheStore | undefined;
+      // cache-manager 7.x uses stores array instead of store
+      const stores = (this.cacheManager as unknown as { stores?: RedisLikeCacheStore[] })?.stores;
+      const store = stores?.[0];
       const client = store?.client || store?.getClient?.();
 
       if (client && typeof client.keys === 'function') {
