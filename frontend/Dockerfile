@@ -8,6 +8,7 @@ RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
 # Copy frontend package files (from repo root context)
+# Note: Using --legacy-peer-deps to resolve @storybook/addon-vitest peer dependency conflict
 COPY frontend/package.json frontend/package-lock.json* ./
 RUN npm install --legacy-peer-deps
 
