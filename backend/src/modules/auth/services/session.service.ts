@@ -92,11 +92,10 @@ export class SessionService {
       await this.revokeSession(oldestSession.id, 'max_sessions_exceeded');
     }
 
-    // Create session with token hint for O(1) lookup
-    const session = this.sessionRepository.create({
+    // Create session with token hint for O(1) lookup (if column exists)
+    const sessionData: Partial<UserSession> = {
       user_id: data.userId,
       refresh_token_hash: refreshTokenHash,
-      refresh_token_hint: refreshTokenHint,
       ip_address: data.ipAddress,
       user_agent: data.userAgent,
       device_type: deviceInfo.deviceType,
@@ -107,9 +106,25 @@ export class SessionService {
       last_used_at: new Date(),
       expires_at: expiresAt,
       metadata: data.metadata || {},
-    });
+    };
 
-    return await this.sessionRepository.save(session);
+    try {
+      // Try with refresh_token_hint column
+      const session = this.sessionRepository.create({
+        ...sessionData,
+        refresh_token_hint: refreshTokenHint,
+      });
+      return await this.sessionRepository.save(session);
+    } catch (error: unknown) {
+      // If refresh_token_hint column doesn't exist, save without it
+      const errMsg = error instanceof Error ? error.message : String(error);
+      if (errMsg.includes('refresh_token_hint') && errMsg.includes('does not exist')) {
+        this.logger.warn('refresh_token_hint column not found, creating session without hint');
+        const session = this.sessionRepository.create(sessionData);
+        return await this.sessionRepository.save(session);
+      }
+      throw error;
+    }
   }
 
   /**
@@ -135,11 +150,25 @@ export class SessionService {
   async rotateRefreshToken(sessionId: string, newRefreshToken: string): Promise<void> {
     const refreshTokenHash = await bcrypt.hash(newRefreshToken, 12);
     const refreshTokenHint = this.generateTokenHint(newRefreshToken);
-    await this.sessionRepository.update(sessionId, {
-      refresh_token_hash: refreshTokenHash,
-      refresh_token_hint: refreshTokenHint,
-      last_used_at: new Date(),
-    });
+    try {
+      await this.sessionRepository.update(sessionId, {
+        refresh_token_hash: refreshTokenHash,
+        refresh_token_hint: refreshTokenHint,
+        last_used_at: new Date(),
+      });
+    } catch (error: unknown) {
+      // If refresh_token_hint column doesn't exist, update without it
+      const errMsg = error instanceof Error ? error.message : String(error);
+      if (errMsg.includes('refresh_token_hint') && errMsg.includes('does not exist')) {
+        this.logger.warn('refresh_token_hint column not found, rotating without hint');
+        await this.sessionRepository.update(sessionId, {
+          refresh_token_hash: refreshTokenHash,
+          last_used_at: new Date(),
+        });
+        return;
+      }
+      throw error;
+    }
   }
 
   /**
@@ -177,53 +206,78 @@ export class SessionService {
    * @returns Session or null
    */
   async findSessionByRefreshToken(refreshToken: string): Promise<UserSession | null> {
-    // Generate hint for fast indexed lookup
-    const tokenHint = this.generateTokenHint(refreshToken);
+    // Fallback method: scan all active sessions (used when hint column doesn't exist)
+    const findByFullScan = async (): Promise<UserSession | null> => {
+      const allActiveSessions = await this.sessionRepository.find({
+        where: { is_active: true },
+      });
 
-    // First, try optimized lookup using token hint (O(1) index query)
-    const sessionsWithHint = await this.sessionRepository.find({
-      where: {
-        is_active: true,
-        refresh_token_hint: tokenHint,
-      },
-    });
-
-    // bcrypt compare only matching sessions (typically 1, at most a few due to hash collisions)
-    for (const session of sessionsWithHint) {
-      const isMatch = await bcrypt.compare(refreshToken, session.refresh_token_hash);
-      if (isMatch && session.isValid) {
-        return session;
-      }
-    }
-
-    // Fallback for sessions without hint (backward compatibility during migration)
-    // This handles existing sessions created before the hint column was added
-    const sessionsWithoutHint = await this.sessionRepository.find({
-      where: {
-        is_active: true,
-        refresh_token_hint: null as unknown as string,
-      },
-    });
-
-    if (sessionsWithoutHint.length > 0) {
-      this.logger.warn(
-        `Found ${sessionsWithoutHint.length} sessions without token hint. ` +
-          `Consider running migration to backfill hints.`,
-      );
-
-      for (const session of sessionsWithoutHint) {
+      for (const session of allActiveSessions) {
         const isMatch = await bcrypt.compare(refreshToken, session.refresh_token_hash);
         if (isMatch && session.isValid) {
-          // Backfill the hint for this session
-          await this.sessionRepository.update(session.id, {
-            refresh_token_hint: tokenHint,
-          });
           return session;
         }
       }
-    }
+      return null;
+    };
 
-    return null;
+    // Generate hint for fast indexed lookup
+    const tokenHint = this.generateTokenHint(refreshToken);
+
+    try {
+      // First, try optimized lookup using token hint (O(1) index query)
+      const sessionsWithHint = await this.sessionRepository.find({
+        where: {
+          is_active: true,
+          refresh_token_hint: tokenHint,
+        },
+      });
+
+      // bcrypt compare only matching sessions (typically 1, at most a few due to hash collisions)
+      for (const session of sessionsWithHint) {
+        const isMatch = await bcrypt.compare(refreshToken, session.refresh_token_hash);
+        if (isMatch && session.isValid) {
+          return session;
+        }
+      }
+
+      // Fallback for sessions without hint (backward compatibility during migration)
+      // This handles existing sessions created before the hint column was added
+      const sessionsWithoutHint = await this.sessionRepository.find({
+        where: {
+          is_active: true,
+          refresh_token_hint: null as unknown as string,
+        },
+      });
+
+      if (sessionsWithoutHint.length > 0) {
+        this.logger.warn(
+          `Found ${sessionsWithoutHint.length} sessions without token hint. ` +
+            `Consider running migration to backfill hints.`,
+        );
+
+        for (const session of sessionsWithoutHint) {
+          const isMatch = await bcrypt.compare(refreshToken, session.refresh_token_hash);
+          if (isMatch && session.isValid) {
+            // Backfill the hint for this session
+            await this.sessionRepository.update(session.id, {
+              refresh_token_hint: tokenHint,
+            });
+            return session;
+          }
+        }
+      }
+
+      return null;
+    } catch (error: unknown) {
+      // If refresh_token_hint column doesn't exist, fall back to full scan
+      const errMsg = error instanceof Error ? error.message : String(error);
+      if (errMsg.includes('refresh_token_hint') && errMsg.includes('does not exist')) {
+        this.logger.warn('refresh_token_hint column not found, using fallback full scan');
+        return findByFullScan();
+      }
+      throw error;
+    }
   }
 
   /**
@@ -233,15 +287,50 @@ export class SessionService {
    * @returns List of active sessions
    */
   async getActiveSessions(userId: string): Promise<UserSession[]> {
-    return await this.sessionRepository.find({
-      where: {
-        user_id: userId,
-        is_active: true,
-      },
-      order: {
-        last_used_at: 'DESC',
-      },
-    });
+    try {
+      return await this.sessionRepository.find({
+        where: {
+          user_id: userId,
+          is_active: true,
+        },
+        order: {
+          last_used_at: 'DESC',
+        },
+      });
+    } catch (error: unknown) {
+      // If refresh_token_hint column doesn't exist, query without selecting it
+      const errMsg = error instanceof Error ? error.message : String(error);
+      if (errMsg.includes('refresh_token_hint') && errMsg.includes('does not exist')) {
+        this.logger.warn('refresh_token_hint column not found, querying without it');
+        return await this.sessionRepository
+          .createQueryBuilder('session')
+          .select([
+            'session.id',
+            'session.user_id',
+            'session.refresh_token_hash',
+            'session.ip_address',
+            'session.user_agent',
+            'session.device_type',
+            'session.device_name',
+            'session.os',
+            'session.browser',
+            'session.is_active',
+            'session.last_used_at',
+            'session.expires_at',
+            'session.revoked_at',
+            'session.revoked_reason',
+            'session.metadata',
+            'session.created_at',
+            'session.updated_at',
+            'session.deleted_at',
+          ])
+          .where('session.user_id = :userId', { userId })
+          .andWhere('session.is_active = true')
+          .orderBy('session.last_used_at', 'DESC')
+          .getMany();
+      }
+      throw error;
+    }
   }
 
   /**

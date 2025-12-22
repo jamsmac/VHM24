@@ -39,6 +39,8 @@ export class UserSession extends BaseEntity {
    * Token hint for fast lookup (first 16 chars of SHA-256 hash)
    * This allows O(1) index lookup before expensive bcrypt comparison
    * REQ-AUTH-55: Performance optimization for refresh token lookup
+   *
+   * NOTE: Column may not exist until migration runs. SessionService handles gracefully.
    */
   @Column({ type: 'varchar', length: 16, nullable: true })
   @Index('idx_user_sessions_token_hint')
