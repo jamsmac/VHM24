@@ -5,7 +5,10 @@ echo "=== VendHub Backend Startup ==="
 
 # Run database migrations (use compiled migrations in dist/)
 echo "Running database migrations..."
-./node_modules/.bin/typeorm migration:run -d typeorm-migrations-only.config.js || echo "Migrations may have already been applied or failed"
+echo "Checking migration files..."
+ls -la dist/database/migrations/ 2>&1 || echo "No migration files found in dist/"
+echo "Executing migrations..."
+./node_modules/.bin/typeorm migration:run -d typeorm-migrations-only.config.js && echo "Migrations completed successfully" || echo "Migrations may have already been applied or failed"
 
 # Run seeds if INITIAL_ADMIN_PASSWORD is set (first-time setup)
 if [ -n "$INITIAL_ADMIN_PASSWORD" ]; then

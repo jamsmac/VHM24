@@ -25,6 +25,9 @@ COPY backend/ .
 # Build the application (use npx as fallback for symlink issues)
 RUN ./node_modules/.bin/nest build || npx @nestjs/cli build
 
+# Compile migrations separately (they may not be included in nest build)
+RUN ./node_modules/.bin/tsc src/database/migrations/*.ts --outDir dist/database/migrations --module commonjs --target es2021 --esModuleInterop --experimentalDecorators --emitDecoratorMetadata --skipLibCheck --resolveJsonModule --removeComments || echo "Migration compilation skipped"
+
 # Remove dev dependencies after build
 RUN npm prune --production --legacy-peer-deps
 
