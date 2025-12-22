@@ -93,22 +93,47 @@ if (require.main === module) {
 
   config();
 
-  // Support both DATABASE_URL and individual variables
+  /**
+   * Get database configuration - NO DEFAULT CREDENTIALS for security
+   */
   const getDatabaseConfig = () => {
+    // Prefer DATABASE_URL if available
     if (process.env.DATABASE_URL) {
       return {
         type: 'postgres',
         url: process.env.DATABASE_URL,
-        ssl: process.env.DATABASE_SSL === 'true' ? { rejectUnauthorized: false } : false,
+        ssl:
+          process.env.DATABASE_SSL === 'true' || process.env.DATABASE_SSL === '1'
+            ? { rejectUnauthorized: false }
+            : false,
       };
     }
+
+    // Check for required individual variables - NO DEFAULTS
+    const requiredVars = ['DATABASE_HOST', 'DATABASE_USER', 'DATABASE_PASSWORD', 'DATABASE_NAME'];
+    const missingVars = requiredVars.filter((v) => !process.env[v]);
+
+    if (missingVars.length > 0) {
+      logger.error('❌ Missing required database configuration!');
+      logger.error(`   Missing: ${missingVars.join(', ')}`);
+      logger.error('');
+      logger.error('Provide either:');
+      logger.error('  - DATABASE_URL (connection string)');
+      logger.error('  - Or all of: DATABASE_HOST, DATABASE_USER, DATABASE_PASSWORD, DATABASE_NAME');
+      process.exit(1);
+    }
+
     return {
       type: 'postgres',
-      host: process.env.DATABASE_HOST || 'localhost',
+      host: process.env.DATABASE_HOST,
       port: parseInt(process.env.DATABASE_PORT || '5432'),
-      username: process.env.DATABASE_USER || 'vendhub',
-      password: process.env.DATABASE_PASSWORD || 'vendhub_password_dev',
-      database: process.env.DATABASE_NAME || 'vendhub',
+      username: process.env.DATABASE_USER,
+      password: process.env.DATABASE_PASSWORD,
+      database: process.env.DATABASE_NAME,
+      ssl:
+        process.env.DATABASE_SSL === 'true' || process.env.DATABASE_SSL === '1'
+          ? { rejectUnauthorized: false }
+          : false,
     };
   };
 

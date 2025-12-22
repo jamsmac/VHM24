@@ -1,6 +1,6 @@
 #!/usr/bin/env ts-node
 
-import { DataSource } from 'typeorm';
+import { DataSource, DataSourceOptions } from 'typeorm';
 import { config } from 'dotenv';
 import { Logger } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
@@ -13,16 +13,60 @@ config();
 
 const logger = new Logger('CreateOwner');
 
-const AppDataSource = new DataSource({
-  type: 'postgres',
-  host: process.env.DATABASE_HOST || 'localhost',
-  port: parseInt(process.env.DATABASE_PORT || '5432'),
-  username: process.env.DATABASE_USER || 'vendhub',
-  password: process.env.DATABASE_PASSWORD || 'vendhub_password_dev',
-  database: process.env.DATABASE_NAME || 'vendhub',
-  entities: [__dirname + '/../../**/*.entity{.ts,.js}'],
-  synchronize: false,
-});
+/**
+ * Get database configuration from environment variables
+ * NO DEFAULT CREDENTIALS - all must be explicitly provided
+ */
+function getDatabaseConfig(): DataSourceOptions {
+  // Prefer DATABASE_URL if available
+  if (process.env.DATABASE_URL) {
+    return {
+      type: 'postgres',
+      url: process.env.DATABASE_URL,
+      entities: [__dirname + '/../../**/*.entity{.ts,.js}'],
+      synchronize: false,
+      ssl:
+        process.env.DATABASE_SSL === 'true' || process.env.DATABASE_SSL === '1'
+          ? { rejectUnauthorized: false }
+          : false,
+    };
+  }
+
+  // Check for required individual variables - NO DEFAULTS
+  const requiredVars = ['DATABASE_HOST', 'DATABASE_USER', 'DATABASE_PASSWORD', 'DATABASE_NAME'];
+  const missingVars = requiredVars.filter((v) => !process.env[v]);
+
+  if (missingVars.length > 0) {
+    logger.error('❌ Missing required database configuration!');
+    logger.error(`   Missing: ${missingVars.join(', ')}`);
+    logger.error('');
+    logger.error('Provide either:');
+    logger.error('  - DATABASE_URL (connection string)');
+    logger.error('  - Or all of: DATABASE_HOST, DATABASE_USER, DATABASE_PASSWORD, DATABASE_NAME');
+    logger.error('');
+    logger.error('Example:');
+    logger.error('  DATABASE_URL="postgresql://user:pass@host:5432/db" npm run create-owner');
+    process.exit(1);
+  }
+
+  return {
+    type: 'postgres',
+    host: process.env.DATABASE_HOST,
+    port: parseInt(process.env.DATABASE_PORT || '5432'),
+    username: process.env.DATABASE_USER,
+    password: process.env.DATABASE_PASSWORD,
+    database: process.env.DATABASE_NAME,
+    entities: [__dirname + '/../../**/*.entity{.ts,.js}'],
+    synchronize: false,
+    ssl:
+      process.env.DATABASE_SSL === 'true' || process.env.DATABASE_SSL === '1'
+        ? { rejectUnauthorized: false }
+        : false,
+  };
+}
+
+// Initialize DataSource lazily to allow validation first
+let AppDataSource: DataSource;
 
 interface CreateOwnerInput {
   email: string;
@@ -125,7 +169,8 @@ async function createOwner(input: CreateOwnerInput): Promise<void> {
   logger.log('\n🚀 Создание Owner пользователя...\n');
 
   try {
-    // Initialize connection
+    // Initialize connection with validated config
+    AppDataSource = new DataSource(getDatabaseConfig());
     await AppDataSource.initialize();
     logger.log('✅ Подключение к БД установлено');
 
