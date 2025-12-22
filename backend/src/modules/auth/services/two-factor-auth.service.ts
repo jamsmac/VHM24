@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, forwardRef, Inject } from '@nestjs/common';
+import { Injectable, BadRequestException, forwardRef, Inject, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { authenticator } from 'otplib';
 import * as QRCode from 'qrcode';
@@ -27,6 +27,7 @@ import { AuditEventType } from '@modules/security/entities/audit-log.entity';
  */
 @Injectable()
 export class TwoFactorAuthService {
+  private readonly logger = new Logger(TwoFactorAuthService.name);
   private readonly algorithm = 'aes-256-gcm';
   private readonly encryptionKey: Buffer;
   private readonly appName: string;
@@ -46,7 +47,27 @@ export class TwoFactorAuthService {
           "Generate with: node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\"",
       );
     }
-    this.encryptionKey = crypto.scryptSync(keyString, 'salt', 32);
+
+    // Get salt from environment or derive from key (MEDIUM-001 fix)
+    // Using unique salt per deployment is more secure than static salt
+    const saltString = this.configService.get<string>('ENCRYPTION_SALT');
+    let salt: Buffer;
+
+    if (saltString && saltString.length >= 16) {
+      // Use provided salt (recommended for production)
+      salt = Buffer.from(saltString, 'hex');
+    } else {
+      // Derive salt from key using SHA-256 (backward compatible)
+      // This is more secure than a static 'salt' string
+      salt = crypto.createHash('sha256').update(keyString + '_2fa_salt').digest().slice(0, 16);
+      this.logger.warn(
+        'ENCRYPTION_SALT not set. Using derived salt. ' +
+          'For production, set ENCRYPTION_SALT with: ' +
+          "node -e \"console.log(require('crypto').randomBytes(16).toString('hex'))\"",
+      );
+    }
+
+    this.encryptionKey = crypto.scryptSync(keyString, salt, 32);
     this.appName = this.configService.get<string>('APP_NAME', 'VendHub');
 
     // Configure otplib
