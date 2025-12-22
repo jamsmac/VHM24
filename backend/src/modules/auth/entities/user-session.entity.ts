@@ -35,6 +35,15 @@ export class UserSession extends BaseEntity {
   @Column({ type: 'text' })
   refresh_token_hash: string;
 
+  /**
+   * Token hint for fast lookup (first 16 chars of SHA-256 hash)
+   * This allows O(1) index lookup before expensive bcrypt comparison
+   * REQ-AUTH-55: Performance optimization for refresh token lookup
+   */
+  @Column({ type: 'varchar', length: 16, nullable: true })
+  @Index('idx_user_sessions_token_hint')
+  refresh_token_hint: string | null;
+
   // Device information
   @Column({ type: 'inet', nullable: true })
   ip_address: string | null;

@@ -1,8 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThan } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
+import * as crypto from 'crypto';
 import { UAParser } from 'ua-parser-js';
 import { UserSession } from '../entities/user-session.entity';
 
@@ -34,6 +35,7 @@ export interface CreateSessionData {
  */
 @Injectable()
 export class SessionService {
+  private readonly logger = new Logger(SessionService.name);
   private readonly maxSessionsPerUser: number;
   private readonly sessionExpirationDays: number;
 
@@ -44,6 +46,19 @@ export class SessionService {
   ) {
     this.maxSessionsPerUser = this.configService.get<number>('MAX_SESSIONS_PER_USER', 5);
     this.sessionExpirationDays = this.configService.get<number>('SESSION_EXPIRATION_DAYS', 7);
+  }
+
+  /**
+   * Generate token hint for fast lookup
+   *
+   * Creates a 16-character SHA-256 hash prefix of the refresh token.
+   * This allows O(1) index lookup before expensive bcrypt comparison.
+   *
+   * @param refreshToken - Raw refresh token
+   * @returns 16-character hex hint
+   */
+  private generateTokenHint(refreshToken: string): string {
+    return crypto.createHash('sha256').update(refreshToken).digest('hex').substring(0, 16);
   }
 
   /**
@@ -59,8 +74,9 @@ export class SessionService {
     // Parse device information from user agent
     const deviceInfo = this.parseUserAgent(data.userAgent);
 
-    // Hash refresh token
+    // Hash refresh token and generate hint for fast lookup
     const refreshTokenHash = await bcrypt.hash(data.refreshToken, 12);
+    const refreshTokenHint = this.generateTokenHint(data.refreshToken);
 
     // Calculate expiration date
     const expiresAt = new Date();
@@ -76,10 +92,11 @@ export class SessionService {
       await this.revokeSession(oldestSession.id, 'max_sessions_exceeded');
     }
 
-    // Create session
+    // Create session with token hint for O(1) lookup
     const session = this.sessionRepository.create({
       user_id: data.userId,
       refresh_token_hash: refreshTokenHash,
+      refresh_token_hint: refreshTokenHint,
       ip_address: data.ipAddress,
       user_agent: data.userAgent,
       device_type: deviceInfo.deviceType,
@@ -109,7 +126,7 @@ export class SessionService {
   /**
    * Rotate refresh token
    *
-   * Updates session with new refresh token hash.
+   * Updates session with new refresh token hash and hint.
    * REQ-AUTH-55: Refresh Token Rotation
    *
    * @param sessionId - Session ID
@@ -117,8 +134,10 @@ export class SessionService {
    */
   async rotateRefreshToken(sessionId: string, newRefreshToken: string): Promise<void> {
     const refreshTokenHash = await bcrypt.hash(newRefreshToken, 12);
+    const refreshTokenHint = this.generateTokenHint(newRefreshToken);
     await this.sessionRepository.update(sessionId, {
       refresh_token_hash: refreshTokenHash,
+      refresh_token_hint: refreshTokenHint,
       last_used_at: new Date(),
     });
   }
@@ -147,18 +166,60 @@ export class SessionService {
   /**
    * Find session by refresh token
    *
+   * OPTIMIZED: Uses token hint for O(1) index lookup before bcrypt comparison.
+   * Previous implementation loaded ALL active sessions and did O(n) bcrypt comparisons.
+   *
+   * Performance improvement:
+   * - Before: O(n) bcrypt comparisons where n = total active sessions
+   * - After: O(1) index lookup + typically 1 bcrypt comparison
+   *
    * @param refreshToken - Refresh token
    * @returns Session or null
    */
   async findSessionByRefreshToken(refreshToken: string): Promise<UserSession | null> {
-    const sessions = await this.sessionRepository.find({
-      where: { is_active: true },
+    // Generate hint for fast indexed lookup
+    const tokenHint = this.generateTokenHint(refreshToken);
+
+    // First, try optimized lookup using token hint (O(1) index query)
+    const sessionsWithHint = await this.sessionRepository.find({
+      where: {
+        is_active: true,
+        refresh_token_hint: tokenHint,
+      },
     });
 
-    for (const session of sessions) {
+    // bcrypt compare only matching sessions (typically 1, at most a few due to hash collisions)
+    for (const session of sessionsWithHint) {
       const isMatch = await bcrypt.compare(refreshToken, session.refresh_token_hash);
       if (isMatch && session.isValid) {
         return session;
+      }
+    }
+
+    // Fallback for sessions without hint (backward compatibility during migration)
+    // This handles existing sessions created before the hint column was added
+    const sessionsWithoutHint = await this.sessionRepository.find({
+      where: {
+        is_active: true,
+        refresh_token_hint: null as unknown as string,
+      },
+    });
+
+    if (sessionsWithoutHint.length > 0) {
+      this.logger.warn(
+        `Found ${sessionsWithoutHint.length} sessions without token hint. ` +
+          `Consider running migration to backfill hints.`,
+      );
+
+      for (const session of sessionsWithoutHint) {
+        const isMatch = await bcrypt.compare(refreshToken, session.refresh_token_hash);
+        if (isMatch && session.isValid) {
+          // Backfill the hint for this session
+          await this.sessionRepository.update(session.id, {
+            refresh_token_hint: tokenHint,
+          });
+          return session;
+        }
       }
     }
 
