@@ -4,35 +4,47 @@ export class CreateAlertsTables1733200000000 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Create enums for alert system
     await queryRunner.query(`
-      CREATE TYPE alert_metric AS ENUM (
-        'low_stock_percentage',
-        'machine_error_count',
-        'task_overdue_hours',
-        'incident_count',
-        'collection_due_days',
-        'component_lifetime_percentage',
-        'washing_overdue_days',
-        'daily_sales_drop_percentage',
-        'machine_offline_hours',
-        'spare_part_low_stock'
-      );
+      DO $$ BEGIN
+        CREATE TYPE alert_metric AS ENUM (
+          'low_stock_percentage',
+          'machine_error_count',
+          'task_overdue_hours',
+          'incident_count',
+          'collection_due_days',
+          'component_lifetime_percentage',
+          'washing_overdue_days',
+          'daily_sales_drop_percentage',
+          'machine_offline_hours',
+          'spare_part_low_stock'
+        );
+      EXCEPTION WHEN duplicate_object THEN NULL;
+      END $$;
     `);
 
     await queryRunner.query(`
-      CREATE TYPE alert_severity AS ENUM ('info', 'warning', 'critical', 'emergency');
+      DO $$ BEGIN
+        CREATE TYPE alert_severity AS ENUM ('info', 'warning', 'critical', 'emergency');
+      EXCEPTION WHEN duplicate_object THEN NULL;
+      END $$;
     `);
 
     await queryRunner.query(`
-      CREATE TYPE alert_operator AS ENUM ('>', '<', '>=', '<=', '==', '!=');
+      DO $$ BEGIN
+        CREATE TYPE alert_operator AS ENUM ('>', '<', '>=', '<=', '==', '!=');
+      EXCEPTION WHEN duplicate_object THEN NULL;
+      END $$;
     `);
 
     await queryRunner.query(`
-      CREATE TYPE alert_status AS ENUM ('active', 'acknowledged', 'resolved', 'escalated', 'expired');
+      DO $$ BEGIN
+        CREATE TYPE alert_status AS ENUM ('active', 'acknowledged', 'resolved', 'escalated', 'expired');
+      EXCEPTION WHEN duplicate_object THEN NULL;
+      END $$;
     `);
 
     // Create alert_rules table
     await queryRunner.query(`
-      CREATE TABLE alert_rules (
+      CREATE TABLE IF NOT EXISTS alert_rules (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         name VARCHAR(100) NOT NULL,
         description TEXT,
@@ -60,24 +72,24 @@ export class CreateAlertsTables1733200000000 implements MigrationInterface {
 
     // Create indexes for alert_rules
     await queryRunner.query(`
-      CREATE INDEX idx_alert_rules_metric ON alert_rules(metric);
+      CREATE INDEX IF NOT EXISTS idx_alert_rules_metric ON alert_rules(metric);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_alert_rules_severity ON alert_rules(severity);
+      CREATE INDEX IF NOT EXISTS idx_alert_rules_severity ON alert_rules(severity);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_alert_rules_enabled ON alert_rules(is_enabled);
+      CREATE INDEX IF NOT EXISTS idx_alert_rules_enabled ON alert_rules(is_enabled);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_alert_rules_created_by ON alert_rules(created_by_id);
+      CREATE INDEX IF NOT EXISTS idx_alert_rules_created_by ON alert_rules(created_by_id);
     `);
 
     // Create alert_history table
     await queryRunner.query(`
-      CREATE TABLE alert_history (
+      CREATE TABLE IF NOT EXISTS alert_history (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         alert_rule_id UUID NOT NULL REFERENCES alert_rules(id) ON DELETE CASCADE,
         status alert_status DEFAULT 'active',
@@ -108,27 +120,27 @@ export class CreateAlertsTables1733200000000 implements MigrationInterface {
 
     // Create indexes for alert_history
     await queryRunner.query(`
-      CREATE INDEX idx_alert_history_rule ON alert_history(alert_rule_id);
+      CREATE INDEX IF NOT EXISTS idx_alert_history_rule ON alert_history(alert_rule_id);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_alert_history_status ON alert_history(status);
+      CREATE INDEX IF NOT EXISTS idx_alert_history_status ON alert_history(status);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_alert_history_severity ON alert_history(severity);
+      CREATE INDEX IF NOT EXISTS idx_alert_history_severity ON alert_history(severity);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_alert_history_triggered ON alert_history(triggered_at);
+      CREATE INDEX IF NOT EXISTS idx_alert_history_triggered ON alert_history(triggered_at);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_alert_history_machine ON alert_history(machine_id);
+      CREATE INDEX IF NOT EXISTS idx_alert_history_machine ON alert_history(machine_id);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_alert_history_location ON alert_history(location_id);
+      CREATE INDEX IF NOT EXISTS idx_alert_history_location ON alert_history(location_id);
     `);
 
     // Add foreign key constraints

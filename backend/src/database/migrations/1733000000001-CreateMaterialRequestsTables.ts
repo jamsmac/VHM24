@@ -17,37 +17,46 @@ export class CreateMaterialRequestsTables1733000000001 implements MigrationInter
 
     // Material category enum
     await queryRunner.query(`
-      CREATE TYPE material_category AS ENUM (
-        'ingredients',
-        'consumables',
-        'cleaning',
-        'spare_parts',
-        'packaging',
-        'other'
-      );
+      DO $$ BEGIN
+        CREATE TYPE material_category AS ENUM (
+          'ingredients',
+          'consumables',
+          'cleaning',
+          'spare_parts',
+          'packaging',
+          'other'
+        );
+      EXCEPTION WHEN duplicate_object THEN NULL;
+      END $$;
     `);
 
     // Request status enum
     await queryRunner.query(`
-      CREATE TYPE material_request_status AS ENUM (
-        'new',
-        'approved',
-        'rejected',
-        'sent',
-        'partial_delivered',
-        'completed',
-        'cancelled'
-      );
+      DO $$ BEGIN
+        CREATE TYPE material_request_status AS ENUM (
+          'new',
+          'approved',
+          'rejected',
+          'sent',
+          'partial_delivered',
+          'completed',
+          'cancelled'
+        );
+      EXCEPTION WHEN duplicate_object THEN NULL;
+      END $$;
     `);
 
     // Request priority enum
     await queryRunner.query(`
-      CREATE TYPE material_request_priority AS ENUM (
-        'low',
-        'normal',
-        'high',
-        'urgent'
-      );
+      DO $$ BEGIN
+        CREATE TYPE material_request_priority AS ENUM (
+          'low',
+          'normal',
+          'high',
+          'urgent'
+        );
+      EXCEPTION WHEN duplicate_object THEN NULL;
+      END $$;
     `);
 
     // ========================================
@@ -55,7 +64,7 @@ export class CreateMaterialRequestsTables1733000000001 implements MigrationInter
     // ========================================
 
     await queryRunner.query(`
-      CREATE TABLE suppliers (
+      CREATE TABLE IF NOT EXISTS suppliers (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         name VARCHAR(255) NOT NULL,
         phone VARCHAR(50),
@@ -74,15 +83,15 @@ export class CreateMaterialRequestsTables1733000000001 implements MigrationInter
 
     // Indexes for suppliers
     await queryRunner.query(`
-      CREATE INDEX idx_suppliers_is_active ON suppliers(is_active) WHERE deleted_at IS NULL;
+      CREATE INDEX IF NOT EXISTS idx_suppliers_is_active ON suppliers(is_active) WHERE deleted_at IS NULL;
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_suppliers_telegram_id ON suppliers(telegram_id) WHERE telegram_id IS NOT NULL;
+      CREATE INDEX IF NOT EXISTS idx_suppliers_telegram_id ON suppliers(telegram_id) WHERE telegram_id IS NOT NULL;
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_suppliers_name ON suppliers(name);
+      CREATE INDEX IF NOT EXISTS idx_suppliers_name ON suppliers(name);
     `);
 
     // ========================================
@@ -90,7 +99,7 @@ export class CreateMaterialRequestsTables1733000000001 implements MigrationInter
     // ========================================
 
     await queryRunner.query(`
-      CREATE TABLE materials (
+      CREATE TABLE IF NOT EXISTS materials (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         name VARCHAR(255) NOT NULL,
         category material_category NOT NULL DEFAULT 'other',
@@ -111,27 +120,27 @@ export class CreateMaterialRequestsTables1733000000001 implements MigrationInter
 
     // Indexes for materials
     await queryRunner.query(`
-      CREATE INDEX idx_materials_category ON materials(category);
+      CREATE INDEX IF NOT EXISTS idx_materials_category ON materials(category);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_materials_supplier_id ON materials(supplier_id);
+      CREATE INDEX IF NOT EXISTS idx_materials_supplier_id ON materials(supplier_id);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_materials_is_active ON materials(is_active) WHERE deleted_at IS NULL;
+      CREATE INDEX IF NOT EXISTS idx_materials_is_active ON materials(is_active) WHERE deleted_at IS NULL;
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_materials_name ON materials(name);
+      CREATE INDEX IF NOT EXISTS idx_materials_name ON materials(name);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_materials_sku ON materials(sku) WHERE sku IS NOT NULL;
+      CREATE INDEX IF NOT EXISTS idx_materials_sku ON materials(sku) WHERE sku IS NOT NULL;
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_materials_sort ON materials(sort_order, name);
+      CREATE INDEX IF NOT EXISTS idx_materials_sort ON materials(sort_order, name);
     `);
 
     // ========================================
@@ -139,7 +148,7 @@ export class CreateMaterialRequestsTables1733000000001 implements MigrationInter
     // ========================================
 
     await queryRunner.query(`
-      CREATE TABLE material_requests (
+      CREATE TABLE IF NOT EXISTS material_requests (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         request_number VARCHAR(50) UNIQUE NOT NULL,
         status material_request_status NOT NULL DEFAULT 'new',
@@ -189,27 +198,27 @@ export class CreateMaterialRequestsTables1733000000001 implements MigrationInter
 
     // Indexes for material_requests
     await queryRunner.query(`
-      CREATE INDEX idx_material_requests_status ON material_requests(status);
+      CREATE INDEX IF NOT EXISTS idx_material_requests_status ON material_requests(status);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_material_requests_priority ON material_requests(priority);
+      CREATE INDEX IF NOT EXISTS idx_material_requests_priority ON material_requests(priority);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_material_requests_created_by ON material_requests(created_by_user_id);
+      CREATE INDEX IF NOT EXISTS idx_material_requests_created_by ON material_requests(created_by_user_id);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_material_requests_approved_by ON material_requests(approved_by_user_id);
+      CREATE INDEX IF NOT EXISTS idx_material_requests_approved_by ON material_requests(approved_by_user_id);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_material_requests_created_at ON material_requests(created_at);
+      CREATE INDEX IF NOT EXISTS idx_material_requests_created_at ON material_requests(created_at);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_material_requests_number ON material_requests(request_number);
+      CREATE INDEX IF NOT EXISTS idx_material_requests_number ON material_requests(request_number);
     `);
 
     // ========================================
@@ -217,7 +226,7 @@ export class CreateMaterialRequestsTables1733000000001 implements MigrationInter
     // ========================================
 
     await queryRunner.query(`
-      CREATE TABLE material_request_items (
+      CREATE TABLE IF NOT EXISTS material_request_items (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         request_id UUID NOT NULL REFERENCES material_requests(id) ON DELETE CASCADE,
         material_id UUID NOT NULL REFERENCES materials(id) ON DELETE CASCADE,
@@ -249,15 +258,15 @@ export class CreateMaterialRequestsTables1733000000001 implements MigrationInter
 
     // Indexes for material_request_items
     await queryRunner.query(`
-      CREATE INDEX idx_material_request_items_request_id ON material_request_items(request_id);
+      CREATE INDEX IF NOT EXISTS idx_material_request_items_request_id ON material_request_items(request_id);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_material_request_items_material_id ON material_request_items(material_id);
+      CREATE INDEX IF NOT EXISTS idx_material_request_items_material_id ON material_request_items(material_id);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_material_request_items_supplier_id ON material_request_items(supplier_id);
+      CREATE INDEX IF NOT EXISTS idx_material_request_items_supplier_id ON material_request_items(supplier_id);
     `);
 
     // ========================================

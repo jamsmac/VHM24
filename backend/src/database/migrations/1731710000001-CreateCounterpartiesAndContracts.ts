@@ -13,7 +13,7 @@ export class CreateCounterpartiesAndContracts1731710000001 implements MigrationI
   public async up(queryRunner: QueryRunner): Promise<void> {
     // 1. Create counterparties table
     await queryRunner.query(`
-      CREATE TABLE "counterparties" (
+      CREATE TABLE IF NOT EXISTS "counterparties" (
         "id" uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
         "name" varchar(255) NOT NULL,
         "short_name" varchar(50),
@@ -87,20 +87,20 @@ export class CreateCounterpartiesAndContracts1731710000001 implements MigrationI
 
     // Create indexes
     await queryRunner.query(`
-      CREATE INDEX "IDX_counterparties_inn" ON "counterparties" ("inn")
+      CREATE INDEX IF NOT EXISTS "IDX_counterparties_inn" ON "counterparties" ("inn")
     `);
 
     await queryRunner.query(`
-      CREATE INDEX "IDX_counterparties_type" ON "counterparties" ("type")
+      CREATE INDEX IF NOT EXISTS "IDX_counterparties_type" ON "counterparties" ("type")
     `);
 
     await queryRunner.query(`
-      CREATE INDEX "IDX_counterparties_is_active" ON "counterparties" ("is_active")
+      CREATE INDEX IF NOT EXISTS "IDX_counterparties_is_active" ON "counterparties" ("is_active")
     `);
 
     // 2. Create contracts table
     await queryRunner.query(`
-      CREATE TABLE "contracts" (
+      CREATE TABLE IF NOT EXISTS "contracts" (
         "id" uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
         "contract_number" varchar(50) NOT NULL UNIQUE,
         "start_date" date NOT NULL,
@@ -172,20 +172,20 @@ export class CreateCounterpartiesAndContracts1731710000001 implements MigrationI
 
     // Create indexes for contracts
     await queryRunner.query(`
-      CREATE INDEX "IDX_contracts_counterparty_id" ON "contracts" ("counterparty_id")
+      CREATE INDEX IF NOT EXISTS "IDX_contracts_counterparty_id" ON "contracts" ("counterparty_id")
     `);
 
     await queryRunner.query(`
-      CREATE INDEX "IDX_contracts_status" ON "contracts" ("status")
+      CREATE INDEX IF NOT EXISTS "IDX_contracts_status" ON "contracts" ("status")
     `);
 
     await queryRunner.query(`
-      CREATE INDEX "IDX_contracts_contract_number" ON "contracts" ("contract_number")
+      CREATE INDEX IF NOT EXISTS "IDX_contracts_contract_number" ON "contracts" ("contract_number")
     `);
 
     // 3. Create commission_calculations table
     await queryRunner.query(`
-      CREATE TABLE "commission_calculations" (
+      CREATE TABLE IF NOT EXISTS "commission_calculations" (
         "id" uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
         "contract_id" uuid NOT NULL,
 
@@ -243,15 +243,15 @@ export class CreateCounterpartiesAndContracts1731710000001 implements MigrationI
 
     // Create indexes
     await queryRunner.query(`
-      CREATE INDEX "IDX_commission_calculations_contract_id" ON "commission_calculations" ("contract_id")
+      CREATE INDEX IF NOT EXISTS "IDX_commission_calculations_contract_id" ON "commission_calculations" ("contract_id")
     `);
 
     await queryRunner.query(`
-      CREATE INDEX "IDX_commission_calculations_period" ON "commission_calculations" ("period_start", "period_end")
+      CREATE INDEX IF NOT EXISTS "IDX_commission_calculations_period" ON "commission_calculations" ("period_start", "period_end")
     `);
 
     await queryRunner.query(`
-      CREATE INDEX "IDX_commission_calculations_payment_status" ON "commission_calculations" ("payment_status")
+      CREATE INDEX IF NOT EXISTS "IDX_commission_calculations_payment_status" ON "commission_calculations" ("payment_status")
     `);
 
     // 4. Update locations table
@@ -274,7 +274,7 @@ export class CreateCounterpartiesAndContracts1731710000001 implements MigrationI
     `);
 
     await queryRunner.query(`
-      CREATE INDEX "IDX_locations_counterparty_id" ON "locations" ("counterparty_id")
+      CREATE INDEX IF NOT EXISTS "IDX_locations_counterparty_id" ON "locations" ("counterparty_id")
     `);
   }
 

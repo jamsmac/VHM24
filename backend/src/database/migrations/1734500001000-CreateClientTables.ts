@@ -53,7 +53,7 @@ export class CreateClientTables1734500001000 implements MigrationInterface {
 
     // Create client_users table
     await queryRunner.query(`
-      CREATE TABLE "client_users" (
+      CREATE TABLE IF NOT EXISTS "client_users" (
         "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
         "telegram_username" character varying(100),
         "telegram_id" character varying(50) NOT NULL,
@@ -71,10 +71,10 @@ export class CreateClientTables1734500001000 implements MigrationInterface {
       )
     `);
 
-    await queryRunner.query(`CREATE INDEX "IDX_client_users_telegram_id" ON "client_users" ("telegram_id")`);
-    await queryRunner.query(`CREATE INDEX "IDX_client_users_phone" ON "client_users" ("phone")`);
-    await queryRunner.query(`CREATE INDEX "IDX_client_users_email" ON "client_users" ("email")`);
-    await queryRunner.query(`CREATE INDEX "IDX_client_users_referral_code" ON "client_users" ("referral_code")`);
+    await queryRunner.query(`CREATE INDEX IF NOT EXISTS "IDX_client_users_telegram_id" ON "client_users" ("telegram_id")`);
+    await queryRunner.query(`CREATE INDEX IF NOT EXISTS "IDX_client_users_phone" ON "client_users" ("phone")`);
+    await queryRunner.query(`CREATE INDEX IF NOT EXISTS "IDX_client_users_email" ON "client_users" ("email")`);
+    await queryRunner.query(`CREATE INDEX IF NOT EXISTS "IDX_client_users_referral_code" ON "client_users" ("referral_code")`);
 
     // Self-referencing FK for referrals
     await queryRunner.query(`
@@ -85,7 +85,7 @@ export class CreateClientTables1734500001000 implements MigrationInterface {
 
     // Create client_orders table
     await queryRunner.query(`
-      CREATE TABLE "client_orders" (
+      CREATE TABLE IF NOT EXISTS "client_orders" (
         "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
         "client_user_id" uuid NOT NULL,
         "machine_id" uuid NOT NULL,
@@ -109,10 +109,10 @@ export class CreateClientTables1734500001000 implements MigrationInterface {
       )
     `);
 
-    await queryRunner.query(`CREATE INDEX "IDX_client_orders_client_user_id" ON "client_orders" ("client_user_id")`);
-    await queryRunner.query(`CREATE INDEX "IDX_client_orders_machine_id" ON "client_orders" ("machine_id")`);
-    await queryRunner.query(`CREATE INDEX "IDX_client_orders_status" ON "client_orders" ("status")`);
-    await queryRunner.query(`CREATE INDEX "IDX_client_orders_created_at" ON "client_orders" ("created_at")`);
+    await queryRunner.query(`CREATE INDEX IF NOT EXISTS "IDX_client_orders_client_user_id" ON "client_orders" ("client_user_id")`);
+    await queryRunner.query(`CREATE INDEX IF NOT EXISTS "IDX_client_orders_machine_id" ON "client_orders" ("machine_id")`);
+    await queryRunner.query(`CREATE INDEX IF NOT EXISTS "IDX_client_orders_status" ON "client_orders" ("status")`);
+    await queryRunner.query(`CREATE INDEX IF NOT EXISTS "IDX_client_orders_created_at" ON "client_orders" ("created_at")`);
 
     await queryRunner.query(`
       ALTER TABLE "client_orders"
@@ -134,7 +134,7 @@ export class CreateClientTables1734500001000 implements MigrationInterface {
 
     // Create client_payments table
     await queryRunner.query(`
-      CREATE TABLE "client_payments" (
+      CREATE TABLE IF NOT EXISTS "client_payments" (
         "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
         "client_user_id" uuid NOT NULL,
         "provider" "payment_provider_enum" NOT NULL,
@@ -150,10 +150,10 @@ export class CreateClientTables1734500001000 implements MigrationInterface {
       )
     `);
 
-    await queryRunner.query(`CREATE INDEX "IDX_client_payments_client_user_id" ON "client_payments" ("client_user_id")`);
-    await queryRunner.query(`CREATE INDEX "IDX_client_payments_provider" ON "client_payments" ("provider")`);
-    await queryRunner.query(`CREATE INDEX "IDX_client_payments_provider_tx_id" ON "client_payments" ("provider_tx_id")`);
-    await queryRunner.query(`CREATE INDEX "IDX_client_payments_status" ON "client_payments" ("status")`);
+    await queryRunner.query(`CREATE INDEX IF NOT EXISTS "IDX_client_payments_client_user_id" ON "client_payments" ("client_user_id")`);
+    await queryRunner.query(`CREATE INDEX IF NOT EXISTS "IDX_client_payments_provider" ON "client_payments" ("provider")`);
+    await queryRunner.query(`CREATE INDEX IF NOT EXISTS "IDX_client_payments_provider_tx_id" ON "client_payments" ("provider_tx_id")`);
+    await queryRunner.query(`CREATE INDEX IF NOT EXISTS "IDX_client_payments_status" ON "client_payments" ("status")`);
 
     await queryRunner.query(`
       ALTER TABLE "client_payments"
@@ -163,7 +163,7 @@ export class CreateClientTables1734500001000 implements MigrationInterface {
 
     // Create client_loyalty_accounts table
     await queryRunner.query(`
-      CREATE TABLE "client_loyalty_accounts" (
+      CREATE TABLE IF NOT EXISTS "client_loyalty_accounts" (
         "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
         "client_user_id" uuid NOT NULL,
         "points_balance" integer NOT NULL DEFAULT 0,
@@ -175,7 +175,7 @@ export class CreateClientTables1734500001000 implements MigrationInterface {
       )
     `);
 
-    await queryRunner.query(`CREATE INDEX "IDX_client_loyalty_accounts_client_user_id" ON "client_loyalty_accounts" ("client_user_id")`);
+    await queryRunner.query(`CREATE INDEX IF NOT EXISTS "IDX_client_loyalty_accounts_client_user_id" ON "client_loyalty_accounts" ("client_user_id")`);
 
     await queryRunner.query(`
       ALTER TABLE "client_loyalty_accounts"
@@ -185,7 +185,7 @@ export class CreateClientTables1734500001000 implements MigrationInterface {
 
     // Create client_loyalty_ledger table
     await queryRunner.query(`
-      CREATE TABLE "client_loyalty_ledger" (
+      CREATE TABLE IF NOT EXISTS "client_loyalty_ledger" (
         "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
         "client_user_id" uuid NOT NULL,
         "delta" integer NOT NULL,
@@ -198,9 +198,9 @@ export class CreateClientTables1734500001000 implements MigrationInterface {
       )
     `);
 
-    await queryRunner.query(`CREATE INDEX "IDX_client_loyalty_ledger_client_user_id" ON "client_loyalty_ledger" ("client_user_id")`);
-    await queryRunner.query(`CREATE INDEX "IDX_client_loyalty_ledger_order_id" ON "client_loyalty_ledger" ("order_id")`);
-    await queryRunner.query(`CREATE INDEX "IDX_client_loyalty_ledger_created_at" ON "client_loyalty_ledger" ("created_at")`);
+    await queryRunner.query(`CREATE INDEX IF NOT EXISTS "IDX_client_loyalty_ledger_client_user_id" ON "client_loyalty_ledger" ("client_user_id")`);
+    await queryRunner.query(`CREATE INDEX IF NOT EXISTS "IDX_client_loyalty_ledger_order_id" ON "client_loyalty_ledger" ("order_id")`);
+    await queryRunner.query(`CREATE INDEX IF NOT EXISTS "IDX_client_loyalty_ledger_created_at" ON "client_loyalty_ledger" ("created_at")`);
 
     await queryRunner.query(`
       ALTER TABLE "client_loyalty_ledger"
@@ -216,7 +216,7 @@ export class CreateClientTables1734500001000 implements MigrationInterface {
 
     // Create client_wallets table (Phase 2 - tables now, endpoints later)
     await queryRunner.query(`
-      CREATE TABLE "client_wallets" (
+      CREATE TABLE IF NOT EXISTS "client_wallets" (
         "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
         "client_user_id" uuid NOT NULL,
         "balance" decimal(12,2) NOT NULL DEFAULT 0,
@@ -229,7 +229,7 @@ export class CreateClientTables1734500001000 implements MigrationInterface {
       )
     `);
 
-    await queryRunner.query(`CREATE INDEX "IDX_client_wallets_client_user_id" ON "client_wallets" ("client_user_id")`);
+    await queryRunner.query(`CREATE INDEX IF NOT EXISTS "IDX_client_wallets_client_user_id" ON "client_wallets" ("client_user_id")`);
 
     await queryRunner.query(`
       ALTER TABLE "client_wallets"
@@ -239,7 +239,7 @@ export class CreateClientTables1734500001000 implements MigrationInterface {
 
     // Create client_wallet_ledger table (Phase 2)
     await queryRunner.query(`
-      CREATE TABLE "client_wallet_ledger" (
+      CREATE TABLE IF NOT EXISTS "client_wallet_ledger" (
         "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
         "client_user_id" uuid NOT NULL,
         "transaction_type" "wallet_transaction_type_enum" NOT NULL,
@@ -254,10 +254,10 @@ export class CreateClientTables1734500001000 implements MigrationInterface {
       )
     `);
 
-    await queryRunner.query(`CREATE INDEX "IDX_client_wallet_ledger_client_user_id" ON "client_wallet_ledger" ("client_user_id")`);
-    await queryRunner.query(`CREATE INDEX "IDX_client_wallet_ledger_order_id" ON "client_wallet_ledger" ("order_id")`);
-    await queryRunner.query(`CREATE INDEX "IDX_client_wallet_ledger_payment_id" ON "client_wallet_ledger" ("payment_id")`);
-    await queryRunner.query(`CREATE INDEX "IDX_client_wallet_ledger_created_at" ON "client_wallet_ledger" ("created_at")`);
+    await queryRunner.query(`CREATE INDEX IF NOT EXISTS "IDX_client_wallet_ledger_client_user_id" ON "client_wallet_ledger" ("client_user_id")`);
+    await queryRunner.query(`CREATE INDEX IF NOT EXISTS "IDX_client_wallet_ledger_order_id" ON "client_wallet_ledger" ("order_id")`);
+    await queryRunner.query(`CREATE INDEX IF NOT EXISTS "IDX_client_wallet_ledger_payment_id" ON "client_wallet_ledger" ("payment_id")`);
+    await queryRunner.query(`CREATE INDEX IF NOT EXISTS "IDX_client_wallet_ledger_created_at" ON "client_wallet_ledger" ("created_at")`);
 
     await queryRunner.query(`
       ALTER TABLE "client_wallet_ledger"

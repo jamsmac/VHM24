@@ -6,7 +6,7 @@ export class CreateIntelligentImportTables1731850000000 implements MigrationInte
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Create import_templates table
     await queryRunner.query(`
-      CREATE TABLE "import_templates" (
+      CREATE TABLE IF NOT EXISTS "import_templates" (
         "id" uuid NOT NULL DEFAULT gen_random_uuid(),
         "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
         "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
@@ -23,16 +23,16 @@ export class CreateIntelligentImportTables1731850000000 implements MigrationInte
     `);
 
     await queryRunner.query(`
-      CREATE INDEX "IDX_import_templates_domain" ON "import_templates" ("domain")
+      CREATE INDEX IF NOT EXISTS "IDX_import_templates_domain" ON "import_templates" ("domain")
     `);
 
     await queryRunner.query(`
-      CREATE INDEX "IDX_import_templates_active" ON "import_templates" ("active")
+      CREATE INDEX IF NOT EXISTS "IDX_import_templates_active" ON "import_templates" ("active")
     `);
 
     // Create schema_definitions table
     await queryRunner.query(`
-      CREATE TABLE "schema_definitions" (
+      CREATE TABLE IF NOT EXISTS "schema_definitions" (
         "id" uuid NOT NULL DEFAULT gen_random_uuid(),
         "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
         "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
@@ -48,12 +48,12 @@ export class CreateIntelligentImportTables1731850000000 implements MigrationInte
     `);
 
     await queryRunner.query(`
-      CREATE UNIQUE INDEX "IDX_schema_definitions_domain_table" ON "schema_definitions" ("domain", "table_name")
+      CREATE UNIQUE INDEX IF NOT EXISTS "IDX_schema_definitions_domain_table" ON "schema_definitions" ("domain", "table_name")
     `);
 
     // Create validation_rules table
     await queryRunner.query(`
-      CREATE TABLE "validation_rules" (
+      CREATE TABLE IF NOT EXISTS "validation_rules" (
         "id" uuid NOT NULL DEFAULT gen_random_uuid(),
         "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
         "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
@@ -70,12 +70,12 @@ export class CreateIntelligentImportTables1731850000000 implements MigrationInte
     `);
 
     await queryRunner.query(`
-      CREATE INDEX "IDX_validation_rules_domain_active" ON "validation_rules" ("domain", "active")
+      CREATE INDEX IF NOT EXISTS "IDX_validation_rules_domain_active" ON "validation_rules" ("domain", "active")
     `);
 
     // Create import_sessions table
     await queryRunner.query(`
-      CREATE TABLE "import_sessions" (
+      CREATE TABLE IF NOT EXISTS "import_sessions" (
         "id" uuid NOT NULL DEFAULT gen_random_uuid(),
         "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
         "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
@@ -101,15 +101,15 @@ export class CreateIntelligentImportTables1731850000000 implements MigrationInte
     `);
 
     await queryRunner.query(`
-      CREATE INDEX "IDX_import_sessions_domain" ON "import_sessions" ("domain")
+      CREATE INDEX IF NOT EXISTS "IDX_import_sessions_domain" ON "import_sessions" ("domain")
     `);
 
     await queryRunner.query(`
-      CREATE INDEX "IDX_import_sessions_status" ON "import_sessions" ("status")
+      CREATE INDEX IF NOT EXISTS "IDX_import_sessions_status" ON "import_sessions" ("status")
     `);
 
     await queryRunner.query(`
-      CREATE INDEX "IDX_import_sessions_uploaded_by" ON "import_sessions" ("uploaded_by_user_id")
+      CREATE INDEX IF NOT EXISTS "IDX_import_sessions_uploaded_by" ON "import_sessions" ("uploaded_by_user_id")
     `);
 
     // Add foreign keys for import_sessions
@@ -136,7 +136,7 @@ export class CreateIntelligentImportTables1731850000000 implements MigrationInte
 
     // Create import_audit_logs table
     await queryRunner.query(`
-      CREATE TABLE "import_audit_logs" (
+      CREATE TABLE IF NOT EXISTS "import_audit_logs" (
         "id" uuid NOT NULL DEFAULT gen_random_uuid(),
         "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
         "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
@@ -155,11 +155,11 @@ export class CreateIntelligentImportTables1731850000000 implements MigrationInte
     `);
 
     await queryRunner.query(`
-      CREATE INDEX "IDX_import_audit_logs_session" ON "import_audit_logs" ("session_id")
+      CREATE INDEX IF NOT EXISTS "IDX_import_audit_logs_session" ON "import_audit_logs" ("session_id")
     `);
 
     await queryRunner.query(`
-      CREATE INDEX "IDX_import_audit_logs_table_record" ON "import_audit_logs" ("table_name", "record_id")
+      CREATE INDEX IF NOT EXISTS "IDX_import_audit_logs_table_record" ON "import_audit_logs" ("table_name", "record_id")
     `);
 
     // Add foreign keys for import_audit_logs

@@ -15,7 +15,7 @@ export class CreateMachineAccessTables1734500000000 implements MigrationInterfac
 
     // Create machine_access table
     await queryRunner.query(`
-      CREATE TABLE "machine_access" (
+      CREATE TABLE IF NOT EXISTS "machine_access" (
         "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
         "machine_id" uuid NOT NULL,
         "user_id" uuid NOT NULL,
@@ -28,9 +28,9 @@ export class CreateMachineAccessTables1734500000000 implements MigrationInterfac
     `);
 
     // Create indexes for machine_access
-    await queryRunner.query(`CREATE INDEX "IDX_machine_access_machine_id" ON "machine_access" ("machine_id")`);
-    await queryRunner.query(`CREATE INDEX "IDX_machine_access_user_id" ON "machine_access" ("user_id")`);
-    await queryRunner.query(`CREATE INDEX "IDX_machine_access_role" ON "machine_access" ("role")`);
+    await queryRunner.query(`CREATE INDEX IF NOT EXISTS "IDX_machine_access_machine_id" ON "machine_access" ("machine_id")`);
+    await queryRunner.query(`CREATE INDEX IF NOT EXISTS "IDX_machine_access_user_id" ON "machine_access" ("user_id")`);
+    await queryRunner.query(`CREATE INDEX IF NOT EXISTS "IDX_machine_access_role" ON "machine_access" ("role")`);
 
     // Create foreign keys for machine_access
     await queryRunner.query(`
@@ -53,7 +53,7 @@ export class CreateMachineAccessTables1734500000000 implements MigrationInterfac
 
     // Create access_templates table
     await queryRunner.query(`
-      CREATE TABLE "access_templates" (
+      CREATE TABLE IF NOT EXISTS "access_templates" (
         "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
         "name" character varying(200) NOT NULL,
         "description" text,
@@ -72,7 +72,7 @@ export class CreateMachineAccessTables1734500000000 implements MigrationInterfac
 
     // Create access_template_rows table
     await queryRunner.query(`
-      CREATE TABLE "access_template_rows" (
+      CREATE TABLE IF NOT EXISTS "access_template_rows" (
         "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
         "template_id" uuid NOT NULL,
         "user_id" uuid NOT NULL,

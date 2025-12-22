@@ -15,37 +15,46 @@ export class CreateReconciliationTables1733000000002 implements MigrationInterfa
 
     // Reconciliation status enum
     await queryRunner.query(`
-      CREATE TYPE reconciliation_status AS ENUM (
-        'pending',
-        'processing',
-        'completed',
-        'failed',
-        'cancelled'
-      );
+      DO $$ BEGIN
+        CREATE TYPE reconciliation_status AS ENUM (
+          'pending',
+          'processing',
+          'completed',
+          'failed',
+          'cancelled'
+        );
+      EXCEPTION WHEN duplicate_object THEN NULL;
+      END $$;
     `);
 
     // Reconciliation source enum
     await queryRunner.query(`
-      CREATE TYPE reconciliation_source AS ENUM (
-        'hw',
-        'sales_report',
-        'fiscal',
-        'payme',
-        'click',
-        'uzum'
-      );
+      DO $$ BEGIN
+        CREATE TYPE reconciliation_source AS ENUM (
+          'hw',
+          'sales_report',
+          'fiscal',
+          'payme',
+          'click',
+          'uzum'
+        );
+      EXCEPTION WHEN duplicate_object THEN NULL;
+      END $$;
     `);
 
     // Mismatch type enum
     await queryRunner.query(`
-      CREATE TYPE mismatch_type AS ENUM (
-        'order_not_found',
-        'payment_not_found',
-        'amount_mismatch',
-        'time_mismatch',
-        'duplicate',
-        'partial_match'
-      );
+      DO $$ BEGIN
+        CREATE TYPE mismatch_type AS ENUM (
+          'order_not_found',
+          'payment_not_found',
+          'amount_mismatch',
+          'time_mismatch',
+          'duplicate',
+          'partial_match'
+        );
+      EXCEPTION WHEN duplicate_object THEN NULL;
+      END $$;
     `);
 
     // ========================================
@@ -53,7 +62,7 @@ export class CreateReconciliationTables1733000000002 implements MigrationInterfa
     // ========================================
 
     await queryRunner.query(`
-      CREATE TABLE reconciliation_runs (
+      CREATE TABLE IF NOT EXISTS reconciliation_runs (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         status reconciliation_status NOT NULL DEFAULT 'pending',
 
@@ -95,19 +104,19 @@ export class CreateReconciliationTables1733000000002 implements MigrationInterfa
 
     // Indexes for reconciliation_runs
     await queryRunner.query(`
-      CREATE INDEX idx_reconciliation_runs_status ON reconciliation_runs(status);
+      CREATE INDEX IF NOT EXISTS idx_reconciliation_runs_status ON reconciliation_runs(status);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_reconciliation_runs_created_by ON reconciliation_runs(created_by_user_id);
+      CREATE INDEX IF NOT EXISTS idx_reconciliation_runs_created_by ON reconciliation_runs(created_by_user_id);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_reconciliation_runs_dates ON reconciliation_runs(date_from, date_to);
+      CREATE INDEX IF NOT EXISTS idx_reconciliation_runs_dates ON reconciliation_runs(date_from, date_to);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_reconciliation_runs_created_at ON reconciliation_runs(created_at);
+      CREATE INDEX IF NOT EXISTS idx_reconciliation_runs_created_at ON reconciliation_runs(created_at);
     `);
 
     // ========================================
@@ -115,7 +124,7 @@ export class CreateReconciliationTables1733000000002 implements MigrationInterfa
     // ========================================
 
     await queryRunner.query(`
-      CREATE TABLE reconciliation_mismatches (
+      CREATE TABLE IF NOT EXISTS reconciliation_mismatches (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         run_id UUID NOT NULL REFERENCES reconciliation_runs(id) ON DELETE CASCADE,
 
@@ -152,32 +161,32 @@ export class CreateReconciliationTables1733000000002 implements MigrationInterfa
 
     // Indexes for reconciliation_mismatches
     await queryRunner.query(`
-      CREATE INDEX idx_reconciliation_mismatches_run_id ON reconciliation_mismatches(run_id);
+      CREATE INDEX IF NOT EXISTS idx_reconciliation_mismatches_run_id ON reconciliation_mismatches(run_id);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_reconciliation_mismatches_type ON reconciliation_mismatches(mismatch_type);
+      CREATE INDEX IF NOT EXISTS idx_reconciliation_mismatches_type ON reconciliation_mismatches(mismatch_type);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_reconciliation_mismatches_machine ON reconciliation_mismatches(machine_code);
+      CREATE INDEX IF NOT EXISTS idx_reconciliation_mismatches_machine ON reconciliation_mismatches(machine_code);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_reconciliation_mismatches_order_time ON reconciliation_mismatches(order_time);
+      CREATE INDEX IF NOT EXISTS idx_reconciliation_mismatches_order_time ON reconciliation_mismatches(order_time);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_reconciliation_mismatches_resolved ON reconciliation_mismatches(is_resolved);
+      CREATE INDEX IF NOT EXISTS idx_reconciliation_mismatches_resolved ON reconciliation_mismatches(is_resolved);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_reconciliation_mismatches_score ON reconciliation_mismatches(match_score);
+      CREATE INDEX IF NOT EXISTS idx_reconciliation_mismatches_score ON reconciliation_mismatches(match_score);
     `);
 
     // Composite index for common queries
     await queryRunner.query(`
-      CREATE INDEX idx_reconciliation_mismatches_run_resolved
+      CREATE INDEX IF NOT EXISTS idx_reconciliation_mismatches_run_resolved
       ON reconciliation_mismatches(run_id, is_resolved);
     `);
 
