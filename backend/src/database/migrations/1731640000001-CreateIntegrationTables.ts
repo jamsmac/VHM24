@@ -2,44 +2,68 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
 
 export class CreateIntegrationTables1731640000001 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
-    // Create enums
+    // Create enums (idempotent - skip if already exists)
     await queryRunner.query(`
-      CREATE TYPE integration_type AS ENUM (
-        'payment_gateway', 'erp', 'accounting', 'crm', 'email', 'sms', 'shipping', 'inventory', 'api', 'webhook'
-      );
+      DO $$ BEGIN
+        CREATE TYPE integration_type AS ENUM (
+          'payment_gateway', 'erp', 'accounting', 'crm', 'email', 'sms', 'shipping', 'inventory', 'api', 'webhook'
+        );
+      EXCEPTION WHEN duplicate_object THEN NULL;
+      END $$;
     `);
 
     await queryRunner.query(`
-      CREATE TYPE integration_status AS ENUM ('active', 'inactive', 'error', 'testing');
+      DO $$ BEGIN
+        CREATE TYPE integration_status AS ENUM ('active', 'inactive', 'error', 'testing');
+      EXCEPTION WHEN duplicate_object THEN NULL;
+      END $$;
     `);
 
     await queryRunner.query(`
-      CREATE TYPE log_level AS ENUM ('info', 'warning', 'error', 'debug');
+      DO $$ BEGIN
+        CREATE TYPE log_level AS ENUM ('info', 'warning', 'error', 'debug');
+      EXCEPTION WHEN duplicate_object THEN NULL;
+      END $$;
     `);
 
     await queryRunner.query(`
-      CREATE TYPE request_method AS ENUM ('GET', 'POST', 'PUT', 'PATCH', 'DELETE');
+      DO $$ BEGIN
+        CREATE TYPE request_method AS ENUM ('GET', 'POST', 'PUT', 'PATCH', 'DELETE');
+      EXCEPTION WHEN duplicate_object THEN NULL;
+      END $$;
     `);
 
     await queryRunner.query(`
-      CREATE TYPE webhook_status AS ENUM ('pending', 'processing', 'completed', 'failed', 'ignored');
+      DO $$ BEGIN
+        CREATE TYPE webhook_status AS ENUM ('pending', 'processing', 'completed', 'failed', 'ignored');
+      EXCEPTION WHEN duplicate_object THEN NULL;
+      END $$;
     `);
 
     await queryRunner.query(`
-      CREATE TYPE sync_job_status AS ENUM ('scheduled', 'running', 'completed', 'failed', 'cancelled');
+      DO $$ BEGIN
+        CREATE TYPE sync_job_status AS ENUM ('scheduled', 'running', 'completed', 'failed', 'cancelled');
+      EXCEPTION WHEN duplicate_object THEN NULL;
+      END $$;
     `);
 
     await queryRunner.query(`
-      CREATE TYPE sync_direction AS ENUM ('inbound', 'outbound', 'bidirectional');
+      DO $$ BEGIN
+        CREATE TYPE sync_direction AS ENUM ('inbound', 'outbound', 'bidirectional');
+      EXCEPTION WHEN duplicate_object THEN NULL;
+      END $$;
     `);
 
     await queryRunner.query(`
-      CREATE TYPE api_key_status AS ENUM ('active', 'inactive', 'revoked', 'expired');
+      DO $$ BEGIN
+        CREATE TYPE api_key_status AS ENUM ('active', 'inactive', 'revoked', 'expired');
+      EXCEPTION WHEN duplicate_object THEN NULL;
+      END $$;
     `);
 
     // Create integrations table
     await queryRunner.query(`
-      CREATE TABLE integrations (
+      CREATE TABLE IF NOT EXISTS integrations (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         name VARCHAR(100) NOT NULL,
         code VARCHAR(50) UNIQUE NOT NULL,
@@ -65,20 +89,20 @@ export class CreateIntegrationTables1731640000001 implements MigrationInterface 
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_integrations_type ON integrations(type);
+      CREATE INDEX IF NOT EXISTS idx_integrations_type ON integrations(type);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_integrations_status ON integrations(status);
+      CREATE INDEX IF NOT EXISTS idx_integrations_status ON integrations(status);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_integrations_sync ON integrations(next_sync_at) WHERE auto_sync_enabled = true;
+      CREATE INDEX IF NOT EXISTS idx_integrations_sync ON integrations(next_sync_at) WHERE auto_sync_enabled = true;
     `);
 
     // Create integration_logs table
     await queryRunner.query(`
-      CREATE TABLE integration_logs (
+      CREATE TABLE IF NOT EXISTS integration_logs (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         integration_id UUID NOT NULL REFERENCES integrations(id) ON DELETE CASCADE,
         level log_level DEFAULT 'info',
@@ -102,24 +126,24 @@ export class CreateIntegrationTables1731640000001 implements MigrationInterface 
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_integration_logs_integration ON integration_logs(integration_id);
+      CREATE INDEX IF NOT EXISTS idx_integration_logs_integration ON integration_logs(integration_id);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_integration_logs_created ON integration_logs(created_at);
+      CREATE INDEX IF NOT EXISTS idx_integration_logs_created ON integration_logs(created_at);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_integration_logs_success ON integration_logs(success);
+      CREATE INDEX IF NOT EXISTS idx_integration_logs_success ON integration_logs(success);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_integration_logs_level ON integration_logs(level);
+      CREATE INDEX IF NOT EXISTS idx_integration_logs_level ON integration_logs(level);
     `);
 
     // Create webhooks table
     await queryRunner.query(`
-      CREATE TABLE webhooks (
+      CREATE TABLE IF NOT EXISTS webhooks (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         integration_id UUID REFERENCES integrations(id) ON DELETE SET NULL,
         event_type VARCHAR(100) NOT NULL,
@@ -142,24 +166,24 @@ export class CreateIntegrationTables1731640000001 implements MigrationInterface 
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_webhooks_integration ON webhooks(integration_id);
+      CREATE INDEX IF NOT EXISTS idx_webhooks_integration ON webhooks(integration_id);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_webhooks_status ON webhooks(status);
+      CREATE INDEX IF NOT EXISTS idx_webhooks_status ON webhooks(status);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_webhooks_event_type ON webhooks(event_type);
+      CREATE INDEX IF NOT EXISTS idx_webhooks_event_type ON webhooks(event_type);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_webhooks_created ON webhooks(created_at);
+      CREATE INDEX IF NOT EXISTS idx_webhooks_created ON webhooks(created_at);
     `);
 
     // Create sync_jobs table
     await queryRunner.query(`
-      CREATE TABLE sync_jobs (
+      CREATE TABLE IF NOT EXISTS sync_jobs (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         integration_id UUID NOT NULL REFERENCES integrations(id) ON DELETE CASCADE,
         job_name VARCHAR(100) NOT NULL,
@@ -185,24 +209,24 @@ export class CreateIntegrationTables1731640000001 implements MigrationInterface 
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_sync_jobs_integration ON sync_jobs(integration_id);
+      CREATE INDEX IF NOT EXISTS idx_sync_jobs_integration ON sync_jobs(integration_id);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_sync_jobs_status ON sync_jobs(status);
+      CREATE INDEX IF NOT EXISTS idx_sync_jobs_status ON sync_jobs(status);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_sync_jobs_scheduled ON sync_jobs(scheduled_at);
+      CREATE INDEX IF NOT EXISTS idx_sync_jobs_scheduled ON sync_jobs(scheduled_at);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_sync_jobs_entity_type ON sync_jobs(entity_type);
+      CREATE INDEX IF NOT EXISTS idx_sync_jobs_entity_type ON sync_jobs(entity_type);
     `);
 
     // Create api_keys table
     await queryRunner.query(`
-      CREATE TABLE api_keys (
+      CREATE TABLE IF NOT EXISTS api_keys (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         name VARCHAR(100) NOT NULL,
         key_hash VARCHAR(64) UNIQUE NOT NULL,
@@ -222,15 +246,15 @@ export class CreateIntegrationTables1731640000001 implements MigrationInterface 
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_api_keys_user ON api_keys(user_id);
+      CREATE INDEX IF NOT EXISTS idx_api_keys_user ON api_keys(user_id);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_api_keys_status ON api_keys(status);
+      CREATE INDEX IF NOT EXISTS idx_api_keys_status ON api_keys(status);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_api_keys_prefix ON api_keys(key_prefix);
+      CREATE INDEX IF NOT EXISTS idx_api_keys_prefix ON api_keys(key_prefix);
     `);
   }
 
