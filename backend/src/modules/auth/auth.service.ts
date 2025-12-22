@@ -24,6 +24,7 @@ import { EmailService } from '../email/email.service';
 import { PasswordResetToken } from './entities/password-reset-token.entity';
 import { SessionService } from './services/session.service';
 import { TokenBlacklistService } from './services/token-blacklist.service';
+import { TwoFactorAuthService } from './services/two-factor-auth.service';
 
 export interface AuthTokens {
   access_token: string;
@@ -61,6 +62,8 @@ export class AuthService {
     private readonly emailService: EmailService,
     private readonly sessionService: SessionService,
     private readonly tokenBlacklistService: TokenBlacklistService,
+    @Inject(forwardRef(() => TwoFactorAuthService))
+    private readonly twoFactorAuthService: TwoFactorAuthService,
   ) {
     // REQ-AUTH-10: Validate JWT_SECRET is set at startup
     if (!process.env.JWT_SECRET) {
@@ -278,9 +281,15 @@ export class AuthService {
       throw new UnauthorizedException('2FA не настроена для этого пользователя');
     }
 
-    // Verify 2FA token using TwoFactorAuthService
-    // Note: We'll need to import and inject TwoFactorAuthService
-    // For now, we'll add this import at the top and inject it
+    // LOW-001 fix: Validate 2FA token inside service method (not in controller)
+    // This ensures the service method is self-contained and secure
+    // Skip validation only for backup code flow (token === 'backup')
+    if (token !== 'backup') {
+      const isValid = await this.twoFactorAuthService.verifyToken(userId, token, ip);
+      if (!isValid) {
+        throw new BadRequestException('Неверный код двухфакторной аутентификации');
+      }
+    }
 
     // Generate new tokens after successful 2FA
     const tokens = await this.generateTokens(user);

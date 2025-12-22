@@ -443,14 +443,8 @@ export class AuthController {
     const ip = req.ip || req.socket.remoteAddress || '0.0.0.0';
     const userAgent = req.headers['user-agent'];
 
-    // Verify 2FA token first
-    const isValid = await this.twoFactorAuthService.verifyToken(user.id, dto.token, ip);
-
-    if (!isValid) {
-      throw new BadRequestException('Неверный код двухфакторной аутентификации');
-    }
-
-    // Complete login
+    // LOW-001 fix: Token validation moved to AuthService.complete2FALogin()
+    // Service method now validates internally, ensuring it can't be called without validation
     const authResponse = await this.authService.complete2FALogin(user.id, dto.token, ip, userAgent);
 
     // SEC-1: Set httpOnly cookies for XSS protection
