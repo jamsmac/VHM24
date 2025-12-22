@@ -3,6 +3,7 @@ import {
   CanActivate,
   ExecutionContext,
   ForbiddenException,
+  SetMetadata,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { MachineAccessService } from '../machine-access.service';
@@ -10,6 +11,7 @@ import { MachineAccessRole } from '../entities/machine-access.entity';
 import { UserRole } from '../../users/entities/user.entity';
 
 export const MACHINE_ACCESS_KEY = 'machine_access_roles';
+export const STRICT_MACHINE_ACCESS_KEY = 'strict_machine_access';
 
 /**
  * Decorator to specify required machine access roles.
@@ -28,6 +30,21 @@ export const MachineAccessRoles = (...roles: MachineAccessRole[]) => {
 };
 
 /**
+ * Decorator to enforce strict machine access checks.
+ * When applied, even OWNER and ADMIN users must have explicit machine-level access.
+ *
+ * Use this for sensitive operations where machine-level audit trail is required,
+ * or when you need to ensure admins are explicitly assigned to specific machines.
+ *
+ * @example
+ * @StrictMachineAccess()
+ * @MachineAccessRoles(MachineAccessRole.OWNER)
+ * @Delete(':machineId')
+ * async deleteMachine(@Param('machineId') machineId: string) {}
+ */
+export const StrictMachineAccess = () => SetMetadata(STRICT_MACHINE_ACCESS_KEY, true);
+
+/**
  * Guard to check per-machine access.
  *
  * Expects:
@@ -35,7 +52,8 @@ export const MachineAccessRoles = (...roles: MachineAccessRole[]) => {
  * - machineId parameter in request params
  * - @MachineAccessRoles decorator on route
  *
- * Global admins (OWNER, ADMIN) bypass this check.
+ * By default, global admins (OWNER, ADMIN) bypass this check.
+ * Use @StrictMachineAccess() decorator to enforce checks for admins too.
  */
 @Injectable()
 export class MachineAccessGuard implements CanActivate {
@@ -63,8 +81,15 @@ export class MachineAccessGuard implements CanActivate {
       throw new ForbiddenException('Authentication required');
     }
 
-    // Global admins bypass machine-level access checks
-    if (user.role === UserRole.OWNER || user.role === UserRole.ADMIN) {
+    // Check if strict mode is enabled (MEDIUM-002 fix)
+    // When strict, even OWNER/ADMIN must have explicit machine-level access
+    const strictMode = this.reflector.get<boolean>(
+      STRICT_MACHINE_ACCESS_KEY,
+      context.getHandler(),
+    );
+
+    // Global admins bypass machine-level access checks UNLESS strict mode is enabled
+    if (!strictMode && (user.role === UserRole.OWNER || user.role === UserRole.ADMIN)) {
       return true;
     }
 
@@ -82,8 +107,9 @@ export class MachineAccessGuard implements CanActivate {
     );
 
     if (!hasAccess) {
+      const strictNote = strictMode ? ' (strict mode enabled)' : '';
       throw new ForbiddenException(
-        `Required machine access level: ${requiredRoles.join(' or ')}`,
+        `Required machine access level: ${requiredRoles.join(' or ')}${strictNote}`,
       );
     }
 

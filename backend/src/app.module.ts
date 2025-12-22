@@ -7,6 +7,7 @@ import { BullModule } from '@nestjs/bull';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard } from '@nestjs/throttler';
+import { CsrfGuard } from './common/guards/csrf.guard';
 import { validate } from './config/env.validation';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -229,9 +230,17 @@ import { SettingsModule } from './modules/settings/settings.module';
   controllers: [AppController],
   providers: [
     AppService,
+    // Global rate limiting (throttling)
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
+    },
+    // Global CSRF protection (MEDIUM-003 fix)
+    // Enabled by default in production (NODE_ENV=production)
+    // Can be explicitly controlled via CSRF_ENABLED=true|false
+    {
+      provide: APP_GUARD,
+      useClass: CsrfGuard,
     },
   ],
 })

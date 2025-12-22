@@ -4,7 +4,10 @@ import {
   ExecutionContext,
   ForbiddenException,
   Logger,
+  Inject,
+  Optional,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
 import { Request } from 'express';
 import * as crypto from 'crypto';
@@ -37,15 +40,47 @@ export const CSRF_TOKEN_COOKIE = 'csrf_token';
  * - Simple to implement with SPAs
  *
  * Protected methods by default: POST, PUT, DELETE, PATCH
+ *
+ * Configuration (via env):
+ * - CSRF_ENABLED=true|false (default: true in production, false in development)
+ * - NODE_ENV=production enables CSRF by default
  */
 @Injectable()
 export class CsrfGuard implements CanActivate {
   private readonly logger = new Logger(CsrfGuard.name);
   private readonly protectedMethods = ['POST', 'PUT', 'DELETE', 'PATCH'];
+  private readonly csrfEnabled: boolean;
 
-  constructor(private readonly reflector: Reflector) {}
+  constructor(
+    private readonly reflector: Reflector,
+    @Optional() @Inject(ConfigService) private readonly configService?: ConfigService,
+  ) {
+    // CSRF is enabled by default in production, can be overridden via CSRF_ENABLED
+    const nodeEnv = this.configService?.get<string>('NODE_ENV', 'development');
+    const csrfEnabledEnv = this.configService?.get<string>('CSRF_ENABLED');
+
+    if (csrfEnabledEnv !== undefined) {
+      this.csrfEnabled = csrfEnabledEnv === 'true' || csrfEnabledEnv === '1';
+    } else {
+      // Default: enabled in production only
+      this.csrfEnabled = nodeEnv === 'production';
+    }
+
+    if (this.csrfEnabled) {
+      this.logger.log('CSRF protection enabled globally');
+    } else {
+      this.logger.warn(
+        'CSRF protection disabled. Set CSRF_ENABLED=true or NODE_ENV=production to enable.',
+      );
+    }
+  }
 
   canActivate(context: ExecutionContext): boolean {
+    // Check if CSRF is globally disabled
+    if (!this.csrfEnabled) {
+      return true;
+    }
+
     const request = context.switchToHttp().getRequest<Request>();
 
     // Check if CSRF protection should be skipped for this route
