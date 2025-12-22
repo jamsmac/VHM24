@@ -131,3 +131,4 @@ const baseConfig = databaseUrl
 Ваш код уже правильно настроен - просто убедитесь, что в Railway Variables установлен только `DATABASE_URL`, а `DATABASE_PUBLIC_URL` удален или не используется.
 
 
+

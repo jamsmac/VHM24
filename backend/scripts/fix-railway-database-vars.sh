@@ -74,3 +74,4 @@ echo "   - Remove DATABASE_PUBLIC_URL if not needed (public, paid)"
 echo "   - Your code already uses DATABASE_URL correctly"
 
 
+

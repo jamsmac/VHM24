@@ -110,3 +110,4 @@ ON CONFLICT (user_id, role_id) DO NOTHING;
 После связывания попробуйте добавить location снова - должно работать! ✅
 
 
+

@@ -61,8 +61,11 @@ export class MachinesController {
     status: 409,
     description: 'Аппарат с таким номером или QR-кодом уже существует',
   })
-  create(@Body() createMachineDto: CreateMachineDto): Promise<Machine> {
-    return this.machinesService.create(createMachineDto);
+  create(
+    @Body() createMachineDto: CreateMachineDto,
+    @CurrentUser() user: User,
+  ): Promise<Machine> {
+    return this.machinesService.create(createMachineDto, user.id);
   }
 
   @Get()
@@ -182,8 +185,9 @@ export class MachinesController {
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateMachineDto: UpdateMachineDto,
+    @CurrentUser() user: User,
   ): Promise<Machine> {
-    return this.machinesService.update(id, updateMachineDto);
+    return this.machinesService.update(id, updateMachineDto, user.id);
   }
 
   @Patch(':id/status')
@@ -199,8 +203,9 @@ export class MachinesController {
   updateStatus(
     @Param('id', ParseUUIDPipe) id: string,
     @Body('status') status: MachineStatus,
+    @CurrentUser() user: User,
   ): Promise<Machine> {
-    return this.machinesService.update(id, { status });
+    return this.machinesService.update(id, { status }, user.id);
   }
 
   @Delete(':id')

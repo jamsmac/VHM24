@@ -224,7 +224,7 @@ describe('MachinesService', () => {
       machineRepository.save.mockResolvedValue(expectedMachine as Machine);
 
       // Act
-      const result = await service.create(createDto);
+      const result = await service.create(createDto, 'user-1');
 
       // Assert
       expect(machineRepository.findOne).toHaveBeenCalledWith({
@@ -259,13 +259,15 @@ describe('MachinesService', () => {
       machineRepository.save.mockResolvedValue(savedMachine as Machine);
 
       // Act
-      await service.create(createDto);
+      await service.create(createDto, 'user-1');
 
       // Assert
       expect(locationHistoryRepository.create).toHaveBeenCalledWith({
         machine: { id: savedMachine.id },
         from_location_id: null,
         to_location_id: createDto.location_id,
+        moved_by_user_id: 'user-1',
+        moved_at: expect.any(Date),
       });
       expect(locationHistoryRepository.save).toHaveBeenCalled();
     });
@@ -282,8 +284,8 @@ describe('MachinesService', () => {
       machineRepository.findOne.mockResolvedValue(mockMachine);
 
       // Act & Assert
-      await expect(service.create(createDto)).rejects.toThrow(ConflictException);
-      await expect(service.create(createDto)).rejects.toThrow(
+      await expect(service.create(createDto, 'user-1')).rejects.toThrow(ConflictException);
+      await expect(service.create(createDto, 'user-1')).rejects.toThrow(
         /Machine with number M-001 already exists/,
       );
     });
@@ -302,7 +304,7 @@ describe('MachinesService', () => {
       machineRepository.save.mockResolvedValue(savedMachine as unknown as Machine);
 
       // Act
-      await service.create(createDto);
+      await service.create(createDto, 'user-1');
 
       // Assert
       expect(locationHistoryRepository.create).not.toHaveBeenCalled();

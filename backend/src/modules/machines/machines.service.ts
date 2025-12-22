@@ -41,8 +41,11 @@ export class MachinesService {
 
   /**
    * Create a new machine with QR code
+   *
+   * @param createMachineDto - Machine creation data
+   * @param userId - ID of user creating the machine
    */
-  async create(createMachineDto: CreateMachineDto): Promise<Machine> {
+  async create(createMachineDto: CreateMachineDto, userId: string): Promise<Machine> {
     // Check if machine number already exists
     const existingMachine = await this.machineRepository.findOne({
       where: { machine_number: createMachineDto.machine_number },
@@ -72,7 +75,7 @@ export class MachinesService {
 
     // Record initial location in history
     if (createMachineDto.location_id) {
-      await this.recordLocationChange(savedMachine.id, null, createMachineDto.location_id);
+      await this.recordLocationChange(savedMachine.id, null, createMachineDto.location_id, userId);
     }
 
     this.logger.log(
@@ -178,13 +181,20 @@ export class MachinesService {
 
   /**
    * Update machine
+   *
+   * @param id - Machine ID
+   * @param updateMachineDto - Machine update data
+   * @param userId - ID of user performing the update (required for location changes)
    */
-  async update(id: string, updateMachineDto: UpdateMachineDto): Promise<Machine> {
+  async update(id: string, updateMachineDto: UpdateMachineDto, userId?: string): Promise<Machine> {
     const machine = await this.findOne(id);
 
     // If location is changing, record in history
     if (updateMachineDto.location_id && updateMachineDto.location_id !== machine.location_id) {
-      await this.recordLocationChange(id, machine.location_id, updateMachineDto.location_id);
+      if (!userId) {
+        throw new BadRequestException('User ID is required for location changes');
+      }
+      await this.recordLocationChange(id, machine.location_id, updateMachineDto.location_id, userId);
     }
 
     // Update machine
@@ -259,16 +269,24 @@ export class MachinesService {
 
   /**
    * Record location change in history
+   *
+   * @param machineId - Machine ID
+   * @param oldLocationId - Previous location ID (null for initial placement)
+   * @param newLocationId - New location ID
+   * @param movedByUserId - User ID who performed the move
    */
   private async recordLocationChange(
     machineId: string,
     oldLocationId: string | null,
     newLocationId: string,
+    movedByUserId: string,
   ): Promise<void> {
     const history = this.locationHistoryRepository.create({
       machine: { id: machineId },
       from_location_id: oldLocationId,
       to_location_id: newLocationId,
+      moved_by_user_id: movedByUserId,
+      moved_at: new Date(),
     });
 
     await this.locationHistoryRepository.save(history);

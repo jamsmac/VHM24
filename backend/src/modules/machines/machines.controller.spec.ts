@@ -125,10 +125,10 @@ describe('MachinesController', () => {
       };
       mockMachinesService.create.mockResolvedValue(mockMachine as any);
 
-      const result = await controller.create(createDto as any);
+      const result = await controller.create(createDto as any, mockUser);
 
       expect(result).toEqual(mockMachine);
-      expect(mockMachinesService.create).toHaveBeenCalledWith(createDto);
+      expect(mockMachinesService.create).toHaveBeenCalledWith(createDto, 'user-123');
     });
   });
 
@@ -235,12 +235,13 @@ describe('MachinesController', () => {
       const updatedMachine = { ...mockMachine, name: 'Updated Machine' };
       mockMachinesService.update.mockResolvedValue(updatedMachine as any);
 
-      const result = await controller.update('123e4567-e89b-12d3-a456-426614174001', updateDto);
+      const result = await controller.update('123e4567-e89b-12d3-a456-426614174001', updateDto, mockUser);
 
       expect(result).toEqual(updatedMachine);
       expect(mockMachinesService.update).toHaveBeenCalledWith(
         '123e4567-e89b-12d3-a456-426614174001',
         updateDto,
+        'user-123',
       );
     });
   });
@@ -253,12 +254,14 @@ describe('MachinesController', () => {
       const result = await controller.updateStatus(
         '123e4567-e89b-12d3-a456-426614174001',
         MachineStatus.MAINTENANCE,
+        mockUser,
       );
 
       expect(result).toEqual(updatedMachine);
       expect(mockMachinesService.update).toHaveBeenCalledWith(
         '123e4567-e89b-12d3-a456-426614174001',
         { status: MachineStatus.MAINTENANCE },
+        'user-123',
       );
     });
   });
