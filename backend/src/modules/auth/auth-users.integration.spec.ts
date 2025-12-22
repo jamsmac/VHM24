@@ -14,6 +14,7 @@ import { EmailService } from '../email/email.service';
 import { SessionService } from './services/session.service';
 import { TokenBlacklistService } from './services/token-blacklist.service';
 import { AuditLogService } from '../security/services/audit-log.service';
+import { TwoFactorAuthService } from './services/two-factor-auth.service';
 // Repository type - not currently used but kept for future type annotations
 // import type { Repository } from 'typeorm';
 
@@ -140,6 +141,13 @@ describe('Auth + Users Integration', () => {
       log: jest.fn(),
     };
 
+    const mockTwoFactorAuthService = {
+      verifyToken: jest.fn().mockResolvedValue(true),
+      generateSecret: jest.fn(),
+      enable2FA: jest.fn(),
+      disable2FA: jest.fn(),
+    };
+
     const moduleRef: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
@@ -178,6 +186,10 @@ describe('Auth + Users Integration', () => {
         {
           provide: AuditLogService,
           useValue: mockAuditLogService,
+        },
+        {
+          provide: TwoFactorAuthService,
+          useValue: mockTwoFactorAuthService,
         },
       ],
     }).compile();

@@ -1,17 +1,28 @@
 import { CsrfGuard, CSRF_TOKEN_HEADER, CSRF_TOKEN_COOKIE, generateCsrfToken } from './csrf.guard';
 import { ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { ConfigService } from '@nestjs/config';
 
 describe('CsrfGuard', () => {
   let guard: CsrfGuard;
   let reflector: jest.Mocked<Reflector>;
+  let configService: jest.Mocked<ConfigService>;
 
   beforeEach(() => {
     reflector = {
       get: jest.fn(),
     } as any;
 
-    guard = new CsrfGuard(reflector);
+    // Mock ConfigService to enable CSRF for tests
+    configService = {
+      get: jest.fn((key: string) => {
+        if (key === 'CSRF_ENABLED') return 'true';
+        if (key === 'NODE_ENV') return 'production';
+        return undefined;
+      }),
+    } as any;
+
+    guard = new CsrfGuard(reflector, configService);
   });
 
   function createMockContext(
@@ -165,6 +176,42 @@ describe('CsrfGuard', () => {
       const token2 = generateCsrfToken();
 
       expect(token1).not.toBe(token2);
+    });
+  });
+
+  describe('CSRF disabled', () => {
+    it('should allow all requests when CSRF is disabled', () => {
+      const disabledConfigService = {
+        get: jest.fn((key: string) => {
+          if (key === 'CSRF_ENABLED') return 'false';
+          if (key === 'NODE_ENV') return 'development';
+          return undefined;
+        }),
+      } as any;
+
+      const disabledGuard = new CsrfGuard(reflector, disabledConfigService);
+      const context = createMockContext('POST', {}, {});
+      reflector.get.mockReturnValue(undefined);
+
+      // Should allow even without tokens when CSRF is disabled
+      expect(disabledGuard.canActivate(context)).toBe(true);
+    });
+
+    it('should be disabled by default in non-production', () => {
+      const devConfigService = {
+        get: jest.fn((key: string) => {
+          if (key === 'CSRF_ENABLED') return undefined; // not set
+          if (key === 'NODE_ENV') return 'development';
+          return undefined;
+        }),
+      } as any;
+
+      const devGuard = new CsrfGuard(reflector, devConfigService);
+      const context = createMockContext('POST', {}, {});
+      reflector.get.mockReturnValue(undefined);
+
+      // Should allow even without tokens in development
+      expect(devGuard.canActivate(context)).toBe(true);
     });
   });
 });

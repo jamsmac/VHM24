@@ -722,7 +722,10 @@ describe('AuthController', () => {
     });
 
     it('should throw BadRequestException for invalid 2FA token', async () => {
-      mockTwoFactorAuthService.verifyToken.mockResolvedValue(false);
+      // LOW-001: 2FA validation now happens inside AuthService.complete2FALogin
+      mockAuthService.complete2FALogin.mockRejectedValue(
+        new BadRequestException('Неверный код двухфакторной аутентификации'),
+      );
 
       const res = mockResponse();
       await expect(
@@ -741,7 +744,7 @@ describe('AuthController', () => {
           role: UserRole.OPERATOR,
         },
       };
-      mockTwoFactorAuthService.verifyToken.mockResolvedValue(true);
+      // LOW-001: 2FA validation now happens inside AuthService.complete2FALogin
       mockAuthService.complete2FALogin.mockResolvedValue(mockAuthResponse);
 
       const req = mockRequest({ ip: undefined, socket: { remoteAddress: '10.0.0.11' } } as any);
@@ -749,11 +752,8 @@ describe('AuthController', () => {
 
       await controller.complete2FALogin(mockUser as User, { token: '123456' }, req, res);
 
-      expect(mockTwoFactorAuthService.verifyToken).toHaveBeenCalledWith(
-        'user-123',
-        '123456',
-        '10.0.0.11',
-      );
+      // Verify that AuthService.complete2FALogin is called with the correct fallback IP
+      // (2FA token verification is now internal to the service)
       expect(mockAuthService.complete2FALogin).toHaveBeenCalledWith(
         'user-123',
         '123456',

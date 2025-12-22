@@ -15,6 +15,7 @@ import { AuditLogService } from '../security/services/audit-log.service';
 import { EmailService } from '../email/email.service';
 import { SessionService } from './services/session.service';
 import { TokenBlacklistService } from './services/token-blacklist.service';
+import { TwoFactorAuthService } from './services/two-factor-auth.service';
 
 // Note: Test files use simplified mock types with 'unknown' casting for flexibility
 // This is a standard Jest pattern that prioritizes test maintainability over strict typing
@@ -26,6 +27,7 @@ type MockSessionService = Partial<jest.Mocked<SessionService>>;
 type MockEmailService = Partial<jest.Mocked<EmailService>>;
 type MockPasswordResetTokenRepository = Record<string, jest.Mock>;
 type MockTokenBlacklistService = Partial<jest.Mocked<TokenBlacklistService>>;
+type MockTwoFactorAuthService = Partial<jest.Mocked<TwoFactorAuthService>>;
 
 // Mock bcrypt
 jest.mock('bcrypt');
@@ -129,6 +131,13 @@ describe('AuthService', () => {
       shouldRejectToken: jest.fn().mockResolvedValue(false),
     };
 
+    const mockTwoFactorAuthService: MockTwoFactorAuthService = {
+      verifyToken: jest.fn().mockResolvedValue(true),
+      generateSecret: jest.fn(),
+      enable2FA: jest.fn(),
+      disable2FA: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
@@ -163,6 +172,10 @@ describe('AuthService', () => {
         {
           provide: TokenBlacklistService,
           useValue: mockTokenBlacklistService,
+        },
+        {
+          provide: TwoFactorAuthService,
+          useValue: mockTwoFactorAuthService,
         },
       ],
     }).compile();
