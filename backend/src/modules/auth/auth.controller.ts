@@ -35,6 +35,7 @@ import { TwoFactorAuthService } from './services/two-factor-auth.service';
 import { TwoFactorAuthService as SecurityTwoFactorAuthService } from '@modules/security/services/two-factor-auth.service';
 import { SessionService } from './services/session.service';
 import { VerifyBackupCodeDto } from './dto/verify-backup-code.dto';
+import { SkipCsrf } from '@/common/guards/csrf.guard';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -48,6 +49,7 @@ export class AuthController {
   ) {}
 
   @Post('login')
+  @SkipCsrf() // Login is the entry point - no CSRF token available yet
   @UseGuards(ThrottlerGuard, LocalAuthGuard, IpWhitelistGuard)
   @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 attempts per minute
   @HttpCode(HttpStatus.OK)
@@ -86,6 +88,7 @@ export class AuthController {
   }
 
   @Post('register')
+  @SkipCsrf() // Registration is an entry point - no CSRF token available yet
   @UseGuards(ThrottlerGuard)
   @Throttle({ default: { limit: 3, ttl: 300000 } }) // 3 attempts per 5 minutes
   @ApiOperation({ summary: 'Регистрация нового пользователя (оператора)' })
@@ -120,6 +123,7 @@ export class AuthController {
   }
 
   @Post('refresh')
+  @SkipCsrf() // Refresh uses refresh token for security, not CSRF
   @UseGuards(ThrottlerGuard)
   @Throttle({ default: { limit: 10, ttl: 60000 } }) // 10 attempts per minute (SEC-2)
   @HttpCode(HttpStatus.OK)
@@ -192,6 +196,7 @@ export class AuthController {
   // ============================================================================
 
   @Post('password-reset/request')
+  @SkipCsrf() // Password reset is for unauthenticated users
   @UseGuards(ThrottlerGuard)
   @Throttle({ default: { limit: 3, ttl: 3600000 } }) // 3 attempts per hour
   @HttpCode(HttpStatus.OK)
@@ -218,6 +223,7 @@ export class AuthController {
   }
 
   @Post('password-reset/validate')
+  @SkipCsrf() // Password reset is for unauthenticated users
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Проверить токен сброса пароля',
@@ -234,6 +240,7 @@ export class AuthController {
   }
 
   @Post('password-reset/confirm')
+  @SkipCsrf() // Password reset is for unauthenticated users
   @UseGuards(ThrottlerGuard)
   @Throttle({ default: { limit: 3, ttl: 3600000 } }) // 3 attempts per hour
   @HttpCode(HttpStatus.OK)
