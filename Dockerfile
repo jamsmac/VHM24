@@ -8,7 +8,7 @@ RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
 # Copy frontend package files
-COPY frontend/package.json frontend/package-lock.json* ./
+COPY frontend/package.json ./
 RUN npm install --legacy-peer-deps
 
 FROM node:20-alpine AS builder

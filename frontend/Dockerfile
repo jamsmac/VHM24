@@ -9,7 +9,8 @@ WORKDIR /app
 
 # Copy frontend package files (from repo root context)
 # Note: Using --legacy-peer-deps to resolve @storybook/addon-vitest peer dependency conflict
-COPY frontend/package.json frontend/package-lock.json* ./
+# Note: Skipping package-lock.json to avoid "Invalid Version" error
+COPY frontend/package.json ./
 RUN npm install --legacy-peer-deps
 
 FROM node:20-alpine AS builder
