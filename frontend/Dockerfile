@@ -9,7 +9,7 @@ WORKDIR /app
 
 # Copy frontend package files (from repo root context)
 COPY frontend/package.json frontend/package-lock.json* ./
-RUN npm install
+RUN npm install --legacy-peer-deps
 
 FROM node:20-alpine AS builder
 WORKDIR /app
