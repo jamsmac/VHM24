@@ -50,7 +50,7 @@ export class MachinesController {
   ) {}
 
   @Post()
-  @Roles(UserRole.ADMIN, UserRole.MANAGER)
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   @ApiOperation({ summary: 'Создать новый аппарат' })
   @ApiResponse({
     status: 201,
@@ -170,7 +170,7 @@ export class MachinesController {
   }
 
   @Patch(':id')
-  @Roles(UserRole.ADMIN, UserRole.MANAGER)
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   @ApiOperation({ summary: 'Обновить аппарат' })
   @ApiParam({ name: 'id', description: 'UUID аппарата' })
   @ApiResponse({
@@ -187,7 +187,7 @@ export class MachinesController {
   }
 
   @Patch(':id/status')
-  @Roles(UserRole.ADMIN, UserRole.MANAGER)
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   @ApiOperation({ summary: 'Обновить статус аппарата' })
   @ApiParam({ name: 'id', description: 'UUID аппарата' })
   @ApiResponse({
@@ -205,7 +205,7 @@ export class MachinesController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN)
   @ApiOperation({ summary: 'Удалить аппарат (soft delete)' })
   @ApiParam({ name: 'id', description: 'UUID аппарата' })
   @ApiResponse({ status: 204, description: 'Аппарат успешно удален' })
@@ -218,7 +218,7 @@ export class MachinesController {
 
   @Post(':id/writeoff')
   @HttpCode(HttpStatus.ACCEPTED) // 202 - Accepted for processing
-  @Roles(UserRole.ADMIN, UserRole.MANAGER)
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   @ApiOperation({
     summary: 'Списать аппарат (асинхронная обработка)',
     description:
@@ -245,7 +245,7 @@ export class MachinesController {
 
   @Post('writeoff/bulk')
   @HttpCode(HttpStatus.ACCEPTED)
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN)
   @ApiOperation({
     summary: 'Массовое списание аппаратов',
     description:
@@ -315,7 +315,7 @@ export class MachinesController {
   }
 
   @Delete('writeoff/job/:jobId')
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.OWNER, UserRole.ADMIN)
   @ApiOperation({
     summary: 'Отменить задачу списания',
     description: 'Отменяет задачу списания, если она еще не начала выполняться.',
@@ -339,7 +339,7 @@ export class MachinesController {
   }
 
   @Get('writeoff/jobs')
-  @Roles(UserRole.ADMIN, UserRole.MANAGER)
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   @ApiOperation({
     summary: 'Получить список задач списания',
     description: 'Возвращает список всех задач списания с возможностью фильтрации по статусу.',
@@ -370,7 +370,7 @@ export class MachinesController {
 
   // @Post(':id/move')
   // @HttpCode(HttpStatus.OK)
-  // @Roles(UserRole.ADMIN, UserRole.MANAGER)
+  // @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   // @ApiOperation({
   //   summary: 'Переместить аппарат в новую локацию',
   //   description:
@@ -501,7 +501,7 @@ export class MachinesController {
   }
 
   @Post(':id/qr-code/regenerate')
-  @Roles(UserRole.ADMIN, UserRole.MANAGER)
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   @ApiOperation({ summary: 'Перегенерировать QR-код для аппарата' })
   @ApiParam({ name: 'id', description: 'UUID аппарата' })
   @ApiResponse({
