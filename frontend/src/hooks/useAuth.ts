@@ -82,9 +82,17 @@ export function useAuth() {
 
   /**
    * Check if user is authenticated
+   *
+   * FIX: Use React state instead of synchronous authStorage.isLoggedIn()
+   * The issue was that isLoggedIn() was called synchronously before
+   * checkAuth() had a chance to load user data from sessionStorage.
+   *
+   * Now isAuthenticated is derived from user state, which is properly
+   * updated after checkAuth() loads data from storage.
+   *
    * Note: Actual auth validation is done by backend via cookies
    */
-  const isAuthenticated = authStorage.isLoggedIn()
+  const isAuthenticated = user !== null
 
   /**
    * Refresh auth state from storage
