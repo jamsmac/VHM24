@@ -116,12 +116,42 @@ export class SessionService {
       });
       return await this.sessionRepository.save(session);
     } catch (error: unknown) {
-      // If refresh_token_hint column doesn't exist, save without it
+      // If refresh_token_hint column doesn't exist, use raw SQL insert
       const errMsg = error instanceof Error ? error.message : String(error);
       if (errMsg.includes('refresh_token_hint') && errMsg.includes('does not exist')) {
-        this.logger.warn('refresh_token_hint column not found, creating session without hint');
-        const session = this.sessionRepository.create(sessionData);
-        return await this.sessionRepository.save(session);
+        this.logger.warn('refresh_token_hint column not found, using raw SQL insert');
+
+        // Use raw SQL to insert without the missing column
+        const [result] = await this.sessionRepository.query(
+          `INSERT INTO user_sessions (
+            user_id, refresh_token_hash, ip_address, user_agent,
+            device_type, device_name, os, browser,
+            is_active, last_used_at, expires_at, metadata
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+          RETURNING id, user_id, refresh_token_hash, ip_address, user_agent,
+            device_type, device_name, os, browser,
+            is_active, last_used_at, expires_at, revoked_at, revoked_reason,
+            metadata, created_at, updated_at, deleted_at`,
+          [
+            sessionData.user_id,
+            sessionData.refresh_token_hash,
+            sessionData.ip_address,
+            sessionData.user_agent,
+            sessionData.device_type,
+            sessionData.device_name,
+            sessionData.os,
+            sessionData.browser,
+            sessionData.is_active,
+            sessionData.last_used_at,
+            sessionData.expires_at,
+            JSON.stringify(sessionData.metadata || {}),
+          ],
+        );
+
+        // Map raw result to entity
+        const session = new UserSession();
+        Object.assign(session, result);
+        return session;
       }
       throw error;
     }
