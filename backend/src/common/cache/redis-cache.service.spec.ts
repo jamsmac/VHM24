@@ -13,11 +13,14 @@ describe('RedisCacheService', () => {
       set: jest.fn(),
       del: jest.fn(),
       reset: jest.fn(),
-      store: {
-        client: {
-          keys: jest.fn(),
+      // cache-manager 7.x uses stores array instead of store
+      stores: [
+        {
+          client: {
+            keys: jest.fn(),
+          },
         },
-      },
+      ],
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -154,14 +157,20 @@ describe('RedisCacheService', () => {
   });
 
   describe('reset', () => {
-    it('should reset all cache entries', async () => {
+    it('should reset all cache entries using pattern delete', async () => {
+      // cache-manager 7.x uses pattern delete instead of reset()
+      const keys = ['vendhub:cache:key1', 'vendhub:cache:key2'];
+      mockCacheManager.stores[0].client.keys.mockResolvedValue(keys);
+
       await service.reset();
 
-      expect(mockCacheManager.reset).toHaveBeenCalled();
+      expect(mockCacheManager.stores[0].client.keys).toHaveBeenCalledWith('vendhub:cache:*');
+      expect(mockCacheManager.del).toHaveBeenCalledTimes(2);
     });
 
     it('should log warning when resetting cache', async () => {
       const warnSpy = jest.spyOn(Logger.prototype, 'warn');
+      mockCacheManager.stores[0].client.keys.mockResolvedValue([]);
 
       await service.reset();
 
@@ -169,7 +178,7 @@ describe('RedisCacheService', () => {
     });
 
     it('should handle reset errors gracefully', async () => {
-      mockCacheManager.reset.mockRejectedValue(new Error('Reset failed'));
+      mockCacheManager.stores[0].client.keys.mockRejectedValue(new Error('Reset failed'));
       const errorSpy = jest.spyOn(Logger.prototype, 'error');
 
       await service.reset();
@@ -181,7 +190,7 @@ describe('RedisCacheService', () => {
   describe('delByPattern', () => {
     it('should delete keys matching pattern', async () => {
       const matchingKeys = ['vendhub:cache:report:a', 'vendhub:cache:report:b'];
-      mockCacheManager.store.client.keys.mockResolvedValue(matchingKeys);
+      mockCacheManager.stores[0].client.keys.mockResolvedValue(matchingKeys);
 
       const result = await service.delByPattern('report:*');
 
@@ -190,7 +199,7 @@ describe('RedisCacheService', () => {
     });
 
     it('should return 0 when no keys match', async () => {
-      mockCacheManager.store.client.keys.mockResolvedValue([]);
+      mockCacheManager.stores[0].client.keys.mockResolvedValue([]);
 
       const result = await service.delByPattern('nonexistent:*');
 
@@ -198,7 +207,7 @@ describe('RedisCacheService', () => {
     });
 
     it('should return 0 when Redis client is not available', async () => {
-      mockCacheManager.store = {};
+      mockCacheManager.stores = [{}];
       const warnSpy = jest.spyOn(Logger.prototype, 'warn');
 
       const result = await service.delByPattern('pattern:*');
@@ -210,7 +219,7 @@ describe('RedisCacheService', () => {
     });
 
     it('should handle errors gracefully', async () => {
-      mockCacheManager.store.client.keys.mockRejectedValue(new Error('Keys error'));
+      mockCacheManager.stores[0].client.keys.mockRejectedValue(new Error('Keys error'));
       const errorSpy = jest.spyOn(Logger.prototype, 'error');
 
       const result = await service.delByPattern('error:*');
@@ -221,9 +230,11 @@ describe('RedisCacheService', () => {
 
     it('should use getClient() method if available', async () => {
       const mockClient = { keys: jest.fn().mockResolvedValue([]) };
-      mockCacheManager.store = {
-        getClient: jest.fn().mockReturnValue(mockClient),
-      };
+      mockCacheManager.stores = [
+        {
+          getClient: jest.fn().mockReturnValue(mockClient),
+        },
+      ];
 
       await service.delByPattern('test:*');
 

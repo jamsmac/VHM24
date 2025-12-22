@@ -20,17 +20,19 @@ describe('ReportsCacheInterceptor', () => {
       get: jest.fn(),
     } as any;
 
-    // Mock Redis cache manager
+    // Mock Redis cache manager (cache-manager 7.x uses stores array)
     mockCacheManager = {
       get: jest.fn(),
       set: jest.fn(),
       del: jest.fn(),
       reset: jest.fn(),
-      store: {
-        client: {
-          keys: jest.fn().mockResolvedValue([]),
+      stores: [
+        {
+          client: {
+            keys: jest.fn().mockResolvedValue([]),
+          },
         },
-      },
+      ],
     };
 
     interceptor = new ReportsCacheInterceptor(reflector, mockCacheManager);
@@ -181,11 +183,11 @@ describe('ReportsCacheInterceptor', () => {
   describe('clearAll', () => {
     it('should clear all report cache entries', async () => {
       const keysToDelete = ['vendhub:reports:key1', 'vendhub:reports:key2'];
-      mockCacheManager.store.client.keys.mockResolvedValue(keysToDelete);
+      mockCacheManager.stores[0].client.keys.mockResolvedValue(keysToDelete);
 
       await interceptor.clearAll();
 
-      expect(mockCacheManager.store.client.keys).toHaveBeenCalledWith('vendhub:reports:*');
+      expect(mockCacheManager.stores[0].client.keys).toHaveBeenCalledWith('vendhub:reports:*');
       expect(mockCacheManager.del).toHaveBeenCalledTimes(2);
     });
   });
@@ -193,11 +195,11 @@ describe('ReportsCacheInterceptor', () => {
   describe('clearPattern', () => {
     it('should clear cache entries matching pattern', async () => {
       const keysToDelete = ['vendhub:reports:financial:key1', 'vendhub:reports:financial:key2'];
-      mockCacheManager.store.client.keys.mockResolvedValue(keysToDelete);
+      mockCacheManager.stores[0].client.keys.mockResolvedValue(keysToDelete);
 
       const count = await interceptor.clearPattern('financial');
 
-      expect(mockCacheManager.store.client.keys).toHaveBeenCalledWith(
+      expect(mockCacheManager.stores[0].client.keys).toHaveBeenCalledWith(
         'vendhub:reports:*financial*',
       );
       expect(mockCacheManager.del).toHaveBeenCalledTimes(2);
@@ -205,7 +207,7 @@ describe('ReportsCacheInterceptor', () => {
     });
 
     it('should return 0 when no keys match pattern', async () => {
-      mockCacheManager.store.client.keys.mockResolvedValue([]);
+      mockCacheManager.stores[0].client.keys.mockResolvedValue([]);
 
       const count = await interceptor.clearPattern('nonexistent');
 
