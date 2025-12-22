@@ -2,46 +2,73 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
 
 export class CreateHRTables1731630000001 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
-    // Create enums
+    // Create enums (idempotent - skip if already exists)
     await queryRunner.query(`
-      CREATE TYPE position_level AS ENUM ('entry', 'junior', 'middle', 'senior', 'lead', 'manager', 'director', 'executive');
+      DO $$ BEGIN
+        CREATE TYPE position_level AS ENUM ('entry', 'junior', 'middle', 'senior', 'lead', 'manager', 'director', 'executive');
+      EXCEPTION WHEN duplicate_object THEN NULL;
+      END $$;
     `);
 
     await queryRunner.query(`
-      CREATE TYPE employment_type AS ENUM ('full_time', 'part_time', 'contract', 'intern', 'temporary');
+      DO $$ BEGIN
+        CREATE TYPE employment_type AS ENUM ('full_time', 'part_time', 'contract', 'intern', 'temporary');
+      EXCEPTION WHEN duplicate_object THEN NULL;
+      END $$;
     `);
 
     await queryRunner.query(`
-      CREATE TYPE employment_status AS ENUM ('active', 'on_leave', 'suspended', 'terminated', 'resigned');
+      DO $$ BEGIN
+        CREATE TYPE employment_status AS ENUM ('active', 'on_leave', 'suspended', 'terminated', 'resigned');
+      EXCEPTION WHEN duplicate_object THEN NULL;
+      END $$;
     `);
 
     await queryRunner.query(`
-      CREATE TYPE attendance_status AS ENUM ('present', 'absent', 'late', 'half_day', 'on_leave');
+      DO $$ BEGIN
+        CREATE TYPE attendance_status AS ENUM ('present', 'absent', 'late', 'half_day', 'on_leave');
+      EXCEPTION WHEN duplicate_object THEN NULL;
+      END $$;
     `);
 
     await queryRunner.query(`
-      CREATE TYPE leave_type AS ENUM ('annual', 'sick', 'maternity', 'paternity', 'unpaid', 'emergency', 'study', 'compensatory');
+      DO $$ BEGIN
+        CREATE TYPE leave_type AS ENUM ('annual', 'sick', 'maternity', 'paternity', 'unpaid', 'emergency', 'study', 'compensatory');
+      EXCEPTION WHEN duplicate_object THEN NULL;
+      END $$;
     `);
 
     await queryRunner.query(`
-      CREATE TYPE leave_status AS ENUM ('pending', 'approved', 'rejected', 'cancelled');
+      DO $$ BEGIN
+        CREATE TYPE leave_status AS ENUM ('pending', 'approved', 'rejected', 'cancelled');
+      EXCEPTION WHEN duplicate_object THEN NULL;
+      END $$;
     `);
 
     await queryRunner.query(`
-      CREATE TYPE payroll_status AS ENUM ('draft', 'calculated', 'approved', 'paid', 'cancelled');
+      DO $$ BEGIN
+        CREATE TYPE payroll_status AS ENUM ('draft', 'calculated', 'approved', 'paid', 'cancelled');
+      EXCEPTION WHEN duplicate_object THEN NULL;
+      END $$;
     `);
 
     await queryRunner.query(`
-      CREATE TYPE review_period AS ENUM ('monthly', 'quarterly', 'semi_annual', 'annual');
+      DO $$ BEGIN
+        CREATE TYPE review_period AS ENUM ('monthly', 'quarterly', 'semi_annual', 'annual');
+      EXCEPTION WHEN duplicate_object THEN NULL;
+      END $$;
     `);
 
     await queryRunner.query(`
-      CREATE TYPE review_status AS ENUM ('scheduled', 'in_progress', 'completed', 'cancelled');
+      DO $$ BEGIN
+        CREATE TYPE review_status AS ENUM ('scheduled', 'in_progress', 'completed', 'cancelled');
+      EXCEPTION WHEN duplicate_object THEN NULL;
+      END $$;
     `);
 
     // Create departments table
     await queryRunner.query(`
-      CREATE TABLE departments (
+      CREATE TABLE IF NOT EXISTS departments (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         name VARCHAR(100) NOT NULL,
         code VARCHAR(50) UNIQUE NOT NULL,
@@ -57,12 +84,12 @@ export class CreateHRTables1731630000001 implements MigrationInterface {
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_departments_active ON departments(is_active) WHERE deleted_at IS NULL;
+      CREATE INDEX IF NOT EXISTS idx_departments_active ON departments(is_active) WHERE deleted_at IS NULL;
     `);
 
     // Create positions table
     await queryRunner.query(`
-      CREATE TABLE positions (
+      CREATE TABLE IF NOT EXISTS positions (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         title VARCHAR(100) NOT NULL,
         code VARCHAR(50) UNIQUE NOT NULL,
@@ -79,12 +106,12 @@ export class CreateHRTables1731630000001 implements MigrationInterface {
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_positions_active ON positions(is_active) WHERE deleted_at IS NULL;
+      CREATE INDEX IF NOT EXISTS idx_positions_active ON positions(is_active) WHERE deleted_at IS NULL;
     `);
 
     // Create employees table
     await queryRunner.query(`
-      CREATE TABLE employees (
+      CREATE TABLE IF NOT EXISTS employees (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         user_id UUID UNIQUE NOT NULL,
         employee_number VARCHAR(50) UNIQUE NOT NULL,
@@ -116,28 +143,28 @@ export class CreateHRTables1731630000001 implements MigrationInterface {
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_employees_department ON employees(department_id);
+      CREATE INDEX IF NOT EXISTS idx_employees_department ON employees(department_id);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_employees_position ON employees(position_id);
+      CREATE INDEX IF NOT EXISTS idx_employees_position ON employees(position_id);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_employees_manager ON employees(manager_id);
+      CREATE INDEX IF NOT EXISTS idx_employees_manager ON employees(manager_id);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_employees_status ON employees(employment_status);
+      CREATE INDEX IF NOT EXISTS idx_employees_status ON employees(employment_status);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_employees_user ON employees(user_id);
+      CREATE INDEX IF NOT EXISTS idx_employees_user ON employees(user_id);
     `);
 
     // Create attendances table
     await queryRunner.query(`
-      CREATE TABLE attendances (
+      CREATE TABLE IF NOT EXISTS attendances (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
         date DATE NOT NULL,
@@ -158,20 +185,20 @@ export class CreateHRTables1731630000001 implements MigrationInterface {
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_attendances_employee ON attendances(employee_id);
+      CREATE INDEX IF NOT EXISTS idx_attendances_employee ON attendances(employee_id);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_attendances_date ON attendances(date);
+      CREATE INDEX IF NOT EXISTS idx_attendances_date ON attendances(date);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_attendances_employee_date ON attendances(employee_id, date);
+      CREATE INDEX IF NOT EXISTS idx_attendances_employee_date ON attendances(employee_id, date);
     `);
 
     // Create leave_requests table
     await queryRunner.query(`
-      CREATE TABLE leave_requests (
+      CREATE TABLE IF NOT EXISTS leave_requests (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
         leave_type leave_type NOT NULL,
@@ -191,20 +218,20 @@ export class CreateHRTables1731630000001 implements MigrationInterface {
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_leave_requests_employee ON leave_requests(employee_id);
+      CREATE INDEX IF NOT EXISTS idx_leave_requests_employee ON leave_requests(employee_id);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_leave_requests_status ON leave_requests(status);
+      CREATE INDEX IF NOT EXISTS idx_leave_requests_status ON leave_requests(status);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_leave_requests_dates ON leave_requests(start_date, end_date);
+      CREATE INDEX IF NOT EXISTS idx_leave_requests_dates ON leave_requests(start_date, end_date);
     `);
 
     // Create payrolls table
     await queryRunner.query(`
-      CREATE TABLE payrolls (
+      CREATE TABLE IF NOT EXISTS payrolls (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
         period VARCHAR(7) NOT NULL,
@@ -230,20 +257,20 @@ export class CreateHRTables1731630000001 implements MigrationInterface {
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_payrolls_employee ON payrolls(employee_id);
+      CREATE INDEX IF NOT EXISTS idx_payrolls_employee ON payrolls(employee_id);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_payrolls_period ON payrolls(period);
+      CREATE INDEX IF NOT EXISTS idx_payrolls_period ON payrolls(period);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_payrolls_status ON payrolls(status);
+      CREATE INDEX IF NOT EXISTS idx_payrolls_status ON payrolls(status);
     `);
 
     // Create performance_reviews table
     await queryRunner.query(`
-      CREATE TABLE performance_reviews (
+      CREATE TABLE IF NOT EXISTS performance_reviews (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
         reviewer_id UUID NOT NULL,
@@ -267,15 +294,15 @@ export class CreateHRTables1731630000001 implements MigrationInterface {
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_performance_reviews_employee ON performance_reviews(employee_id);
+      CREATE INDEX IF NOT EXISTS idx_performance_reviews_employee ON performance_reviews(employee_id);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_performance_reviews_reviewer ON performance_reviews(reviewer_id);
+      CREATE INDEX IF NOT EXISTS idx_performance_reviews_reviewer ON performance_reviews(reviewer_id);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_performance_reviews_date ON performance_reviews(review_date);
+      CREATE INDEX IF NOT EXISTS idx_performance_reviews_date ON performance_reviews(review_date);
     `);
   }
 
