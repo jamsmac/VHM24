@@ -30,6 +30,30 @@ export default function DashboardLayout({
     }
   }, [loading, isAuthenticated, router])
 
+  // Show loading state while checking authentication
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Загрузка...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Don't render dashboard if not authenticated (redirect will happen via useEffect)
+  if (!isAuthenticated) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Перенаправление...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <QueryProvider>
       <CommandPaletteProvider>
