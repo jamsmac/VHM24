@@ -1,3 +1,8 @@
+// Bundle analyzer - run with ANALYZE=true npm run build
+const withBundleAnalyzer = require('@next/bundle-analyzer')({
+  enabled: process.env.ANALYZE === 'true',
+})
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone', // Required for optimized Railway deployment
@@ -5,6 +10,22 @@ const nextConfig = {
   // Set turbopack root to fix Cyrillic path issues
   turbopack: {
     root: __dirname,
+  },
+  // Optimize imports for better tree-shaking
+  modularizeImports: {
+    // Optimize date-fns imports
+    'date-fns': {
+      transform: 'date-fns/{{member}}',
+    },
+    // Optimize lodash imports (if used)
+    'lodash': {
+      transform: 'lodash/{{member}}',
+    },
+  },
+  // Experimental optimizations
+  experimental: {
+    // Optimize package imports
+    optimizePackageImports: ['lucide-react', 'date-fns', '@radix-ui/react-icons'],
   },
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1',
@@ -158,4 +179,4 @@ const nextConfig = {
   productionBrowserSourceMaps: false,
 }
 
-module.exports = nextConfig
+module.exports = withBundleAnalyzer(nextConfig)

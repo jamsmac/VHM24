@@ -73,6 +73,39 @@ export const PaymentStatusChart = lazy(() =>
   }))
 )
 
+// RealTimeChart - exports RealTimeChart, MultiRealTimeChart, Sparkline
+export const RealTimeChart = lazy(() =>
+  import('@/components/charts/RealTimeChart').then(module => ({
+    default: module.RealTimeChart
+  }))
+)
+
+export const MultiRealTimeChart = lazy(() =>
+  import('@/components/charts/RealTimeChart').then(module => ({
+    default: module.MultiRealTimeChart
+  }))
+)
+
+// PerformanceMetrics - exports MachineRankingChart, MachineHealthRadar, KPISummary, CategoryDonut
+export const MachineRankingChart = lazy(() =>
+  import('@/components/charts/PerformanceMetrics').then(module => ({
+    default: module.MachineRankingChart
+  }))
+)
+
+export const KPISummary = lazy(() =>
+  import('@/components/charts/PerformanceMetrics').then(module => ({
+    default: module.KPISummary
+  }))
+)
+
+// SalesTrendChart - exports SalesTrendChart, SalesComparisonChart
+export const SalesTrendChart = lazy(() =>
+  import('@/components/charts/SalesTrendChart').then(module => ({
+    default: module.SalesTrendChart
+  }))
+)
+
 /**
  * Special components - loaded when needed
  */
