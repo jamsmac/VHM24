@@ -58,6 +58,7 @@ import { RateLimitModule } from './common/modules/rate-limit.module';
 import { MachineAccessModule } from './modules/machine-access/machine-access.module';
 import { ClientModule } from './modules/client/client.module';
 import { SettingsModule } from './modules/settings/settings.module';
+import { OrganizationsModule } from './modules/organizations/organizations.module';
 
 @Module({
   imports: [
@@ -226,6 +227,9 @@ import { SettingsModule } from './modules/settings/settings.module';
 
     // Settings module (AI provider keys, system settings)
     SettingsModule,
+
+    // Sprint 4: Multi-tenant franchise system
+    OrganizationsModule,
   ],
   controllers: [AppController],
   providers: [

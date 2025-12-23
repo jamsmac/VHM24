@@ -2,6 +2,7 @@ import { Entity, Column, ManyToOne, JoinColumn, Index } from 'typeorm';
 import { BaseEntity } from '@/common/entities/base.entity';
 import { Location } from '../../locations/entities/location.entity';
 import { Contract } from '../../counterparty/entities/contract.entity';
+import { Organization } from '../../organizations/entities/organization.entity';
 
 export enum MachineStatus {
   ACTIVE = 'active',
@@ -16,6 +17,7 @@ export enum MachineStatus {
 @Index(['location_id'])
 @Index(['machine_number'], { unique: true })
 @Index(['qr_code'], { unique: true })
+@Index(['organization_id'])
 export class Machine extends BaseEntity {
   @Column({ type: 'varchar', length: 50, unique: true })
   machine_number: string; // Уникальный номер аппарата (M-001, M-002, etc.)
@@ -47,6 +49,14 @@ export class Machine extends BaseEntity {
   @ManyToOne(() => Contract, { onDelete: 'SET NULL' })
   @JoinColumn({ name: 'contract_id' })
   contract: Contract | null;
+
+  // Organization for multi-tenant franchise system
+  @Column({ type: 'uuid', nullable: true })
+  organization_id: string | null;
+
+  @ManyToOne(() => Organization, { onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'organization_id' })
+  organization: Organization | null;
 
   // Machine details
   @Column({ type: 'varchar', length: 100, nullable: true })

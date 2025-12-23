@@ -65,6 +65,8 @@ describe('UsersService', () => {
     deleted_at: null,
     created_by_id: null,
     updated_by_id: null,
+    organization_id: null,
+    organization: null,
   } as User;
 
   const mockPendingUser: User = {

@@ -10,6 +10,10 @@ export enum ConversationState {
   AWAITING_PHOTO_AFTER = 'awaiting_photo_after',
   AWAITING_TEXT_INPUT = 'awaiting_text_input',
   IN_TASK_EXECUTION = 'in_task_execution',
+  // Sprint 3: Incident creation states
+  INCIDENT_TYPE_SELECTION = 'incident_type_selection',
+  INCIDENT_MACHINE_SELECTION = 'incident_machine_selection',
+  INCIDENT_DESCRIPTION_INPUT = 'incident_description_input',
 }
 
 /**

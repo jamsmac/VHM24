@@ -34,7 +34,7 @@ export function Header() {
           </div>
 
           {/* Search Trigger */}
-          <div className="flex-1 max-w-lg">
+          <div className="flex-1 max-w-lg" data-tour="header-search">
           <button
             onClick={openCommandPalette}
             className="w-full flex items-center gap-3 px-3 py-2 text-left border border-input rounded-md bg-background hover:bg-accent/50 transition-colors group"
@@ -54,7 +54,9 @@ export function Header() {
         {/* Right side */}
         <div className="flex items-center space-x-4">
           {/* Notifications */}
-          <NotificationCenter />
+          <div data-tour="header-notifications">
+            <NotificationCenter />
+          </div>
 
           {/* Language Toggle */}
           <LanguageToggle />
@@ -63,7 +65,7 @@ export function Header() {
           <ThemeToggle />
 
           {/* User menu */}
-          <div className="relative">
+          <div className="relative" data-tour="header-user">
             <button
               onClick={() => setShowUserMenu(!showUserMenu)}
               className="flex items-center space-x-3 focus:outline-none"

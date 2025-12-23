@@ -735,7 +735,13 @@ export class MachinesService {
   ): Promise<void> {
     const machine = await this.findOne(machineId);
 
-    const updates: Partial<Machine> = {};
+    const updates: Pick<
+      Machine,
+      'current_cash_amount' | 'last_refill_date' | 'last_collection_date' | 'total_sales_count' | 'total_revenue'
+    > = {} as Pick<
+      Machine,
+      'current_cash_amount' | 'last_refill_date' | 'last_collection_date' | 'total_sales_count' | 'total_revenue'
+    >;
 
     if (stats.current_cash_amount !== undefined) {
       updates.current_cash_amount = stats.current_cash_amount;
@@ -758,7 +764,8 @@ export class MachinesService {
     }
 
     if (Object.keys(updates).length > 0) {
-      await this.machineRepository.update(machineId, updates);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await this.machineRepository.update(machineId, updates as any);
 
       this.logger.log(
         `Updated stats for machine ${machine.machine_number}: ${JSON.stringify(updates)}`,

@@ -1,6 +1,7 @@
-import { Entity, Column, Index, ManyToMany, JoinTable } from 'typeorm';
+import { Entity, Column, Index, ManyToMany, JoinTable, ManyToOne, JoinColumn } from 'typeorm';
 import { BaseEntity } from '@/common/entities/base.entity';
 import { Role } from '@modules/rbac/entities/role.entity';
+import { Organization } from '../../organizations/entities/organization.entity';
 
 export enum UserRole {
   OWNER = 'Owner',
@@ -26,6 +27,7 @@ export enum UserStatus {
 @Index(['phone'], { unique: true, where: 'phone IS NOT NULL' })
 @Index(['telegram_user_id'], { unique: true, where: 'telegram_user_id IS NOT NULL' })
 @Index(['username'], { unique: true, where: 'username IS NOT NULL' })
+@Index(['organization_id'])
 export class User extends BaseEntity {
   @Column({ type: 'varchar', length: 100 })
   full_name: string;
@@ -108,6 +110,14 @@ export class User extends BaseEntity {
 
   @Column({ type: 'jsonb', nullable: true })
   settings: Record<string, any> | null;
+
+  // Organization for multi-tenant franchise system
+  @Column({ type: 'uuid', nullable: true })
+  organization_id: string | null;
+
+  @ManyToOne(() => Organization, { onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'organization_id' })
+  organization: Organization | null;
 
   // IP Whitelist (REQ-AUTH-60)
   @Column({ type: 'boolean', default: false })

@@ -48,6 +48,8 @@ describe('Telegram Approval Workflow', () => {
     deleted_at: null,
     created_by_id: null,
     updated_by_id: null,
+    organization_id: null,
+    organization: null,
   };
 
   beforeEach(async () => {

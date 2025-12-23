@@ -4,6 +4,7 @@ import { BaseEntity } from '../../../common/entities/base.entity';
 import { Machine } from '../../machines/entities/machine.entity';
 import { User } from '../../users/entities/user.entity';
 import { Contract } from '../../counterparty/entities/contract.entity';
+import { Organization } from '../../organizations/entities/organization.entity';
 
 /**
  * Тип транзакции
@@ -48,6 +49,7 @@ export enum ExpenseCategory {
 @Index(['machine_id'])
 @Index(['user_id'])
 @Index(['transaction_date'])
+@Index(['organization_id'])
 export class Transaction extends BaseEntity {
   @ApiProperty({ enum: TransactionType, example: TransactionType.SALE })
   @Column({ type: 'enum', enum: TransactionType })
@@ -158,4 +160,13 @@ export class Transaction extends BaseEntity {
   })
   @Column({ type: 'varchar', length: 100, unique: true, nullable: true })
   transaction_number: string | null;
+
+  // Organization for multi-tenant franchise system (Sprint 4)
+  @ApiProperty({ example: 'uuid', description: 'ID организации (для multi-tenant)' })
+  @Column({ type: 'uuid', nullable: true })
+  organization_id: string | null;
+
+  @ManyToOne(() => Organization, { onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'organization_id' })
+  organization: Organization | null;
 }
