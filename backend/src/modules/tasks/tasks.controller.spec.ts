@@ -11,6 +11,7 @@ interface MockTasksService {
   create: jest.Mock;
   findAll: jest.Mock;
   findOne: jest.Mock;
+  findOneWithDetails: jest.Mock;
   update: jest.Mock;
   remove: jest.Mock;
   assignTask: jest.Mock;
@@ -65,6 +66,7 @@ describe('TasksController', () => {
       create: jest.fn(),
       findAll: jest.fn(),
       findOne: jest.fn(),
+      findOneWithDetails: jest.fn(),
       update: jest.fn(),
       remove: jest.fn(),
       assignTask: jest.fn(),
@@ -293,12 +295,12 @@ describe('TasksController', () => {
 
   describe('findOne', () => {
     it('should find task by id', async () => {
-      mockTasksService.findOne.mockResolvedValue(mockTask);
+      mockTasksService.findOneWithDetails.mockResolvedValue(mockTask);
 
       const result = await controller.findOne('123e4567-e89b-12d3-a456-426614174001');
 
       expect(result).toEqual(mockTask);
-      expect(mockTasksService.findOne).toHaveBeenCalledWith('123e4567-e89b-12d3-a456-426614174001');
+      expect(mockTasksService.findOneWithDetails).toHaveBeenCalledWith('123e4567-e89b-12d3-a456-426614174001');
     });
   });
 

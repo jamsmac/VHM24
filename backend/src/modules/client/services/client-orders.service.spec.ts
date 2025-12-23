@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { ClientOrdersService } from './client-orders.service';
 import { ClientLoyaltyService } from './client-loyalty.service';
+import { PromoCodesService } from '@/modules/promo-codes/promo-codes.service';
 import {
   ClientOrder,
   ClientOrderStatus,
@@ -20,6 +21,7 @@ describe('ClientOrdersService', () => {
   let machineRepository: jest.Mocked<Repository<Machine>>;
   let nomenclatureRepository: jest.Mocked<Repository<Nomenclature>>;
   let loyaltyService: jest.Mocked<ClientLoyaltyService>;
+  let promoCodesService: jest.Mocked<PromoCodesService>;
 
   const mockClientUser: Partial<ClientUser> = {
     id: 'client-user-123',
@@ -84,6 +86,13 @@ describe('ClientOrdersService', () => {
       refundPoints: jest.fn(),
     };
 
+    const mockPromoCodesService = {
+      validate: jest.fn(),
+      applyToOrder: jest.fn(),
+      findByCode: jest.fn(),
+      calculateDiscount: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ClientOrdersService,
@@ -107,6 +116,10 @@ describe('ClientOrdersService', () => {
           provide: ClientLoyaltyService,
           useValue: mockLoyaltyService,
         },
+        {
+          provide: PromoCodesService,
+          useValue: mockPromoCodesService,
+        },
       ],
     }).compile();
 
@@ -115,6 +128,7 @@ describe('ClientOrdersService', () => {
     machineRepository = module.get(getRepositoryToken(Machine));
     nomenclatureRepository = module.get(getRepositoryToken(Nomenclature));
     loyaltyService = module.get(ClientLoyaltyService);
+    promoCodesService = module.get(PromoCodesService);
   });
 
   afterEach(() => {
@@ -261,13 +275,11 @@ describe('ClientOrdersService', () => {
       orderRepository.create.mockImplementation(
         (data) => data as unknown as ClientOrder,
       );
-      orderRepository.save.mockImplementation((order) =>
-        Promise.resolve({
-          ...order,
-          id: 'new-order-1',
-          created_at: new Date(),
-        } as ClientOrder),
-      );
+      orderRepository.save.mockImplementation((order) => {
+        // Mutate the order object to simulate TypeORM behavior
+        Object.assign(order, { id: 'new-order-1', created_at: new Date() });
+        return Promise.resolve(order as ClientOrder);
+      });
     });
 
     it('should create order with correct total amount', async () => {
@@ -291,8 +303,12 @@ describe('ClientOrdersService', () => {
         dtoWithPoints,
       );
 
-      // Total 20000 - 10000 discount = 10000 final
-      expect(result.total_amount).toBe(10000);
+      // total_amount is the original amount before discount
+      expect(result.total_amount).toBe(20000);
+      // final_amount is the amount after discount: 20000 - 10000 = 10000
+      expect(result.final_amount).toBe(10000);
+      // discount_amount should reflect the points discount
+      expect(result.discount_amount).toBe(10000);
     });
 
     it('should throw NotFoundException for non-existent machine', async () => {

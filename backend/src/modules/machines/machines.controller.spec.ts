@@ -12,6 +12,7 @@ type MockUser = Parameters<typeof MachinesController.prototype.writeOff>[2];
 interface MockMachinesService {
   create: jest.Mock;
   findAll: jest.Mock;
+  findAllSimple: jest.Mock;
   findOne: jest.Mock;
   findByMachineNumber: jest.Mock;
   findByQrCode: jest.Mock;
@@ -64,6 +65,7 @@ describe('MachinesController', () => {
     mockMachinesService = {
       create: jest.fn(),
       findAll: jest.fn(),
+      findAllSimple: jest.fn(),
       findOne: jest.fn(),
       findByMachineNumber: jest.fn(),
       findByQrCode: jest.fn(),
@@ -135,48 +137,53 @@ describe('MachinesController', () => {
   describe('findAll', () => {
     it('should return all machines', async () => {
       const mockMachines = [mockMachine];
-      mockMachinesService.findAll.mockResolvedValue(mockMachines as any);
+      const paginatedResponse = { data: mockMachines, total: 1, page: 1, limit: 50, totalPages: 1 };
+      mockMachinesService.findAll.mockResolvedValue(paginatedResponse as any);
 
       const result = await controller.findAll();
 
-      expect(result).toEqual(mockMachines);
-      expect(mockMachinesService.findAll).toHaveBeenCalledWith({
-        status: undefined,
-        location_id: undefined,
-      });
+      expect(result).toEqual(paginatedResponse);
+      expect(mockMachinesService.findAll).toHaveBeenCalledWith(
+        { status: undefined, location_id: undefined },
+        1,
+        50,
+      );
     });
 
     it('should filter by status', async () => {
-      mockMachinesService.findAll.mockResolvedValue([]);
+      mockMachinesService.findAll.mockResolvedValue({ data: [], total: 0, page: 1, limit: 50, totalPages: 0 });
 
       await controller.findAll(MachineStatus.ACTIVE);
 
-      expect(mockMachinesService.findAll).toHaveBeenCalledWith({
-        status: MachineStatus.ACTIVE,
-        location_id: undefined,
-      });
+      expect(mockMachinesService.findAll).toHaveBeenCalledWith(
+        { status: MachineStatus.ACTIVE, location_id: undefined },
+        1,
+        50,
+      );
     });
 
     it('should filter by locationId', async () => {
-      mockMachinesService.findAll.mockResolvedValue([]);
+      mockMachinesService.findAll.mockResolvedValue({ data: [], total: 0, page: 1, limit: 50, totalPages: 0 });
 
       await controller.findAll(undefined, 'loc-123');
 
-      expect(mockMachinesService.findAll).toHaveBeenCalledWith({
-        status: undefined,
-        location_id: 'loc-123',
-      });
+      expect(mockMachinesService.findAll).toHaveBeenCalledWith(
+        { status: undefined, location_id: 'loc-123' },
+        1,
+        50,
+      );
     });
 
     it('should filter by both status and locationId', async () => {
-      mockMachinesService.findAll.mockResolvedValue([]);
+      mockMachinesService.findAll.mockResolvedValue({ data: [], total: 0, page: 1, limit: 50, totalPages: 0 });
 
       await controller.findAll(MachineStatus.OFFLINE, 'loc-123');
 
-      expect(mockMachinesService.findAll).toHaveBeenCalledWith({
-        status: MachineStatus.OFFLINE,
-        location_id: 'loc-123',
-      });
+      expect(mockMachinesService.findAll).toHaveBeenCalledWith(
+        { status: MachineStatus.OFFLINE, location_id: 'loc-123' },
+        1,
+        50,
+      );
     });
   });
 
@@ -205,12 +212,12 @@ describe('MachinesController', () => {
   describe('findByLocation', () => {
     it('should find machines by location', async () => {
       const mockMachines = [mockMachine];
-      mockMachinesService.findAll.mockResolvedValue(mockMachines as any);
+      mockMachinesService.findAllSimple.mockResolvedValue(mockMachines as any);
 
       const result = await controller.findByLocation('123e4567-e89b-12d3-a456-426614174002');
 
       expect(result).toEqual(mockMachines);
-      expect(mockMachinesService.findAll).toHaveBeenCalledWith({
+      expect(mockMachinesService.findAllSimple).toHaveBeenCalledWith({
         location_id: '123e4567-e89b-12d3-a456-426614174002',
       });
     });

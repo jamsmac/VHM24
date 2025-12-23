@@ -103,7 +103,10 @@ describe('MachinesService', () => {
       where: jest.fn().mockReturnThis(),
       andWhere: jest.fn().mockReturnThis(),
       orderBy: jest.fn().mockReturnThis(),
+      skip: jest.fn().mockReturnThis(),
+      take: jest.fn().mockReturnThis(),
       getMany: jest.fn().mockResolvedValue([mockMachine]),
+      getManyAndCount: jest.fn().mockResolvedValue([[mockMachine], 1]),
       getOne: jest.fn().mockResolvedValue(mockMachine),
       select: jest.fn().mockReturnThis(),
       addSelect: jest.fn().mockReturnThis(),
@@ -321,13 +324,15 @@ describe('MachinesService', () => {
       const result = await service.findAll();
 
       // Assert
-      expect(result).toEqual([mockMachine]);
+      expect(result.data).toEqual([mockMachine]);
+      expect(result.total).toBe(1);
+      expect(result.page).toBe(1);
       expect(machineRepository.createQueryBuilder).toHaveBeenCalledWith('machine');
       expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith(
         'machine.location',
         'location',
       );
-      expect(mockQueryBuilder.getMany).toHaveBeenCalled();
+      expect(mockQueryBuilder.getManyAndCount).toHaveBeenCalled();
     });
 
     it('should filter machines by location_id', async () => {

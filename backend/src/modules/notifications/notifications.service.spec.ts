@@ -15,6 +15,7 @@ import { CreateNotificationDto, BulkNotificationDto } from './dto/create-notific
 import { EmailService } from '../email/email.service';
 import { TelegramNotificationsService } from '../telegram/services/telegram-notifications.service';
 import { WebPushService } from '../web-push/web-push.service';
+import { FcmService } from '../fcm/fcm.service';
 import { SmsService } from '../sms/sms.service';
 import { User } from '@modules/users/entities/user.entity';
 
@@ -25,6 +26,7 @@ describe('NotificationsService', () => {
   let mockEmailService: jest.Mocked<EmailService>;
   let mockTelegramNotificationsService: jest.Mocked<TelegramNotificationsService>;
   let mockWebPushService: jest.Mocked<WebPushService>;
+  let mockFcmService: jest.Mocked<FcmService>;
   let mockSmsService: jest.Mocked<SmsService>;
 
   // Test data
@@ -149,6 +151,14 @@ describe('NotificationsService', () => {
       cleanupInactiveSubscriptions: jest.fn(),
     } as any;
 
+    mockFcmService = {
+      sendToUser: jest.fn(),
+      sendToMultipleUsers: jest.fn(),
+      sendToTopic: jest.fn(),
+      subscribeToTopic: jest.fn(),
+      unsubscribeFromTopic: jest.fn(),
+    } as any;
+
     mockSmsService = {
       send: jest.fn(),
       sendSimple: jest.fn(),
@@ -182,6 +192,10 @@ describe('NotificationsService', () => {
         {
           provide: WebPushService,
           useValue: mockWebPushService,
+        },
+        {
+          provide: FcmService,
+          useValue: mockFcmService,
         },
         {
           provide: SmsService,

@@ -642,7 +642,7 @@ describe('TasksService', () => {
   // ============================================================================
 
   describe('findOne', () => {
-    it('should return a task by ID with all relations', async () => {
+    it('should return a task by ID with basic relations', async () => {
       taskRepository.findOne.mockResolvedValue(mockTask as Task);
 
       const result = await service.findOne('task-uuid');
@@ -650,18 +650,7 @@ describe('TasksService', () => {
       expect(result).toEqual(mockTask);
       expect(taskRepository.findOne).toHaveBeenCalledWith({
         where: { id: 'task-uuid' },
-        relations: [
-          'machine',
-          'machine.location',
-          'assigned_to',
-          'created_by',
-          'items',
-          'items.nomenclature',
-          'comments',
-          'comments.user',
-          'components',
-          'components.component',
-        ],
+        relations: ['machine', 'assigned_to'],
       });
     });
 
