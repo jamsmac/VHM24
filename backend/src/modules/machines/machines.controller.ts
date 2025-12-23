@@ -75,7 +75,7 @@ export class MachinesController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Получить список всех аппаратов' })
+  @ApiOperation({ summary: 'Получить список всех аппаратов с пагинацией' })
   @ApiQuery({
     name: 'status',
     required: false,
@@ -88,19 +88,47 @@ export class MachinesController {
     type: String,
     description: 'Фильтр по локации',
   })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    type: Number,
+    description: 'Номер страницы (по умолчанию 1)',
+    example: 1,
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Количество записей на страницу (по умолчанию 50, макс 200)',
+    example: 50,
+  })
   @ApiResponse({
     status: 200,
-    description: 'Список аппаратов',
-    type: [Machine],
+    description: 'Пагинированный список аппаратов',
+    schema: {
+      properties: {
+        data: { type: 'array', items: { $ref: '#/components/schemas/Machine' } },
+        total: { type: 'number', example: 100 },
+        page: { type: 'number', example: 1 },
+        limit: { type: 'number', example: 50 },
+        totalPages: { type: 'number', example: 2 },
+      },
+    },
   })
   findAll(
     @Query('status') status?: MachineStatus,
     @Query('locationId') locationId?: string,
-  ): Promise<Machine[]> {
-    return this.machinesService.findAll({
-      status,
-      location_id: locationId,
-    });
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ): Promise<{ data: Machine[]; total: number; page: number; limit: number; totalPages: number }> {
+    return this.machinesService.findAll(
+      {
+        status,
+        location_id: locationId,
+      },
+      page ? parseInt(page, 10) : 1,
+      limit ? parseInt(limit, 10) : 50,
+    );
   }
 
   @Get('stats')
@@ -150,7 +178,7 @@ export class MachinesController {
     type: [Machine],
   })
   findByLocation(@Param('locationId', ParseUUIDPipe) locationId: string): Promise<Machine[]> {
-    return this.machinesService.findAll({ location_id: locationId });
+    return this.machinesService.findAllSimple({ location_id: locationId });
   }
 
   // @Get('by-operator/:operatorId')

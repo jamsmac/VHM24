@@ -8,6 +8,8 @@ import { QueryProvider } from '@/providers/QueryProvider'
 import { CommandPaletteProvider } from '@/providers/CommandPaletteProvider'
 import { HelpProvider } from '@/providers/HelpProvider'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
+import { LiquidEther, liquidPresets } from '@/components/effects'
+import { useLiquidSettings } from '@/hooks/useLiquidSettings'
 import { ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 import 'leaflet/dist/leaflet.css'
@@ -23,6 +25,7 @@ export default function DashboardLayout({
 }) {
   const router = useRouter()
   const { isAuthenticated, loading } = useAuth()
+  const { enabled } = useLiquidSettings()
 
   useEffect(() => {
     // Only redirect if not loading and not authenticated
@@ -34,10 +37,10 @@ export default function DashboardLayout({
   // Show loading state while checking authentication
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-gray-50">
+      <div className="flex h-screen items-center justify-center bg-background">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Загрузка...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Загрузка...</p>
         </div>
       </div>
     )
@@ -46,10 +49,10 @@ export default function DashboardLayout({
   // Don't render dashboard if not authenticated (redirect will happen via useEffect)
   if (!isAuthenticated) {
     return (
-      <div className="flex h-screen items-center justify-center bg-gray-50">
+      <div className="flex h-screen items-center justify-center bg-background">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Перенаправление...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Перенаправление...</p>
         </div>
       </div>
     )
@@ -67,9 +70,15 @@ export default function DashboardLayout({
           >
             Перейти к основному содержимому
           </a>
-          <div className="flex h-screen bg-gray-50 dark:bg-slate-950">
+          <div className="flex h-screen bg-background relative">
+            {/* Subtle LiquidEther background effect */}
+            {enabled && (
+              <div className="fixed inset-0 z-0 opacity-20 pointer-events-none">
+                <LiquidEther {...liquidPresets.dashboard} />
+              </div>
+            )}
             <CollapsibleSidebar />
-            <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="flex-1 flex flex-col overflow-hidden relative z-10">
               <Header />
               <main id="main-content" className="flex-1 overflow-y-auto p-4 md:p-6 pb-20 md:pb-6" tabIndex={-1}>
                 {children}

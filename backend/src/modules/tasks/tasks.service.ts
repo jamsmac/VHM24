@@ -179,9 +179,25 @@ export class TasksService {
   }
 
   /**
-   * Получение задачи по ID
+   * Получение задачи по ID с минимальными relations (для внутреннего использования)
    */
   async findOne(id: string): Promise<Task> {
+    const task = await this.taskRepository.findOne({
+      where: { id },
+      relations: ['machine', 'assigned_to'],
+    });
+
+    if (!task) {
+      throw new NotFoundException(`Задача с ID ${id} не найдена`);
+    }
+
+    return task;
+  }
+
+  /**
+   * Получение задачи по ID с полными relations (для API детального просмотра)
+   */
+  async findOneWithDetails(id: string): Promise<Task> {
     const task = await this.taskRepository.findOne({
       where: { id },
       relations: [

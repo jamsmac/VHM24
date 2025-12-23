@@ -103,7 +103,7 @@ export default function SettingsPage() {
                     type="text"
                     value={formData.first_name}
                     onChange={handleChange}
-                    className="w-full pl-10 pr-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                    className="w-full pl-10 pr-4 py-2.5 border border-white/10 bg-white/5 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-foreground placeholder:text-muted-foreground"
                     placeholder="Ваше имя"
                   />
                 </div>
@@ -121,7 +121,7 @@ export default function SettingsPage() {
                     type="text"
                     value={formData.last_name}
                     onChange={handleChange}
-                    className="w-full pl-10 pr-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                    className="w-full pl-10 pr-4 py-2.5 border border-white/10 bg-white/5 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-foreground placeholder:text-muted-foreground"
                     placeholder="Ваша фамилия"
                   />
                 </div>
@@ -139,7 +139,7 @@ export default function SettingsPage() {
                     type="tel"
                     value={formData.phone}
                     onChange={handleChange}
-                    className="w-full pl-10 pr-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                    className="w-full pl-10 pr-4 py-2.5 border border-white/10 bg-white/5 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-foreground placeholder:text-muted-foreground"
                     placeholder="+998 XX XXX XX XX"
                   />
                 </div>
@@ -157,7 +157,7 @@ export default function SettingsPage() {
                     type="email"
                     value={formData.email}
                     onChange={handleChange}
-                    className="w-full pl-10 pr-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                    className="w-full pl-10 pr-4 py-2.5 border border-white/10 bg-white/5 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-foreground placeholder:text-muted-foreground"
                     placeholder="example@email.com"
                   />
                 </div>
@@ -198,9 +198,9 @@ export default function SettingsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg">
-              <div className="p-3 bg-blue-100 rounded-full">
-                <Send className="h-6 w-6 text-blue-600" />
+            <div className="flex items-center gap-4 p-4 bg-white/5 rounded-lg border border-white/10">
+              <div className="p-3 bg-blue-500/20 rounded-full">
+                <Send className="h-6 w-6 text-blue-400" />
               </div>
               <div>
                 <p className="font-medium">@{user.telegram_username}</p>

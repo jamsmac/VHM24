@@ -17,7 +17,7 @@ export class OperatorInventory extends BaseEntity {
   @Column({ type: 'uuid' })
   operator_id: string;
 
-  @ManyToOne(() => User, { onDelete: 'CASCADE', eager: true })
+  @ManyToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'operator_id' })
   operator: User;
 
@@ -25,7 +25,7 @@ export class OperatorInventory extends BaseEntity {
   @Column({ type: 'uuid' })
   nomenclature_id: string;
 
-  @ManyToOne(() => Nomenclature, { onDelete: 'CASCADE', eager: true })
+  @ManyToOne(() => Nomenclature, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'nomenclature_id' })
   nomenclature: Nomenclature;
 

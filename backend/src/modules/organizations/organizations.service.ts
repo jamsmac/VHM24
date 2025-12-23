@@ -294,7 +294,7 @@ export class OrganizationsService {
    * Generate unique slug from name
    */
   async generateSlug(name: string): Promise<string> {
-    let baseSlug = name
+    const baseSlug = name
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '');

@@ -33,7 +33,10 @@ export function I18nProvider({ children }: { children: ReactNode }) {
 
   const setLocale = (newLocale: Locale) => {
     setLocaleState(newLocale)
-    localStorage.setItem('locale', newLocale)
+    // SSR-safe localStorage access
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('locale', newLocale)
+    }
   }
 
   const t = (key: string): string => {

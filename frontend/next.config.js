@@ -89,12 +89,14 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              // Scripts: Allow self + inline (Next.js requires this)
-              // TODO: Remove 'unsafe-inline' 'unsafe-eval' in Phase 2 with nonce-based CSP
+              // Scripts: Next.js App Router requires 'unsafe-inline' for hydration
+              // In development: also need 'unsafe-eval' for HMR/Fast Refresh
+              // In production: 'unsafe-inline' only (safer but not ideal)
+              // TODO: Implement nonce-based CSP for better security (requires middleware)
               isDevelopment
                 ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
-                : "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-              // Styles: Allow self + inline (Tailwind/CSS-in-JS)
+                : "script-src 'self' 'unsafe-inline'",
+              // Styles: Allow self + inline (Tailwind/CSS-in-JS requires this)
               "style-src 'self' 'unsafe-inline'",
               // Images: Allow self, data URIs, HTTPS images
               "img-src 'self' data: https: blob:",

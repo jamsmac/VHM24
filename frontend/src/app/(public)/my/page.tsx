@@ -86,8 +86,8 @@ export default function ClientDashboardPage() {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-green-100 rounded-xl">
-                <ShoppingBag className="h-6 w-6 text-green-600" />
+              <div className="p-3 bg-green-500/20 rounded-xl">
+                <ShoppingBag className="h-6 w-6 text-green-400" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Заказов</p>
@@ -101,8 +101,8 @@ export default function ClientDashboardPage() {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-blue-100 rounded-xl">
-                <TrendingUp className="h-6 w-6 text-blue-600" />
+              <div className="p-3 bg-blue-500/20 rounded-xl">
+                <TrendingUp className="h-6 w-6 text-blue-400" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Потрачено</p>
@@ -116,8 +116,8 @@ export default function ClientDashboardPage() {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-orange-100 rounded-xl">
-                <Coffee className="h-6 w-6 text-orange-600" />
+              <div className="p-3 bg-orange-500/20 rounded-xl">
+                <Coffee className="h-6 w-6 text-orange-400" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Любимое</p>
@@ -156,10 +156,10 @@ export default function ClientDashboardPage() {
               {recentOrders.map((order) => (
                 <div
                   key={order.id}
-                  className="flex items-center justify-between p-4 bg-muted/50 rounded-lg"
+                  className="flex items-center justify-between p-4 bg-white/5 rounded-lg border border-white/10"
                 >
                   <div className="flex items-center gap-4">
-                    <div className="p-2 bg-white rounded-lg">
+                    <div className="p-2 bg-white/10 rounded-lg">
                       <Coffee className="h-5 w-5 text-muted-foreground" />
                     </div>
                     <div>
@@ -191,7 +191,7 @@ export default function ClientDashboardPage() {
 
       {/* Quick actions */}
       <div className="grid gap-4 md:grid-cols-2">
-        <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
+        <Card className="bg-gradient-to-br from-blue-500/20 to-purple-500/10 border-white/10">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
@@ -210,7 +210,7 @@ export default function ClientDashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-green-50 to-green-100/50 border-green-200">
+        <Card className="bg-gradient-to-br from-green-500/20 to-emerald-500/10 border-white/10">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>

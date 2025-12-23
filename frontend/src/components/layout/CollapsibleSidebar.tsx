@@ -143,7 +143,7 @@ function AlertsBadge() {
   if (count === 0) return null
 
   return (
-    <span className="ml-auto inline-flex items-center justify-center px-2 py-0.5 text-xs font-medium rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
+    <span className="ml-auto inline-flex items-center justify-center px-2 py-0.5 text-xs font-medium rounded-full bg-red-500/20 text-red-400">
       {count > 99 ? '99+' : count}
     </span>
   )
@@ -218,7 +218,7 @@ export function CollapsibleSidebar({ className }: CollapsibleSidebarProps) {
   return (
     <aside
       className={cn(
-        'hidden md:flex flex-col w-64 bg-white dark:bg-slate-900 border-r border-gray-200 dark:border-slate-800 h-screen overflow-hidden',
+        'hidden md:flex flex-col w-64 bg-card/50 backdrop-blur-xl border-r border-white/10 h-screen overflow-hidden',
         className
       )}
       role="navigation"
@@ -226,14 +226,14 @@ export function CollapsibleSidebar({ className }: CollapsibleSidebarProps) {
       data-tour="sidebar"
     >
       {/* Logo */}
-      <div className="p-4 border-b border-gray-100 dark:border-slate-800">
-        <Link href="/dashboard" className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+      <div className="p-4 border-b border-white/10">
+        <Link href="/dashboard" className="flex items-center gap-3 group">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg shadow-purple-500/20 group-hover:shadow-purple-500/40 transition-all">
             <Coffee className="w-5 h-5 text-white" />
           </div>
           <div>
-            <div className="font-bold text-gray-900 dark:text-white">VendHub</div>
-            <div className="text-xs text-gray-500 dark:text-slate-400">Manager</div>
+            <div className="font-bold text-foreground">VendHub</div>
+            <div className="text-xs text-muted-foreground">Manager</div>
           </div>
         </Link>
       </div>
@@ -252,10 +252,10 @@ export function CollapsibleSidebar({ className }: CollapsibleSidebarProps) {
                 <button
                   onClick={() => toggleGroup(group.id)}
                   className={cn(
-                    'w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-all',
+                    'w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-all',
                     isActive
-                      ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-400'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50 dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-800'
+                      ? 'bg-primary/20 text-primary'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
                   )}
                   aria-expanded={isExpanded}
                 >
@@ -277,7 +277,7 @@ export function CollapsibleSidebar({ className }: CollapsibleSidebarProps) {
                     isExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
                   )}
                 >
-                  <li className="ml-4 mt-1 space-y-0.5 border-l border-gray-200 dark:border-slate-700 pl-3">
+                  <li className="ml-4 mt-1 space-y-0.5 border-l border-white/10 pl-3">
                     {group.items.map((item) => {
                       const ItemIcon = item.icon
                       const isItemActive = isActiveItem(item.href)
@@ -289,8 +289,8 @@ export function CollapsibleSidebar({ className }: CollapsibleSidebarProps) {
                           className={cn(
                             'flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all',
                             isItemActive
-                              ? 'bg-indigo-100 text-indigo-700 font-medium dark:bg-indigo-900/30 dark:text-indigo-400'
-                              : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50 dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-800'
+                              ? 'bg-primary/20 text-primary font-medium'
+                              : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
                           )}
                           aria-current={isItemActive ? 'page' : undefined}
                           {...(item.dataTour && { 'data-tour': item.dataTour })}
@@ -310,14 +310,14 @@ export function CollapsibleSidebar({ className }: CollapsibleSidebarProps) {
       </nav>
 
       {/* Footer - User Section */}
-      <div className="p-4 border-t border-gray-100 dark:border-slate-800" data-tour="user-menu">
+      <div className="p-4 border-t border-white/10" data-tour="user-menu">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-medium text-sm">
+          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-medium text-sm shadow-lg shadow-purple-500/20">
             VH
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-sm font-medium text-gray-900 dark:text-white truncate">VendHub</div>
-            <div className="text-xs text-gray-500 dark:text-slate-400 truncate">v1.0.0</div>
+            <div className="text-sm font-medium text-foreground truncate">VendHub</div>
+            <div className="text-xs text-muted-foreground truncate">v1.0.0</div>
           </div>
         </div>
       </div>

@@ -17,7 +17,7 @@ export class MachineInventory extends BaseEntity {
   @Column({ type: 'uuid' })
   machine_id: string;
 
-  @ManyToOne(() => Machine, { onDelete: 'CASCADE', eager: true })
+  @ManyToOne(() => Machine, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'machine_id' })
   machine: Machine;
 
@@ -25,7 +25,7 @@ export class MachineInventory extends BaseEntity {
   @Column({ type: 'uuid' })
   nomenclature_id: string;
 
-  @ManyToOne(() => Nomenclature, { onDelete: 'CASCADE', eager: true })
+  @ManyToOne(() => Nomenclature, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'nomenclature_id' })
   nomenclature: Nomenclature;
 

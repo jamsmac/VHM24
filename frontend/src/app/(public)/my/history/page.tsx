@@ -10,12 +10,12 @@ import type { ClientOrder, OrderStatus } from '@/types/client'
 import { cn } from '@/lib/utils'
 
 const ORDER_STATUS_CONFIG: Record<OrderStatus, { label: string; color: string; bgColor: string }> = {
-  pending: { label: 'Ожидает оплаты', color: 'text-yellow-700', bgColor: 'bg-yellow-100' },
-  paid: { label: 'Оплачен', color: 'text-blue-700', bgColor: 'bg-blue-100' },
-  processing: { label: 'Готовится', color: 'text-purple-700', bgColor: 'bg-purple-100' },
-  completed: { label: 'Выполнен', color: 'text-green-700', bgColor: 'bg-green-100' },
-  cancelled: { label: 'Отменён', color: 'text-red-700', bgColor: 'bg-red-100' },
-  refunded: { label: 'Возврат', color: 'text-gray-700', bgColor: 'bg-gray-100' },
+  pending: { label: 'Ожидает оплаты', color: 'text-yellow-400', bgColor: 'bg-yellow-500/20' },
+  paid: { label: 'Оплачен', color: 'text-blue-400', bgColor: 'bg-blue-500/20' },
+  processing: { label: 'Готовится', color: 'text-purple-400', bgColor: 'bg-purple-500/20' },
+  completed: { label: 'Выполнен', color: 'text-green-400', bgColor: 'bg-green-500/20' },
+  cancelled: { label: 'Отменён', color: 'text-red-400', bgColor: 'bg-red-500/20' },
+  refunded: { label: 'Возврат', color: 'text-gray-400', bgColor: 'bg-gray-500/20' },
 }
 
 export default function OrderHistoryPage() {
@@ -91,7 +91,7 @@ export default function OrderHistoryPage() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as OrderStatus | 'all')}
-            className="text-sm border rounded-lg px-3 py-2 bg-white"
+            className="text-sm border border-white/10 rounded-lg px-3 py-2 bg-white/5 text-foreground"
           >
             <option value="all">Все заказы</option>
             <option value="completed">Выполненные</option>
@@ -127,7 +127,7 @@ export default function OrderHistoryPage() {
                   {/* Order header */}
                   <div className="flex items-start justify-between">
                     <div className="flex items-start gap-4">
-                      <div className="p-3 bg-muted rounded-xl">
+                      <div className="p-3 bg-white/10 rounded-xl">
                         <Coffee className="h-6 w-6 text-muted-foreground" />
                       </div>
                       <div>
@@ -199,7 +199,7 @@ export default function OrderHistoryPage() {
                         {order.items.map((item) => (
                           <div
                             key={item.id}
-                            className="flex items-center justify-between py-2 px-3 bg-muted/50 rounded-lg"
+                            className="flex items-center justify-between py-2 px-3 bg-white/5 rounded-lg border border-white/5"
                           >
                             <div>
                               <p className="font-medium">{item.product_name}</p>

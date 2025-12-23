@@ -4,7 +4,13 @@ export class UpdateTelegramBotToken1734400000000 implements MigrationInterface {
   name = 'UpdateTelegramBotToken1734400000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
-    const botToken = '8201265622:AAG3NMF7J2RP49nc4y6rnEG2A-0iaAnW4dA';
+    // SECURITY: Token must be provided via environment variable
+    const botToken = process.env.TELEGRAM_BOT_TOKEN;
+
+    if (!botToken) {
+      console.log('TELEGRAM_BOT_TOKEN not set, skipping migration');
+      return;
+    }
 
     // Check if telegram_settings table exists
     const tableExists = await queryRunner.hasTable('telegram_settings');

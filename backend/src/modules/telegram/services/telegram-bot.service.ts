@@ -763,7 +763,7 @@ export class TelegramBotService implements OnModuleInit {
         }
 
         // Show machine selection
-        const machines = await this.machinesService.findAll();
+        const machines = await this.machinesService.findAllSimple();
         const buttons = machines.slice(0, 10).map((m) => [
           Markup.button.callback(
             `${m.machine_number} - ${m.location?.name || 'N/A'}`,
@@ -869,7 +869,7 @@ export class TelegramBotService implements OnModuleInit {
     await ctx.replyWithChatAction('typing');
 
     // Fetch actual machines from database
-    const machines = await this.machinesService.findAll();
+    const machines = await this.machinesService.findAllSimple();
     const formattedMachines = machines.map((machine, index) => ({
       id: index + 1, // Use sequential ID for display
       name: machine.machine_number,
@@ -973,7 +973,7 @@ export class TelegramBotService implements OnModuleInit {
     const todayEnd = endOfDay(today);
 
     // Get all machines and count by status
-    const allMachines = await this.machinesService.findAll();
+    const allMachines = await this.machinesService.findAllSimple();
     const total_machines = allMachines.length;
     const online = allMachines.filter((m) => m.status === MachineStatus.ACTIVE).length;
     const offline = allMachines.filter(
@@ -1658,11 +1658,15 @@ export class TelegramBotService implements OnModuleInit {
   }
 
   /**
-   * Check if user is the owner (Jamshiddin)
-   * Owner Telegram ID: 42283329
+   * Check if user is the super admin (owner)
+   * Super Admin Telegram ID is configured via SUPER_ADMIN_TELEGRAM_ID environment variable
    */
   private isSuperAdmin(telegramId: string | undefined): boolean {
-    const OWNER_TELEGRAM_ID = '42283329';
+    const OWNER_TELEGRAM_ID = process.env.SUPER_ADMIN_TELEGRAM_ID;
+    if (!OWNER_TELEGRAM_ID) {
+      this.logger.warn('SUPER_ADMIN_TELEGRAM_ID not configured');
+      return false;
+    }
     return telegramId === OWNER_TELEGRAM_ID;
   }
 
@@ -1674,7 +1678,12 @@ export class TelegramBotService implements OnModuleInit {
     userId: string,
     telegramFrom: { id: number; first_name?: string; last_name?: string; username?: string },
   ): Promise<void> {
-    const OWNER_TELEGRAM_ID = '42283329';
+    const OWNER_TELEGRAM_ID = process.env.SUPER_ADMIN_TELEGRAM_ID;
+
+    if (!OWNER_TELEGRAM_ID) {
+      this.logger.warn('SUPER_ADMIN_TELEGRAM_ID not configured, cannot send notification');
+      return;
+    }
 
     try {
       // Get owner's TelegramUser to find their chat_id
@@ -2008,7 +2017,7 @@ export class TelegramBotService implements OnModuleInit {
       }
 
       // Get machines for selection
-      const machines = await this.machinesService.findAll();
+      const machines = await this.machinesService.findAllSimple();
 
       if (machines.length === 0) {
         await ctx.reply(
@@ -2090,7 +2099,7 @@ export class TelegramBotService implements OnModuleInit {
 
       if (!machineNumber) {
         // Show machine selection if no machine specified
-        const machines = await this.machinesService.findAll();
+        const machines = await this.machinesService.findAllSimple();
 
         if (machines.length === 0) {
           await ctx.reply(
@@ -2126,7 +2135,7 @@ export class TelegramBotService implements OnModuleInit {
       }
 
       // Find machine by number
-      const machines = await this.machinesService.findAll();
+      const machines = await this.machinesService.findAllSimple();
       const machine = machines.find(
         (m) => m.machine_number.toLowerCase() === machineNumber.toLowerCase(),
       );

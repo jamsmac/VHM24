@@ -15,32 +15,32 @@ const TRANSACTION_TYPE_CONFIG: Record<
   earned: {
     label: 'Начислено',
     icon: TrendingUp,
-    color: 'text-green-700',
-    bgColor: 'bg-green-100',
+    color: 'text-green-400',
+    bgColor: 'bg-green-500/20',
   },
   redeemed: {
     label: 'Списано',
     icon: TrendingDown,
-    color: 'text-orange-700',
-    bgColor: 'bg-orange-100',
+    color: 'text-orange-400',
+    bgColor: 'bg-orange-500/20',
   },
   expired: {
     label: 'Сгорело',
     icon: Clock,
-    color: 'text-gray-700',
-    bgColor: 'bg-gray-100',
+    color: 'text-gray-400',
+    bgColor: 'bg-gray-500/20',
   },
   bonus: {
     label: 'Бонус',
     icon: Sparkles,
-    color: 'text-purple-700',
-    bgColor: 'bg-purple-100',
+    color: 'text-purple-400',
+    bgColor: 'bg-purple-500/20',
   },
   adjustment: {
     label: 'Корректировка',
     icon: Info,
-    color: 'text-blue-700',
-    bgColor: 'bg-blue-100',
+    color: 'text-blue-400',
+    bgColor: 'bg-blue-500/20',
   },
 }
 
@@ -142,8 +142,8 @@ export default function BonusesPage() {
         <CardContent>
           <div className="grid gap-4 md:grid-cols-3">
             <div className="flex items-start gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <TrendingUp className="h-5 w-5 text-green-600" />
+              <div className="p-2 bg-green-500/20 rounded-lg">
+                <TrendingUp className="h-5 w-5 text-green-400" />
               </div>
               <div>
                 <p className="font-medium">Накапливайте</p>
@@ -153,8 +153,8 @@ export default function BonusesPage() {
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <div className="p-2 bg-orange-100 rounded-lg">
-                <Gift className="h-5 w-5 text-orange-600" />
+              <div className="p-2 bg-orange-500/20 rounded-lg">
+                <Gift className="h-5 w-5 text-orange-400" />
               </div>
               <div>
                 <p className="font-medium">Используйте</p>
@@ -164,8 +164,8 @@ export default function BonusesPage() {
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <Sparkles className="h-5 w-5 text-purple-600" />
+              <div className="p-2 bg-purple-500/20 rounded-lg">
+                <Sparkles className="h-5 w-5 text-purple-400" />
               </div>
               <div>
                 <p className="font-medium">Бонусы</p>
@@ -200,7 +200,7 @@ export default function BonusesPage() {
                 return (
                   <div
                     key={transaction.id}
-                    className="flex items-center justify-between p-4 bg-muted/50 rounded-lg"
+                    className="flex items-center justify-between p-4 bg-white/5 rounded-lg border border-white/10"
                   >
                     <div className="flex items-center gap-4">
                       <div className={cn('p-2 rounded-lg', config.bgColor)}>

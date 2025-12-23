@@ -1,4 +1,8 @@
 import * as crypto from 'crypto';
+import { Logger } from '@nestjs/common';
+
+// Module-level logger for crypto utilities
+const logger = new Logger('CryptoUtil');
 
 /**
  * Cryptography utility for secure data encryption/decryption
@@ -129,7 +133,7 @@ export function decrypt(ciphertext: string | null): string | null {
   } catch (error) {
     // If decryption fails, it might be legacy unencrypted data
     // Log warning but don't throw - allows gradual migration
-    console.warn(
+    logger.warn(
       `Decryption warning (possible legacy data): ${error instanceof Error ? error.message : 'Unknown error'}`,
     );
     return ciphertext;

@@ -167,16 +167,16 @@ export class TasksController {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Получить задачу по ID' })
+  @ApiOperation({ summary: 'Получить задачу по ID с полной информацией' })
   @ApiParam({ name: 'id', description: 'UUID задачи' })
   @ApiResponse({
     status: 200,
-    description: 'Данные задачи',
+    description: 'Данные задачи с полными relations',
     type: Task,
   })
   @ApiResponse({ status: 404, description: 'Задача не найдена' })
   findOne(@Param('id', ParseUUIDPipe) id: string): Promise<Task> {
-    return this.tasksService.findOne(id);
+    return this.tasksService.findOneWithDetails(id);
   }
 
   @Patch(':id')

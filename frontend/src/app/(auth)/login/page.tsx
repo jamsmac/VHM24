@@ -141,18 +141,18 @@ export default function LoginPage() {
   // Credentials step
   if (step === 'credentials') {
     return (
-      <div className="bg-white rounded-2xl shadow-2xl p-8">
+      <div className="p-8">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl mb-4">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl mb-4 shadow-lg shadow-blue-500/30">
             <LogIn className="h-8 w-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900">VendHub Manager</h1>
-          <p className="mt-2 text-gray-600">Система управления вендинговыми автоматами</p>
+          <h1 className="text-2xl font-bold text-white">Вход в систему</h1>
+          <p className="mt-2 text-slate-400">Введите данные для входа в аккаунт</p>
         </div>
 
-        <form onSubmit={handleCredentialsSubmit} className="space-y-6">
+        <form onSubmit={handleCredentialsSubmit} className="space-y-5">
           <div>
-            <label htmlFor="emailOrUsername" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="emailOrUsername" className="block text-sm font-medium text-slate-300 mb-2">
               Email или имя пользователя
             </label>
             <input
@@ -164,14 +164,13 @@ export default function LoginPage() {
                 setEmailOrUsername(e.target.value)
                 setError(null)
               }}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+              className="w-full px-4 py-3 rounded-xl bg-slate-800/50 border border-white/10 text-white placeholder-slate-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition"
               placeholder="user@example.com или username"
             />
-            <p className="mt-2 text-xs text-gray-500">Введите ваш email или имя пользователя</p>
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="password" className="block text-sm font-medium text-slate-300 mb-2">
               Пароль
             </label>
             <input
@@ -183,13 +182,13 @@ export default function LoginPage() {
                 setPassword(e.target.value)
                 setError(null)
               }}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+              className="w-full px-4 py-3 rounded-xl bg-slate-800/50 border border-white/10 text-white placeholder-slate-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition"
               placeholder="••••••••"
             />
           </div>
 
           {error && (
-            <div className="bg-red-50 text-red-700 p-3 rounded-lg text-sm flex items-center gap-2">
+            <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-3 rounded-lg text-sm flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 flex-shrink-0" />
               {error}
             </div>
@@ -198,15 +197,22 @@ export default function LoginPage() {
           <Button
             type="submit"
             isLoading={loading}
-            className="w-full py-3"
+            className="w-full py-3.5 rounded-xl bg-gradient-to-r from-blue-500 via-purple-500 to-blue-600 hover:from-blue-600 hover:via-purple-600 hover:to-blue-700 transition-all hover:shadow-lg hover:shadow-blue-500/30"
             size="lg"
           >
             Войти
           </Button>
         </form>
 
-        <div className="mt-6 text-center text-sm text-gray-600">
-          <p>По умолчанию: admin@vendhub.ru / password</p>
+        {/* Divider */}
+        <div className="my-6 flex items-center gap-4">
+          <div className="flex-1 h-px bg-white/10" />
+          <span className="text-sm text-slate-500">демо доступ</span>
+          <div className="flex-1 h-px bg-white/10" />
+        </div>
+
+        <div className="text-center text-sm text-slate-400">
+          <p>admin@vendhub.ru / password</p>
         </div>
       </div>
     )
@@ -214,13 +220,13 @@ export default function LoginPage() {
 
   // 2FA step
   return (
-    <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md">
-      <div className="text-center mb-6">
-        <div className="inline-flex items-center justify-center w-12 h-12 bg-blue-100 rounded-xl mb-4">
-          <Shield className="h-6 w-6 text-blue-600" />
+    <div className="p-8">
+      <div className="text-center mb-8">
+        <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl mb-4 shadow-lg shadow-blue-500/30">
+          <Shield className="h-8 w-8 text-white" />
         </div>
-        <h1 className="text-2xl font-bold text-gray-900">Двухфакторная аутентификация</h1>
-        <p className="mt-2 text-gray-600 text-sm">
+        <h1 className="text-2xl font-bold text-white">Двухфакторная аутентификация</h1>
+        <p className="mt-2 text-slate-400">
           {twoFAMode === 'totp'
             ? 'Введите код из приложения-аутентификатора'
             : 'Введите один из ваших резервных кодов'}
@@ -228,7 +234,7 @@ export default function LoginPage() {
       </div>
 
       {/* Mode Toggle */}
-      <div className="flex border border-gray-200 rounded-lg p-1 mb-6">
+      <div className="flex bg-slate-800/50 border border-white/10 rounded-xl p-1 mb-6">
         <button
           type="button"
           onClick={() => {
@@ -236,14 +242,14 @@ export default function LoginPage() {
             setTwoFACode('')
             setError(null)
           }}
-          className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+          className={`flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
             twoFAMode === 'totp'
-              ? 'bg-blue-100 text-blue-700'
-              : 'text-gray-600 hover:bg-gray-50'
+              ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg'
+              : 'text-slate-400 hover:text-white hover:bg-white/5'
           }`}
         >
           <Shield className="w-4 h-4" />
-          Код аутентификатора
+          Аутентификатор
         </button>
         <button
           type="button"
@@ -252,10 +258,10 @@ export default function LoginPage() {
             setTwoFACode('')
             setError(null)
           }}
-          className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+          className={`flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
             twoFAMode === 'backup'
-              ? 'bg-blue-100 text-blue-700'
-              : 'text-gray-600 hover:bg-gray-50'
+              ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg'
+              : 'text-slate-400 hover:text-white hover:bg-white/5'
           }`}
         >
           <Key className="w-4 h-4" />
@@ -263,7 +269,7 @@ export default function LoginPage() {
         </button>
       </div>
 
-      <form onSubmit={handle2FASubmit} className="space-y-6">
+      <form onSubmit={handle2FASubmit} className="space-y-5">
         <div>
           {twoFAMode === 'totp' ? (
             <input
@@ -278,7 +284,7 @@ export default function LoginPage() {
                 setError(null)
               }}
               placeholder="000000"
-              className="w-full text-center text-2xl tracking-[0.5em] font-mono px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              className="w-full text-center text-3xl tracking-[0.5em] font-mono px-4 py-4 rounded-xl bg-slate-800/50 border border-white/10 text-white placeholder-slate-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition"
               autoFocus
             />
           ) : (
@@ -290,14 +296,14 @@ export default function LoginPage() {
                 setError(null)
               }}
               placeholder="XXXXXXXX"
-              className="w-full text-center text-xl tracking-widest font-mono px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 uppercase"
+              className="w-full text-center text-2xl tracking-widest font-mono px-4 py-4 rounded-xl bg-slate-800/50 border border-white/10 text-white placeholder-slate-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition uppercase"
               autoFocus
             />
           )}
         </div>
 
         {error && (
-          <div className="bg-red-50 text-red-700 p-3 rounded-lg text-sm flex items-center gap-2">
+          <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-3 rounded-lg text-sm flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 flex-shrink-0" />
             {error}
           </div>
@@ -307,23 +313,17 @@ export default function LoginPage() {
           <Button
             type="submit"
             disabled={loading || (twoFAMode === 'totp' ? twoFACode.length !== 6 : twoFACode.length < 8)}
-            className="w-full py-3"
+            isLoading={loading}
+            className="w-full py-3.5 rounded-xl bg-gradient-to-r from-blue-500 via-purple-500 to-blue-600 hover:from-blue-600 hover:via-purple-600 hover:to-blue-700 transition-all hover:shadow-lg hover:shadow-blue-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
             size="lg"
           >
-            {loading ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                Проверка...
-              </>
-            ) : (
-              'Подтвердить'
-            )}
+            Подтвердить
           </Button>
 
           <button
             type="button"
             onClick={handleBackToCredentials}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition"
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition"
           >
             <ArrowLeft className="w-4 h-4" />
             Вернуться к логину
@@ -332,14 +332,14 @@ export default function LoginPage() {
       </form>
 
       {/* Help Text */}
-      <p className="mt-6 text-xs text-gray-500 text-center">
+      <p className="mt-6 text-xs text-slate-500 text-center">
         {twoFAMode === 'totp' ? (
           <>
             Не можете получить код?{' '}
             <button
               type="button"
               onClick={() => setTwoFAMode('backup')}
-              className="text-blue-600 hover:underline"
+              className="text-blue-400 hover:text-blue-300 hover:underline"
             >
               Используйте резервный код
             </button>
@@ -350,7 +350,7 @@ export default function LoginPage() {
             <button
               type="button"
               onClick={() => setTwoFAMode('totp')}
-              className="text-blue-600 hover:underline"
+              className="text-blue-400 hover:text-blue-300 hover:underline"
             >
               Вернуться к аутентификатору
             </button>

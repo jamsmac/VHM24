@@ -86,9 +86,65 @@ export class MachinesService {
   }
 
   /**
-   * Find all machines with optional filters
+   * Find all machines with optional filters and pagination
+   * @param filters - Optional filters for location, status, online state
+   * @param page - Page number (1-based), defaults to 1
+   * @param limit - Items per page, defaults to 50, max 200
+   * @returns Paginated result with machines and total count
    */
-  async findAll(filters?: {
+  async findAll(
+    filters?: {
+      location_id?: string;
+      status?: MachineStatus;
+      is_online?: boolean;
+    },
+    page = 1,
+    limit = 50,
+  ): Promise<{ data: Machine[]; total: number; page: number; limit: number; totalPages: number }> {
+    // Ensure reasonable limits
+    const sanitizedLimit = Math.min(Math.max(1, limit), 200);
+    const sanitizedPage = Math.max(1, page);
+    const skip = (sanitizedPage - 1) * sanitizedLimit;
+
+    const query = this.machineRepository.createQueryBuilder('machine');
+    query.leftJoinAndSelect('machine.location', 'location');
+
+    if (filters?.location_id) {
+      query.andWhere('machine.location_id = :location_id', {
+        location_id: filters.location_id,
+      });
+    }
+
+    if (filters?.status) {
+      query.andWhere('machine.status = :status', { status: filters.status });
+    }
+
+    if (filters?.is_online !== undefined) {
+      query.andWhere('machine.is_online = :is_online', {
+        is_online: filters.is_online,
+      });
+    }
+
+    // Apply pagination
+    query.skip(skip).take(sanitizedLimit);
+    query.orderBy('machine.created_at', 'DESC');
+
+    const [data, total] = await query.getManyAndCount();
+
+    return {
+      data,
+      total,
+      page: sanitizedPage,
+      limit: sanitizedLimit,
+      totalPages: Math.ceil(total / sanitizedLimit),
+    };
+  }
+
+  /**
+   * Find all machines without pagination (for internal services)
+   * Warning: Use with caution for large datasets
+   */
+  async findAllSimple(filters?: {
     location_id?: string;
     status?: MachineStatus;
     is_online?: boolean;
@@ -112,7 +168,8 @@ export class MachinesService {
       });
     }
 
-    return await query.getMany();
+    query.orderBy('machine.created_at', 'DESC');
+    return query.getMany();
   }
 
   /**
@@ -764,7 +821,7 @@ export class MachinesService {
     }
 
     if (Object.keys(updates).length > 0) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       await this.machineRepository.update(machineId, updates as any);
 
       this.logger.log(

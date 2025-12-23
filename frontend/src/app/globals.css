@@ -3,14 +3,56 @@
 @tailwind utilities;
 
 @layer base {
+  /* VendHub Dark Theme as default */
   :root {
+    /* Slate-950 based dark theme */
+    --background: 222 47% 4%;
+    --foreground: 210 40% 98%;
+
+    /* Card with glass-morphism support */
+    --card: 222 47% 7%;
+    --card-foreground: 210 40% 98%;
+
+    /* Popover/dropdown */
+    --popover: 222 47% 8%;
+    --popover-foreground: 210 40% 98%;
+
+    /* Primary: Purple-Blue gradient accent */
+    --primary: 250 89% 65%;
+    --primary-foreground: 210 40% 98%;
+
+    /* Secondary: Slate-800 */
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 210 40% 98%;
+
+    /* Muted: Slate-700/800 */
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
+
+    /* Accent: Purple tint */
+    --accent: 250 30% 20%;
+    --accent-foreground: 210 40% 98%;
+
+    /* Destructive */
+    --destructive: 0 63% 50%;
+    --destructive-foreground: 210 40% 98%;
+
+    /* Borders: Subtle white */
+    --border: 217 33% 20%;
+    --input: 217 33% 17%;
+    --ring: 250 89% 65%;
+    --radius: 0.75rem;
+  }
+
+  /* Light theme override (for backward compatibility) */
+  .light {
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
     --card: 0 0% 100%;
     --card-foreground: 222.2 84% 4.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
-    --primary: 199 89% 48%;
+    --primary: 250 89% 65%;
     --primary-foreground: 210 40% 98%;
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
@@ -22,30 +64,30 @@
     --destructive-foreground: 210 40% 98%;
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 199 89% 48%;
-    --radius: 0.5rem;
+    --ring: 250 89% 65%;
   }
 
+  /* Keep .dark for compatibility with existing code */
   .dark {
-    --background: 222.2 84% 4.9%;
+    --background: 222 47% 4%;
     --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
+    --card: 222 47% 7%;
     --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
+    --popover: 222 47% 8%;
     --popover-foreground: 210 40% 98%;
-    --primary: 199 89% 48%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
+    --primary: 250 89% 65%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 217 33% 17%;
     --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 250 30% 20%;
     --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
+    --destructive: 0 63% 50%;
     --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 199 89% 48%;
+    --border: 217 33% 20%;
+    --input: 217 33% 17%;
+    --ring: 250 89% 65%;
   }
 }
 
