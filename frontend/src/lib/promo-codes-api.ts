@@ -46,7 +46,7 @@ export interface CreatePromoCodeDto {
   organization_id?: string
 }
 
-export interface UpdatePromoCodeDto extends Partial<Omit<CreatePromoCodeDto, 'code'>> {}
+export type UpdatePromoCodeDto = Partial<Omit<CreatePromoCodeDto, 'code'>>
 
 export interface PromoCodeQueryParams {
   page?: number

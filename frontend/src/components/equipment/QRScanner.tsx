@@ -84,7 +84,6 @@ export function QRScanner({ isOpen, onClose, onScanSuccess }: QRScannerProps) {
         {/* Camera View */}
         {scanning ? (
           <div className="relative">
-            {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
             <video
               ref={videoRef}
               autoPlay

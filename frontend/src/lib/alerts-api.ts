@@ -134,7 +134,7 @@ export interface CreateAlertRuleDto {
   }
 }
 
-export interface UpdateAlertRuleDto extends Partial<CreateAlertRuleDto> {}
+export type UpdateAlertRuleDto = Partial<CreateAlertRuleDto>
 
 export interface AlertRuleFilters {
   is_enabled?: boolean

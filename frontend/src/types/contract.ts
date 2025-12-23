@@ -97,7 +97,7 @@ export interface CreateContractDto {
   contract_file_id?: string | null
 }
 
-export interface UpdateContractDto extends Partial<CreateContractDto> {}
+export type UpdateContractDto = Partial<CreateContractDto>
 
 export interface ContractListParams {
   status?: ContractStatus

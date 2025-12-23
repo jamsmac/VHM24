@@ -80,7 +80,7 @@ export interface CreateCounterpartyDto {
   notes?: string
 }
 
-export interface UpdateCounterpartyDto extends Partial<CreateCounterpartyDto> {}
+export type UpdateCounterpartyDto = Partial<CreateCounterpartyDto>
 
 export interface CounterpartyListParams {
   type?: CounterpartyType
