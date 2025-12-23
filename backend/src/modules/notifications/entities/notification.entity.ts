@@ -34,6 +34,7 @@ export enum NotificationChannel {
   EMAIL = 'email',
   SMS = 'sms',
   WEB_PUSH = 'web_push',
+  FCM = 'fcm', // Firebase Cloud Messaging for mobile push
   IN_APP = 'in_app',
 }
 

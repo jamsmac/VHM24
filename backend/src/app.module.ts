@@ -59,6 +59,8 @@ import { MachineAccessModule } from './modules/machine-access/machine-access.mod
 import { ClientModule } from './modules/client/client.module';
 import { SettingsModule } from './modules/settings/settings.module';
 import { OrganizationsModule } from './modules/organizations/organizations.module';
+import { PromoCodesModule } from './modules/promo-codes/promo-codes.module';
+import { FcmModule } from './modules/fcm/fcm.module';
 
 @Module({
   imports: [
@@ -211,6 +213,7 @@ import { OrganizationsModule } from './modules/organizations/organizations.modul
     AlertsModule,
     ReportsModule,
     WebPushModule,
+    FcmModule, // Firebase Cloud Messaging for mobile push notifications
     SalesImportModule,
     RequestsModule,
     ReconciliationModule,
@@ -230,6 +233,9 @@ import { OrganizationsModule } from './modules/organizations/organizations.modul
 
     // Sprint 4: Multi-tenant franchise system
     OrganizationsModule,
+
+    // Promo codes and promotions system
+    PromoCodesModule,
   ],
   controllers: [AppController],
   providers: [

@@ -8,11 +8,11 @@ import { Repository } from 'typeorm';
 import {
   ClientOrder,
   ClientOrderStatus,
-  PaymentProvider,
 } from '../entities/client-order.entity';
 import { ClientUser } from '../entities/client-user.entity';
 import { ClientPayment } from '../entities/client-payment.entity';
 import { ClientLoyaltyService } from './client-loyalty.service';
+import { PromoCodesService } from '@/modules/promo-codes/promo-codes.service';
 import {
   CreateClientOrderDto,
   ClientOrderQueryDto,
@@ -41,6 +41,7 @@ export class ClientOrdersService {
     @InjectRepository(Nomenclature)
     private readonly nomenclatureRepository: Repository<Nomenclature>,
     private readonly loyaltyService: ClientLoyaltyService,
+    private readonly promoCodesService: PromoCodesService,
   ) {}
 
   /**
@@ -64,8 +65,9 @@ export class ClientOrdersService {
     }
 
     // Build order items and calculate totals
-    let totalAmount = 0;
+    let baseAmount = 0;
     const orderItems: OrderItem[] = [];
+    const productIds: string[] = [];
 
     for (const item of dto.items) {
       const product = await this.nomenclatureRepository.findOne({
@@ -78,7 +80,7 @@ export class ClientOrdersService {
 
       const unitPrice = item.unit_price ?? 0;
       const itemTotal = unitPrice * item.quantity;
-      totalAmount += itemTotal;
+      baseAmount += itemTotal;
 
       orderItems.push({
         product_id: product.id,
@@ -87,54 +89,101 @@ export class ClientOrdersService {
         unit_price: unitPrice,
         total_price: itemTotal,
       });
+
+      productIds.push(product.id);
+    }
+
+    // Apply promo code if provided
+    let promoCodeId: string | null = null;
+    let promoDiscount = 0;
+    let promoLoyaltyBonus = 0;
+
+    if (dto.promo_code) {
+      const validation = await this.promoCodesService.validate(
+        {
+          code: dto.promo_code,
+          order_amount: baseAmount,
+          machine_id: dto.machine_id,
+          location_id: machine.location_id ?? undefined,
+          product_ids: productIds,
+        },
+        clientUser.id,
+      );
+
+      if (!validation.valid) {
+        throw new BadRequestException(validation.error || 'Invalid promo code');
+      }
+
+      promoCodeId = validation.promo_code_id!;
+      promoDiscount = validation.discount_amount || 0;
+      promoLoyaltyBonus = validation.bonus_points || 0;
     }
 
     // Calculate points redemption
     let pointsRedeemed = 0;
     let discountFromPoints = 0;
 
+    // Calculate amount after promo discount for points redemption limit
+    const amountAfterPromo = baseAmount - promoDiscount;
+
     if (dto.redeem_points && dto.redeem_points > 0) {
       const balance = await this.loyaltyService.getBalance(clientUser.id);
       const maxRedeemable = Math.min(dto.redeem_points, balance.points_balance);
-      pointsRedeemed = maxRedeemable;
-      // 1 point = 100 UZS
+      // Limit points to 50% of remaining amount
+      const maxPointsDiscount = amountAfterPromo * 0.5;
+      const actualPointsValue = Math.min(maxRedeemable * 100, maxPointsDiscount);
+      pointsRedeemed = Math.floor(actualPointsValue / 100);
       discountFromPoints = pointsRedeemed * 100;
     }
 
-    // Calculate final amount
-    const discountAmount = discountFromPoints;
-    const finalAmount = Math.max(0, totalAmount - discountAmount);
+    // Calculate total discount and final amount
+    const totalDiscount = promoDiscount + discountFromPoints;
+    const finalAmount = Math.max(0, baseAmount - totalDiscount);
 
-    // Calculate points to earn (1% of final amount)
-    const pointsEarned = Math.floor(finalAmount / 1000);
+    // Calculate points to earn (1% of final amount) + promo bonus
+    const basePointsEarned = Math.floor(finalAmount / 1000);
+    const totalPointsEarned = basePointsEarned + promoLoyaltyBonus;
 
     // Create order
     const order = this.orderRepository.create({
       client_user_id: clientUser.id,
       machine_id: dto.machine_id,
+      location_id: machine.location_id,
       status: ClientOrderStatus.PENDING,
       items: orderItems,
       currency: 'UZS',
-      total_amount: finalAmount, // Use final amount as total
-      loyalty_points_earned: pointsEarned,
+      total_amount: finalAmount,
+      discount_amount: totalDiscount,
+      promo_code_id: promoCodeId,
+      loyalty_points_earned: totalPointsEarned,
       loyalty_points_used: pointsRedeemed,
       payment_provider: dto.payment_provider,
     });
 
     await this.orderRepository.save(order);
 
-    // Update order status based on payment provider
-    if (dto.payment_provider === PaymentProvider.WALLET) {
-      // Wallet payment - mark as pending
-      order.status = ClientOrderStatus.PENDING;
-    } else {
-      // External payment provider
-      order.status = ClientOrderStatus.PENDING;
+    // Apply promo code redemption (increments usage counter)
+    if (promoCodeId) {
+      await this.promoCodesService.applyToOrder(
+        promoCodeId,
+        clientUser.id,
+        order.id,
+        promoDiscount,
+        promoLoyaltyBonus,
+      );
     }
 
-    await this.orderRepository.save(order);
+    // Redeem loyalty points if any
+    if (pointsRedeemed > 0) {
+      await this.loyaltyService.redeemPoints(
+        clientUser.id,
+        pointsRedeemed,
+        order.id,
+        `Points redeemed for order #${order.id.substring(0, 8)}`,
+      );
+    }
 
-    return this.mapToResponseDto(order, machine);
+    return this.mapToResponseDto(order, machine, baseAmount);
   }
 
   /**
@@ -219,13 +268,22 @@ export class ClientOrdersService {
   /**
    * Map order entity to response DTO
    */
-  private mapToResponseDto(order: ClientOrder, machine?: Machine): ClientOrderResponseDto {
+  private mapToResponseDto(
+    order: ClientOrder,
+    machine?: Machine,
+    baseAmount?: number,
+  ): ClientOrderResponseDto {
+    const totalAmount = Number(order.total_amount);
+    const discountAmount = Number(order.discount_amount || 0);
+    // Base amount is totalAmount + discount if not provided
+    const originalAmount = baseAmount ?? totalAmount + discountAmount;
+
     return {
       id: order.id,
       status: order.status,
-      total_amount: Number(order.total_amount),
-      discount_amount: 0, // No discount column in entity
-      final_amount: Number(order.total_amount), // Same as total since no discount
+      total_amount: originalAmount,
+      discount_amount: discountAmount,
+      final_amount: totalAmount,
       points_earned: order.loyalty_points_earned,
       points_redeemed: order.loyalty_points_used,
       payment_provider: order.payment_provider,

@@ -17,6 +17,7 @@ import {
 } from '@nestjs/swagger';
 import { ClientAuthGuard } from '../guards/client-auth.guard';
 import { ClientOrdersService } from '../services/client-orders.service';
+import { TelegramPaymentsService } from '../services/telegram-payments.service';
 import {
   CreateClientOrderDto,
   ClientOrderQueryDto,
@@ -41,7 +42,10 @@ export const CurrentClientUser = createParamDecorator(
 @UseGuards(ClientAuthGuard)
 @ApiBearerAuth()
 export class ClientOrdersController {
-  constructor(private readonly ordersService: ClientOrdersService) {}
+  constructor(
+    private readonly ordersService: ClientOrdersService,
+    private readonly paymentsService: TelegramPaymentsService,
+  ) {}
 
   @Post()
   @ApiOperation({ summary: 'Create a new order' })
@@ -90,5 +94,35 @@ export class ClientOrdersController {
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<ClientOrderResponseDto> {
     return this.ordersService.cancelOrder(user, id);
+  }
+
+  @Post(':id/invoice')
+  @ApiOperation({ summary: 'Create Telegram invoice link for order payment' })
+  @ApiResponse({ status: 201, description: 'Invoice link created successfully' })
+  @ApiResponse({ status: 400, description: 'Order not eligible for payment' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Order not found' })
+  async createInvoice(
+    @CurrentClientUser() user: ClientUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<{ invoice_link: string }> {
+    // Verify order belongs to user
+    await this.ordersService.getOrder(user, id);
+    const invoiceLink = await this.paymentsService.createInvoiceLink(id);
+    return { invoice_link: invoiceLink };
+  }
+
+  @Get(':id/payment-status')
+  @ApiOperation({ summary: 'Get payment status for an order' })
+  @ApiResponse({ status: 200, description: 'Payment status retrieved' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Order not found' })
+  async getPaymentStatus(
+    @CurrentClientUser() user: ClientUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<{ status: string; paid_at?: Date; payment_id?: string }> {
+    // Verify order belongs to user
+    await this.ordersService.getOrder(user, id);
+    return this.paymentsService.getPaymentStatus(id);
   }
 }

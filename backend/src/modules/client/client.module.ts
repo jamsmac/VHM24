@@ -21,6 +21,7 @@ import {
   ClientLoyaltyService,
   ClientOrdersService,
 } from './services';
+import { TelegramPaymentsService } from './services/telegram-payments.service';
 
 // Controllers
 import {
@@ -28,6 +29,7 @@ import {
   ClientAuthController,
   ClientLoyaltyController,
   ClientOrdersController,
+  ClientPromoController,
 } from './controllers';
 
 // Guards
@@ -42,6 +44,7 @@ import { Nomenclature } from '@modules/nomenclature/entities/nomenclature.entity
 import { EmailModule } from '@modules/email/email.module';
 import { NotificationsModule } from '@modules/notifications/notifications.module';
 import { UsersModule } from '@modules/users/users.module';
+import { PromoCodesModule } from '@modules/promo-codes/promo-codes.module';
 
 /**
  * Client module - handles client-facing functionality:
@@ -81,18 +84,22 @@ import { UsersModule } from '@modules/users/users.module';
     EmailModule,
     NotificationsModule,
     UsersModule,
+    // Promo codes integration
+    PromoCodesModule,
   ],
   controllers: [
     ClientPublicController,
     ClientAuthController,
     ClientLoyaltyController,
     ClientOrdersController,
+    ClientPromoController,
   ],
   providers: [
     ClientPublicService,
     ClientAuthService,
     ClientLoyaltyService,
     ClientOrdersService,
+    TelegramPaymentsService,
     ClientAuthGuard,
   ],
   exports: [
@@ -100,6 +107,7 @@ import { UsersModule } from '@modules/users/users.module';
     ClientAuthService,
     ClientLoyaltyService,
     ClientOrdersService,
+    TelegramPaymentsService,
     ClientAuthGuard,
   ],
 })

@@ -16,6 +16,7 @@ import {
 import { EmailService } from '../email/email.service';
 import { TelegramNotificationsService } from '../telegram/services/telegram-notifications.service';
 import { WebPushService } from '../web-push/web-push.service';
+import { FcmService } from '../fcm/fcm.service';
 import { SmsService } from '../sms/sms.service';
 
 @Injectable()
@@ -31,6 +32,7 @@ export class NotificationsService {
     @Inject(forwardRef(() => TelegramNotificationsService))
     private readonly telegramNotificationsService: TelegramNotificationsService,
     private readonly webPushService: WebPushService,
+    private readonly fcmService: FcmService,
     private readonly smsService: SmsService,
   ) {}
 
@@ -201,6 +203,10 @@ export class NotificationsService {
 
         case NotificationChannel.WEB_PUSH:
           response = await this.sendWebPush(notification);
+          break;
+
+        case NotificationChannel.FCM:
+          response = await this.sendFcm(notification);
           break;
 
         case NotificationChannel.IN_APP:
@@ -453,6 +459,41 @@ export class NotificationsService {
     );
 
     return `Web push sent to ${sentCount} device(s)`;
+  }
+
+  /**
+   * Отправка через FCM (Firebase Cloud Messaging)
+   * Sends mobile push notifications to user's registered devices
+   */
+  private async sendFcm(notification: Notification): Promise<string> {
+    if (!this.fcmService.isConfigured()) {
+      this.logger.warn(
+        `[FCM] Service not configured, skipping FCM to ${notification.recipient_id}`,
+      );
+      throw new Error('FCM service not configured');
+    }
+
+    const sentCount = await this.fcmService.sendToUser({
+      user_id: notification.recipient_id,
+      title: notification.title,
+      body: notification.message,
+      url: notification.action_url ?? undefined,
+      data: notification.data
+        ? Object.fromEntries(
+            Object.entries(notification.data).map(([k, v]) => [k, String(v)]),
+          )
+        : undefined,
+    });
+
+    if (sentCount === 0) {
+      throw new Error('No active FCM tokens for user');
+    }
+
+    this.logger.debug(
+      `[FCM] Sent to user ${notification.recipient_id}: ${sentCount} device(s)`,
+    );
+
+    return `FCM sent to ${sentCount} device(s)`;
   }
 
   // ============================================================================

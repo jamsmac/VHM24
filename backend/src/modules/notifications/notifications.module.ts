@@ -7,6 +7,7 @@ import { NotificationPreference } from './entities/notification-preference.entit
 import { EmailModule } from '../email/email.module';
 import { TelegramModule } from '../telegram/telegram.module';
 import { WebPushModule } from '../web-push/web-push.module';
+import { FcmModule } from '../fcm/fcm.module';
 import { SmsModule } from '../sms/sms.module';
 
 @Module({
@@ -15,6 +16,7 @@ import { SmsModule } from '../sms/sms.module';
     EmailModule,
     forwardRef(() => TelegramModule),
     WebPushModule,
+    FcmModule,
     SmsModule,
   ],
   controllers: [NotificationsController],

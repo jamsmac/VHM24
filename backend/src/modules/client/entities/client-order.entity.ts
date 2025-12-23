@@ -11,6 +11,7 @@ import {
 import { ClientUser } from './client-user.entity';
 import { Machine } from '../../machines/entities/machine.entity';
 import { Location } from '../../locations/entities/location.entity';
+import { PromoCode } from '../../promo-codes/entities/promo-code.entity';
 
 export enum ClientOrderStatus {
   PENDING = 'pending',
@@ -98,6 +99,16 @@ export class ClientOrder {
 
   @Column({ type: 'integer', default: 0 })
   loyalty_points_used: number;
+
+  @Column({ type: 'uuid', nullable: true })
+  promo_code_id: string | null;
+
+  @ManyToOne(() => PromoCode, { onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'promo_code_id' })
+  promo_code: PromoCode | null;
+
+  @Column({ type: 'decimal', precision: 12, scale: 2, default: 0 })
+  discount_amount: number;
 
   @CreateDateColumn({ type: 'timestamp with time zone' })
   created_at: Date;
