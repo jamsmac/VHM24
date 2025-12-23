@@ -43,7 +43,7 @@ export class FixRefreshTokenHintColumn1735000000000 implements MigrationInterfac
     }
   }
 
-  public async down(queryRunner: QueryRunner): Promise<void> {
+  public async down(_queryRunner: QueryRunner): Promise<void> {
     // This is a fix migration, down is no-op
     console.log('FixRefreshTokenHintColumn down() - no action needed');
   }

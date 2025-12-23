@@ -21,7 +21,6 @@ describe('ClientOrdersService', () => {
   let machineRepository: jest.Mocked<Repository<Machine>>;
   let nomenclatureRepository: jest.Mocked<Repository<Nomenclature>>;
   let loyaltyService: jest.Mocked<ClientLoyaltyService>;
-  let promoCodesService: jest.Mocked<PromoCodesService>;
 
   const mockClientUser: Partial<ClientUser> = {
     id: 'client-user-123',
@@ -128,7 +127,6 @@ describe('ClientOrdersService', () => {
     machineRepository = module.get(getRepositoryToken(Machine));
     nomenclatureRepository = module.get(getRepositoryToken(Nomenclature));
     loyaltyService = module.get(ClientLoyaltyService);
-    promoCodesService = module.get(PromoCodesService);
   });
 
   afterEach(() => {

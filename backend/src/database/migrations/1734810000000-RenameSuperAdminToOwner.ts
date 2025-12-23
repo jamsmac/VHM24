@@ -18,7 +18,7 @@ export class RenameSuperAdminToOwner1734810000000 implements MigrationInterface 
     `);
   }
 
-  public async down(queryRunner: QueryRunner): Promise<void> {
+  public async down(_queryRunner: QueryRunner): Promise<void> {
     // PostgreSQL doesn't support removing enum values
     // The 'Owner' value will remain in the enum but unused
   }

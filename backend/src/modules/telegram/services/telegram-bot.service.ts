@@ -20,7 +20,6 @@ import { InventoryService } from '../../inventory/inventory.service';
 import { AccessRequestsService } from '../../access-requests/access-requests.service';
 import { TaskStatus, TaskType } from '../../tasks/entities/task.entity';
 import { TelegramManagerToolsService } from './telegram-manager-tools.service';
-import { IncidentType, IncidentPriority } from '../../incidents/entities/incident.entity';
 import { startOfDay, endOfDay } from 'date-fns';
 import {
   TelegramTaskInfo,

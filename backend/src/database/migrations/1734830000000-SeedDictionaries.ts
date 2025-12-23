@@ -341,7 +341,7 @@ export class SeedDictionaries1734830000000 implements MigrationInterface {
     console.log('Dictionaries seeded successfully');
   }
 
-  public async down(queryRunner: QueryRunner): Promise<void> {
+  public async down(_queryRunner: QueryRunner): Promise<void> {
     // Don't delete dictionaries on rollback - they may be in use
     console.log('Skipping dictionary deletion on rollback');
   }

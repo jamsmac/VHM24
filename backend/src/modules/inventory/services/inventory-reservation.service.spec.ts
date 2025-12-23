@@ -4,8 +4,6 @@ import { DataSource } from 'typeorm';
 import { BadRequestException } from '@nestjs/common';
 import { InventoryReservationService } from './inventory-reservation.service';
 import { InventoryReservation, ReservationStatus, InventoryLevel } from '../entities/inventory-reservation.entity';
-import { OperatorInventory } from '../entities/operator-inventory.entity';
-import { WarehouseInventory } from '../entities/warehouse-inventory.entity';
 
 describe('InventoryReservationService', () => {
   let service: InventoryReservationService;

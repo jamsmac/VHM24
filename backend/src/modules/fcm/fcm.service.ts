@@ -6,7 +6,7 @@ import { FcmToken } from './entities/fcm-token.entity';
 import { RegisterFcmTokenDto, SendFcmNotificationDto } from './dto/register-token.dto';
 
 // Dynamic import for firebase-admin (optional dependency)
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 let firebaseAdmin: any = null;
 
 /**
@@ -20,7 +20,7 @@ let firebaseAdmin: any = null;
 export class FcmService implements OnModuleInit {
   private readonly logger = new Logger(FcmService.name);
   private isInitialized = false;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   private messaging: any = null;
 
   constructor(

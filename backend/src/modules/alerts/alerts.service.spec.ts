@@ -345,7 +345,7 @@ describe('AlertsService', () => {
       alertRuleRepository.findOne.mockResolvedValue(mockAlertRule);
       alertRuleRepository.update.mockResolvedValue({ affected: 1 } as any);
 
-      const result = await service.toggleRule('rule-uuid-1', false);
+      await service.toggleRule('rule-uuid-1', false);
 
       expect(alertRuleRepository.update).toHaveBeenCalledWith('rule-uuid-1', {
         is_enabled: false,
