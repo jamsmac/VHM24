@@ -48,6 +48,14 @@ interface SystemHealth {
   status: 'healthy' | 'degraded' | 'unhealthy';
 }
 
+/** Slack Block Kit block types */
+interface SlackBlock {
+  type: 'header' | 'section' | 'context';
+  text?: { type: 'plain_text' | 'mrkdwn'; text: string; emoji?: boolean };
+  fields?: Array<{ type: 'mrkdwn'; text: string }>;
+  elements?: Array<{ type: 'mrkdwn'; text: string }>;
+}
+
 // Alert configuration from environment
 const ALERT_CONFIG = {
   slackWebhookUrl: process.env.SLACK_WEBHOOK_URL,
@@ -78,8 +86,7 @@ async function sendSlackAlert(health: SystemHealth): Promise<boolean> {
     const statusEmoji = health.status === 'unhealthy' ? '🔴' : '🟡';
     const statusText = health.status === 'unhealthy' ? 'UNHEALTHY' : 'DEGRADED';
 
-     
-    const blocks: any[] = [
+    const blocks: SlackBlock[] = [
       {
         type: 'header',
         text: {

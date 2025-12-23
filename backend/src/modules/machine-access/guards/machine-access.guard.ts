@@ -23,9 +23,13 @@ export const STRICT_MACHINE_ACCESS_KEY = 'strict_machine_access';
  * async getSensitiveData(@Param('machineId') machineId: string) {}
  */
 export const MachineAccessRoles = (...roles: MachineAccessRole[]) => {
-  return (target: any, key?: string, descriptor?: any) => {
+  return <T>(
+    target: object,
+    key?: string | symbol,
+    descriptor?: TypedPropertyDescriptor<T>,
+  ): TypedPropertyDescriptor<T> | void => {
     Reflect.defineMetadata(MACHINE_ACCESS_KEY, roles, descriptor?.value || target);
-    return descriptor || target;
+    return descriptor;
   };
 };
 

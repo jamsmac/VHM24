@@ -14,6 +14,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { Request as ExpressRequest } from 'express';
 import {
   ApiTags,
   ApiOperation,
@@ -36,6 +37,12 @@ import {
   ApplyTemplateDto,
   BulkAssignDto,
 } from './dto';
+
+interface AuthenticatedRequest extends ExpressRequest {
+  user: {
+    id: string;
+  };
+}
 
 @ApiTags('machine-access')
 @ApiBearerAuth('JWT-auth')
@@ -70,7 +77,7 @@ export class MachineAccessController {
   @Post()
   @Roles(UserRole.OWNER, UserRole.ADMIN)
   @ApiOperation({ summary: 'Create or update access entry' })
-  async create(@Body() dto: CreateMachineAccessDto, @Req() req: any) {
+  async create(@Body() dto: CreateMachineAccessDto, @Req() req: AuthenticatedRequest) {
     return this.machineAccessService.create(dto, req.user.id);
   }
 
@@ -97,14 +104,14 @@ export class MachineAccessController {
   @Post('assign-me-owner-all')
   @Roles(UserRole.OWNER, UserRole.ADMIN)
   @ApiOperation({ summary: 'Assign current user as owner to all machines' })
-  async assignMeOwnerAll(@Req() req: any) {
+  async assignMeOwnerAll(@Req() req: AuthenticatedRequest) {
     return this.machineAccessService.assignOwnerToAllMachines(req.user.id, req.user.id);
   }
 
   @Post('bulk-assign')
   @Roles(UserRole.OWNER, UserRole.ADMIN)
   @ApiOperation({ summary: 'Bulk assign user to multiple machines' })
-  async bulkAssign(@Body() dto: BulkAssignDto, @Req() req: any) {
+  async bulkAssign(@Body() dto: BulkAssignDto, @Req() req: AuthenticatedRequest) {
     return this.machineAccessService.bulkAssign(dto, req.user.id);
   }
 
@@ -127,7 +134,7 @@ export class MachineAccessController {
       },
     },
   })
-  async importFile(@UploadedFile() file: Express.Multer.File, @Req() req: any) {
+  async importFile(@UploadedFile() file: Express.Multer.File, @Req() req: AuthenticatedRequest) {
     if (!file) {
       throw new BadRequestException('File is required');
     }
@@ -160,7 +167,7 @@ export class MachineAccessController {
   @Post('templates')
   @Roles(UserRole.OWNER, UserRole.ADMIN)
   @ApiOperation({ summary: 'Create new access template' })
-  async createTemplate(@Body() dto: CreateAccessTemplateDto, @Req() req: any) {
+  async createTemplate(@Body() dto: CreateAccessTemplateDto, @Req() req: AuthenticatedRequest) {
     return this.machineAccessService.createTemplate(dto, req.user.id);
   }
 
@@ -209,7 +216,7 @@ export class MachineAccessController {
   async applyTemplate(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: ApplyTemplateDto,
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
   ) {
     return this.machineAccessService.applyTemplate(id, dto, req.user.id);
   }

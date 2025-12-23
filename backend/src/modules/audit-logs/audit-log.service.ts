@@ -1,6 +1,6 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between, MoreThanOrEqual, LessThanOrEqual } from 'typeorm';
+import { Repository, Between, MoreThanOrEqual, LessThanOrEqual, FindOptionsWhere } from 'typeorm';
 import { AuditLog, AuditEventType, AuditSeverity } from './entities/audit-log.entity';
 import { CreateAuditLogDto } from './dto/create-audit-log.dto';
 import { QueryAuditLogDto } from './dto/query-audit-log.dto';
@@ -683,7 +683,7 @@ export class AuditLogService {
    * Get audit statistics for dashboard
    */
   async getStatistics(fromDate?: Date, toDate?: Date): Promise<AuditStatistics> {
-    const dateFilter: any = {};
+    const dateFilter: FindOptionsWhere<AuditLog> = {};
     if (fromDate && toDate) {
       dateFilter.created_at = Between(fromDate, toDate);
     } else if (fromDate) {

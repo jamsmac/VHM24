@@ -21,6 +21,14 @@ import {
 import { Machine } from '@/modules/machines/entities/machine.entity';
 import { Nomenclature } from '@/modules/nomenclature/entities/nomenclature.entity';
 
+interface OrderItem {
+  product_id: string;
+  name: string;
+  quantity: number;
+  unit_price: number;
+  total_price: number;
+}
+
 @Injectable()
 export class ClientOrdersService {
   constructor(
@@ -57,7 +65,7 @@ export class ClientOrdersService {
 
     // Build order items and calculate totals
     let totalAmount = 0;
-    const orderItems: any[] = [];
+    const orderItems: OrderItem[] = [];
 
     for (const item of dto.items) {
       const product = await this.nomenclatureRepository.findOne({

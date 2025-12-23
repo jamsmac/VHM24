@@ -4,6 +4,11 @@ import { Repository } from 'typeorm';
 import { Location, LocationStatus } from '@modules/locations/entities/location.entity';
 import { Machine, MachineStatus } from '@modules/machines/entities/machine.entity';
 import { Nomenclature } from '@modules/nomenclature/entities/nomenclature.entity';
+
+/** Extended Location type with computed machine_count from loadRelationCountAndMap */
+interface LocationWithMachineCount extends Location {
+  machine_count?: number;
+}
 import {
   PublicLocationsQueryDto,
   PublicLocationResponseDto,
@@ -84,7 +89,7 @@ export class ClientPublicService {
     const locations = await qb.getMany();
 
     // Calculate distances if coordinates provided
-    const data: PublicLocationResponseDto[] = locations.map((loc: any) => {
+    const data: PublicLocationResponseDto[] = locations.map((loc: LocationWithMachineCount) => {
       const result: PublicLocationResponseDto = {
         id: loc.id,
         name: loc.name,
@@ -93,7 +98,7 @@ export class ClientPublicService {
         lat: loc.latitude ? parseFloat(String(loc.latitude)) : undefined,
         lng: loc.longitude ? parseFloat(String(loc.longitude)) : undefined,
         machine_count: loc.machine_count || 0,
-        working_hours: loc.working_hours,
+        working_hours: loc.working_hours ?? undefined,
       };
 
       if (lat && lng && loc.latitude && loc.longitude) {

@@ -71,8 +71,16 @@ export class PublicLocationResponseDto {
   @ApiProperty({ description: 'Number of active machines at this location' })
   machine_count: number;
 
-  @ApiPropertyOptional({ description: 'Working hours' })
-  working_hours?: string;
+  @ApiPropertyOptional({ description: 'Working hours by day of week' })
+  working_hours?: {
+    monday?: { from: string; to: string };
+    tuesday?: { from: string; to: string };
+    wednesday?: { from: string; to: string };
+    thursday?: { from: string; to: string };
+    friday?: { from: string; to: string };
+    saturday?: { from: string; to: string };
+    sunday?: { from: string; to: string };
+  };
 }
 
 /**

@@ -7,6 +7,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
+import { Request } from 'express';
 
 export const IS_PUBLIC_KEY = 'isPublic';
 export const Public = () => import('@nestjs/common').then(m => m.SetMetadata(IS_PUBLIC_KEY, true));
@@ -63,7 +64,7 @@ export class ClientAuthGuard implements CanActivate {
     }
   }
 
-  private extractTokenFromHeader(request: any): string | undefined {
+  private extractTokenFromHeader(request: Request): string | undefined {
     const [type, token] = request.headers.authorization?.split(' ') ?? [];
     return type === 'Bearer' ? token : undefined;
   }

@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import { DataSource, QueryRunner } from 'typeorm';
 import * as csv from 'csv-parser';
 import { Readable } from 'stream';
 import { MachineAccessService } from './machine-access.service';
@@ -208,7 +208,7 @@ export class MachineAccessImportService {
   private async processRow(
     row: ImportRow,
     createdById: string,
-    queryRunner: any,
+    queryRunner: QueryRunner,
   ): Promise<'applied' | 'updated' | 'skipped'> {
     // Validate row
     if (!row.machine_number && !row.serial_number) {

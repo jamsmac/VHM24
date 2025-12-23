@@ -3,6 +3,15 @@ import { CacheModule } from '@nestjs/cache-manager';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { redisStore } from 'cache-manager-ioredis-yet';
 
+interface RedisStoreConfig {
+  host: string;
+  port: number;
+  password?: string;
+  username?: string;
+  ttl: number;
+  keyPrefix: string;
+}
+
 /**
  * Redis Cache Module
  *
@@ -30,7 +39,7 @@ import { redisStore } from 'cache-manager-ioredis-yet';
         const redisUrl = configService.get<string>('REDIS_URL');
         const ttl = configService.get<number>('CACHE_TTL', 300) * 1000; // Convert to ms
 
-        let storeConfig: any;
+        let storeConfig: RedisStoreConfig;
 
         if (redisUrl) {
           // Parse REDIS_URL into components for cache-manager-ioredis-yet
