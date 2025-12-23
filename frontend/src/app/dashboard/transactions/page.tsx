@@ -1,14 +1,35 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { transactionsApi } from '@/lib/transactions-api'
 import { Badge } from '@/components/ui/badge'
+import { ExportButton } from '@/components/ui/ExportButton'
 import { TableSkeleton } from '@/components/ui/LoadingSkeleton'
-import { formatDateTime, formatCurrency, getStatusColor } from '@/lib/utils'
-import { Filter, Download } from 'lucide-react'
-import { TransactionType } from '@/types/transactions'
-import Link from 'next/link'
+import { formatDateTime, formatCurrency } from '@/lib/utils'
+import { Filter } from 'lucide-react'
+import { Transaction, TransactionType } from '@/types/transactions'
+import { formatDateTimeForExport, formatCurrencyForExport, type ExportColumn } from '@/lib/export'
+
+// Transaction type labels
+const typeLabels: Record<TransactionType, string> = {
+  sale: 'Продажа',
+  collection: 'Инкассация',
+  expense: 'Расход',
+  refund: 'Возврат',
+}
+
+// Export columns configuration
+const transactionExportColumns: ExportColumn<Transaction>[] = [
+  { key: 'transaction_number', header: 'Номер' },
+  { key: 'transaction_type', header: 'Тип', format: (v) => typeLabels[v as TransactionType] || String(v) },
+  { key: 'amount', header: 'Сумма', format: (v) => formatCurrencyForExport(v as number) },
+  { key: 'payment_method', header: 'Способ оплаты', format: (v) => String(v || '') },
+  { key: 'machine', header: 'Аппарат', format: (v) => (v as Transaction['machine'])?.machine_number || '' },
+  { key: 'user', header: 'Пользователь', format: (v) => (v as Transaction['user'])?.full_name || '' },
+  { key: 'description', header: 'Описание', format: (v) => String(v || '') },
+  { key: 'transaction_date', header: 'Дата', format: (v) => formatDateTimeForExport(v as string) },
+]
 
 export default function TransactionsPage() {
   const [typeFilter, setTypeFilter] = useState<TransactionType | undefined>()
@@ -29,6 +50,9 @@ export default function TransactionsPage() {
     queryFn: () => transactionsApi.getStats(dateFrom, dateTo),
   })
 
+  // Memoize export data
+  const exportData = useMemo(() => transactions || [], [transactions])
+
   const typeColors: Record<string, string> = {
     sale: 'bg-green-100 text-green-800',
     collection: 'bg-blue-100 text-blue-800',
@@ -43,10 +67,11 @@ export default function TransactionsPage() {
           <h1 className="text-3xl font-bold text-gray-900">Транзакции</h1>
           <p className="mt-2 text-gray-600">Финансовые операции</p>
         </div>
-        <button className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
-          <Download className="h-4 w-4" />
-          Экспорт
-        </button>
+        <ExportButton
+          data={exportData}
+          columns={transactionExportColumns}
+          filename={`transactions-${dateFrom || 'all'}-${dateTo || new Date().toISOString().split('T')[0]}`}
+        />
       </div>
 
       {/* Stats */}

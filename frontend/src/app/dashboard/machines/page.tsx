@@ -1,16 +1,35 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { machinesApi } from '@/lib/machines-api'
 import { machineColumns } from '@/components/machines/columns'
 import { DataTable } from '@/components/ui/data-table'
 import { Button } from '@/components/ui/button'
 import { CardSkeleton } from '@/components/ui/LoadingSkeleton'
+import { ExportButton } from '@/components/ui/ExportButton'
 import { Plus, Filter } from 'lucide-react'
 import Link from 'next/link'
-import { MachineStatus } from '@/types/machines'
+import { Machine, MachineStatus } from '@/types/machines'
 import { useTranslations } from '@/providers/I18nProvider'
+import { formatDateForExport, formatCurrencyForExport, type ExportColumn } from '@/lib/export'
+
+// Export columns configuration
+const machineExportColumns: ExportColumn<Machine>[] = [
+  { key: 'machine_number', header: 'Номер' },
+  { key: 'name', header: 'Название' },
+  { key: 'status', header: 'Статус' },
+  { key: 'location', header: 'Локация', format: (v) => (v as Machine['location'])?.name || '' },
+  { key: 'manufacturer', header: 'Производитель', format: (v) => String(v || '') },
+  { key: 'model', header: 'Модель', format: (v) => String(v || '') },
+  { key: 'serial_number', header: 'Серийный номер', format: (v) => String(v || '') },
+  { key: 'current_cash_amount', header: 'Наличные', format: (v) => formatCurrencyForExport(v as number) },
+  { key: 'current_product_count', header: 'Товаров', format: (v) => String(v || 0) },
+  { key: 'max_product_slots', header: 'Макс. слотов', format: (v) => String(v || 0) },
+  { key: 'last_refill_date', header: 'Посл. пополнение', format: (v) => formatDateForExport(v as string) },
+  { key: 'last_collection_date', header: 'Посл. инкассация', format: (v) => formatDateForExport(v as string) },
+  { key: 'installation_date', header: 'Дата установки', format: (v) => formatDateForExport(v as string) },
+]
 
 export default function MachinesPage() {
   const { t } = useTranslations()
@@ -26,6 +45,9 @@ export default function MachinesPage() {
     queryFn: machinesApi.getStats,
   })
 
+  // Memoize export data to prevent unnecessary re-renders
+  const exportData = useMemo(() => machines || [], [machines])
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -34,12 +56,19 @@ export default function MachinesPage() {
           <h1 className="text-3xl font-bold text-foreground">{t('machines.title')}</h1>
           <p className="mt-2 text-muted-foreground">{t('machines.subtitle')}</p>
         </div>
-        <Link href="/dashboard/machines/create">
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            {t('machines.addMachine')}
-          </Button>
-        </Link>
+        <div className="flex items-center gap-3">
+          <ExportButton
+            data={exportData}
+            columns={machineExportColumns}
+            filename={`machines-${new Date().toISOString().split('T')[0]}`}
+          />
+          <Link href="/dashboard/machines/create">
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              {t('machines.addMachine')}
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Stats Cards */}

@@ -20,7 +20,7 @@ export interface ExportOptions {
  * @param columns - Column definitions with headers and formatters
  * @param options - Export options (filename)
  */
-export function exportToCSV<T extends Record<string, unknown>>(
+export function exportToCSV<T extends object>(
   data: T[],
   columns: ExportColumn<T>[],
   options: ExportOptions
@@ -50,7 +50,7 @@ export function exportToCSV<T extends Record<string, unknown>>(
  * Export data to Excel-like format (actually CSV with .xlsx extension for compatibility)
  * For true Excel format, install xlsx package
  */
-export function exportToExcel<T extends Record<string, unknown>>(
+export function exportToExcel<T extends object>(
   data: T[],
   columns: ExportColumn<T>[],
   options: ExportOptions

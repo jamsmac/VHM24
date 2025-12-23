@@ -1,14 +1,27 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { usersApi } from '@/lib/users-api'
+import { usersApi, User as UserType } from '@/lib/users-api'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { ExportButton } from '@/components/ui/ExportButton'
 import { Plus, Filter, User, Phone, Mail } from 'lucide-react'
 import Link from 'next/link'
 import { TableSkeleton } from '@/components/ui/LoadingSkeleton'
-import { UserRole, ROLE_CONFIG, getRoleLabel, getRoleBadgeClass } from '@/types/users'
+import { UserRole, getRoleLabel, getRoleBadgeClass } from '@/types/users'
+import { formatDateForExport, type ExportColumn } from '@/lib/export'
+
+// Export columns configuration
+const userExportColumns: ExportColumn<UserType>[] = [
+  { key: 'username', header: 'Логин' },
+  { key: 'full_name', header: 'ФИО' },
+  { key: 'role', header: 'Роль', format: (v) => getRoleLabel(v as UserRole) },
+  { key: 'phone', header: 'Телефон', format: (v) => String(v || '') },
+  { key: 'email', header: 'Email', format: (v) => String(v || '') },
+  { key: 'is_active', header: 'Статус', format: (v) => v ? 'Активен' : 'Неактивен' },
+  { key: 'created_at', header: 'Создан', format: (v) => formatDateForExport(v as string) },
+]
 
 export default function UsersPage() {
   const [roleFilter, setRoleFilter] = useState<UserRole | undefined>()
@@ -22,6 +35,9 @@ export default function UsersPage() {
     }),
   })
 
+  // Memoize export data
+  const exportData = useMemo(() => users || [], [users])
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -29,12 +45,19 @@ export default function UsersPage() {
           <h1 className="text-3xl font-bold text-gray-900">Пользователи</h1>
           <p className="mt-2 text-gray-600">Управление пользователями системы</p>
         </div>
-        <Link href="/users/create">
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            Добавить пользователя
-          </Button>
-        </Link>
+        <div className="flex items-center gap-3">
+          <ExportButton
+            data={exportData}
+            columns={userExportColumns}
+            filename={`users-${new Date().toISOString().split('T')[0]}`}
+          />
+          <Link href="/dashboard/users/create">
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              Добавить пользователя
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Statistics */}

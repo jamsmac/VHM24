@@ -5,7 +5,7 @@ import { Download, FileSpreadsheet, FileText, ChevronDown, Loader2 } from 'lucid
 import { exportToExcel, exportToCSV, type ExportColumn } from '@/lib/export'
 import { cn } from '@/lib/utils'
 
-interface ExportButtonProps<T extends Record<string, unknown>> {
+interface ExportButtonProps<T extends object> {
   data: T[]
   columns: ExportColumn<T>[]
   filename: string
@@ -13,7 +13,7 @@ interface ExportButtonProps<T extends Record<string, unknown>> {
   disabled?: boolean
 }
 
-export function ExportButton<T extends Record<string, unknown>>({
+export function ExportButton<T extends object>({
   data,
   columns,
   filename,
