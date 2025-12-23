@@ -511,6 +511,7 @@ describe('MachinesService', () => {
       const updateDto: UpdateMachineDto = {
         location_id: 'location-2', // Different from current location-1
       };
+      const userId = 'user-123';
 
       const updatedMachine = { ...mockMachine, location_id: 'location-2' };
       machineRepository.findOne
@@ -519,13 +520,15 @@ describe('MachinesService', () => {
       machineRepository.update.mockResolvedValue({ affected: 1 } as any);
 
       // Act
-      await service.update('machine-1', updateDto);
+      await service.update('machine-1', updateDto, userId);
 
       // Assert
       expect(locationHistoryRepository.create).toHaveBeenCalledWith({
         machine: { id: 'machine-1' },
         from_location_id: 'location-1',
         to_location_id: 'location-2',
+        moved_by_user_id: userId,
+        moved_at: expect.any(Date),
       });
       expect(locationHistoryRepository.save).toHaveBeenCalled();
     });

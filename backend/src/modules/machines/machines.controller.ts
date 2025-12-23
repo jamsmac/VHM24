@@ -97,16 +97,15 @@ export class MachinesController {
     });
   }
 
-  // @Get('stats')
-  // @ApiOperation({ summary: 'Получить статистику по аппаратам' })
-  // @ApiResponse({
-  //   status: 200,
-  //   description: 'Статистика аппаратов',
-  // })
-  // getStats() {
-  //   // TODO: Implement getStats method
-  //   return { message: 'Not implemented yet' };
-  // }
+  @Get('stats')
+  @ApiOperation({ summary: 'Получить статистику по аппаратам' })
+  @ApiResponse({
+    status: 200,
+    description: 'Статистика аппаратов',
+  })
+  getStats() {
+    return this.machinesService.getStats();
+  }
 
   @Get('by-number/:machine_number')
   @ApiOperation({ summary: 'Получить аппарат по номеру' })

@@ -217,6 +217,37 @@ export class MachinesService {
   }
 
   /**
+   * Get overall machine statistics
+   */
+  async getStats(): Promise<{
+    total_machines: number;
+    active_machines: number;
+    by_status: {
+      active: number;
+      offline: number;
+      error: number;
+      maintenance: number;
+      low_stock: number;
+    };
+  }> {
+    const machines = await this.machineRepository.find();
+
+    const byStatus = {
+      active: machines.filter((m) => m.status === MachineStatus.ACTIVE).length,
+      offline: machines.filter((m) => m.status === MachineStatus.OFFLINE).length,
+      error: machines.filter((m) => m.status === MachineStatus.ERROR).length,
+      maintenance: machines.filter((m) => m.status === MachineStatus.MAINTENANCE).length,
+      low_stock: machines.filter((m) => m.status === MachineStatus.LOW_STOCK).length,
+    };
+
+    return {
+      total_machines: machines.length,
+      active_machines: byStatus.active,
+      by_status: byStatus,
+    };
+  }
+
+  /**
    * Get machine stats by location
    */
   async getMachineStatsByLocation(locationId: string): Promise<{
