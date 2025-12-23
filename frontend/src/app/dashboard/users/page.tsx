@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Plus, Filter, User, Phone, Mail } from 'lucide-react'
 import Link from 'next/link'
 import { TableSkeleton } from '@/components/ui/LoadingSkeleton'
-import { UserRole } from '@/types/users'
+import { UserRole, ROLE_CONFIG, getRoleLabel, getRoleBadgeClass } from '@/types/users'
 
 export default function UsersPage() {
   const [roleFilter, setRoleFilter] = useState<UserRole | undefined>()
@@ -21,22 +21,6 @@ export default function UsersPage() {
       is_active: isActiveFilter,
     }),
   })
-
-  const roleLabels: Record<UserRole, string> = {
-    [UserRole.ADMIN]: 'Администратор',
-    [UserRole.MANAGER]: 'Менеджер',
-    [UserRole.OPERATOR]: 'Оператор',
-    [UserRole.ACCOUNTANT]: 'Бухгалтер',
-    [UserRole.VIEWER]: 'Наблюдатель',
-  }
-
-  const roleColors: Record<UserRole, string> = {
-    [UserRole.ADMIN]: 'bg-purple-100 text-purple-800',
-    [UserRole.MANAGER]: 'bg-blue-100 text-blue-800',
-    [UserRole.OPERATOR]: 'bg-green-100 text-green-800',
-    [UserRole.ACCOUNTANT]: 'bg-indigo-100 text-indigo-800',
-    [UserRole.VIEWER]: 'bg-gray-100 text-gray-800',
-  }
 
   return (
     <div className="space-y-6">
@@ -69,13 +53,13 @@ export default function UsersPage() {
           <div className="bg-white rounded-lg border border-gray-200 p-4">
             <p className="text-sm text-gray-600">Операторов</p>
             <p className="text-2xl font-bold text-blue-600">
-              {users.filter(u => u.role === 'operator').length}
+              {users.filter(u => u.role === UserRole.OPERATOR).length}
             </p>
           </div>
           <div className="bg-white rounded-lg border border-gray-200 p-4">
             <p className="text-sm text-gray-600">Менеджеров</p>
             <p className="text-2xl font-bold text-indigo-600">
-              {users.filter(u => u.role === 'manager').length}
+              {users.filter(u => u.role === UserRole.MANAGER).length}
             </p>
           </div>
         </div>
@@ -94,10 +78,11 @@ export default function UsersPage() {
             className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
           >
             <option value="">Все роли</option>
-            <option value="admin">Администратор</option>
-            <option value="manager">Менеджер</option>
-            <option value="operator">Оператор</option>
-            <option value="accountant">Бухгалтер</option>
+            {Object.values(UserRole).map((role) => (
+              <option key={role} value={role}>
+                {getRoleLabel(role)}
+              </option>
+            ))}
           </select>
 
           <select
@@ -157,8 +142,8 @@ export default function UsersPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <Badge className={roleColors[user.role]}>
-                        {roleLabels[user.role]}
+                      <Badge className={getRoleBadgeClass(user.role)}>
+                        {getRoleLabel(user.role)}
                       </Badge>
                     </td>
                     <td className="px-6 py-4">

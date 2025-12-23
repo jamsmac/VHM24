@@ -11,6 +11,7 @@ import {
   isUnread,
 } from '@/lib/notifications-api'
 import { NotificationList } from '@/components/notifications/NotificationList'
+import { GroupedNotificationList } from '@/components/notifications/GroupedNotificationList'
 import { Button } from '@/components/ui/button'
 import {
   Bell,
@@ -20,13 +21,18 @@ import {
   Filter,
   X,
   Inbox,
+  LayoutList,
+  Layers,
 } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 
 type FilterTab = 'all' | 'unread' | 'urgent'
+type ViewMode = 'list' | 'grouped'
 
 export default function NotificationsPage() {
   const [activeTab, setActiveTab] = useState<FilterTab>('all')
+  const [viewMode, setViewMode] = useState<ViewMode>('grouped')
   const [showFilters, setShowFilters] = useState(false)
   const [statusFilter, setStatusFilter] = useState<NotificationStatus | ''>('')
   const [priorityFilter, setPriorityFilter] = useState<NotificationPriority | ''>('')
@@ -89,6 +95,34 @@ export default function NotificationsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {/* View Mode Toggle */}
+          <div className="flex items-center rounded-lg border border-gray-200 p-1">
+            <button
+              onClick={() => setViewMode('list')}
+              className={cn(
+                'flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
+                viewMode === 'list'
+                  ? 'bg-indigo-100 text-indigo-700'
+                  : 'text-gray-500 hover:text-gray-700'
+              )}
+              title="Простой список"
+            >
+              <LayoutList className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => setViewMode('grouped')}
+              className={cn(
+                'flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
+                viewMode === 'grouped'
+                  ? 'bg-indigo-100 text-indigo-700'
+                  : 'text-gray-500 hover:text-gray-700'
+              )}
+              title="Группировка"
+            >
+              <Layers className="h-4 w-4" />
+            </button>
+          </div>
+
           <Button
             variant="outline"
             onClick={() => setShowFilters(!showFilters)}
@@ -309,10 +343,17 @@ export default function NotificationsPage() {
           </div>
         ) : (
           <div className="p-4">
-            <NotificationList
-              notifications={filteredNotifications}
-              isLoading={isLoading}
-            />
+            {viewMode === 'grouped' ? (
+              <GroupedNotificationList
+                notifications={filteredNotifications}
+                isLoading={isLoading}
+              />
+            ) : (
+              <NotificationList
+                notifications={filteredNotifications}
+                isLoading={isLoading}
+              />
+            )}
           </div>
         )}
       </div>

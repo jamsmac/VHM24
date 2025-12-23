@@ -239,7 +239,7 @@ function generateMaintenanceReport(
       <div class="stat-label">Всего работ</div>
     </div>
     <div class="stat-card">
-      <div class="stat-value">${totalCost.toLocaleString('ru-RU')} ₽</div>
+      <div class="stat-value">${totalCost.toLocaleString('ru-RU')} сўм</div>
       <div class="stat-label">Общие затраты</div>
     </div>
     <div class="stat-card">
@@ -267,7 +267,7 @@ function generateMaintenanceReport(
           <td>${MaintenanceTypeLabels[m.maintenance_type]}</td>
           <td>${m.description.substring(0, 100)}${m.description.length > 100 ? '...' : ''}</td>
           <td>${m.duration_minutes ? `${m.duration_minutes} мин` : '—'}</td>
-          <td>${Number(m.total_cost).toLocaleString('ru-RU')} ₽</td>
+          <td>${Number(m.total_cost).toLocaleString('ru-RU')} сўм</td>
           <td>
             <span class="badge ${m.is_successful ? 'badge-success' : 'badge-error'}">
               ${m.is_successful ? '✓ Успешно' : '✗ Неуспешно'}

@@ -207,7 +207,7 @@ export default function CompleteTaskPage({ params }: CompleteTaskPageProps) {
           {task.type_code === 'collection' && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Собранная сумма * (₽)
+                Собранная сумма * (сўм)
               </label>
               <input
                 type="number"

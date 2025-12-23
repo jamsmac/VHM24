@@ -140,10 +140,10 @@ export const machineColumns: ColumnDef<Machine>[] = [
       return (
         <div className="text-sm">
           <div className="font-medium text-foreground">
-            {current.toLocaleString('ru-RU')} ₽
+            {current.toLocaleString('ru-RU')} сўм
           </div>
           <div className="text-xs text-muted-foreground">
-            {percentage}% от {capacity.toLocaleString('ru-RU')} ₽
+            {percentage}% от {capacity.toLocaleString('ru-RU')} сўм
           </div>
         </div>
       )

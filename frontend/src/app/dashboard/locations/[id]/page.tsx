@@ -134,13 +134,13 @@ export default function LocationDetailPage({ params }: LocationDetailPageProps) 
           <div className="bg-white rounded-lg border border-gray-200 p-4">
             <p className="text-sm text-gray-600">Выручка сегодня</p>
             <p className="text-2xl font-bold text-green-600">
-              {(stats.revenue_today || 0).toLocaleString('ru-RU')} ₽
+              {(stats.revenue_today || 0).toLocaleString('ru-RU')} сўм
             </p>
           </div>
           <div className="bg-white rounded-lg border border-gray-200 p-4">
             <p className="text-sm text-gray-600">Выручка за месяц</p>
             <p className="text-2xl font-bold text-indigo-600">
-              {(stats.revenue_month || 0).toLocaleString('ru-RU')} ₽
+              {(stats.revenue_month || 0).toLocaleString('ru-RU')} сўм
             </p>
           </div>
           <div className="bg-white rounded-lg border border-gray-200 p-4">

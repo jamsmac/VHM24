@@ -10,7 +10,7 @@ import { formatDateTime, getErrorMessage } from '@/lib/utils'
 import { LoadingSkeleton } from '@/components/ui/LoadingSkeleton'
 import { toast } from 'react-toastify'
 import { queryClient } from '@/lib/query-client'
-import { UserRole } from '@/types/users'
+import { UserRole, getRoleLabel, getRoleBadgeClass, ROLE_CONFIG } from '@/types/users'
 
 interface UserDetailPageProps {
   params: {
@@ -63,22 +63,6 @@ export default function UserDetailPage({ params }: UserDetailPageProps) {
     )
   }
 
-  const roleLabels: Record<UserRole, string> = {
-    [UserRole.ADMIN]: 'Администратор',
-    [UserRole.MANAGER]: 'Менеджер',
-    [UserRole.OPERATOR]: 'Оператор',
-    [UserRole.ACCOUNTANT]: 'Бухгалтер',
-    [UserRole.VIEWER]: 'Наблюдатель',
-  }
-
-  const roleColors: Record<UserRole, string> = {
-    [UserRole.ADMIN]: 'bg-purple-100 text-purple-800',
-    [UserRole.MANAGER]: 'bg-blue-100 text-blue-800',
-    [UserRole.OPERATOR]: 'bg-green-100 text-green-800',
-    [UserRole.ACCOUNTANT]: 'bg-indigo-100 text-indigo-800',
-    [UserRole.VIEWER]: 'bg-gray-100 text-gray-800',
-  }
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -95,8 +79,8 @@ export default function UserDetailPage({ params }: UserDetailPageProps) {
           </div>
         </div>
         <div className="flex gap-2">
-          <Badge className={roleColors[user.role]}>
-            {roleLabels[user.role]}
+          <Badge className={getRoleBadgeClass(user.role)}>
+            {getRoleLabel(user.role)}
           </Badge>
           {user.is_active ? (
             <Badge className="bg-green-100 text-green-800">
@@ -167,25 +151,28 @@ export default function UserDetailPage({ params }: UserDetailPageProps) {
           <div>
             <dt className="text-gray-600">Роль в системе</dt>
             <dd className="mt-1">
-              <Badge className={roleColors[user.role]}>
-                {roleLabels[user.role]}
+              <Badge className={getRoleBadgeClass(user.role)}>
+                {getRoleLabel(user.role)}
               </Badge>
             </dd>
           </div>
           <div>
             <dt className="text-gray-600 mb-2">Описание роли</dt>
             <dd className="text-gray-900">
-              {user.role === 'admin' && 'Полный доступ ко всем функциям системы'}
-              {user.role === 'manager' && 'Управление аппаратами, задачами, инвентарем и отчетами'}
-              {user.role === 'operator' && 'Выполнение задач, управление инвентарем на руках'}
-              {user.role === 'accountant' && 'Доступ к финансовым отчетам и транзакциям'}
+              {user.role === UserRole.OWNER && 'Полный доступ ко всем функциям и настройкам системы'}
+              {user.role === UserRole.ADMIN && 'Управление пользователями, аппаратами, отчетами и настройками'}
+              {user.role === UserRole.MANAGER && 'Управление аппаратами, задачами, инвентарем и отчетами'}
+              {user.role === UserRole.OPERATOR && 'Выполнение задач, управление инвентарем на руках'}
+              {user.role === UserRole.COLLECTOR && 'Сбор наличных, просмотр информации об аппаратах'}
+              {user.role === UserRole.TECHNICIAN && 'Техническое обслуживание и ремонт аппаратов'}
+              {user.role === UserRole.VIEWER && 'Только просмотр данных без возможности редактирования'}
             </dd>
           </div>
         </dl>
       </div>
 
       {/* Activity Stats */}
-      {user.role === 'operator' && (
+      {user.role === UserRole.OPERATOR && (
         <div className="bg-white rounded-lg border border-gray-200 p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Статистика активности</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

@@ -24,10 +24,8 @@ export function formatDateTime(date: string | Date): string {
 }
 
 export function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('ru-RU', {
-    style: 'currency',
-    currency: 'RUB',
-  }).format(amount)
+  // Using UZS (Uzbekistan Som) as primary currency
+  return `${new Intl.NumberFormat('ru-RU').format(amount)} сўм`
 }
 
 export function formatNumber(num: number): string {

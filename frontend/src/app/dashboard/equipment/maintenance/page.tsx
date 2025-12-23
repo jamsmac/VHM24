@@ -127,11 +127,11 @@ export default function MaintenancePage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-semibold text-gray-900">
-                          {record.total_cost.toLocaleString()} ₽
+                          {record.total_cost.toLocaleString()} сўм
                         </div>
                         <div className="text-xs text-gray-500">
-                          Работы: {record.labor_cost} ₽<br />
-                          Запчасти: {record.parts_cost} ₽
+                          Работы: {record.labor_cost} сўм<br />
+                          Запчасти: {record.parts_cost} сўм
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">

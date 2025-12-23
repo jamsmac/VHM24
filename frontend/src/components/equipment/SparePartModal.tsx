@@ -39,7 +39,7 @@ export function SparePartModal({
     max_stock_level: 0,
     unit: 'pcs',
     unit_price: 0,
-    currency: 'RUB',
+    currency: 'UZS',
     supplier_name: '',
     supplier_part_number: '',
     storage_location: '',
@@ -218,7 +218,7 @@ export function SparePartModal({
             value={formData.currency}
             onChange={(e) => handleChange('currency', e.target.value)}
             options={[
-              { value: 'RUB', label: '₽ RUB' },
+              { value: 'UZS', label: 'сўм UZS' },
               { value: 'USD', label: '$ USD' },
               { value: 'EUR', label: '€ EUR' },
             ]}

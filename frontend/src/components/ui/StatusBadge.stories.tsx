@@ -10,6 +10,7 @@ import {
   StatusDot,
   CountBadge
 } from './StatusBadge'
+import { UserRole } from '@/types/users'
 
 const meta: Meta = {
   title: 'UI/StatusBadge',
@@ -103,10 +104,13 @@ export const Roles: Story = {
     <div className="space-y-4">
       <h3 className="text-sm font-medium text-gray-700">Role Badges</h3>
       <div className="flex flex-wrap gap-2">
-        <RoleBadge role="admin" />
-        <RoleBadge role="manager" />
-        <RoleBadge role="operator" />
-        <RoleBadge role="viewer" />
+        <RoleBadge role={UserRole.OWNER} />
+        <RoleBadge role={UserRole.ADMIN} />
+        <RoleBadge role={UserRole.MANAGER} />
+        <RoleBadge role={UserRole.OPERATOR} />
+        <RoleBadge role={UserRole.COLLECTOR} />
+        <RoleBadge role={UserRole.TECHNICIAN} />
+        <RoleBadge role={UserRole.VIEWER} />
       </div>
     </div>
   ),

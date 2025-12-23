@@ -131,7 +131,7 @@ export default function CreateMachinePage() {
           />
 
           <FormInput
-            label="Емкость купюроприемника (₽)"
+            label="Емкость купюроприемника (сўм)"
             id="cash_capacity"
             type="number"
             step="0.01"

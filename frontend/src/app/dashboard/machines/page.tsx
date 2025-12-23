@@ -58,7 +58,7 @@ export default function MachinesPage() {
           <div className="bg-card rounded-lg border border-border p-4">
             <p className="text-sm text-muted-foreground">{t('machines.stats.revenueToday')}</p>
             <p className="text-2xl font-bold text-primary">
-              {stats.total_revenue_today?.toLocaleString('ru-RU') || 0} ₽
+              {stats.total_revenue_today?.toLocaleString('ru-RU') || 0} сўм
             </p>
           </div>
           <div className="bg-card rounded-lg border border-border p-4">

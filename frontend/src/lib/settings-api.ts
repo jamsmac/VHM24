@@ -5,7 +5,7 @@ export interface SystemSettings {
   company_name: string
   contact_email: string
   contact_phone: string
-  currency: 'RUB' | 'USD' | 'EUR'
+  currency: 'UZS' | 'USD' | 'EUR'
   timezone: string
 
   // Notifications

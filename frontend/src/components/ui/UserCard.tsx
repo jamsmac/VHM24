@@ -3,6 +3,7 @@
 import { cn } from '@/lib/utils'
 import { Avatar, AvatarWithName } from './Avatar'
 import { RoleBadge, UserStatusBadge } from './StatusBadge'
+import { UserRole } from '@/types/users'
 import {
   Mail,
   Phone,
@@ -20,7 +21,7 @@ interface UserData {
   name: string
   email?: string
   phone?: string
-  role?: 'admin' | 'manager' | 'operator' | 'viewer'
+  role?: UserRole
   status?: 'active' | 'inactive' | 'pending' | 'blocked'
   avatar?: string | null
   location?: string

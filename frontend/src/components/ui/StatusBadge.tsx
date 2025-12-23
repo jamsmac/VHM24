@@ -2,6 +2,7 @@
 
 import { cn } from '@/lib/utils'
 import { Badge, type BadgeProps } from './badge'
+import { UserRole, ROLE_CONFIG } from '@/types/users'
 
 // Badge variant type
 type BadgeVariant = NonNullable<BadgeProps['variant']>
@@ -175,14 +176,15 @@ export function IncidentStatusBadge({
   )
 }
 
-// User Role Badge
-type UserRole = 'admin' | 'manager' | 'operator' | 'viewer'
-
-const roleConfig: Record<UserRole, { label: string; variant: BadgeVariant }> = {
-  admin: { label: 'Администратор', variant: 'danger' },
-  manager: { label: 'Менеджер', variant: 'info' },
-  operator: { label: 'Оператор', variant: 'success' },
-  viewer: { label: 'Наблюдатель', variant: 'default' },
+// User Role Badge - synced with backend
+const roleVariantMap: Record<string, BadgeVariant> = {
+  purple: 'info',
+  red: 'danger',
+  blue: 'info',
+  green: 'success',
+  yellow: 'warning',
+  orange: 'warning',
+  gray: 'default',
 }
 
 export function RoleBadge({
@@ -192,11 +194,12 @@ export function RoleBadge({
   role: UserRole
   className?: string
 }) {
-  const config = roleConfig[role] || roleConfig.viewer
+  const config = ROLE_CONFIG[role] || ROLE_CONFIG[UserRole.VIEWER]
+  const variant = roleVariantMap[config.color] || 'default'
 
   return (
-    <Badge variant={config.variant} className={className}>
-      {config.label}
+    <Badge variant={variant} className={className}>
+      {config.labelRu}
     </Badge>
   )
 }

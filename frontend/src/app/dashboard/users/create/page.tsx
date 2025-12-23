@@ -10,7 +10,7 @@ import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'react-toastify'
 import { getErrorMessage } from '@/lib/utils'
-import { UserRole } from '@/types/users'
+import { UserRole, ROLE_CONFIG, getRoleLabel } from '@/types/users'
 
 export default function CreateUserPage() {
   const router = useRouter()
@@ -20,7 +20,7 @@ export default function CreateUserPage() {
     full_name: '',
     phone: '',
     email: '',
-    role: 'operator' as UserRole,
+    role: UserRole.OPERATOR,
   })
 
   const createMutation = useMutation({
@@ -118,27 +118,34 @@ export default function CreateUserPage() {
               required
               value={formData.role}
               onChange={(e) => handleChange('role', e.target.value as UserRole)}
-              options={[
-                { value: 'operator', label: 'Оператор' },
-                { value: 'manager', label: 'Менеджер' },
-                { value: 'accountant', label: 'Бухгалтер' },
-                { value: 'admin', label: 'Администратор' },
-              ]}
+              options={Object.values(UserRole).map((role) => ({
+                value: role,
+                label: getRoleLabel(role),
+              }))}
             />
             <div className="mt-3 bg-gray-50 border border-gray-200 rounded-lg p-4">
               <h4 className="font-semibold text-gray-900 mb-2">Описание ролей:</h4>
               <ul className="text-sm text-gray-700 space-y-2">
                 <li>
-                  <strong>Оператор:</strong> Выполнение задач, управление инвентарем на руках
+                  <strong>Владелец:</strong> Полный доступ ко всем функциям и настройкам системы
+                </li>
+                <li>
+                  <strong>Администратор:</strong> Управление пользователями, аппаратами, отчетами и настройками
                 </li>
                 <li>
                   <strong>Менеджер:</strong> Управление аппаратами, задачами, инвентарем и отчетами
                 </li>
                 <li>
-                  <strong>Бухгалтер:</strong> Доступ к финансовым отчетам и транзакциям
+                  <strong>Оператор:</strong> Выполнение задач, управление инвентарем на руках
                 </li>
                 <li>
-                  <strong>Администратор:</strong> Полный доступ ко всем функциям системы
+                  <strong>Инкассатор:</strong> Сбор наличных, просмотр информации об аппаратах
+                </li>
+                <li>
+                  <strong>Техник:</strong> Техническое обслуживание и ремонт аппаратов
+                </li>
+                <li>
+                  <strong>Наблюдатель:</strong> Только просмотр данных без возможности редактирования
                 </li>
               </ul>
             </div>

@@ -236,7 +236,7 @@ export default function DashboardPage() {
             <>
               <StatCard
                 title={t('dashboard.stats.revenueToday')}
-                value={`${stats?.total_revenue_today?.toLocaleString('ru-RU') || 0} ₽`}
+                value={`${stats?.total_revenue_today?.toLocaleString('ru-RU') || 0} сўм`}
                 change={stats?.revenue_vs_yesterday}
                 icon={DollarSign}
                 color="green"

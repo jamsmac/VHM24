@@ -114,7 +114,7 @@ export const warehouseInventoryColumns: ColumnDef<WarehouseInventoryItem>[] = [
       const price = row.original.product?.price
       return (
         <p className="font-medium text-foreground">
-          {price ? `${price.toLocaleString('ru-RU')} ₽` : '-'}
+          {price ? `${price.toLocaleString('ru-RU')} сўм` : '-'}
         </p>
       )
     },
@@ -131,7 +131,7 @@ export const warehouseInventoryColumns: ColumnDef<WarehouseInventoryItem>[] = [
 
       return (
         <p className="font-semibold text-foreground">
-          {totalValue.toLocaleString('ru-RU')} ₽
+          {totalValue.toLocaleString('ru-RU')} сўм
         </p>
       )
     },

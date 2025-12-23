@@ -7,10 +7,10 @@ import { Settings as SettingsIcon, Bell, Globe, Database, Shield } from 'lucide-
 export default function SettingsPage() {
   const [settings, setSettings] = useState({
     company_name: 'VendHub',
-    contact_email: 'info@vendhub.ru',
-    contact_phone: '+7 (999) 123-45-67',
-    currency: 'RUB',
-    timezone: 'Europe/Moscow',
+    contact_email: 'info@vendhub.uz',
+    contact_phone: '+998 99 123-45-67',
+    currency: 'UZS',
+    timezone: 'Asia/Tashkent',
     notifications_enabled: true,
     email_notifications: true,
     telegram_notifications: false,
@@ -78,7 +78,7 @@ export default function SettingsPage() {
               onChange={(e) => setSettings({...settings, currency: e.target.value})}
               className="w-full px-3 py-2 border border-gray-300 rounded-md"
             >
-              <option value="RUB">Российский рубль (₽)</option>
+              <option value="UZS">Узбекский сум (сўм)</option>
               <option value="USD">Доллар США ($)</option>
               <option value="EUR">Евро (€)</option>
             </select>

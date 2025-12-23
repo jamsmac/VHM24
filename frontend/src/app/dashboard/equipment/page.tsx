@@ -237,7 +237,7 @@ export default function EquipmentDashboard() {
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-700">Общие затраты</span>
                 <span className="font-semibold text-gray-900">
-                  {maintenanceStats.total_cost.toLocaleString()} ₽
+                  {maintenanceStats.total_cost.toLocaleString()} сўм
                 </span>
               </div>
             </div>
@@ -259,7 +259,7 @@ export default function EquipmentDashboard() {
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-700">Общая стоимость</span>
                 <span className="font-semibold text-green-600">
-                  {sparePartStats.total_inventory_value.toLocaleString()} ₽
+                  {sparePartStats.total_inventory_value.toLocaleString()} сўм
                 </span>
               </div>
               <div className="flex items-center justify-between">

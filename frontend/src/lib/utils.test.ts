@@ -46,9 +46,10 @@ describe('utils', () => {
   })
 
   describe('formatCurrency', () => {
-    it('should format currency in RUB', () => {
+    it('should format currency in UZS', () => {
       expect(formatCurrency(1000)).toContain('1')
       expect(formatCurrency(1000)).toContain('000')
+      expect(formatCurrency(1000)).toContain('сўм')
     })
 
     it('should handle zero', () => {

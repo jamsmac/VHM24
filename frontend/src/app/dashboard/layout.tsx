@@ -1,6 +1,7 @@
 'use client'
 
-import { Sidebar } from '@/components/layout/Sidebar'
+import { CollapsibleSidebar } from '@/components/layout/CollapsibleSidebar'
+import { DashboardTour } from '@/components/layout/DashboardTour'
 import { Header } from '@/components/layout/Header'
 import { MobileNav } from '@/components/layout/MobileNav'
 import { QueryProvider } from '@/providers/QueryProvider'
@@ -66,8 +67,8 @@ export default function DashboardLayout({
           >
             Перейти к основному содержимому
           </a>
-          <div className="flex h-screen bg-gray-50">
-            <Sidebar />
+          <div className="flex h-screen bg-gray-50 dark:bg-slate-950">
+            <CollapsibleSidebar />
             <div className="flex-1 flex flex-col overflow-hidden">
               <Header />
               <main id="main-content" className="flex-1 overflow-y-auto p-4 md:p-6 pb-20 md:pb-6" tabIndex={-1}>
@@ -78,6 +79,7 @@ export default function DashboardLayout({
           </div>
           <ToastContainer position="top-right" autoClose={3000} />
           <Toaster position="top-right" richColors />
+          <DashboardTour />
           </ErrorBoundary>
         </HelpProvider>
       </CommandPaletteProvider>

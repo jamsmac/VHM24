@@ -77,11 +77,9 @@ export default function AnalyticsPage() {
   const profitMarginMetric = metrics?.find((m) => m.metric === MetricType.PROFIT_MARGIN)
 
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('ru-RU', {
-      style: 'currency',
-      currency: 'RUB',
+    return `${new Intl.NumberFormat('ru-RU', {
       minimumFractionDigits: 0,
-    }).format(value)
+    }).format(value)} сўм`
   }
 
   const formatPercent = (value: number) => {

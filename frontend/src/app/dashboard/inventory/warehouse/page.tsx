@@ -60,7 +60,7 @@ export default function WarehouseInventoryPage() {
           <div className="bg-card rounded-lg border border-border p-4">
             <p className="text-sm text-muted-foreground">{t('inventory.stats.stockValue')}</p>
             <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-              {stockValue.toLocaleString('ru-RU')} ₽
+              {stockValue.toLocaleString('ru-RU')} сўм
             </p>
           </div>
         </div>

@@ -75,7 +75,7 @@ export default function OperatorInventoryPage() {
           <div className="bg-white rounded-lg border border-gray-200 p-4">
             <p className="text-sm text-gray-600">Стоимость</p>
             <p className="text-2xl font-bold text-green-600">
-              {inventory.reduce((sum, item) => sum + (item.quantity * (item.product?.price ?? 0)), 0).toLocaleString('ru-RU')} ₽
+              {inventory.reduce((sum, item) => sum + (item.quantity * (item.product?.price ?? 0)), 0).toLocaleString('ru-RU')} сўм
             </p>
           </div>
           <div className="bg-white rounded-lg border border-gray-200 p-4">
@@ -137,11 +137,11 @@ export default function OperatorInventoryPage() {
                         <p className="font-semibold text-gray-900">{item.quantity}</p>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <p className="text-gray-900">{(item.product?.price ?? 0).toLocaleString('ru-RU')} ₽</p>
+                        <p className="text-gray-900">{(item.product?.price ?? 0).toLocaleString('ru-RU')} сўм</p>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <p className="font-semibold text-green-600">
-                          {((item.quantity * (item.product?.price ?? 0))).toLocaleString('ru-RU')} ₽
+                          {((item.quantity * (item.product?.price ?? 0))).toLocaleString('ru-RU')} сўм
                         </p>
                       </td>
                     </tr>
