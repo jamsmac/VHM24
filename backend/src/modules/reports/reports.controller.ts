@@ -57,32 +57,38 @@ export class ReportsController {
   ) {}
 
   @Get('dashboard')
+  @UseInterceptors(ReportsCacheInterceptor)
+  @CacheTTL(CACHE_TTL_CONFIG.DASHBOARD_ADMIN)
   @ApiOperation({ summary: 'Получить сводный дашборд' })
   @ApiResponse({
     status: 200,
-    description: 'Сводные данные по всем метрикам',
+    description: 'Сводные данные по всем метрикам (кэш: 5 мин)',
   })
   getDashboard(@Query() filters: ReportFiltersDto) {
     return this.reportsService.getDashboard(filters);
   }
 
   @Get('machine/:machineId')
+  @UseInterceptors(ReportsCacheInterceptor)
+  @CacheTTL(CACHE_TTL_CONFIG.REPORT_STATISTICS)
   @ApiOperation({ summary: 'Получить отчет по аппарату' })
   @ApiParam({ name: 'machineId', description: 'UUID аппарата' })
   @ApiResponse({
     status: 200,
-    description: 'Детальный отчет по аппарату',
+    description: 'Детальный отчет по аппарату (кэш: 15 мин)',
   })
   getMachineReport(@Param('machineId') machineId: string, @Query() filters: ReportFiltersDto) {
     return this.reportsService.getMachineReport(machineId, filters);
   }
 
   @Get('user/:userId')
+  @UseInterceptors(ReportsCacheInterceptor)
+  @CacheTTL(CACHE_TTL_CONFIG.REPORT_STATISTICS)
   @ApiOperation({ summary: 'Получить отчет по пользователю (оператору)' })
   @ApiParam({ name: 'userId', description: 'UUID пользователя' })
   @ApiResponse({
     status: 200,
-    description: 'Отчет по активности оператора',
+    description: 'Отчет по активности оператора (кэш: 15 мин)',
   })
   getUserReport(@Param('userId') userId: string, @Query() filters: ReportFiltersDto) {
     return this.reportsService.getUserReport(userId, filters);
@@ -608,9 +614,9 @@ export class ReportsController {
     status: 200,
     description: 'Расширенный дашборд с сетевыми KPI для администратора (кэш: 5 мин)',
   })
-  async getAdminDashboard(@Res() res: Response) {
-    const dashboard = await this.adminDashboardService.generateDashboard();
-    return res.status(HttpStatus.OK).json(dashboard);
+  async getAdminDashboard() {
+    // NOTE: Removed @Res() to enable cache interceptor
+    return this.adminDashboardService.generateDashboard();
   }
 
   @Get('dashboards/manager')
@@ -621,12 +627,12 @@ export class ReportsController {
     status: 200,
     description: 'Расширенный дашборд с операционными метриками для менеджера (кэш: 5 мин)',
   })
-  async getManagerDashboard(@Query('location_ids') locationIds: string, @Res() res: Response) {
+  async getManagerDashboard(@Query('location_ids') locationIds: string) {
+    // NOTE: Removed @Res() to enable cache interceptor
     // Parse location IDs if provided
     const locationIdArray = locationIds ? locationIds.split(',').filter(Boolean) : undefined;
 
-    const dashboard = await this.managerDashboardService.generateDashboard(locationIdArray);
-    return res.status(HttpStatus.OK).json(dashboard);
+    return this.managerDashboardService.generateDashboard(locationIdArray);
   }
 
   @Get('dashboards/operator/:operatorId')
@@ -642,14 +648,13 @@ export class ReportsController {
     @Param('operatorId') operatorId: string,
     @Query('operator_name') operatorName: string,
     @Query('operator_role') operatorRole: string,
-    @Res() res: Response,
   ) {
-    const dashboard = await this.operatorDashboardService.generateDashboard(
+    // NOTE: Removed @Res() to enable cache interceptor
+    return this.operatorDashboardService.generateDashboard(
       operatorId,
       operatorName || 'Оператор',
       operatorRole || 'OPERATOR',
     );
-    return res.status(HttpStatus.OK).json(dashboard);
   }
 
   // ============================================================================

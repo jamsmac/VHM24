@@ -613,15 +613,14 @@ describe('MachinesService', () => {
 
   describe('getMachineStatsByLocation', () => {
     it('should return correct stats for machines at location', async () => {
-      // Arrange
-      const machines = [
-        { ...mockMachine, status: MachineStatus.ACTIVE },
-        { ...mockMachine, id: 'machine-2', status: MachineStatus.ACTIVE },
-        { ...mockMachine, id: 'machine-3', status: MachineStatus.OFFLINE },
-        { ...mockMachine, id: 'machine-4', status: MachineStatus.ERROR },
-        { ...mockMachine, id: 'machine-5', status: MachineStatus.MAINTENANCE },
+      // Arrange - use getRawMany format since we now use COUNT with GROUP BY
+      const statusCounts = [
+        { status: MachineStatus.ACTIVE, count: '2' },
+        { status: MachineStatus.OFFLINE, count: '1' },
+        { status: MachineStatus.ERROR, count: '1' },
+        { status: MachineStatus.MAINTENANCE, count: '1' },
       ];
-      mockQueryBuilder.getMany.mockResolvedValue(machines);
+      mockQueryBuilder.getRawMany.mockResolvedValue(statusCounts);
 
       // Act
       const result = await service.getMachineStatsByLocation('location-1');
@@ -638,7 +637,7 @@ describe('MachinesService', () => {
 
     it('should return all zeros when no machines at location', async () => {
       // Arrange
-      mockQueryBuilder.getMany.mockResolvedValue([]);
+      mockQueryBuilder.getRawMany.mockResolvedValue([]);
 
       // Act
       const result = await service.getMachineStatsByLocation('location-empty');

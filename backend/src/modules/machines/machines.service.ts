@@ -218,6 +218,9 @@ export class MachinesService {
 
   /**
    * Get overall machine statistics
+   *
+   * OPTIMIZED: Uses COUNT with GROUP BY instead of loading all machines
+   * Performance: O(1) database query instead of O(n) memory operation
    */
   async getStats(): Promise<{
     total_machines: number;
@@ -230,18 +233,51 @@ export class MachinesService {
       low_stock: number;
     };
   }> {
-    const machines = await this.machineRepository.find();
+    // Use a single query with GROUP BY to count by status
+    const statusCounts = await this.machineRepository
+      .createQueryBuilder('machine')
+      .select('machine.status', 'status')
+      .addSelect('COUNT(*)', 'count')
+      .where('machine.deleted_at IS NULL')
+      .groupBy('machine.status')
+      .getRawMany<{ status: MachineStatus; count: string }>();
 
+    // Initialize counts with 0
     const byStatus = {
-      active: machines.filter((m) => m.status === MachineStatus.ACTIVE).length,
-      offline: machines.filter((m) => m.status === MachineStatus.OFFLINE).length,
-      error: machines.filter((m) => m.status === MachineStatus.ERROR).length,
-      maintenance: machines.filter((m) => m.status === MachineStatus.MAINTENANCE).length,
-      low_stock: machines.filter((m) => m.status === MachineStatus.LOW_STOCK).length,
+      active: 0,
+      offline: 0,
+      error: 0,
+      maintenance: 0,
+      low_stock: 0,
     };
 
+    // Map database results to status counts
+    let totalMachines = 0;
+    for (const row of statusCounts) {
+      const count = parseInt(row.count, 10);
+      totalMachines += count;
+
+      switch (row.status) {
+        case MachineStatus.ACTIVE:
+          byStatus.active = count;
+          break;
+        case MachineStatus.OFFLINE:
+          byStatus.offline = count;
+          break;
+        case MachineStatus.ERROR:
+          byStatus.error = count;
+          break;
+        case MachineStatus.MAINTENANCE:
+          byStatus.maintenance = count;
+          break;
+        case MachineStatus.LOW_STOCK:
+          byStatus.low_stock = count;
+          break;
+      }
+    }
+
     return {
-      total_machines: machines.length,
+      total_machines: totalMachines,
       active_machines: byStatus.active,
       by_status: byStatus,
     };
@@ -249,6 +285,8 @@ export class MachinesService {
 
   /**
    * Get machine stats by location
+   *
+   * OPTIMIZED: Uses COUNT with GROUP BY instead of loading all machines
    */
   async getMachineStatsByLocation(locationId: string): Promise<{
     total: number;
@@ -257,15 +295,47 @@ export class MachinesService {
     error: number;
     maintenance: number;
   }> {
-    const machines = await this.findAll({ location_id: locationId });
+    // Use a single query with GROUP BY to count by status
+    const statusCounts = await this.machineRepository
+      .createQueryBuilder('machine')
+      .select('machine.status', 'status')
+      .addSelect('COUNT(*)', 'count')
+      .where('machine.location_id = :locationId', { locationId })
+      .andWhere('machine.deleted_at IS NULL')
+      .groupBy('machine.status')
+      .getRawMany<{ status: MachineStatus; count: string }>();
 
-    return {
-      total: machines.length,
-      active: machines.filter((m) => m.status === MachineStatus.ACTIVE).length,
-      offline: machines.filter((m) => m.status === MachineStatus.OFFLINE).length,
-      error: machines.filter((m) => m.status === MachineStatus.ERROR).length,
-      maintenance: machines.filter((m) => m.status === MachineStatus.MAINTENANCE).length,
+    // Initialize counts with 0
+    const result = {
+      total: 0,
+      active: 0,
+      offline: 0,
+      error: 0,
+      maintenance: 0,
     };
+
+    // Map database results to status counts
+    for (const row of statusCounts) {
+      const count = parseInt(row.count, 10);
+      result.total += count;
+
+      switch (row.status) {
+        case MachineStatus.ACTIVE:
+          result.active = count;
+          break;
+        case MachineStatus.OFFLINE:
+          result.offline = count;
+          break;
+        case MachineStatus.ERROR:
+          result.error = count;
+          break;
+        case MachineStatus.MAINTENANCE:
+          result.maintenance = count;
+          break;
+      }
+    }
+
+    return result;
   }
 
   /**

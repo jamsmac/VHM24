@@ -604,11 +604,11 @@ describe('ReportsController', () => {
       const mockDashboard = { networkKPIs: {} } as any;
       mockAdminDashboardService.generateDashboard.mockResolvedValue(mockDashboard);
 
-      const res = mockResponse();
-      await controller.getAdminDashboard(res);
+      // NOTE: Method signature changed - no longer uses @Res() for cache interceptor compatibility
+      const result = await controller.getAdminDashboard();
 
-      expect(res.status).toHaveBeenCalledWith(HttpStatus.OK);
-      expect(res.json).toHaveBeenCalledWith(mockDashboard);
+      expect(result).toEqual(mockDashboard);
+      expect(mockAdminDashboardService.generateDashboard).toHaveBeenCalled();
     });
   });
 
@@ -617,19 +617,18 @@ describe('ReportsController', () => {
       const mockDashboard = { operationalMetrics: {} } as any;
       mockManagerDashboardService.generateDashboard.mockResolvedValue(mockDashboard);
 
-      const res = mockResponse();
-      await controller.getManagerDashboard('', res);
+      // NOTE: Method signature changed - no longer uses @Res() for cache interceptor compatibility
+      const result = await controller.getManagerDashboard('');
 
-      expect(res.status).toHaveBeenCalledWith(HttpStatus.OK);
-      expect(res.json).toHaveBeenCalledWith(mockDashboard);
+      expect(result).toEqual(mockDashboard);
+      expect(mockManagerDashboardService.generateDashboard).toHaveBeenCalled();
     });
 
     it('should pass location IDs to service', async () => {
       const mockDashboard = { operationalMetrics: {} } as any;
       mockManagerDashboardService.generateDashboard.mockResolvedValue(mockDashboard);
 
-      const res = mockResponse();
-      await controller.getManagerDashboard('loc1,loc2,loc3', res);
+      await controller.getManagerDashboard('loc1,loc2,loc3');
 
       expect(mockManagerDashboardService.generateDashboard).toHaveBeenCalledWith([
         'loc1',
@@ -644,23 +643,25 @@ describe('ReportsController', () => {
       const mockDashboard = { tasks: [], performance: {} } as any;
       mockOperatorDashboardService.generateDashboard.mockResolvedValue(mockDashboard);
 
-      const res = mockResponse();
-      await controller.getOperatorDashboard('operator-123', 'John Doe', 'OPERATOR', res);
+      // NOTE: Method signature changed - no longer uses @Res() for cache interceptor compatibility
+      const result = await controller.getOperatorDashboard('operator-123', 'John Doe', 'OPERATOR');
 
-      expect(res.status).toHaveBeenCalledWith(HttpStatus.OK);
-      expect(res.json).toHaveBeenCalledWith(mockDashboard);
+      expect(result).toEqual(mockDashboard);
+      expect(mockOperatorDashboardService.generateDashboard).toHaveBeenCalledWith(
+        'operator-123',
+        'John Doe',
+        'OPERATOR',
+      );
     });
 
     it('should use default values for name and role', async () => {
       const mockDashboard = { tasks: [] } as any;
       mockOperatorDashboardService.generateDashboard.mockResolvedValue(mockDashboard);
 
-      const res = mockResponse();
       await controller.getOperatorDashboard(
         'operator-123',
         undefined as any,
         undefined as any,
-        res,
       );
 
       expect(mockOperatorDashboardService.generateDashboard).toHaveBeenCalledWith(

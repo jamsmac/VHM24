@@ -11,6 +11,7 @@ import {
   HttpStatus,
   Res,
   UseGuards,
+  UseInterceptors,
   ParseUUIDPipe,
 } from '@nestjs/common';
 import {
@@ -38,6 +39,11 @@ import { User, UserRole } from '@modules/users/entities/user.entity';
 import { CurrentUser } from '@modules/auth/decorators/current-user.decorator';
 // import { MoveMachineDto } from './dto/move-machine.dto';
 import { MachineLocationHistory } from './entities/machine-location-history.entity';
+import {
+  ReportsCacheInterceptor,
+  CacheTTL,
+} from '@modules/reports/interceptors/cache.interceptor';
+import { CACHE_TTL } from '@common/cache/redis-cache.service';
 
 @ApiTags('Machines')
 @ApiBearerAuth('JWT-auth')
@@ -98,10 +104,12 @@ export class MachinesController {
   }
 
   @Get('stats')
+  @UseInterceptors(ReportsCacheInterceptor)
+  @CacheTTL(CACHE_TTL.ENTITY_MACHINE) // 1 minute cache
   @ApiOperation({ summary: 'Получить статистику по аппаратам' })
   @ApiResponse({
     status: 200,
-    description: 'Статистика аппаратов',
+    description: 'Статистика аппаратов (кэш: 1 мин)',
   })
   getStats() {
     return this.machinesService.getStats();
@@ -435,10 +443,12 @@ export class MachinesController {
   // }
 
   @Get('connectivity/status')
+  @UseInterceptors(ReportsCacheInterceptor)
+  @CacheTTL(CACHE_TTL.ENTITY_MACHINE) // 1 minute cache
   @ApiOperation({ summary: 'Получить статус подключения всех аппаратов' })
   @ApiResponse({
     status: 200,
-    description: 'Статистика подключения аппаратов',
+    description: 'Статистика подключения аппаратов (кэш: 1 мин)',
     schema: {
       type: 'object',
       properties: {
