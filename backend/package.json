@@ -15,9 +15,9 @@
     "lint": "eslint . --fix",
     "lint:check": "eslint .",
     "type-check": "tsc --noEmit",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:cov": "jest --coverage",
+    "test": "NODE_OPTIONS='--max-old-space-size=4096' jest",
+    "test:watch": "NODE_OPTIONS='--max-old-space-size=4096' jest --watch",
+    "test:cov": "NODE_OPTIONS='--max-old-space-size=4096' jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "migration:generate": "typeorm migration:generate -d src/config/typeorm.config.ts",
@@ -162,6 +162,8 @@
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
     },
+    "maxWorkers": "50%",
+    "workerIdleMemoryLimit": "512MB",
     "collectCoverageFrom": [
       "**/*.(t|j)s",
       "!**/workers/**",
