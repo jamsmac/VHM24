@@ -1,7 +1,7 @@
 import { Controller, Post, Delete, Get, Body, Param, UseGuards, ParseUUIDPipe } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { TwoFactorAuthService } from '../services/two-factor-auth.service';
-import { Enable2FADto, Verify2FADto, VerifyBackupCodeDto } from '../dto/two-factor-auth.dto';
+import { AdminEnable2FADto, AdminVerify2FADto, AdminVerifyBackupCodeDto } from '../dto/two-factor-auth.dto';
 import { JwtAuthGuard } from '@modules/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '@modules/auth/guards/roles.guard';
 import { Roles } from '@modules/auth/decorators/roles.decorator';
@@ -45,27 +45,31 @@ export class TwoFactorAuthController {
 
   @Post('setup')
   @Roles('Admin', 'Owner')
-  async setup(@Body() dto: Enable2FADto) {
+  @ApiOperation({ summary: 'Set up 2FA for a user (admin only)' })
+  async setup(@Body() dto: AdminEnable2FADto) {
     return this.twoFactorAuthService.generateSecret(dto.user_id, dto.email);
   }
 
   @Post('enable')
   @Roles('Admin', 'Owner')
-  async enable(@Body() dto: Verify2FADto) {
+  @ApiOperation({ summary: 'Enable 2FA for a user (admin only)' })
+  async enable(@Body() dto: AdminVerify2FADto) {
     const verified = await this.twoFactorAuthService.verifyAndEnable(dto.user_id, dto.token);
     return { verified };
   }
 
   @Post('verify')
   @Roles('Admin', 'Owner')
-  async verify(@Body() dto: Verify2FADto) {
+  @ApiOperation({ summary: 'Verify 2FA token for a user (admin only)' })
+  async verify(@Body() dto: AdminVerify2FADto) {
     const verified = await this.twoFactorAuthService.verify(dto.user_id, dto.token);
     return { verified };
   }
 
   @Post('verify-backup-code')
   @Roles('Admin', 'Owner')
-  async verifyBackupCode(@Body() dto: VerifyBackupCodeDto) {
+  @ApiOperation({ summary: 'Verify backup code for a user (admin only)' })
+  async verifyBackupCode(@Body() dto: AdminVerifyBackupCodeDto) {
     const verified = await this.twoFactorAuthService.verifyBackupCode(dto.user_id, dto.code);
     return { verified };
   }
