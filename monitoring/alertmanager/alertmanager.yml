@@ -5,18 +5,16 @@
 # (Slack, Telegram, Email, PagerDuty)
 
 global:
-  # Default SMTP settings for email alerts
-  smtp_smarthost: 'smtp.gmail.com:587'
-  smtp_from: 'alerts@vendhub.com'
-  smtp_auth_username: '${SMTP_USERNAME}'
-  smtp_auth_password: '${SMTP_PASSWORD}'
-  smtp_require_tls: true
-
-  # Slack API URL (if using Slack)
-  slack_api_url: '${SLACK_WEBHOOK_URL}'
-
   # Resolve timeout - how long to wait before marking alert as resolved
   resolve_timeout: 5m
+
+  # Uncomment and configure when ready:
+  # smtp_smarthost: 'smtp.gmail.com:587'
+  # smtp_from: 'alerts@vendhub.com'
+  # smtp_auth_username: '${SMTP_USERNAME}'
+  # smtp_auth_password: '${SMTP_PASSWORD}'
+  # smtp_require_tls: true
+  # slack_api_url: 'https://hooks.slack.com/services/YOUR/WEBHOOK/URL'
 
 # ============================================================================
 # Templates for alert messages
@@ -104,69 +102,40 @@ inhibit_rules:
 # Receivers - notification endpoints
 # ============================================================================
 receivers:
-  # Default receiver - sends to Slack and email
+  # Default receiver - logs alerts (configure Slack/email when ready)
   - name: 'default-receiver'
-    slack_configs:
-      - channel: '#vendhub-alerts'
-        send_resolved: true
-        title: '{{ template "slack.default.title" . }}'
-        text: '{{ template "slack.default.text" . }}'
-        color: '{{ if eq .Status "firing" }}{{ if eq .CommonLabels.severity "critical" }}danger{{ else }}warning{{ end }}{{ else }}good{{ end }}'
+    # Uncomment when Slack is configured:
+    # slack_configs:
+    #   - channel: '#vendhub-alerts'
+    #     send_resolved: true
 
-  # Critical alerts - Slack, Telegram, and PagerDuty
+  # Critical alerts
   - name: 'critical-alerts'
-    slack_configs:
-      - channel: '#vendhub-critical'
-        send_resolved: true
-        title: ':rotating_light: CRITICAL: {{ .CommonLabels.alertname }}'
-        text: |
-          *Alert:* {{ .CommonLabels.alertname }}
-          *Severity:* {{ .CommonLabels.severity }}
-          *Component:* {{ .CommonLabels.component }}
-          *Description:* {{ .CommonAnnotations.description }}
-          *Started:* {{ .StartsAt.Format "2006-01-02 15:04:05" }}
-        color: 'danger'
-    webhook_configs:
-      # Telegram webhook (via custom webhook handler)
-      - url: '${TELEGRAM_ALERT_WEBHOOK}'
-        send_resolved: true
-    # Uncomment for PagerDuty integration
-    # pagerduty_configs:
-    #   - service_key: '${PAGERDUTY_SERVICE_KEY}'
-    #     severity: 'critical'
-    #     description: '{{ .CommonLabels.alertname }}'
+    # Uncomment when Slack is configured:
+    # slack_configs:
+    #   - channel: '#vendhub-critical'
+    #     send_resolved: true
+    #     title: ':rotating_light: CRITICAL: {{ .CommonLabels.alertname }}'
+    #     color: 'danger'
 
-  # Warning alerts - Slack only
+  # Warning alerts
   - name: 'warning-alerts'
-    slack_configs:
-      - channel: '#vendhub-alerts'
-        send_resolved: true
-        title: ':warning: Warning: {{ .CommonLabels.alertname }}'
-        text: |
-          *Alert:* {{ .CommonLabels.alertname }}
-          *Component:* {{ .CommonLabels.component }}
-          *Description:* {{ .CommonAnnotations.description }}
-        color: 'warning'
+    # Uncomment when Slack is configured:
+    # slack_configs:
+    #   - channel: '#vendhub-alerts'
+    #     send_resolved: true
+    #     color: 'warning'
 
-  # Database alerts - dedicated channel
+  # Database alerts
   - name: 'database-alerts'
-    slack_configs:
-      - channel: '#vendhub-database'
-        send_resolved: true
-        title: ':floppy_disk: Database Alert: {{ .CommonLabels.alertname }}'
-        text: |
-          *Alert:* {{ .CommonLabels.alertname }}
-          *Description:* {{ .CommonAnnotations.description }}
-        color: '{{ if eq .CommonLabels.severity "critical" }}danger{{ else }}warning{{ end }}'
+    # Uncomment when Slack is configured:
+    # slack_configs:
+    #   - channel: '#vendhub-database'
+    #     send_resolved: true
 
-  # Worker alerts - dedicated channel
+  # Worker alerts
   - name: 'worker-alerts'
-    slack_configs:
-      - channel: '#vendhub-workers'
-        send_resolved: true
-        title: ':gear: Worker Alert: {{ .CommonLabels.alertname }}'
-        text: |
-          *Alert:* {{ .CommonLabels.alertname }}
-          *Description:* {{ .CommonAnnotations.description }}
-          *Queue:* {{ .CommonLabels.queue }}
-        color: '{{ if eq .CommonLabels.severity "critical" }}danger{{ else }}warning{{ end }}'
+    # Uncomment when Slack is configured:
+    # slack_configs:
+    #   - channel: '#vendhub-workers'
+    #     send_resolved: true
