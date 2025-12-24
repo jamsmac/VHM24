@@ -78,9 +78,9 @@ describe('MetricsController', () => {
     it('should include process uptime metrics', async () => {
       const result = await controller.getMetrics();
 
-      expect(result).toContain('process_uptime_seconds');
-      expect(result).toContain('# HELP process_uptime_seconds');
-      expect(result).toContain('# TYPE process_uptime_seconds gauge');
+      expect(result).toContain('vendhub_process_uptime_seconds');
+      expect(result).toContain('# HELP vendhub_process_uptime_seconds');
+      expect(result).toContain('# TYPE vendhub_process_uptime_seconds gauge');
     });
 
     it('should include memory usage metrics', async () => {
@@ -110,7 +110,7 @@ describe('MetricsController', () => {
 
       expect(result).not.toContain('database_connections_active');
       // Should still return other metrics
-      expect(result).toContain('process_uptime_seconds');
+      expect(result).toContain('vendhub_process_uptime_seconds');
     });
 
     it('should include queue metrics', async () => {
@@ -144,7 +144,7 @@ describe('MetricsController', () => {
 
       expect(result).not.toContain('bullmq_queue_waiting');
       // Should still return other metrics
-      expect(result).toContain('process_uptime_seconds');
+      expect(result).toContain('vendhub_process_uptime_seconds');
     });
 
     it('should end with newline', async () => {
