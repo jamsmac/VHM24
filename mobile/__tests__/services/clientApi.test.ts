@@ -1,6 +1,12 @@
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
-import { clientApi, ClientUser, MenuItem, PublicLocation, QrResolveResult } from '../../src/services/clientApi';
+
+// Store interceptor callbacks for testing - using global to allow access from mock
+const interceptorCallbacks: {
+  request: { success: ((config: any) => Promise<any>) | null; error: ((error: any) => Promise<any>) | null };
+} = {
+  request: { success: null, error: null },
+};
 
 // Mock axios
 jest.mock('axios', () => {
@@ -9,7 +15,13 @@ jest.mock('axios', () => {
     post: jest.fn(),
     patch: jest.fn(),
     interceptors: {
-      request: { use: jest.fn() },
+      request: {
+        use: jest.fn((onSuccess, onError) => {
+          interceptorCallbacks.request.success = onSuccess;
+          interceptorCallbacks.request.error = onError;
+          return 0;
+        }),
+      },
       response: { use: jest.fn() },
     },
   };
@@ -18,6 +30,9 @@ jest.mock('axios', () => {
     __mockInstance: mockAxiosInstance,
   };
 });
+
+// Import after mocks are set up
+import { clientApi, ClientUser, MenuItem, PublicLocation, QrResolveResult } from '../../src/services/clientApi';
 
 // Mock SecureStore
 jest.mock('expo-secure-store', () => ({
@@ -404,6 +419,211 @@ describe('ClientApiService', () => {
         expect(mockAxiosInstance.get).toHaveBeenCalledWith('/auth/me');
         expect(result).toEqual(mockClientUser);
       });
+    });
+  });
+
+  describe('request interceptor', () => {
+    it('should add auth header when token exists', async () => {
+      mockSecureStore.getItemAsync.mockResolvedValueOnce('valid_token');
+
+      const config = { headers: {} };
+      const interceptor = interceptorCallbacks.request.success;
+
+      expect(interceptor).not.toBeNull();
+      if (interceptor) {
+        const result = await interceptor(config);
+
+        expect(mockSecureStore.getItemAsync).toHaveBeenCalledWith('client_access_token');
+        expect(result.headers.Authorization).toBe('Bearer valid_token');
+      }
+    });
+
+    it('should not add auth header when no token', async () => {
+      mockSecureStore.getItemAsync.mockResolvedValueOnce(null);
+
+      const config = { headers: {} };
+      const interceptor = interceptorCallbacks.request.success;
+
+      expect(interceptor).not.toBeNull();
+      if (interceptor) {
+        const result = await interceptor(config);
+
+        expect(result.headers.Authorization).toBeUndefined();
+      }
+    });
+
+    it('should not add auth header when headers is undefined', async () => {
+      mockSecureStore.getItemAsync.mockResolvedValueOnce('valid_token');
+
+      const config = {};
+      const interceptor = interceptorCallbacks.request.success;
+
+      expect(interceptor).not.toBeNull();
+      if (interceptor) {
+        const result = await interceptor(config);
+
+        expect(result.headers).toBeUndefined();
+      }
+    });
+
+    it('should reject on error', async () => {
+      const error = new Error('Request error');
+      const interceptor = interceptorCallbacks.request.error;
+
+      expect(interceptor).not.toBeNull();
+      if (interceptor) {
+        await expect(interceptor(error)).rejects.toThrow('Request error');
+      }
+    });
+  });
+
+  describe('error handling', () => {
+    it('should handle network error on getLocations', async () => {
+      mockAxiosInstance.get.mockRejectedValueOnce(new Error('Network error'));
+
+      await expect(clientApi.getLocations()).rejects.toThrow('Network error');
+    });
+
+    it('should handle network error on getCities', async () => {
+      mockAxiosInstance.get.mockRejectedValueOnce(new Error('Network error'));
+
+      await expect(clientApi.getCities()).rejects.toThrow('Network error');
+    });
+
+    it('should handle network error on getMenu', async () => {
+      mockAxiosInstance.get.mockRejectedValueOnce(new Error('Network error'));
+
+      await expect(clientApi.getMenu('machine-1')).rejects.toThrow('Network error');
+    });
+
+    it('should handle network error on resolveQrCode', async () => {
+      mockAxiosInstance.post.mockRejectedValueOnce(new Error('Network error'));
+
+      await expect(clientApi.resolveQrCode('qr-code')).rejects.toThrow('Network error');
+    });
+
+    it('should handle network error on authenticateTelegram', async () => {
+      mockAxiosInstance.post.mockRejectedValueOnce(new Error('Auth error'));
+
+      await expect(clientApi.authenticateTelegram('init_data')).rejects.toThrow('Auth error');
+    });
+
+    it('should handle network error on getCurrentUser', async () => {
+      mockAxiosInstance.get.mockRejectedValueOnce(new Error('Unauthorized'));
+
+      await expect(clientApi.getCurrentUser()).rejects.toThrow('Unauthorized');
+    });
+
+    it('should handle network error on updateProfile', async () => {
+      mockAxiosInstance.patch.mockRejectedValueOnce(new Error('Update failed'));
+
+      await expect(clientApi.updateProfile({ full_name: 'New Name' })).rejects.toThrow('Update failed');
+    });
+
+    it('should handle network error on getLoyaltyBalance', async () => {
+      mockAxiosInstance.get.mockRejectedValueOnce(new Error('Network error'));
+
+      await expect(clientApi.getLoyaltyBalance()).rejects.toThrow('Network error');
+    });
+
+    it('should handle network error on getLoyaltyHistory', async () => {
+      mockAxiosInstance.get.mockRejectedValueOnce(new Error('Network error'));
+
+      await expect(clientApi.getLoyaltyHistory()).rejects.toThrow('Network error');
+    });
+
+    it('should handle network error on getOrders', async () => {
+      mockAxiosInstance.get.mockRejectedValueOnce(new Error('Network error'));
+
+      await expect(clientApi.getOrders()).rejects.toThrow('Network error');
+    });
+
+    it('should handle network error on getOrder', async () => {
+      mockAxiosInstance.get.mockRejectedValueOnce(new Error('Order not found'));
+
+      await expect(clientApi.getOrder('order-1')).rejects.toThrow('Order not found');
+    });
+  });
+
+  describe('edge cases', () => {
+    it('should handle empty locations response', async () => {
+      mockAxiosInstance.get.mockResolvedValueOnce({ data: { data: [], total: 0 } });
+
+      const result = await clientApi.getLocations();
+
+      expect(result).toEqual({ data: [], total: 0 });
+    });
+
+    it('should handle empty cities response', async () => {
+      mockAxiosInstance.get.mockResolvedValueOnce({ data: [] });
+
+      const result = await clientApi.getCities();
+
+      expect(result).toEqual([]);
+    });
+
+    it('should handle empty menu response', async () => {
+      mockAxiosInstance.get.mockResolvedValueOnce({ data: { data: [] } });
+
+      const result = await clientApi.getMenu('machine-1');
+
+      expect(result).toEqual({ data: [] });
+    });
+
+    it('should handle getLocations with search param', async () => {
+      const params = { search: 'coffee' };
+      mockAxiosInstance.get.mockResolvedValueOnce({ data: { data: [mockLocation], total: 1 } });
+
+      await clientApi.getLocations(params);
+
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/public/locations', { params });
+    });
+
+    it('should handle getLoyaltyHistory without params', async () => {
+      mockAxiosInstance.get.mockResolvedValueOnce({ data: { data: [], total: 0 } });
+
+      await clientApi.getLoyaltyHistory();
+
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/loyalty/history', { params: undefined });
+    });
+
+    it('should handle getOrders without params', async () => {
+      mockAxiosInstance.get.mockResolvedValueOnce({ data: { data: [], total: 0 } });
+
+      await clientApi.getOrders();
+
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/orders', { params: undefined });
+    });
+
+    it('should handle refreshToken with no access_token in response', async () => {
+      mockSecureStore.getItemAsync.mockResolvedValueOnce('old_refresh_token');
+      const mockResponse = {
+        access_token: '',
+        refresh_token: '',
+      };
+      mockAxiosInstance.post.mockResolvedValueOnce({ data: mockResponse });
+
+      await clientApi.refreshToken();
+
+      // Should not save tokens when access_token is falsy
+      expect(mockSecureStore.setItemAsync).not.toHaveBeenCalled();
+    });
+
+    it('should handle updateProfile with all fields', async () => {
+      const updates = {
+        full_name: 'New Name',
+        phone: '+9998901234567',
+        email: 'new@example.com',
+        language: 'uz' as const,
+      };
+      const updatedUser = { ...mockClientUser, ...updates };
+      mockAxiosInstance.patch.mockResolvedValueOnce({ data: updatedUser });
+
+      const result = await clientApi.updateProfile(updates);
+
+      expect(mockAxiosInstance.patch).toHaveBeenCalledWith('/auth/profile', updates);
+      expect(result.full_name).toBe('New Name');
+      expect(result.language).toBe('uz');
     });
   });
 });
