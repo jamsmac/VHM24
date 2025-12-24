@@ -119,7 +119,7 @@ async function bootstrap() {
 
   // Global prefix - exclude health endpoints for Railway health checks
   app.setGlobalPrefix('api/v1', {
-    exclude: ['health', 'health/ready', 'health/live', 'health/queues'],
+    exclude: ['health', 'health/ready', 'health/live', 'health/queues', 'metrics'],
   });
 
   // Swagger documentation

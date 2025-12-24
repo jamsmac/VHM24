@@ -24,7 +24,8 @@ import { APP_INTERCEPTOR } from '@nestjs/core';
           prefix: 'vendhub_',
         },
       },
-      path: '/metrics',
+      // Don't register built-in controller - using custom one in HealthModule
+      controller: undefined as any,
       defaultLabels: {
         app: 'vendhub',
         env: process.env.NODE_ENV || 'development',

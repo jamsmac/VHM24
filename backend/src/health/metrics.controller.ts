@@ -5,11 +5,13 @@ import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
 import { InjectConnection } from '@nestjs/typeorm';
 import { Connection } from 'typeorm';
+import { register } from 'prom-client';
 
 /**
  * Metrics Controller
  *
  * Exposes Prometheus-compatible metrics for monitoring
+ * Combines prom-client default metrics with custom business metrics
  */
 @ApiTags('Metrics')
 @Controller('metrics')
@@ -30,10 +32,19 @@ export class MetricsController {
   async getMetrics(): Promise<string> {
     const metrics: string[] = [];
 
+    // Get default metrics from prom-client registry (from MonitoringModule)
+    try {
+      const promMetrics = await register.metrics();
+      metrics.push(promMetrics);
+    } catch {
+      // Registry might not be initialized
+    }
+
+    // Additional custom metrics below
     // Process metrics
-    metrics.push('# HELP process_uptime_seconds Process uptime in seconds');
-    metrics.push('# TYPE process_uptime_seconds gauge');
-    metrics.push(`process_uptime_seconds ${process.uptime()}`);
+    metrics.push('# HELP vendhub_process_uptime_seconds Process uptime in seconds');
+    metrics.push('# TYPE vendhub_process_uptime_seconds gauge');
+    metrics.push(`vendhub_process_uptime_seconds ${process.uptime()}`);
 
     metrics.push('# HELP process_memory_bytes Process memory usage in bytes');
     metrics.push('# TYPE process_memory_bytes gauge');
