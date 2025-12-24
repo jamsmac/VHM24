@@ -495,6 +495,100 @@ groups:
           description: "95th percentile task duration is {{ $value | humanizeDuration }} - above 2 hour threshold"
 
   # ==========================================================================
+  # Node.js Runtime Alerts (Railway Backend)
+  # ==========================================================================
+  - name: nodejs_runtime_alerts
+    interval: 30s
+    rules:
+      - alert: HighEventLoopLag
+        expr: vendhub_nodejs_eventloop_lag_seconds > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          component: api
+          deployment: railway
+        annotations:
+          summary: "High event loop lag detected"
+          description: "Event loop lag is {{ $value }}s - may indicate blocking operations"
+
+      - alert: CriticalEventLoopLag
+        expr: vendhub_nodejs_eventloop_lag_seconds > 0.5
+        for: 2m
+        labels:
+          severity: critical
+          component: api
+          deployment: railway
+        annotations:
+          summary: "Critical event loop lag"
+          description: "Event loop lag is {{ $value }}s - application is severely degraded"
+
+      - alert: ProcessRestarted
+        expr: changes(vendhub_process_start_time_seconds[10m]) > 0
+        for: 1m
+        labels:
+          severity: warning
+          component: api
+          deployment: railway
+        annotations:
+          summary: "Backend process restarted"
+          description: "Backend process has restarted - check for crashes or deployments"
+
+      - alert: FrequentRestarts
+        expr: changes(vendhub_process_start_time_seconds[1h]) > 3
+        for: 5m
+        labels:
+          severity: critical
+          component: api
+          deployment: railway
+        annotations:
+          summary: "Frequent process restarts detected"
+          description: "Backend has restarted {{ $value }} times in the last hour - investigate stability issues"
+
+      - alert: HighHeapUsage
+        expr: (vendhub_process_heap_bytes / 1024 / 1024) > 400
+        for: 10m
+        labels:
+          severity: warning
+          component: api
+          deployment: railway
+        annotations:
+          summary: "High heap memory usage"
+          description: "Heap usage is {{ $value | humanize }}MB - potential memory leak"
+
+      - alert: CriticalHeapUsage
+        expr: (vendhub_process_heap_bytes / 1024 / 1024) > 600
+        for: 5m
+        labels:
+          severity: critical
+          component: api
+          deployment: railway
+        annotations:
+          summary: "Critical heap memory - risk of OOM"
+          description: "Heap usage is {{ $value | humanize }}MB - approaching memory limit"
+
+      - alert: HighOpenFileDescriptors
+        expr: vendhub_process_open_fds / vendhub_process_max_fds > 0.8
+        for: 10m
+        labels:
+          severity: warning
+          component: api
+          deployment: railway
+        annotations:
+          summary: "High file descriptor usage"
+          description: "Using {{ $value | humanizePercentage }} of available file descriptors"
+
+      - alert: DatabaseConnectionPoolExhausted
+        expr: database_connections_active > 90
+        for: 5m
+        labels:
+          severity: critical
+          component: database
+          deployment: railway
+        annotations:
+          summary: "Database connection pool near exhaustion"
+          description: "Active connections: {{ $value }} - approaching pool limit"
+
+  # ==========================================================================
   # SLA/SLO Alerts
   # ==========================================================================
   - name: sla_alerts
