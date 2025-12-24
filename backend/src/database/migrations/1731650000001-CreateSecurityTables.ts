@@ -79,10 +79,31 @@ export class CreateSecurityTables1731650000001 implements MigrationInterface {
       END $$;
     `);
 
-    // Create audit_logs table
+    // Create audit_logs table - drop first if exists with wrong schema
+    // Check if table exists but is missing required columns
+    const auditLogsCheck = await queryRunner.query(`
+      SELECT EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = 'audit_logs'
+      ) as table_exists,
+      EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'audit_logs' AND column_name = 'entity_type'
+      ) as has_entity_type
+    `);
+
+    const tableExists = auditLogsCheck[0]?.table_exists || false;
+    const hasEntityType = auditLogsCheck[0]?.has_entity_type || false;
+
+    // If table exists but is missing entity_type column, drop and recreate
+    if (tableExists && !hasEntityType) {
+      console.log('audit_logs table exists but is missing entity_type column, recreating...');
+      await queryRunner.query(`DROP TABLE IF EXISTS audit_logs CASCADE`);
+    }
+
     await queryRunner.query(`
       CREATE TABLE IF NOT EXISTS audit_logs (
-        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         user_id UUID,
         user_email VARCHAR(200),
         action audit_action NOT NULL,
@@ -125,7 +146,7 @@ export class CreateSecurityTables1731650000001 implements MigrationInterface {
     // Create security_events table
     await queryRunner.query(`
       CREATE TABLE IF NOT EXISTS security_events (
-        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         user_id UUID,
         user_email VARCHAR(200),
         event_type security_event_type NOT NULL,
@@ -163,7 +184,7 @@ export class CreateSecurityTables1731650000001 implements MigrationInterface {
     // Create two_factor_auth table
     await queryRunner.query(`
       CREATE TABLE IF NOT EXISTS two_factor_auth (
-        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         user_id UUID UNIQUE NOT NULL,
         method two_factor_method NOT NULL,
         is_enabled BOOLEAN DEFAULT false,
@@ -191,7 +212,7 @@ export class CreateSecurityTables1731650000001 implements MigrationInterface {
     // Create session_logs table
     await queryRunner.query(`
       CREATE TABLE IF NOT EXISTS session_logs (
-        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         user_id UUID NOT NULL,
         session_id VARCHAR(100) UNIQUE NOT NULL,
         ip_address VARCHAR(100) NOT NULL,
@@ -230,7 +251,7 @@ export class CreateSecurityTables1731650000001 implements MigrationInterface {
     // Create data_encryption table
     await queryRunner.query(`
       CREATE TABLE IF NOT EXISTS data_encryption (
-        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         entity_type VARCHAR(100) NOT NULL,
         entity_id UUID NOT NULL,
         field_name VARCHAR(100) NOT NULL,
@@ -257,7 +278,7 @@ export class CreateSecurityTables1731650000001 implements MigrationInterface {
     // Create access_control_logs table
     await queryRunner.query(`
       CREATE TABLE IF NOT EXISTS access_control_logs (
-        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         user_id UUID NOT NULL,
         user_email VARCHAR(200) NOT NULL,
         resource_type VARCHAR(100) NOT NULL,
