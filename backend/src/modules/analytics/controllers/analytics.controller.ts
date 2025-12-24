@@ -5,10 +5,10 @@ import { AnalyticsCalculationService } from '../services/analytics-calculation.s
 import { AnalyticsQueryDto } from '../dto/analytics-query.dto';
 
 @ApiTags('analytics')
-@Controller('analytics')
+@Controller('analytics/realtime')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
-export class AnalyticsController {
+export class AnalyticsRealtimeController {
   constructor(private analyticsService: AnalyticsCalculationService) {}
 
   @Get('metrics')

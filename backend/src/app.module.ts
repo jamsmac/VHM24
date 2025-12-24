@@ -33,7 +33,7 @@ import { RoutesModule } from './modules/routes/routes.module';
 import { BillingModule } from './modules/billing/billing.module';
 import { RbacModule } from './modules/rbac/rbac.module';
 import { AccessRequestsModule } from './modules/access-requests/access-requests.module';
-// import { AuditLogModule } from './modules/audit-logs/audit-log.module';
+// AuditLogModule now imported above and registered in imports
 import { WarehouseModule } from './modules/warehouse/warehouse.module';
 import { HrModule } from './modules/hr/hr.module';
 import { IntegrationModule } from './modules/integration/integration.module';
@@ -61,6 +61,10 @@ import { SettingsModule } from './modules/settings/settings.module';
 import { OrganizationsModule } from './modules/organizations/organizations.module';
 import { PromoCodesModule } from './modules/promo-codes/promo-codes.module';
 import { FcmModule } from './modules/fcm/fcm.module';
+import { SmsModule } from './modules/sms/sms.module';
+import { MonitoringModule } from './modules/monitoring/monitoring.module';
+import { DataParserModule } from './modules/data-parser/data-parser.module';
+import { AuditLogModule } from './modules/audit-logs/audit-log.module';
 
 @Module({
   imports: [
@@ -205,7 +209,7 @@ import { FcmModule } from './modules/fcm/fcm.module';
     IntelligentImportModule, // Intelligent data import with AI assistance
     RbacModule,
     AccessRequestsModule,
-    //     AuditLogModule,
+    AuditLogModule, // Centralized audit logging (REQ-AUTH-80, REQ-AUTH-81)
     WarehouseModule,
     HrModule,
     IntegrationModule,
@@ -236,6 +240,11 @@ import { FcmModule } from './modules/fcm/fcm.module';
 
     // Promo codes and promotions system
     PromoCodesModule,
+
+    // Infrastructure modules
+    SmsModule, // SMS messaging via Twilio
+    MonitoringModule, // Prometheus metrics and performance monitoring
+    DataParserModule, // Data parsing for imports (Excel, CSV, JSON)
   ],
   controllers: [AppController],
   providers: [

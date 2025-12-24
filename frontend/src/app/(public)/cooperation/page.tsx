@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { clientApi } from '@/lib/client-api'
 import { CooperationRequest } from '@/types/client'
+import { getErrorMessage } from '@/types/common'
 
 export default function CooperationPage() {
   const [submitted, setSubmitted] = useState(false)
@@ -29,8 +30,8 @@ export default function CooperationPage() {
       setSubmitted(true)
       toast.success('Заявка отправлена!')
     },
-    onError: (error: any) => {
-      toast.error(error?.response?.data?.message || 'Ошибка при отправке заявки')
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error) || 'Ошибка при отправке заявки')
     },
   })
 

@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { machineAccessApi } from '@/lib/machine-access-api'
 import { ImportMachineAccessResult } from '@/types/machine-access'
+import { getErrorMessage } from '@/types/common'
 
 interface ImportAccessDialogProps {
   open: boolean
@@ -40,8 +41,8 @@ export function ImportAccessDialog({ open, onOpenChange }: ImportAccessDialogPro
         toast.warning(`${data.errors.length} ошибок при импорте`)
       }
     },
-    onError: (error: any) => {
-      toast.error(error?.response?.data?.message || 'Ошибка при импорте')
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error) || 'Ошибка при импорте')
     },
   })
 

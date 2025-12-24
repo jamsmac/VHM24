@@ -594,7 +594,7 @@ function NotificationsTab({
     }
     acc[pref.notification_type][pref.channel] = pref
     return acc
-  }, {} as Record<string, Record<string, any>>)
+  }, {} as Record<string, Record<string, NotificationPreference>>)
 
   if (isLoading) {
     return <LoadingSkeleton />

@@ -15,6 +15,7 @@ import {
 } from '@/components/machine-access'
 import { machineAccessApi } from '@/lib/machine-access-api'
 import { MachineAccess } from '@/types/machine-access'
+import { getErrorMessage } from '@/types/common'
 
 export default function MachineAccessPage() {
   const queryClient = useQueryClient()
@@ -35,8 +36,8 @@ export default function MachineAccessPage() {
       queryClient.invalidateQueries({ queryKey: ['machine-access'] })
       setDeletingAccess(null)
     },
-    onError: (error: any) => {
-      toast.error(error?.response?.data?.message || 'Ошибка при удалении')
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error) || 'Ошибка при удалении')
     },
   })
 
@@ -46,8 +47,8 @@ export default function MachineAccessPage() {
       toast.success(`Вы назначены владельцем для ${data.count} аппаратов`)
       queryClient.invalidateQueries({ queryKey: ['machine-access'] })
     },
-    onError: (error: any) => {
-      toast.error(error?.response?.data?.message || 'Ошибка при назначении')
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error) || 'Ошибка при назначении')
     },
   })
 

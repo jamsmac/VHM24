@@ -8,9 +8,19 @@ import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'ax
 import * as SecureStore from 'expo-secure-store';
 import { ApiResponse, AuthTokens, LoginCredentials } from '../types';
 
-const API_URL = __DEV__
-  ? 'http://localhost:3000/api/v1'
-  : 'https://your-domain.com/api/v1';
+import Constants from 'expo-constants';
+
+// Get API URL from app.config.js extra or fallback to defaults
+const getApiUrl = () => {
+  const configUrl = Constants.expoConfig?.extra?.apiUrl;
+  if (configUrl) return configUrl;
+
+  return __DEV__
+    ? 'http://localhost:3000/api/v1'
+    : 'https://vhm24-production.up.railway.app/api/v1';
+};
+
+const API_URL = getApiUrl();
 
 class ApiClient {
   private axiosInstance: AxiosInstance;

@@ -1,10 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { AnalyticsController } from './analytics.controller';
+import { AnalyticsRealtimeController } from './analytics.controller';
 import { AnalyticsCalculationService } from '../services/analytics-calculation.service';
 import { AnalyticsQueryDto, MetricType, GroupByType } from '../dto/analytics-query.dto';
 
-describe('AnalyticsController', () => {
-  let controller: AnalyticsController;
+describe('AnalyticsRealtimeController', () => {
+  let controller: AnalyticsRealtimeController;
   let mockAnalyticsService: jest.Mocked<AnalyticsCalculationService>;
 
   beforeEach(async () => {
@@ -16,7 +16,7 @@ describe('AnalyticsController', () => {
     } as any;
 
     const module: TestingModule = await Test.createTestingModule({
-      controllers: [AnalyticsController],
+      controllers: [AnalyticsRealtimeController],
       providers: [
         {
           provide: AnalyticsCalculationService,
@@ -25,7 +25,7 @@ describe('AnalyticsController', () => {
       ],
     }).compile();
 
-    controller = module.get<AnalyticsController>(AnalyticsController);
+    controller = module.get<AnalyticsRealtimeController>(AnalyticsRealtimeController);
   });
 
   afterEach(() => {

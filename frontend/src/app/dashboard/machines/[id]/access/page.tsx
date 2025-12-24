@@ -13,6 +13,7 @@ import { getColumns, AccessFormDialog } from '@/components/machine-access'
 import { machineAccessApi } from '@/lib/machine-access-api'
 import { machinesApi } from '@/lib/machines-api'
 import { MachineAccess } from '@/types/machine-access'
+import { getErrorMessage } from '@/types/common'
 
 interface MachineAccessPageProps {
   params: {
@@ -44,8 +45,8 @@ export default function MachineAccessPage({ params }: MachineAccessPageProps) {
       queryClient.invalidateQueries({ queryKey: ['machine-access'] })
       setDeletingAccess(null)
     },
-    onError: (error: any) => {
-      toast.error(error?.response?.data?.message || 'Ошибка при удалении')
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error) || 'Ошибка при удалении')
     },
   })
 

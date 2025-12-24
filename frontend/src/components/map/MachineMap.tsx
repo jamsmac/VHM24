@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { locationsApi, MapLocationData } from '@/lib/locations-api'
-import { MapPin, Package, AlertTriangle, AlertCircle, Loader2 } from 'lucide-react'
-import Link from 'next/link'
+import { MapPin, Loader2 } from 'lucide-react'
+import type { Map as LeafletMap, Marker as LeafletMarker } from 'leaflet'
 
 // Default center (Tashkent, Uzbekistan)
 const DEFAULT_CENTER: [number, number] = [41.2995, 69.2401]
@@ -102,8 +102,8 @@ function MapLegend() {
 
 export function MachineMap({ height = '500px', showLegend = true, onLocationClick }: MachineMapProps) {
   const mapRef = useRef<HTMLDivElement>(null)
-  const mapInstanceRef = useRef<any>(null)
-  const markersRef = useRef<any[]>([])
+  const mapInstanceRef = useRef<LeafletMap | null>(null)
+  const markersRef = useRef<LeafletMarker[]>([])
   const [isMapReady, setIsMapReady] = useState(false)
 
   const { data: locations, isLoading } = useQuery({
@@ -154,6 +154,7 @@ export function MachineMap({ height = '500px', showLegend = true, onLocationClic
     const updateMarkers = async () => {
       const L = (await import('leaflet')).default
       const map = mapInstanceRef.current
+      if (!map) return
 
       // Remove existing markers
       markersRef.current.forEach((marker) => marker.remove())

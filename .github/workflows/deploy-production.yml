@@ -48,10 +48,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
 
@@ -87,7 +87,12 @@ jobs:
           echo "Creating database backup before migration..."
           # Backup will be handled by deployment platform or external tool
           echo "Running migrations..."
-          npm run migration:run || echo "Migration failed - check logs"
+          npm run migration:run
+          if [ $? -ne 0 ]; then
+            echo "::error::Migration failed! Deployment aborted."
+            exit 1
+          fi
+          echo "Migrations completed successfully"
 
       # Placeholder for actual deployment steps
       - name: Deployment placeholder

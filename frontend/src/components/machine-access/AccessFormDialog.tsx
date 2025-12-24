@@ -28,6 +28,9 @@ import {
   machineAccessRoleLabels,
   CreateMachineAccessDto,
 } from '@/types/machine-access'
+import { getErrorMessage } from '@/types/common'
+import { Machine } from '@/types/machines'
+import { User } from '@/types/users'
 
 interface AccessFormDialogProps {
   open: boolean
@@ -88,8 +91,8 @@ export function AccessFormDialog({
       queryClient.invalidateQueries({ queryKey: ['machine-access'] })
       onOpenChange(false)
     },
-    onError: (error: any) => {
-      toast.error(error?.response?.data?.message || 'Ошибка при добавлении доступа')
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error) || 'Ошибка при добавлении доступа')
     },
   })
 
@@ -101,8 +104,8 @@ export function AccessFormDialog({
       queryClient.invalidateQueries({ queryKey: ['machine-access'] })
       onOpenChange(false)
     },
-    onError: (error: any) => {
-      toast.error(error?.response?.data?.message || 'Ошибка при изменении роли')
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error) || 'Ошибка при изменении роли')
     },
   })
 
@@ -141,7 +144,7 @@ export function AccessFormDialog({
                   <SelectValue placeholder="Выберите аппарат" />
                 </SelectTrigger>
                 <SelectContent>
-                  {machines?.map((machine: any) => (
+                  {machines?.map((machine: Machine) => (
                     <SelectItem key={machine.id} value={machine.id}>
                       {machine.machine_number} - {machine.name}
                     </SelectItem>
@@ -164,7 +167,7 @@ export function AccessFormDialog({
                   <SelectValue placeholder="Выберите пользователя" />
                 </SelectTrigger>
                 <SelectContent>
-                  {users?.map((user: any) => (
+                  {users?.map((user: User) => (
                     <SelectItem key={user.id} value={user.id}>
                       {user.full_name || user.username} ({user.email})
                     </SelectItem>
