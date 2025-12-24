@@ -1,17 +1,21 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import i18next, { TFunction } from 'i18next';
 import { format } from 'date-fns';
 import { TelegramLanguage } from '../entities/telegram-user.entity';
 
-// Import translations directly for reliability (avoids filesystem path issues)
+// Import translations directly for reliability (no external i18n library needed)
 import * as ruTranslations from '../locales/ru.json';
 import * as enTranslations from '../locales/en.json';
 import * as uzTranslations from '../locales/uz.json';
 
 /**
+ * Translation function type (compatible with i18next TFunction)
+ */
+export type TranslationFunction = (key: string, options?: Record<string, unknown>) => string;
+
+/**
  * i18n Service for Telegram Bot
  *
- * Provides multi-language support for bot messages using i18next.
+ * Provides multi-language support for bot messages using direct JSON translations.
  * Supports Russian, English, and Uzbek languages.
  *
  * **Usage:**
@@ -23,46 +27,16 @@ import * as uzTranslations from '../locales/uz.json';
 @Injectable()
 export class TelegramI18nService implements OnModuleInit {
   private readonly logger = new Logger(TelegramI18nService.name);
-  private isInitialized = false;
+
+  // Pre-loaded translations for fast lookup
+  private readonly translations: Record<string, Record<string, unknown>> = {
+    ru: ruTranslations as unknown as Record<string, unknown>,
+    en: enTranslations as unknown as Record<string, unknown>,
+    uz: uzTranslations as unknown as Record<string, unknown>,
+  };
 
   async onModuleInit() {
-    await this.initialize();
-  }
-
-  /**
-   * Initialize i18next with inline resources
-   */
-  private async initialize(): Promise<void> {
-    try {
-      await i18next.init({
-        lng: 'ru', // Default language
-        fallbackLng: 'ru', // Fallback if translation missing
-        supportedLngs: ['ru', 'en', 'uz'],
-
-        // Inline resources (more reliable than filesystem loading)
-        resources: {
-          ru: { translation: ruTranslations },
-          en: { translation: enTranslations },
-          uz: { translation: uzTranslations },
-        },
-
-        // Interpolation options
-        interpolation: {
-          escapeValue: false, // Not needed for Telegram (no XSS risk)
-        },
-
-        // Return key if translation missing (for debugging)
-        returnNull: false,
-        returnEmptyString: false,
-      });
-
-      this.isInitialized = true;
-      this.logger.log('i18next initialized successfully with languages: ru, en, uz');
-    } catch (error) {
-      this.logger.error('Failed to initialize i18next', error);
-      // Don't throw - allow service to work with fallback
-      this.isInitialized = false;
-    }
+    this.logger.log('i18n initialized with inline translations: ru, en, uz');
   }
 
   /**
@@ -84,34 +58,18 @@ export class TelegramI18nService implements OnModuleInit {
    * ```
    */
   t(language: TelegramLanguage | string, key: string, options?: Record<string, unknown>): string {
-    if (!this.isInitialized) {
-      // Return fallback from inline translations if not initialized
-      return this.getFallbackTranslation(language, key, options) || key;
-    }
-
-    try {
-      return i18next.t(key, { lng: language, ...options }) as string;
-    } catch (error) {
-      this.logger.error(`Translation error for key "${key}" in language "${language}"`, error);
-      return key; // Return key as fallback
-    }
+    return this.getTranslation(language, key, options) || key;
   }
 
   /**
-   * Get fallback translation directly from imported JSON
+   * Get translation directly from imported JSON
    */
-  private getFallbackTranslation(
+  private getTranslation(
     language: string,
     key: string,
     options?: Record<string, unknown>,
   ): string | null {
-    const translations: Record<string, Record<string, unknown>> = {
-      ru: ruTranslations as unknown as Record<string, unknown>,
-      en: enTranslations as unknown as Record<string, unknown>,
-      uz: uzTranslations as unknown as Record<string, unknown>,
-    };
-
-    const langTranslations = translations[language] || translations['ru'];
+    const langTranslations = this.translations[language] || this.translations['ru'];
 
     // Navigate nested keys (e.g., 'welcome.title')
     const keys = key.split('.');
@@ -121,6 +79,10 @@ export class TelegramI18nService implements OnModuleInit {
       if (value && typeof value === 'object' && k in value) {
         value = (value as Record<string, unknown>)[k];
       } else {
+        // Try fallback to Russian if key not found in requested language
+        if (language !== 'ru') {
+          return this.getTranslation('ru', key, options);
+        }
         return null;
       }
     }
@@ -129,7 +91,7 @@ export class TelegramI18nService implements OnModuleInit {
       return null;
     }
 
-    // Simple interpolation for fallback
+    // Interpolation support ({{variable}} syntax like i18next)
     if (options) {
       let result = value;
       for (const [optKey, optValue] of Object.entries(options)) {
@@ -156,15 +118,9 @@ export class TelegramI18nService implements OnModuleInit {
    * const description = t('welcome.description');
    * ```
    */
-  getFixedT(language: TelegramLanguage | string): TFunction {
-    if (!this.isInitialized) {
-      this.logger.warn('i18next not initialized yet, using fallback');
-      // Return fallback function
-      return ((key: string, options?: Record<string, unknown>) =>
-        this.t(language, key, options)) as unknown as TFunction;
-    }
-
-    return i18next.getFixedT(language);
+  getFixedT(language: TelegramLanguage | string): TranslationFunction {
+    return (key: string, options?: Record<string, unknown>) =>
+      this.t(language, key, options);
   }
 
   /**
@@ -175,11 +131,7 @@ export class TelegramI18nService implements OnModuleInit {
    * @returns True if key exists
    */
   exists(language: TelegramLanguage | string, key: string): boolean {
-    if (!this.isInitialized) {
-      return this.getFallbackTranslation(language, key) !== null;
-    }
-
-    return i18next.exists(key, { lng: language });
+    return this.getTranslation(language, key) !== null;
   }
 
   /**
