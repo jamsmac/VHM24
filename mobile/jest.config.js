@@ -4,7 +4,7 @@ module.exports = {
     '^.+\\.(ts|tsx)$': ['ts-jest', { useESM: false }],
   },
   transformIgnorePatterns: [
-    'node_modules/(?!(expo-secure-store|expo-notifications|expo-location|expo-camera|expo-image-manipulator|@react-native|react-native|@react-native-async-storage|@react-native-community)/)',
+    'node_modules/(?!(expo-secure-store|expo-notifications|expo-location|expo-camera|expo-image-manipulator|expo-constants|expo-modules-core|@react-native|react-native|@react-native-async-storage|@react-native-community)/)',
   ],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
   testMatch: ['**/__tests__/**/*.(test|spec).(ts|tsx|js|jsx)'],
@@ -26,6 +26,7 @@ module.exports = {
     '^@/(.*)$': '<rootDir>/src/$1',
     '^expo-secure-store$': '<rootDir>/__mocks__/expo-secure-store.js',
     '^expo-notifications$': '<rootDir>/__mocks__/expo-notifications.js',
+    '^expo-constants$': '<rootDir>/__mocks__/expo-constants.js',
   },
   testPathIgnorePatterns: ['/node_modules/'],
 };
