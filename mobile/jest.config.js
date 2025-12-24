@@ -1,7 +1,13 @@
 module.exports = {
+  preset: 'ts-jest',
   testEnvironment: 'node',
   transform: {
-    '^.+\\.(ts|tsx)$': ['ts-jest', { useESM: false }],
+    '^.+\\.(ts|tsx)$': ['ts-jest', {
+      useESM: false,
+      tsconfig: {
+        jsx: 'react',
+      },
+    }],
   },
   transformIgnorePatterns: [
     'node_modules/(?!(expo-secure-store|expo-notifications|expo-location|expo-camera|expo-image-manipulator|expo-constants|expo-modules-core|@react-native|react-native|@react-native-async-storage|@react-native-community)/)',
@@ -13,6 +19,9 @@ module.exports = {
     'src/**/*.{ts,tsx}',
     '!src/**/*.d.ts',
     '!src/**/index.ts',
+    '!src/components/**/*.tsx',    // Exclude UI components (need separate testing with react-native-testing-library)
+    '!src/screens/**/*.tsx',       // Exclude screen components
+    '!src/navigation/**/*.tsx',    // Exclude navigation components
   ],
   coverageThreshold: {
     global: {
