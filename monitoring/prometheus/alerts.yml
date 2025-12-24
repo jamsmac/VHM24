@@ -1,6 +1,7 @@
 # ============================================================================
 # Prometheus Alert Rules for VendHub Manager
 # ============================================================================
+# Comprehensive alerting for production monitoring
 
 groups:
   # ==========================================================================
@@ -10,7 +11,7 @@ groups:
     interval: 30s
     rules:
       - alert: BackendAPIDown
-        expr: up{job="vendhub-backend"} == 0
+        expr: up{job=~"vendhub-backend.*"} == 0
         for: 2m
         labels:
           severity: critical
@@ -18,9 +19,21 @@ groups:
         annotations:
           summary: "Backend API is down"
           description: "Backend API has been down for more than 2 minutes"
+          runbook_url: "https://docs.vendhub.com/runbooks/backend-down"
+
+      - alert: RailwayBackendUnreachable
+        expr: probe_success{job="blackbox-http", instance=~".*railway.*"} == 0
+        for: 3m
+        labels:
+          severity: critical
+          component: api
+          deployment: railway
+        annotations:
+          summary: "Railway backend is unreachable"
+          description: "Cannot reach the Railway-deployed backend at {{ $labels.instance }}"
 
       - alert: HighErrorRate
-        expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.05
+        expr: (sum(rate(vendhub_http_request_errors_total[5m])) / sum(rate(vendhub_http_requests_total[5m]))) > 0.05
         for: 5m
         labels:
           severity: warning
@@ -29,8 +42,18 @@ groups:
           summary: "High error rate detected"
           description: "Error rate is {{ $value | humanizePercentage }} over the last 5 minutes"
 
+      - alert: CriticalErrorRate
+        expr: (sum(rate(vendhub_http_request_errors_total[5m])) / sum(rate(vendhub_http_requests_total[5m]))) > 0.15
+        for: 2m
+        labels:
+          severity: critical
+          component: api
+        annotations:
+          summary: "Critical error rate - immediate attention required"
+          description: "Error rate is {{ $value | humanizePercentage }} - above 15% threshold"
+
       - alert: HighResponseTime
-        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 1
+        expr: histogram_quantile(0.95, rate(vendhub_http_request_duration_seconds_bucket[5m])) > 1
         for: 5m
         labels:
           severity: warning
@@ -39,8 +62,18 @@ groups:
           summary: "High response time detected"
           description: "95th percentile response time is {{ $value }}s"
 
+      - alert: CriticalResponseTime
+        expr: histogram_quantile(0.95, rate(vendhub_http_request_duration_seconds_bucket[5m])) > 5
+        for: 2m
+        labels:
+          severity: critical
+          component: api
+        annotations:
+          summary: "Critical response time - API severely degraded"
+          description: "95th percentile response time is {{ $value }}s - above 5s threshold"
+
       - alert: HighMemoryUsage
-        expr: process_resident_memory_bytes / 1024 / 1024 > 1500
+        expr: process_memory_bytes{type="rss"} / 1024 / 1024 > 1500
         for: 10m
         labels:
           severity: warning
@@ -48,6 +81,26 @@ groups:
         annotations:
           summary: "High memory usage"
           description: "Memory usage is {{ $value | humanize }}MB"
+
+      - alert: CriticalMemoryUsage
+        expr: process_memory_bytes{type="rss"} / 1024 / 1024 > 1800
+        for: 5m
+        labels:
+          severity: critical
+          component: api
+        annotations:
+          summary: "Critical memory usage - approaching limit"
+          description: "Memory usage is {{ $value | humanize }}MB - may cause OOM soon"
+
+      - alert: LowRequestRate
+        expr: sum(rate(vendhub_http_requests_total[5m])) < 0.1 and hour() >= 9 and hour() <= 21
+        for: 15m
+        labels:
+          severity: warning
+          component: api
+        annotations:
+          summary: "Unusually low request rate during business hours"
+          description: "Request rate is {{ $value }}/s - check if system is accessible"
 
   # ==========================================================================
   # Worker Alerts
@@ -66,7 +119,7 @@ groups:
           description: "Worker has been down for more than 2 minutes"
 
       - alert: HighJobFailureRate
-        expr: rate(bullmq_job_failed_total[10m]) > 0.1
+        expr: (rate(bullmq_queue_failed[10m]) / (rate(bullmq_queue_completed[10m]) + rate(bullmq_queue_failed[10m]))) > 0.1
         for: 10m
         labels:
           severity: warning
@@ -76,14 +129,34 @@ groups:
           description: "Job failure rate is {{ $value | humanizePercentage }}"
 
       - alert: QueueBacklog
-        expr: bullmq_queue_waiting > 1000
+        expr: sum(bullmq_queue_waiting) > 500
         for: 15m
         labels:
           severity: warning
           component: worker
         annotations:
           summary: "High queue backlog"
-          description: "Queue has {{ $value }} waiting jobs"
+          description: "Queue has {{ $value }} waiting jobs - processing may be delayed"
+
+      - alert: CriticalQueueBacklog
+        expr: sum(bullmq_queue_waiting) > 1000
+        for: 10m
+        labels:
+          severity: critical
+          component: worker
+        annotations:
+          summary: "Critical queue backlog"
+          description: "Queue has {{ $value }} waiting jobs - immediate investigation required"
+
+      - alert: StalledJobs
+        expr: sum(bullmq_queue_active) > 0 and increase(bullmq_queue_completed[10m]) == 0
+        for: 15m
+        labels:
+          severity: warning
+          component: worker
+        annotations:
+          summary: "Jobs appear to be stalled"
+          description: "Active jobs present but no completions in 15 minutes"
 
   # ==========================================================================
   # Database Alerts
@@ -102,7 +175,7 @@ groups:
           description: "PostgreSQL database has been down for more than 1 minute"
 
       - alert: HighDatabaseConnections
-        expr: pg_stat_database_numbackends > 80
+        expr: pg_stat_database_numbackends{datname="vendhub"} > 80
         for: 5m
         labels:
           severity: warning
@@ -111,15 +184,55 @@ groups:
           summary: "High number of database connections"
           description: "Database has {{ $value }} active connections"
 
-      - alert: DatabaseDiskSpaceLow
-        expr: pg_database_size_bytes / (1024*1024*1024) > 50
+      - alert: CriticalDatabaseConnections
+        expr: pg_stat_database_numbackends{datname="vendhub"} > 95
+        for: 2m
+        labels:
+          severity: critical
+          component: database
+        annotations:
+          summary: "Critical database connection count"
+          description: "Database has {{ $value }} connections - approaching limit"
+
+      - alert: DatabaseDiskSpaceWarning
+        expr: pg_database_size_bytes{datname="vendhub"} / (1024*1024*1024) > 30
         for: 10m
         labels:
           severity: warning
           component: database
         annotations:
-          summary: "Database disk space running low"
+          summary: "Database disk space growing"
           description: "Database size is {{ $value | humanize }}GB"
+
+      - alert: DatabaseDiskSpaceCritical
+        expr: pg_database_size_bytes{datname="vendhub"} / (1024*1024*1024) > 50
+        for: 10m
+        labels:
+          severity: critical
+          component: database
+        annotations:
+          summary: "Database disk space critical"
+          description: "Database size is {{ $value | humanize }}GB - cleanup required"
+
+      - alert: HighDatabaseRollbackRate
+        expr: rate(pg_stat_database_xact_rollback{datname="vendhub"}[5m]) / (rate(pg_stat_database_xact_commit{datname="vendhub"}[5m]) + rate(pg_stat_database_xact_rollback{datname="vendhub"}[5m])) > 0.05
+        for: 10m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "High database rollback rate"
+          description: "Rollback rate is {{ $value | humanizePercentage }} - check for deadlocks or constraint violations"
+
+      - alert: SlowDatabaseQueries
+        expr: histogram_quantile(0.95, sum(rate(vendhub_database_query_duration_seconds_bucket[5m])) by (le)) > 1
+        for: 10m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "Slow database queries detected"
+          description: "P95 query duration is {{ $value }}s"
 
   # ==========================================================================
   # Redis Alerts
@@ -138,7 +251,7 @@ groups:
           description: "Redis has been down for more than 1 minute"
 
       - alert: RedisHighMemoryUsage
-        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.9
+        expr: (redis_memory_used_bytes / redis_memory_max_bytes) > 0.8
         for: 5m
         labels:
           severity: warning
@@ -146,6 +259,36 @@ groups:
         annotations:
           summary: "Redis memory usage is high"
           description: "Redis memory usage is {{ $value | humanizePercentage }}"
+
+      - alert: RedisCriticalMemoryUsage
+        expr: (redis_memory_used_bytes / redis_memory_max_bytes) > 0.95
+        for: 2m
+        labels:
+          severity: critical
+          component: cache
+        annotations:
+          summary: "Redis memory critically high"
+          description: "Redis memory usage is {{ $value | humanizePercentage }} - eviction imminent"
+
+      - alert: RedisHighLatency
+        expr: redis_commands_duration_seconds_total / redis_commands_total > 0.01
+        for: 5m
+        labels:
+          severity: warning
+          component: cache
+        annotations:
+          summary: "Redis latency is high"
+          description: "Average command latency is {{ $value }}s"
+
+      - alert: LowCacheHitRate
+        expr: (sum(rate(vendhub_cache_hits_total[5m])) / (sum(rate(vendhub_cache_hits_total[5m])) + sum(rate(vendhub_cache_misses_total[5m])))) < 0.5
+        for: 15m
+        labels:
+          severity: warning
+          component: cache
+        annotations:
+          summary: "Low cache hit rate"
+          description: "Cache hit rate is {{ $value | humanizePercentage }} - cache may be ineffective"
 
   # ==========================================================================
   # Storage Alerts
@@ -163,6 +306,72 @@ groups:
           summary: "MinIO is down"
           description: "MinIO storage has been down for more than 2 minutes"
 
+      - alert: MinIODiskSpaceWarning
+        expr: ((minio_cluster_capacity_usable_total_bytes - minio_cluster_capacity_usable_free_bytes) / minio_cluster_capacity_usable_total_bytes) > 0.7
+        for: 10m
+        labels:
+          severity: warning
+          component: storage
+        annotations:
+          summary: "MinIO disk space growing"
+          description: "MinIO disk usage is {{ $value | humanizePercentage }}"
+
+      - alert: MinIODiskSpaceCritical
+        expr: ((minio_cluster_capacity_usable_total_bytes - minio_cluster_capacity_usable_free_bytes) / minio_cluster_capacity_usable_total_bytes) > 0.9
+        for: 5m
+        labels:
+          severity: critical
+          component: storage
+        annotations:
+          summary: "MinIO disk space critical"
+          description: "MinIO disk usage is {{ $value | humanizePercentage }}"
+
+  # ==========================================================================
+  # Infrastructure Alerts
+  # ==========================================================================
+  - name: infrastructure_alerts
+    interval: 30s
+    rules:
+      - alert: HighHostCPU
+        expr: 100 - (avg(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 10m
+        labels:
+          severity: warning
+          component: host
+        annotations:
+          summary: "High host CPU usage"
+          description: "Host CPU usage is {{ $value | humanize }}%"
+
+      - alert: HighHostMemory
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 85
+        for: 10m
+        labels:
+          severity: warning
+          component: host
+        annotations:
+          summary: "High host memory usage"
+          description: "Host memory usage is {{ $value | humanize }}%"
+
+      - alert: HighDiskUsage
+        expr: (1 - (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"})) * 100 > 80
+        for: 10m
+        labels:
+          severity: warning
+          component: host
+        annotations:
+          summary: "High disk usage"
+          description: "Disk usage is {{ $value | humanize }}%"
+
+      - alert: CriticalDiskUsage
+        expr: (1 - (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"})) * 100 > 90
+        for: 5m
+        labels:
+          severity: critical
+          component: host
+        annotations:
+          summary: "Critical disk usage"
+          description: "Disk usage is {{ $value | humanize }}% - immediate cleanup required"
+
   # ==========================================================================
   # Security Alerts
   # ==========================================================================
@@ -177,7 +386,7 @@ groups:
           component: security
         annotations:
           summary: "High login failure rate detected"
-          description: "Login failure rate is {{ $value | humanizePercentage }} - possible brute force attack"
+          description: "Login failure rate is {{ $value }}/s - possible brute force attack"
 
       - alert: RateLimitExceeded
         expr: increase(vendhub_http_request_errors_total{status="429"}[5m]) > 100
@@ -219,6 +428,16 @@ groups:
           summary: "High token refresh failures"
           description: "Token refresh failure rate is {{ $value }}/s - possible token theft"
 
+      - alert: Excessive2FAFailures
+        expr: increase(vendhub_2fa_authentications_total{result="failure"}[1h]) > 20
+        for: 5m
+        labels:
+          severity: warning
+          component: security
+        annotations:
+          summary: "Excessive 2FA failures"
+          description: "{{ $value }} 2FA failures in the last hour - possible attack"
+
   # ==========================================================================
   # Business Alerts
   # ==========================================================================
@@ -256,7 +475,7 @@ groups:
           description: "{{ $value }} urgent tasks have not been completed in 4 hours"
 
       - alert: InventoryMovementAnomaly
-        expr: rate(vendhub_inventory_movements_total[1h]) == 0
+        expr: rate(vendhub_inventory_movements_total[1h]) == 0 and hour() >= 9 and hour() <= 18
         for: 4h
         labels:
           severity: warning
@@ -274,3 +493,39 @@ groups:
         annotations:
           summary: "Task processing delayed"
           description: "95th percentile task duration is {{ $value | humanizeDuration }} - above 2 hour threshold"
+
+  # ==========================================================================
+  # SLA/SLO Alerts
+  # ==========================================================================
+  - name: sla_alerts
+    interval: 60s
+    rules:
+      - alert: SLOViolation_Availability
+        expr: (1 - avg_over_time(up{job=~"vendhub-backend.*"}[1h])) > 0.01
+        for: 5m
+        labels:
+          severity: critical
+          component: slo
+        annotations:
+          summary: "SLO Violation: Availability below 99%"
+          description: "System availability is {{ $value | humanizePercentage }} below target"
+
+      - alert: SLOViolation_Latency
+        expr: histogram_quantile(0.99, sum(rate(vendhub_http_request_duration_seconds_bucket[1h])) by (le)) > 2
+        for: 10m
+        labels:
+          severity: warning
+          component: slo
+        annotations:
+          summary: "SLO Violation: P99 latency above 2s"
+          description: "P99 latency is {{ $value }}s - above 2s SLO target"
+
+      - alert: SLOViolation_ErrorBudget
+        expr: sum(increase(vendhub_http_request_errors_total[24h])) / sum(increase(vendhub_http_requests_total[24h])) > 0.01
+        for: 30m
+        labels:
+          severity: warning
+          component: slo
+        annotations:
+          summary: "SLO Violation: Error budget consumption high"
+          description: "Daily error rate is {{ $value | humanizePercentage }} - consuming error budget"

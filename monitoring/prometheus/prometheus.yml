@@ -1,6 +1,7 @@
 # ============================================================================
 # Prometheus Configuration for VendHub Manager
 # ============================================================================
+# Supports both local Docker deployment and Railway cloud deployment
 
 global:
   scrape_interval: 15s
@@ -35,7 +36,7 @@ scrape_configs:
           service: 'prometheus'
 
   # ==========================================================================
-  # Backend API metrics
+  # Backend API metrics - Local Docker deployment
   # ==========================================================================
   - job_name: 'vendhub-backend'
     metrics_path: '/metrics'
@@ -44,10 +45,32 @@ scrape_configs:
         labels:
           service: 'backend-api'
           component: 'api'
+          deployment: 'docker'
     relabel_configs:
       - source_labels: [__address__]
         target_label: instance
         replacement: 'backend-api'
+
+  # ==========================================================================
+  # Backend API metrics - Railway Cloud deployment
+  # ==========================================================================
+  - job_name: 'vendhub-backend-railway'
+    metrics_path: '/metrics'
+    scheme: https
+    static_configs:
+      - targets: ['vhm24-production.up.railway.app']
+        labels:
+          service: 'backend-api'
+          component: 'api'
+          deployment: 'railway'
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'backend-api-railway'
+    # Add bearer token if metrics endpoint is protected
+    # authorization:
+    #   type: Bearer
+    #   credentials_file: /etc/prometheus/railway_token
 
   # ==========================================================================
   # Commission Worker metrics
@@ -162,3 +185,24 @@ scrape_configs:
         labels:
           service: 'alertmanager'
           component: 'monitoring'
+
+  # ==========================================================================
+  # Blackbox Exporter - Endpoint probes
+  # ==========================================================================
+  - job_name: 'blackbox-http'
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets:
+          - https://vhm24-production.up.railway.app/health/live
+          - https://vhm24-production.up.railway.app/health/ready
+        labels:
+          probe_type: 'health'
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
