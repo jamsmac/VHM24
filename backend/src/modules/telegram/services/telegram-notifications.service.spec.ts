@@ -309,4 +309,309 @@ describe('TelegramNotificationsService', () => {
       );
     });
   });
+
+  describe('sendNotification edge cases', () => {
+    it('should handle error when getting settings fails', async () => {
+      telegramSettingsService.getSettings.mockRejectedValue(new Error('DB error'));
+
+      await service.sendNotification({
+        userId: 'user-uuid',
+        type: 'task_assigned',
+        title: 'Test',
+        message: 'Test',
+      });
+
+      // Should not throw and not send
+      expect(resilientApi.sendText).not.toHaveBeenCalled();
+    });
+
+    it('should return empty users when no targeting specified', async () => {
+      // Payload with no userId, userIds, or broadcast
+      await service.sendNotification({
+        type: 'custom',
+        title: 'Test',
+        message: 'Test',
+      });
+
+      expect(resilientApi.sendText).not.toHaveBeenCalled();
+    });
+
+    it('should send notification for unknown notification type', async () => {
+      telegramUserRepository.findOne.mockResolvedValue(mockTelegramUser as TelegramUser);
+      messageLogRepository.create.mockReturnValue({} as TelegramMessageLog);
+      messageLogRepository.save.mockResolvedValue({} as TelegramMessageLog);
+
+      await service.sendNotification({
+        userId: 'user-uuid',
+        type: 'unknown_type_xyz',
+        title: 'Unknown',
+        message: 'Test',
+      });
+
+      expect(resilientApi.sendText).toHaveBeenCalled();
+    });
+
+    it('should build keyboard with callback_data action', async () => {
+      telegramUserRepository.findOne.mockResolvedValue(mockTelegramUser as TelegramUser);
+      messageLogRepository.create.mockReturnValue({} as TelegramMessageLog);
+      messageLogRepository.save.mockResolvedValue({} as TelegramMessageLog);
+
+      await service.sendNotification({
+        userId: 'user-uuid',
+        type: 'task_assigned',
+        title: 'Test',
+        message: 'Test',
+        actions: [{ text: 'Action', callback_data: 'action_data' }],
+      });
+
+      expect(resilientApi.sendText).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.any(String),
+        expect.objectContaining({
+          reply_markup: expect.any(Object),
+        }),
+        expect.any(Object),
+      );
+    });
+
+    it('should filter out invalid actions without url or callback_data', async () => {
+      telegramUserRepository.findOne.mockResolvedValue(mockTelegramUser as TelegramUser);
+      messageLogRepository.create.mockReturnValue({} as TelegramMessageLog);
+      messageLogRepository.save.mockResolvedValue({} as TelegramMessageLog);
+
+      await service.sendNotification({
+        userId: 'user-uuid',
+        type: 'task_assigned',
+        title: 'Test',
+        message: 'Test',
+        actions: [{ text: 'Invalid Action' }], // No url or callback_data
+      });
+
+      // Should send without keyboard
+      expect(resilientApi.sendText).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.any(String),
+        expect.objectContaining({
+          parse_mode: 'HTML',
+        }),
+        expect.any(Object),
+      );
+    });
+
+    it('should handle log failure gracefully', async () => {
+      telegramUserRepository.findOne.mockResolvedValue(mockTelegramUser as TelegramUser);
+      messageLogRepository.create.mockReturnValue({} as TelegramMessageLog);
+      messageLogRepository.save.mockRejectedValue(new Error('DB error'));
+
+      // Should not throw
+      await service.sendNotification({
+        userId: 'user-uuid',
+        type: 'task_assigned',
+        title: 'Test',
+        message: 'Test',
+      });
+
+      expect(resilientApi.sendText).toHaveBeenCalled();
+    });
+
+    it('should handle user with null notification_preferences', async () => {
+      const userWithNullPrefs = {
+        ...mockTelegramUser,
+        notification_preferences: null,
+      };
+      telegramUserRepository.findOne.mockResolvedValue(userWithNullPrefs as unknown as TelegramUser);
+      messageLogRepository.create.mockReturnValue({} as TelegramMessageLog);
+      messageLogRepository.save.mockResolvedValue({} as TelegramMessageLog);
+
+      await service.sendNotification({
+        userId: 'user-uuid',
+        type: 'task_assigned',
+        title: 'Test',
+        message: 'Test',
+      });
+
+      // Should send (defaults to true when prefs are null)
+      expect(resilientApi.sendText).toHaveBeenCalled();
+    });
+
+    it('should handle empty data object', async () => {
+      telegramUserRepository.findOne.mockResolvedValue(mockTelegramUser as TelegramUser);
+      messageLogRepository.create.mockReturnValue({} as TelegramMessageLog);
+      messageLogRepository.save.mockResolvedValue({} as TelegramMessageLog);
+
+      await service.sendNotification({
+        userId: 'user-uuid',
+        type: 'task_assigned',
+        title: 'Test',
+        message: 'Test',
+        data: {}, // Empty data object
+      });
+
+      expect(resilientApi.sendText).toHaveBeenCalled();
+    });
+  });
+
+  describe('sendDirectNotification', () => {
+    it('should send direct notification when bot is ready', async () => {
+      const result = await service.sendDirectNotification(123456789, 'Test message');
+
+      expect(result).toBe(true);
+      expect(resilientApi.sendText).toHaveBeenCalledWith(
+        '123456789',
+        'Test message',
+        { parse_mode: 'Markdown' },
+        expect.objectContaining({ priority: 1, attempts: 3 }),
+      );
+    });
+
+    it('should return false when bot is not ready', async () => {
+      telegramBotService.isReady.mockReturnValue(false);
+
+      const result = await service.sendDirectNotification(123456789, 'Test message');
+
+      expect(result).toBe(false);
+      expect(resilientApi.sendText).not.toHaveBeenCalled();
+    });
+
+    it('should return false when sending fails', async () => {
+      resilientApi.sendText.mockRejectedValue(new Error('Network error'));
+
+      const result = await service.sendDirectNotification(123456789, 'Test message');
+
+      expect(result).toBe(false);
+    });
+  });
+
+  describe('notifyTaskAssignedWithTask', () => {
+    const mockTask = {
+      id: 'task-uuid',
+      type_code: 'refill',
+      priority: 'high',
+      due_date: new Date('2025-12-25'),
+      machine: { machine_number: 'M-001' },
+    };
+
+    it('should send task assigned notification with task details', async () => {
+      const result = await service.notifyTaskAssignedWithTask(mockTask as any, 123456789);
+
+      expect(result).toBe(true);
+      expect(resilientApi.sendText).toHaveBeenCalledWith(
+        '123456789',
+        expect.stringContaining('Новая задача назначена'),
+        expect.any(Object),
+        expect.any(Object),
+      );
+    });
+
+    it('should handle task without due_date', async () => {
+      const taskNoDue = { ...mockTask, due_date: null };
+
+      await service.notifyTaskAssignedWithTask(taskNoDue as any, 123456789);
+
+      expect(resilientApi.sendText).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.stringContaining('Не указан'),
+        expect.any(Object),
+        expect.any(Object),
+      );
+    });
+
+    it('should handle task without machine', async () => {
+      const taskNoMachine = { ...mockTask, machine: null };
+
+      await service.notifyTaskAssignedWithTask(taskNoMachine as any, 123456789);
+
+      expect(resilientApi.sendText).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.stringContaining('N/A'),
+        expect.any(Object),
+        expect.any(Object),
+      );
+    });
+  });
+
+  describe('notifyTaskOverdue', () => {
+    const mockTask = {
+      id: 'task-uuid',
+      type_code: 'refill',
+      machine: { machine_number: 'M-001' },
+    };
+
+    it('should send task overdue notification', async () => {
+      const result = await service.notifyTaskOverdue(mockTask as any, 123456789, 5);
+
+      expect(result).toBe(true);
+      expect(resilientApi.sendText).toHaveBeenCalledWith(
+        '123456789',
+        expect.stringContaining('Задача просрочена'),
+        expect.any(Object),
+        expect.any(Object),
+      );
+      expect(resilientApi.sendText).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.stringContaining('5 часов'),
+        expect.any(Object),
+        expect.any(Object),
+      );
+    });
+
+    it('should handle task without machine in overdue notification', async () => {
+      const taskNoMachine = { ...mockTask, machine: null };
+
+      await service.notifyTaskOverdue(taskNoMachine as any, 123456789, 3);
+
+      expect(resilientApi.sendText).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.stringContaining('N/A'),
+        expect.any(Object),
+        expect.any(Object),
+      );
+    });
+  });
+
+  describe('getPriorityEmoji (via notifyTaskAssignedWithTask)', () => {
+    it('should show correct emoji for low priority', async () => {
+      const task = { id: 't', type_code: 'refill', priority: 'low', machine: { machine_number: 'M' } };
+      await service.notifyTaskAssignedWithTask(task as any, 123);
+      expect(resilientApi.sendText).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.stringContaining('🟢'),
+        expect.any(Object),
+        expect.any(Object),
+      );
+    });
+
+    it('should show correct emoji for normal priority', async () => {
+      const task = { id: 't', type_code: 'refill', priority: 'normal', machine: { machine_number: 'M' } };
+      await service.notifyTaskAssignedWithTask(task as any, 123);
+      expect(resilientApi.sendText).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.stringContaining('🟡'),
+        expect.any(Object),
+        expect.any(Object),
+      );
+    });
+
+    it('should show correct emoji for urgent priority', async () => {
+      const task = { id: 't', type_code: 'refill', priority: 'urgent', machine: { machine_number: 'M' } };
+      await service.notifyTaskAssignedWithTask(task as any, 123);
+      expect(resilientApi.sendText).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.stringContaining('🔴'),
+        expect.any(Object),
+        expect.any(Object),
+      );
+    });
+
+    it('should show default emoji for unknown priority', async () => {
+      const task = { id: 't', type_code: 'refill', priority: 'unknown', machine: { machine_number: 'M' } };
+      await service.notifyTaskAssignedWithTask(task as any, 123);
+      expect(resilientApi.sendText).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.stringContaining('⚪'),
+        expect.any(Object),
+        expect.any(Object),
+      );
+    });
+  });
 });

@@ -261,6 +261,32 @@ describe('TelegramManagerToolsService', () => {
       expect(result[0].name).toBe('Operator B'); // Fewer tasks first
       expect(result[1].name).toBe('Operator A');
     });
+
+    it('should sort operators by name when task count is equal', async () => {
+      userRepository.findOne.mockResolvedValue(mockManager as User);
+      const operator1 = {
+        ...mockTelegramUser,
+        user_id: 'op1',
+        user: { ...mockOperator, id: 'op1', full_name: 'Zeta' },
+      };
+      const operator2 = {
+        ...mockTelegramUser,
+        user_id: 'op2',
+        user: { ...mockOperator, id: 'op2', full_name: 'Alpha' },
+      };
+      telegramUserRepository.find.mockResolvedValue([
+        operator1 as unknown as TelegramUser,
+        operator2 as unknown as TelegramUser,
+      ]);
+      taskRepository.count
+        .mockResolvedValueOnce(2) // op1 has 2 tasks
+        .mockResolvedValueOnce(2); // op2 has 2 tasks - same count
+
+      const result = await service.getAvailableOperators('manager-id');
+
+      expect(result[0].name).toBe('Alpha'); // Alphabetically first
+      expect(result[1].name).toBe('Zeta');
+    });
   });
 
   describe('getUnassignedTasks', () => {
@@ -341,6 +367,17 @@ describe('TelegramManagerToolsService', () => {
       expect(result.notificationSent).toBe(false);
       expect(result.error).toBe('Operator does not have Telegram linked');
     });
+
+    it('should return error when task returns null from service', async () => {
+      userRepository.findOne.mockResolvedValue(mockManager as User);
+      tasksService.findOne.mockResolvedValue(null as unknown as Task);
+
+      const result = await service.assignTask('manager-id', 'task-id', 'operator-id');
+
+      expect(result.success).toBe(false);
+      expect(result.notificationSent).toBe(false);
+      expect(result.error).toBe('Task not found');
+    });
   });
 
   describe('broadcastMessage', () => {
@@ -389,6 +426,57 @@ describe('TelegramManagerToolsService', () => {
         expect.objectContaining({ priority: 2 }),
       );
     });
+
+    it('should send to specific operators when operatorIds provided', async () => {
+      userRepository.findOne.mockResolvedValue(mockManager as User);
+      telegramUserRepository.find.mockResolvedValue([mockTelegramUser as TelegramUser]);
+
+      const result = await service.broadcastMessage('manager-id', 'Test message', {
+        operatorIds: ['operator-id'],
+      });
+
+      expect(result.sent).toBe(1);
+      expect(telegramUserRepository.find).toHaveBeenCalledWith({
+        where: {
+          user_id: expect.anything(),
+          is_verified: true,
+          status: TelegramUserStatus.ACTIVE,
+        },
+      });
+    });
+
+    it('should filter by roles when roles option provided', async () => {
+      userRepository.findOne.mockResolvedValue(mockManager as User);
+      telegramUserRepository.find.mockResolvedValue([
+        { ...mockTelegramUser, user: mockOperator } as unknown as TelegramUser,
+        { ...mockTelegramUser, user: mockManager, user_id: 'manager-id-2' } as unknown as TelegramUser,
+      ]);
+
+      const result = await service.broadcastMessage('manager-id', 'Test message', {
+        roles: [UserRole.MANAGER],
+      });
+
+      expect(result.sent).toBe(1); // Only manager gets the message
+    });
+
+    it('should skip recipients without chat_id', async () => {
+      userRepository.findOne.mockResolvedValue(mockManager as User);
+      const noChatIdUser = { ...mockTelegramUser, chat_id: null };
+      telegramUserRepository.find.mockResolvedValue([noChatIdUser as unknown as TelegramUser]);
+
+      const result = await service.broadcastMessage('manager-id', 'Test message');
+
+      expect(result.sent).toBe(0);
+      expect(result.failed).toBe(1);
+      expect(result.failedRecipients).toContain('operator-id');
+      expect(resilientApi.sendText).not.toHaveBeenCalled();
+    });
+
+    it('should throw error when broadcastMessage encounters exception', async () => {
+      userRepository.findOne.mockRejectedValue(new Error('Database error'));
+
+      await expect(service.broadcastMessage('manager-id', 'Test')).rejects.toThrow('Database error');
+    });
   });
 
   describe('getTeamAnalytics', () => {
@@ -435,6 +523,116 @@ describe('TelegramManagerToolsService', () => {
       const result = await service.getTeamAnalytics('manager-id', 'today');
 
       expect(result.avgCompletionTimeMinutes).toBe(60);
+    });
+
+    it('should return analytics for week period', async () => {
+      userRepository.findOne.mockResolvedValue(mockManager as User);
+      taskRepository.find.mockResolvedValue([]);
+      taskRepository.count.mockResolvedValue(0);
+      telegramUserRepository.count.mockResolvedValue(0);
+
+      const result = await service.getTeamAnalytics('manager-id', 'week');
+
+      expect(result.tasksCompleted).toBe(0);
+    });
+
+    it('should return analytics for month period', async () => {
+      userRepository.findOne.mockResolvedValue(mockManager as User);
+      taskRepository.find.mockResolvedValue([]);
+      taskRepository.count.mockResolvedValue(0);
+      telegramUserRepository.count.mockResolvedValue(0);
+
+      const result = await service.getTeamAnalytics('manager-id', 'month');
+
+      expect(result.tasksCompleted).toBe(0);
+    });
+
+    it('should skip tasks without started_at in avg completion time', async () => {
+      userRepository.findOne.mockResolvedValue(mockManager as User);
+      taskRepository.find.mockResolvedValue([
+        {
+          ...mockTask,
+          status: TaskStatus.COMPLETED,
+          completed_at: new Date(),
+          started_at: null, // No started_at
+        } as Task,
+      ]);
+      taskRepository.count.mockResolvedValue(0);
+      telegramUserRepository.count.mockResolvedValue(0);
+
+      const result = await service.getTeamAnalytics('manager-id', 'today');
+
+      expect(result.avgCompletionTimeMinutes).toBe(0); // Skipped, so avg is 0
+    });
+
+    it('should increment count for existing performers', async () => {
+      userRepository.findOne.mockResolvedValue(mockManager as User);
+      const operator1 = { ...mockOperator, id: 'op1', full_name: 'Operator 1' };
+      taskRepository.find.mockResolvedValue([
+        {
+          ...mockTask,
+          id: 'task-1',
+          status: TaskStatus.COMPLETED,
+          completed_at: new Date(),
+          assigned_to: operator1,
+          assigned_to_user_id: 'op1',
+        } as Task,
+        {
+          ...mockTask,
+          id: 'task-2',
+          status: TaskStatus.COMPLETED,
+          completed_at: new Date(),
+          assigned_to: operator1,
+          assigned_to_user_id: 'op1',
+        } as Task,
+      ]);
+      taskRepository.count.mockResolvedValue(0);
+      telegramUserRepository.count.mockResolvedValue(0);
+
+      const result = await service.getTeamAnalytics('manager-id', 'today');
+
+      expect(result.topPerformers).toHaveLength(1);
+      expect(result.topPerformers[0].tasksCompleted).toBe(2);
+    });
+
+    it('should sort top performers by tasks completed', async () => {
+      userRepository.findOne.mockResolvedValue(mockManager as User);
+      const operator1 = { ...mockOperator, id: 'op1', full_name: 'Low Performer' };
+      const operator2 = { ...mockOperator, id: 'op2', full_name: 'High Performer' };
+      taskRepository.find.mockResolvedValue([
+        {
+          ...mockTask,
+          id: 'task-1',
+          status: TaskStatus.COMPLETED,
+          completed_at: new Date(),
+          assigned_to: operator1,
+          assigned_to_user_id: 'op1',
+        } as Task,
+        {
+          ...mockTask,
+          id: 'task-2',
+          status: TaskStatus.COMPLETED,
+          completed_at: new Date(),
+          assigned_to: operator2,
+          assigned_to_user_id: 'op2',
+        } as Task,
+        {
+          ...mockTask,
+          id: 'task-3',
+          status: TaskStatus.COMPLETED,
+          completed_at: new Date(),
+          assigned_to: operator2,
+          assigned_to_user_id: 'op2',
+        } as Task,
+      ]);
+      taskRepository.count.mockResolvedValue(0);
+      telegramUserRepository.count.mockResolvedValue(0);
+
+      const result = await service.getTeamAnalytics('manager-id', 'today');
+
+      expect(result.topPerformers).toHaveLength(2);
+      expect(result.topPerformers[0].name).toBe('High Performer'); // 2 tasks
+      expect(result.topPerformers[1].name).toBe('Low Performer');  // 1 task
     });
   });
 
@@ -506,6 +704,74 @@ describe('TelegramManagerToolsService', () => {
       expect(result[0].photosCount).toBe(2);
       expect(result[0].requiresReview).toBe(true);
     });
+
+    it('should sort tasks with requiresReview first', async () => {
+      userRepository.findOne.mockResolvedValue(mockManager as User);
+      const now = new Date();
+      const earlier = new Date(now.getTime() - 60000);
+      taskRepository.find.mockResolvedValue([
+        {
+          ...mockTask,
+          id: 'task-no-review',
+          status: TaskStatus.COMPLETED,
+          completed_at: now,
+          pending_photos: false,
+          has_photo_before: true,
+          has_photo_after: true,
+          assigned_to: mockOperator,
+        } as Task,
+        {
+          ...mockTask,
+          id: 'task-needs-review',
+          status: TaskStatus.COMPLETED,
+          completed_at: earlier, // Earlier but needs review
+          pending_photos: true,
+          assigned_to: mockOperator,
+        } as Task,
+      ]);
+      filesService.findByEntity.mockResolvedValue([]);
+
+      const result = await service.getPendingApprovals('manager-id');
+
+      expect(result).toHaveLength(2);
+      expect(result[0].taskId).toBe('task-needs-review'); // Requires review comes first
+      expect(result[1].taskId).toBe('task-no-review');
+    });
+
+    it('should sort by completedAt when requiresReview is the same', async () => {
+      userRepository.findOne.mockResolvedValue(mockManager as User);
+      const now = new Date();
+      const earlier = new Date(now.getTime() - 60000);
+      taskRepository.find.mockResolvedValue([
+        {
+          ...mockTask,
+          id: 'task-older',
+          status: TaskStatus.COMPLETED,
+          completed_at: earlier, // Older
+          pending_photos: false,
+          has_photo_before: true,
+          has_photo_after: true,
+          assigned_to: mockOperator,
+        } as Task,
+        {
+          ...mockTask,
+          id: 'task-newer',
+          status: TaskStatus.COMPLETED,
+          completed_at: now, // Newer
+          pending_photos: false,
+          has_photo_before: true,
+          has_photo_after: true,
+          assigned_to: mockOperator,
+        } as Task,
+      ]);
+      filesService.findByEntity.mockResolvedValue([]);
+
+      const result = await service.getPendingApprovals('manager-id');
+
+      expect(result).toHaveLength(2);
+      expect(result[0].taskId).toBe('task-newer'); // Most recent first
+      expect(result[1].taskId).toBe('task-older');
+    });
   });
 
   describe('approveTask', () => {
@@ -574,6 +840,42 @@ describe('TelegramManagerToolsService', () => {
 
       expect(result.success).toBe(false);
     });
+
+    it('should return failure if task is null', async () => {
+      userRepository.findOne.mockResolvedValue(mockManager as User);
+      tasksService.findOne.mockResolvedValue(null as unknown as Task);
+
+      const result = await service.approveTask('manager-id', 'task-id', true);
+
+      expect(result.success).toBe(false);
+      expect(result.notifiedOperator).toBe(false);
+    });
+
+    it('should handle error when notification fails', async () => {
+      userRepository.findOne.mockResolvedValue(mockManager as User);
+      tasksService.findOne.mockResolvedValue({
+        ...mockTask,
+        status: TaskStatus.COMPLETED,
+        assigned_to_user_id: 'operator-id',
+      } as Task);
+      telegramUserRepository.findOne.mockResolvedValue(mockTelegramUser as TelegramUser);
+      taskRepository.update.mockResolvedValue({ affected: 1 } as any);
+      resilientApi.sendText.mockRejectedValue(new Error('Notification failed'));
+
+      const result = await service.approveTask('manager-id', 'task-id', true);
+
+      expect(result.success).toBe(true);
+      expect(result.notifiedOperator).toBe(false);
+    });
+
+    it('should return failure when exception occurs in approveTask', async () => {
+      userRepository.findOne.mockRejectedValue(new Error('Database error'));
+
+      const result = await service.approveTask('manager-id', 'task-id', true);
+
+      expect(result.success).toBe(false);
+      expect(result.notifiedOperator).toBe(false);
+    });
   });
 
   describe('formatAnalyticsMessage', () => {
@@ -633,6 +935,80 @@ describe('TelegramManagerToolsService', () => {
       expect(message).toContain('⚫');
       expect(message).toContain('Operator 1');
       expect(message).toContain('M-001');
+    });
+  });
+
+  describe('createOperatorSelectionKeyboard', () => {
+    it('should create keyboard with operators and cancel button', () => {
+      const operators = [
+        { id: 'op1', name: 'Operator 1', tasksInProgress: 2 },
+        { id: 'op2', name: 'Operator 2', tasksInProgress: 0 },
+      ];
+
+      const keyboard = service.createOperatorSelectionKeyboard(operators, 'ru');
+
+      expect(keyboard).toBeDefined();
+      expect(keyboard.reply_markup).toBeDefined();
+      expect(keyboard.reply_markup.inline_keyboard).toBeDefined();
+      expect(keyboard.reply_markup.inline_keyboard.length).toBe(3); // 2 operators + cancel
+    });
+
+    it('should create keyboard with default language', () => {
+      const operators = [{ id: 'op1', name: 'Operator 1', tasksInProgress: 0 }];
+
+      const keyboard = service.createOperatorSelectionKeyboard(operators);
+
+      expect(keyboard).toBeDefined();
+      expect(keyboard.reply_markup.inline_keyboard.length).toBe(2);
+    });
+  });
+
+  describe('createTaskSelectionKeyboard', () => {
+    it('should create keyboard with tasks and cancel button', () => {
+      const tasks = [
+        { id: 'task1', type: TaskType.REFILL, machineNumber: 'M-001', priority: 'normal' },
+        { id: 'task2', type: TaskType.COLLECTION, machineNumber: 'M-002', priority: 'high' },
+      ];
+
+      const keyboard = service.createTaskSelectionKeyboard(tasks, 'ru');
+
+      expect(keyboard).toBeDefined();
+      expect(keyboard.reply_markup).toBeDefined();
+      expect(keyboard.reply_markup.inline_keyboard).toBeDefined();
+      expect(keyboard.reply_markup.inline_keyboard.length).toBe(3); // 2 tasks + cancel
+    });
+
+    it('should add priority indicator for urgent tasks', () => {
+      const tasks = [
+        { id: 'task1', type: TaskType.REFILL, machineNumber: 'M-001', priority: 'urgent' },
+      ];
+
+      const keyboard = service.createTaskSelectionKeyboard(tasks, 'ru');
+
+      expect(keyboard.reply_markup.inline_keyboard[0][0].text).toContain('🔴');
+    });
+
+    it('should limit to 10 tasks maximum', () => {
+      const tasks = Array.from({ length: 15 }, (_, i) => ({
+        id: `task${i}`,
+        type: TaskType.REFILL,
+        machineNumber: `M-${i.toString().padStart(3, '0')}`,
+        priority: 'normal',
+      }));
+
+      const keyboard = service.createTaskSelectionKeyboard(tasks, 'ru');
+
+      // 10 tasks + 1 cancel button = 11 rows
+      expect(keyboard.reply_markup.inline_keyboard.length).toBe(11);
+    });
+
+    it('should create keyboard with default language', () => {
+      const tasks = [{ id: 'task1', type: TaskType.REFILL, machineNumber: 'M-001', priority: 'normal' }];
+
+      const keyboard = service.createTaskSelectionKeyboard(tasks);
+
+      expect(keyboard).toBeDefined();
+      expect(keyboard.reply_markup.inline_keyboard.length).toBe(2);
     });
   });
 });
