@@ -473,6 +473,35 @@ describe('DataTableRowActions', () => {
       // Empty group label should not be rendered
       expect(screen.queryByText('Empty Group')).not.toBeInTheDocument()
     })
+
+    it('should render only visible actions in a group with mixed visibility', async () => {
+      const user = userEvent.setup()
+      const actions: (RowAction<TestRow> | RowActionGroup<TestRow>)[] = [
+        {
+          label: 'Mixed Group',
+          actions: [
+            { label: 'Visible Action', onClick: vi.fn() },
+            { label: 'Hidden Action', onClick: vi.fn(), hidden: true },
+            { label: 'Another Visible', onClick: vi.fn() },
+          ],
+        },
+      ]
+
+      render(<DataTableRowActions row={mockRow} actions={actions} />)
+
+      await user.click(screen.getByRole('button', { name: /действия/i }))
+
+      await waitFor(() => {
+        expect(screen.getByRole('menuitem', { name: /visible action/i })).toBeInTheDocument()
+        expect(screen.getByRole('menuitem', { name: /another visible/i })).toBeInTheDocument()
+      })
+
+      // Hidden action should not be rendered
+      expect(screen.queryByRole('menuitem', { name: /hidden action/i })).not.toBeInTheDocument()
+
+      // Group label should still be rendered since there are visible actions
+      expect(screen.getByText('Mixed Group')).toBeInTheDocument()
+    })
   })
 
   describe('Keyboard Navigation', () => {

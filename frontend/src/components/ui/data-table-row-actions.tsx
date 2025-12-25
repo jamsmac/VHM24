@@ -100,9 +100,11 @@ export function DataTableRowActions<TData>({
 
         groupActions.forEach((action, actionIndex) => {
           const rendered = renderAction(action, `group-${index}-action-${actionIndex}`)
+          /* v8 ignore start - defensive check: groupActions is pre-filtered, so rendered is always truthy */
           if (rendered) {
             items.push(rendered)
           }
+          /* v8 ignore stop */
         })
       } else {
         const rendered = renderAction(item, `action-${index}`)
