@@ -1,7 +1,7 @@
 'use client'
 
 import { cn } from '@/lib/utils'
-import { Avatar, AvatarWithName } from './Avatar'
+import { Avatar } from './Avatar'
 import { RoleBadge, UserStatusBadge } from './StatusBadge'
 import { UserRole } from '@/types/users'
 import {
@@ -9,7 +9,6 @@ import {
   Phone,
   MapPin,
   Calendar,
-  MoreVertical,
   MessageSquare,
   UserPlus,
   Ban,

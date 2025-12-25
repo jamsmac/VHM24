@@ -10,7 +10,7 @@ import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'react-toastify'
 import { getErrorMessage } from '@/lib/utils'
-import { UserRole, ROLE_CONFIG, getRoleLabel } from '@/types/users'
+import { UserRole, getRoleLabel } from '@/types/users'
 
 export default function CreateUserPage() {
   const router = useRouter()

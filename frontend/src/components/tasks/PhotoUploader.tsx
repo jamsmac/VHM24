@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback } from 'react'
 import Image from 'next/image'
 import { Camera, Upload, X, CheckCircle, AlertCircle } from 'lucide-react'
-import { filesApi, type FileUploadParams } from '@/lib/files-api'
+import { filesApi } from '@/lib/files-api'
 import { compressImage } from '@/lib/image-utils'
 import { toast } from 'react-toastify'
 import { getErrorMessage } from '@/lib/utils'

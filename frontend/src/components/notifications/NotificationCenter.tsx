@@ -8,7 +8,6 @@ import {
   isUnread,
 } from '@/lib/notifications-api'
 import { NotificationList } from './NotificationList'
-import { Button } from '@/components/ui/button'
 import {
   Bell,
   CheckCheck,

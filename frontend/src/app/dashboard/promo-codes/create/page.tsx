@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useMutation } from '@tanstack/react-query'
-import { promoCodesApi, CreatePromoCodeDto, PromoCodeType, PromoCodeStatus } from '@/lib/promo-codes-api'
+import { promoCodesApi, CreatePromoCodeDto } from '@/lib/promo-codes-api'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, Save, Loader2 } from 'lucide-react'
 import Link from 'next/link'

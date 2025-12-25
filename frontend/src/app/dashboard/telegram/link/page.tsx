@@ -3,8 +3,8 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import Image from 'next/image'
 import { telegramApi } from '@/lib/telegram-api'
-import type { MyTelegramAccount, VerificationCodeResponse, NotificationPreferences } from '@/types/telegram'
-import { QrCode, Copy, CheckCircle, RefreshCw, Send, Bell, BellOff, Link as LinkIcon, Unlink } from 'lucide-react'
+import type { MyTelegramAccount, VerificationCodeResponse } from '@/types/telegram'
+import { Copy, CheckCircle, RefreshCw, Send, Bell, BellOff, Link as LinkIcon, Unlink } from 'lucide-react'
 import QRCode from 'qrcode'
 import { NotificationTypeLabels } from '@/types/telegram'
 

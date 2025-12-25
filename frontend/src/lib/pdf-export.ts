@@ -37,7 +37,7 @@ function generateMaintenanceReport(
   component?: EquipmentComponent
 ): string {
   const totalCost = maintenance.reduce((sum, m) => sum + Number(m.total_cost), 0)
-  const avgDuration = maintenance.length > 0
+  const _avgDuration = maintenance.length > 0
     ? maintenance.reduce((sum, m) => sum + (m.duration_minutes || 0), 0) / maintenance.length
     : 0
   const successRate = maintenance.length > 0

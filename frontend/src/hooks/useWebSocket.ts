@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { io, Socket } from 'socket.io-client'
 
-interface WebSocketEvent {
+interface _WebSocketEvent {
   event: string
   data: unknown
 }

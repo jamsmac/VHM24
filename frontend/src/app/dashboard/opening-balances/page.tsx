@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { getErrorMessage } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 
 interface Nomenclature {
   id: string;

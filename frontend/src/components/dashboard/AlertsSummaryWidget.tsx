@@ -1,7 +1,7 @@
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
-import { alertsApi, AlertSeverity, AlertStatus } from '@/lib/alerts-api'
+import { alertsApi, AlertSeverity } from '@/lib/alerts-api'
 import { AlertTriangle, AlertCircle, Info, BellRing, Bell } from 'lucide-react'
 import Link from 'next/link'
 

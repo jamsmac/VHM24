@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react'
 import { telegramApi } from '@/lib/telegram-api'
-import { TelegramSettings, UpdateTelegramSettingsDto, TelegramBotMode, TelegramBotModeLabels, NotificationTypeLabels } from '@/types/telegram'
+import { TelegramSettings, UpdateTelegramSettingsDto, TelegramBotMode, NotificationTypeLabels } from '@/types/telegram'
 import { Save, Bot, Webhook, RefreshCw, CheckCircle, XCircle, Eye, EyeOff } from 'lucide-react'
 
 export default function TelegramSettingsPage() {

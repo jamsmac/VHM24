@@ -3,7 +3,7 @@
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { ChevronRight, Home } from 'lucide-react'
-import { getBreadcrumbs, BreadcrumbItem } from '@/lib/breadcrumbs'
+import { getBreadcrumbs } from '@/lib/breadcrumbs'
 
 interface BreadcrumbsProps {
   className?: string

@@ -20,7 +20,7 @@ export function TableSkeleton({
   showActions = true,
   className,
 }: TableSkeletonProps) {
-  const totalColumns = columns + (showCheckbox ? 1 : 0) + (showActions ? 1 : 0)
+  const _totalColumns = columns + (showCheckbox ? 1 : 0) + (showActions ? 1 : 0)
 
   return (
     <div className={cn('w-full', className)}>

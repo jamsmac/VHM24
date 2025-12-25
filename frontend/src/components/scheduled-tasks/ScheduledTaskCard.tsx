@@ -2,7 +2,6 @@
 
 import {
   ScheduledTask,
-  TaskCategory,
   categoryLabels,
   frequencyLabels,
   getCategoryColor,

@@ -5,7 +5,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   intelligentImportApi,
   ImportSession,
-  ImportSessionStatus,
   statusLabels,
   domainLabels,
   getStatusColor,

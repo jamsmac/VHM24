@@ -9,7 +9,6 @@ import { CardSkeleton } from '@/components/ui/LoadingSkeleton'
 import { ArrowRight, AlertTriangle } from 'lucide-react'
 import Link from 'next/link'
 import { useTranslations } from '@/providers/I18nProvider'
-import { WarehouseInventoryItem } from '@/types/inventory'
 
 export default function WarehouseInventoryPage() {
   const { t } = useTranslations()

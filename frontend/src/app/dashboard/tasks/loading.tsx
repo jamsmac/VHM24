@@ -1,4 +1,4 @@
-import { TableSkeleton, CardSkeleton } from '@/components/ui/LoadingSkeleton'
+import { TableSkeleton } from '@/components/ui/LoadingSkeleton'
 
 export default function TasksLoading() {
   return (

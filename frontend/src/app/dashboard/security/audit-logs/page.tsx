@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Badge } from '@/components/ui/badge'
-import { Filter, User, Calendar } from 'lucide-react'
+import { Filter, User } from 'lucide-react'
 import { formatDateTime } from '@/lib/utils'
 import { TableSkeleton } from '@/components/ui/LoadingSkeleton'
 import { auditApi } from '@/lib/audit-api'

@@ -1,7 +1,7 @@
 'use client'
 
 import { Button } from '@/components/ui/button'
-import { Download, TrendingUp, TrendingDown } from 'lucide-react'
+import { Download, TrendingUp } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid, Legend } from 'recharts'
 

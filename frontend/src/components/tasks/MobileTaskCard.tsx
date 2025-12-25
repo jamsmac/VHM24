@@ -13,7 +13,7 @@ interface MobileTaskCardProps {
   onSwipeRight?: (task: Task) => void
 }
 
-export const MobileTaskCard = memo(function MobileTaskCard({ task, onSwipeLeft, onSwipeRight }: MobileTaskCardProps) {
+export const MobileTaskCard = memo(function MobileTaskCard({ task, onSwipeLeft: _onSwipeLeft, onSwipeRight: _onSwipeRight }: MobileTaskCardProps) {
   const isOverdue = task.due_date && new Date(task.due_date) < new Date()
   const canStart = task.status === TaskStatus.ASSIGNED
   const canComplete = task.status === TaskStatus.IN_PROGRESS

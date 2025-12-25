@@ -115,7 +115,7 @@ function CartContent() {
     })
   }, [hapticFeedback])
 
-  const removeItem = useCallback((productId: string) => {
+  const _removeItem = useCallback((productId: string) => {
     hapticFeedback?.notificationOccurred('warning')
     setCart(prev => prev.filter(item => item.product.id !== productId))
   }, [hapticFeedback])
@@ -136,7 +136,7 @@ function CartContent() {
       } else {
         hapticFeedback?.notificationOccurred('error')
       }
-    } catch (error) {
+    } catch {
       setPromoValidation({ valid: false, error: 'Не удалось проверить промокод' })
       hapticFeedback?.notificationOccurred('error')
     } finally {

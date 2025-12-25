@@ -22,7 +22,7 @@ interface UserProfile {
 
 export default function ProfilePage() {
   const router = useRouter()
-  const { webApp, user, isReady, isAuthenticated, authenticate, showBackButton, hideBackButton, colorScheme } = useTelegram()
+  const { user, isReady, isAuthenticated, authenticate, showBackButton, hideBackButton, colorScheme } = useTelegram()
 
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [isLoading, setIsLoading] = useState(true)

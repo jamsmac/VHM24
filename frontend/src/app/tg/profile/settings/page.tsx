@@ -21,7 +21,6 @@ export default function SettingsPage() {
     bonuses: true,
   })
   const [language, setLanguage] = useState<'ru' | 'uz'>('ru')
-  const [isSaving, setIsSaving] = useState(false)
 
   // Back button
   useEffect(() => {

@@ -191,7 +191,7 @@ export function ComprehensiveAuthHandler() {
 
   useAuthEvents(
     useCallback(
-      (event, data) => {
+      (event, _data) => {
         switch (event) {
           case 'login':
             showNotification('success', 'Successfully logged in')

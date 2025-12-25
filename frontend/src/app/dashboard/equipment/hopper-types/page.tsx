@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { Plus, Search, Filter, Trash2, Edit, Tag } from 'lucide-react'
+import { Plus, Search, Trash2, Edit, Tag } from 'lucide-react'
 import { hopperTypesApi } from '@/lib/equipment-api'
 import type { HopperType } from '@/types/equipment'
 import { HopperCategoryLabels } from '@/types/equipment'

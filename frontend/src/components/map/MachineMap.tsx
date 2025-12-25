@@ -33,7 +33,7 @@ function getMarkerIcon(location: MapLocationData): string {
   `)}`
 }
 
-function LocationPopup({ location }: { location: MapLocationData }) {
+function _LocationPopup({ location }: { location: MapLocationData }) {
   return (
     <div className="min-w-[200px]">
       <h3 className="font-semibold text-gray-900 mb-1">{location.name}</h3>

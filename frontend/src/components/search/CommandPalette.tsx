@@ -4,9 +4,6 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   searchCommands,
-  navigationUrls,
-  formatShortcut,
-  keyboardShortcuts,
 } from '@/lib/search-api'
 import {
   Search,
@@ -139,7 +136,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
                     </p>
                     {results
                       .filter((r) => r.category === 'navigation')
-                      .map((item, index) => {
+                      .map((item) => {
                         const globalIndex = results.findIndex((r) => r.id === item.id)
                         return (
                           <button

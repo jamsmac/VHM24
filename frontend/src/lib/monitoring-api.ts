@@ -159,7 +159,7 @@ export const monitoringApi = {
    * Get dashboard statistics
    */
   getDashboardStats: async (): Promise<DashboardStats> => {
-    const [health, queues, readiness] = await Promise.all([
+    const [health, queues, _readiness] = await Promise.all([
       monitoringApi.getMonitoringHealth(),
       monitoringApi.getQueueHealth(),
       monitoringApi.getReadiness(),

@@ -31,7 +31,7 @@ import {
   Clock,
   Calendar,
 } from 'lucide-react'
-import { formatDistanceToNow, isToday, isYesterday, isThisWeek, format } from 'date-fns'
+import { formatDistanceToNow, isToday, isYesterday, isThisWeek } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
@@ -89,7 +89,7 @@ interface GroupedNotificationListProps {
 export function GroupedNotificationList({
   notifications,
   isLoading,
-  groupBy = 'both',
+  groupBy: _groupBy = 'both',
 }: GroupedNotificationListProps) {
   const queryClient = useQueryClient()
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(['today', 'yesterday']))

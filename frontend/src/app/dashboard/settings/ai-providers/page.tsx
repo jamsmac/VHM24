@@ -116,7 +116,7 @@ export default function AiProvidersPage() {
         success: result.success,
         message: result.message || (result.success ? 'Ключ работает!' : 'Ошибка'),
       })
-    } catch (err) {
+    } catch {
       setTestResult({ success: false, message: 'Ошибка при тестировании' })
     } finally {
       setTesting(null)
@@ -137,7 +137,7 @@ export default function AiProvidersPage() {
         success: result.success,
         message: result.message || (result.success ? 'Ключ работает!' : result.error || 'Ошибка'),
       })
-    } catch (err) {
+    } catch {
       setTestResult({ success: false, message: 'Ошибка при тестировании' })
     } finally {
       setTesting(null)

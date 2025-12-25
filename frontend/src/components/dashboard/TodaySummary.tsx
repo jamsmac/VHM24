@@ -9,12 +9,9 @@ import {
   Moon,
   Cloud,
   Clock,
-  CheckCircle,
   AlertTriangle,
   ClipboardList,
   TrendingUp,
-  ArrowRight,
-  Users,
   Package,
 } from 'lucide-react'
 import { format } from 'date-fns'

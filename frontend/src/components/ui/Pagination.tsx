@@ -291,7 +291,7 @@ export function InfiniteScrollTrigger({
   threshold = 100,
   className,
 }: InfiniteScrollTriggerProps) {
-  const handleScroll = () => {
+  const _handleScroll = () => {
     if (isLoading || !hasMore) return
 
     const scrollTop = document.documentElement.scrollTop

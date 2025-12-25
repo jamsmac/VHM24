@@ -3,7 +3,6 @@
 import Link from 'next/link'
 import { Coffee, MapPin, Smartphone, Gift, ArrowRight, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
 import { LiquidEther, liquidPresets } from '@/components/effects'
 import { useLiquidSettings } from '@/hooks/useLiquidSettings'
 

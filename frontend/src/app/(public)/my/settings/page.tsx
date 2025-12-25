@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button'
 import { clientAuthApi } from '@/lib/client-api'
 import { formatDate } from '@/lib/utils'
 import type { ClientUser, ClientProfile } from '@/types/client'
-import { cn } from '@/lib/utils'
 
 export default function SettingsPage() {
   const [user, setUser] = useState<ClientUser | null>(null)

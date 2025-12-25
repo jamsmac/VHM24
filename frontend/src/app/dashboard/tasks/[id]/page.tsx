@@ -23,8 +23,8 @@ export default function TaskDetailPage() {
 
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null)
   const [showPhotoUpload, setShowPhotoUpload] = useState(false)
-  const [photosBeforeIds, setPhotosBeforeIds] = useState<string[]>([])
-  const [photosAfterIds, setPhotosAfterIds] = useState<string[]>([])
+  const [, setPhotosBeforeIds] = useState<string[]>([])
+  const [, setPhotosAfterIds] = useState<string[]>([])
 
   const { data: task, isLoading } = useQuery({
     queryKey: ['tasks', taskId],

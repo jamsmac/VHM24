@@ -20,7 +20,7 @@ import {
   Pie,
 } from 'recharts'
 import { cn } from '@/lib/utils'
-import { TrendingUp, TrendingDown, Target, AlertTriangle } from 'lucide-react'
+import { TrendingUp, TrendingDown, Target } from 'lucide-react'
 
 // Machine performance ranking
 interface MachinePerformance {

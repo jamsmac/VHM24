@@ -36,7 +36,7 @@ describe('DropdownMenu', () => {
 
   describe('DropdownMenuCheckboxItem', () => {
     it('should render checkbox item', async () => {
-      const user = userEvent.setup()
+      userEvent.setup()
 
       render(
         <DropdownMenu defaultOpen>

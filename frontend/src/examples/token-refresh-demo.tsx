@@ -98,7 +98,7 @@ export function TokenRefreshDemo() {
         ...prev,
         `[${new Date().toLocaleTimeString()}] ✅ All requests completed (should only refresh once!)`,
       ])
-    } catch (error) {
+    } catch {
       setRefreshLog(prev => [
         ...prev,
         `[${new Date().toLocaleTimeString()}] ❌ Some requests failed`,

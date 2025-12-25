@@ -3,7 +3,7 @@
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Download, Database, CheckCircle, XCircle } from 'lucide-react'
-import { formatDateTime, formatNumber } from '@/lib/utils'
+import { formatDateTime } from '@/lib/utils'
 
 export default function BackupsPage() {
   const backups = [

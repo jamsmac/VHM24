@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import {
-  keyboardShortcuts,
   ShortcutCategory,
   categoryLabels,
   categoryIcons,

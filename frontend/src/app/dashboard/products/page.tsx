@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import axios from 'axios';
 import { Button } from '@/components/ui/button';
@@ -20,7 +19,6 @@ interface Nomenclature {
 }
 
 export default function ProductsPage() {
-  const router = useRouter();
   const [products, setProducts] = useState<Nomenclature[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'products' | 'ingredients'>('all');

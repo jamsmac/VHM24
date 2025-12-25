@@ -67,8 +67,8 @@ export function ProductTour({ steps, tourId, onComplete, onSkip }: ProductTourPr
     // Check available space and adjust placement if needed
     const spaceTop = rect.top
     const spaceBottom = window.innerHeight - rect.bottom
-    const spaceLeft = rect.left
-    const spaceRight = window.innerWidth - rect.right
+    const _spaceLeft = rect.left
+    const _spaceRight = window.innerWidth - rect.right
 
     if (placement === 'bottom' && spaceBottom < tooltipHeight + margin) {
       placement = spaceTop > spaceBottom ? 'top' : 'bottom'

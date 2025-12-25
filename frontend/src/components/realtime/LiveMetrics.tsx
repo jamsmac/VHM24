@@ -31,7 +31,7 @@ interface LiveMetricsProps {
  */
 export function LiveMetrics({
   initialData,
-  refreshInterval = 30000,
+  refreshInterval: _refreshInterval = 30000,
 }: LiveMetricsProps) {
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(
     initialData || null

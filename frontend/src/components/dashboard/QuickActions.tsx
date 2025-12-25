@@ -9,10 +9,8 @@ import {
   FileUp,
   UserPlus,
   MapPin,
-  DollarSign,
   FileText,
   QrCode,
-  Wrench,
   ArrowRight,
 } from 'lucide-react'
 

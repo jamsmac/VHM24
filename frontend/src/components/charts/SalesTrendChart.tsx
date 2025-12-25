@@ -14,7 +14,7 @@ import {
   AreaChart,
   ReferenceLine,
 } from 'recharts'
-import { format, parseISO, subDays } from 'date-fns'
+import { format, parseISO } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react'

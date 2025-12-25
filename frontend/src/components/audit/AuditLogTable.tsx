@@ -4,7 +4,6 @@ import { useState } from 'react'
 import {
   AuditLog,
   AuditEventType,
-  AuditSeverity,
   eventTypeLabels,
   severityLabels,
   getSeverityColor,
@@ -25,7 +24,6 @@ import {
   XCircle,
   ChevronDown,
   ChevronUp,
-  ExternalLink,
 } from 'lucide-react'
 import { formatDistanceToNow, format } from 'date-fns'
 import { ru } from 'date-fns/locale'

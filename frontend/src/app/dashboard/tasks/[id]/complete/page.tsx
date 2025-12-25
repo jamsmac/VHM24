@@ -31,8 +31,8 @@ export default function CompleteTaskPage({ params }: CompleteTaskPageProps) {
     actual_cash_amount: '',
     notes: '',
   })
-  const [photosBeforeIds, setPhotosBeforeIds] = useState<string[]>([])
-  const [photosAfterIds, setPhotosAfterIds] = useState<string[]>([])
+  const [, setPhotosBeforeIds] = useState<string[]>([])
+  const [, setPhotosAfterIds] = useState<string[]>([])
 
   const { data: task, isLoading } = useQuery({
     queryKey: ['tasks', params.id],

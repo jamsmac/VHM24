@@ -4,11 +4,9 @@ import { useState, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   intelligentImportApi,
-  ImportSession,
   ImportSessionStatus,
   statusLabels,
   domainLabels,
-  getStatusColor,
   getStatusProgress,
 } from '@/lib/intelligent-import-api'
 import { Button } from '@/components/ui/button'
@@ -46,7 +44,7 @@ export function ImportWizard({ onComplete }: ImportWizardProps) {
   const queryClient = useQueryClient()
 
   // Fetch session data
-  const { data: session, isLoading: sessionLoading } = useQuery({
+  const { data: session } = useQuery({
     queryKey: ['import-session', sessionId],
     queryFn: () => intelligentImportApi.getSession(sessionId!),
     enabled: !!sessionId,

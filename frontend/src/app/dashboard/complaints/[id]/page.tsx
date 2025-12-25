@@ -3,7 +3,7 @@
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, User, Phone, Calendar, AlertCircle } from 'lucide-react'
+import { ArrowLeft, User, Phone, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
 import { formatDateTime } from '@/lib/utils'
 import { complaintsApi } from '@/lib/complaints-api'

@@ -11,7 +11,6 @@ import {
   Clock,
   AlertTriangle,
   XCircle,
-  Pause,
   Play,
   Loader2,
   Ban,

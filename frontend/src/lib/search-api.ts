@@ -139,7 +139,7 @@ export function searchCommands(query: string): (Omit<QuickAction, 'action'> & { 
 }
 
 // Mock search results (in real app, this would call the API)
-export function searchEntities(query: string, category: SearchCategory = SearchCategory.ALL): SearchResult[] {
+export function searchEntities(query: string, _category: SearchCategory = SearchCategory.ALL): SearchResult[] {
   if (!query.trim() || query.length < 2) return []
 
   // This would normally be an API call

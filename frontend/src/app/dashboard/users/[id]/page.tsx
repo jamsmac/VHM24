@@ -10,7 +10,7 @@ import { formatDateTime, getErrorMessage } from '@/lib/utils'
 import { LoadingSkeleton } from '@/components/ui/LoadingSkeleton'
 import { toast } from 'react-toastify'
 import { queryClient } from '@/lib/query-client'
-import { UserRole, getRoleLabel, getRoleBadgeClass, ROLE_CONFIG } from '@/types/users'
+import { UserRole, getRoleLabel, getRoleBadgeClass } from '@/types/users'
 
 interface UserDetailPageProps {
   params: {

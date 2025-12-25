@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useTelegram } from '../components/TelegramProvider'
-import { apiClient } from '@/lib/axios'
 
 interface Product {
   id: string
@@ -24,7 +23,7 @@ function MenuContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const machineNumber = searchParams.get('machine')
-  const { isReady, isAuthenticated, showMainButton, hideMainButton, showBackButton, hideBackButton, hapticFeedback } = useTelegram()
+  const { isReady, showMainButton, hideMainButton, showBackButton, hideBackButton, hapticFeedback } = useTelegram()
 
   const [isLoading, setIsLoading] = useState(true)
   const [products, setProducts] = useState<Product[]>([])
@@ -63,7 +62,7 @@ function MenuContent() {
           { id: '8', name: 'Твикс', price: 12000, available: true, category: 'Снеки' },
           { id: '9', name: 'Чипсы Lay\'s', price: 15000, available: false, category: 'Снеки' },
         ])
-      } catch (err) {
+      } catch {
         setError('Не удалось загрузить меню')
       } finally {
         setIsLoading(false)

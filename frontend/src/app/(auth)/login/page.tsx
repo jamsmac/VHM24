@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { authApi } from '@/lib/auth-api'
 import { Button } from '@/components/ui/button'
-import { LogIn, Shield, Key, Loader2, AlertTriangle, ArrowLeft } from 'lucide-react'
+import { LogIn, Shield, Key, AlertTriangle, ArrowLeft } from 'lucide-react'
 import { toast } from 'react-toastify'
 import { getErrorMessage } from '@/types/common'
 

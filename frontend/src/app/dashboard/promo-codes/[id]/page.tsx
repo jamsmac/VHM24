@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter, useParams } from 'next/navigation'
+import { useParams } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { promoCodesApi, UpdatePromoCodeDto, PromoCodeType, PromoCodeStatus } from '@/lib/promo-codes-api'
+import { promoCodesApi, UpdatePromoCodeDto } from '@/lib/promo-codes-api'
 import { Button } from '@/components/ui/button'
 import { CardSkeleton } from '@/components/ui/LoadingSkeleton'
 import {
@@ -18,10 +18,9 @@ import {
   TrendingUp,
 } from 'lucide-react'
 import Link from 'next/link'
-import { formatDate, formatCurrency } from '@/lib/utils'
+import { formatCurrency } from '@/lib/utils'
 
 export default function EditPromoCodePage() {
-  const router = useRouter()
   const params = useParams()
   const queryClient = useQueryClient()
   const id = params.id as string

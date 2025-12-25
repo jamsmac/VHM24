@@ -11,7 +11,7 @@ interface ThemeToggleProps {
 }
 
 export function ThemeToggle({ className, showTooltip = true }: ThemeToggleProps) {
-  const { theme, setTheme, resolvedTheme } = useTheme()
+  const { setTheme, resolvedTheme } = useTheme()
   const [mounted, setMounted] = React.useState(false)
 
   React.useEffect(() => {
