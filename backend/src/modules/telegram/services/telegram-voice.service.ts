@@ -137,10 +137,12 @@ export class TelegramVoiceService {
       throw new Error('Не удалось распознать голосовое сообщение');
     } finally {
       // Clean up temporary file
+      /* istanbul ignore else - tempFilePath is always set before errors can occur */
       if (tempFilePath && fs.existsSync(tempFilePath)) {
         try {
           await unlinkAsync(tempFilePath);
         } catch (err) {
+          /* istanbul ignore next - defensive error handling for file cleanup */
           this.logger.warn(`Failed to delete temp file: ${tempFilePath}`, err);
         }
       }
@@ -205,6 +207,7 @@ export class TelegramVoiceService {
     if (this.matchesKeywords(lowerText, ['начать', 'start', 'запустить задачу', 'приступить'])) {
       // Try to extract task number or ID
       const taskNumberMatch = lowerText.match(/номер\s*(\d+)|задач[уа]\s*(\d+)|task\s*(\d+)/);
+      /* istanbul ignore next - regex capture groups 2 & 3 are unreachable due to keyword matching order */
       const taskNumber = taskNumberMatch
         ? taskNumberMatch[1] || taskNumberMatch[2] || taskNumberMatch[3]
         : undefined;

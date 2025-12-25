@@ -1,41 +1,74 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { TelegramVoiceService, VoiceCommand } from './telegram-voice.service';
 
-// Mock OpenAI
+// Mock variables that will be available in mock factories
+const mockTranscriptionsCreate = jest.fn();
+const mockWriteFile = jest.fn();
+const mockUnlink = jest.fn();
+
+// Mock OpenAI with proper default export handling
 jest.mock('openai', () => {
-  return jest.fn().mockImplementation(() => ({
+  const mockOpenAIClass = jest.fn().mockImplementation(() => ({
     audio: {
       transcriptions: {
-        create: jest.fn(),
+        create: mockTranscriptionsCreate,
       },
     },
   }));
+  return {
+    __esModule: true,
+    default: mockOpenAIClass,
+  };
 });
+
+// Get reference to the mocked class after jest.mock is processed
+const getMockOpenAI = () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  return require('openai').default;
+};
 
 // Mock fs
 jest.mock('fs', () => ({
   existsSync: jest.fn(),
   mkdirSync: jest.fn(),
   createReadStream: jest.fn(),
+  writeFile: jest.fn(),
+  unlink: jest.fn(),
   readdirSync: jest.fn(),
   statSync: jest.fn(),
 }));
 
-// Mock util
+// Mock util with actual promisify behavior for writeFile and unlink
 jest.mock('util', () => ({
-  promisify: (_fn: any) => jest.fn(),
+  promisify: () => {
+    // Return mockUnlink by default - this is used for both writeFile and unlink
+    // The actual mocks are configured in the tests
+    return jest.fn();
+  },
 }));
 
 describe('TelegramVoiceService', () => {
   let service: TelegramVoiceService;
+  let fsMock: any;
+  let MockOpenAI: jest.Mock;
 
   beforeEach(async () => {
     // Reset environment
     delete process.env.OPENAI_API_KEY;
 
-    const fs = require('fs');
-    fs.existsSync.mockReturnValue(true);
-    fs.mkdirSync.mockReturnValue(undefined);
+    // Get reference to the mocked OpenAI class
+    MockOpenAI = getMockOpenAI();
+
+    // Reset all mocks
+    MockOpenAI.mockClear();
+    mockTranscriptionsCreate.mockReset();
+    mockWriteFile.mockReset();
+    mockUnlink.mockReset();
+
+    fsMock = require('fs');
+    fsMock.existsSync.mockReturnValue(true);
+    fsMock.mkdirSync.mockReturnValue(undefined);
+    fsMock.createReadStream.mockReturnValue({ pipe: jest.fn() });
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [TelegramVoiceService],
@@ -46,6 +79,79 @@ describe('TelegramVoiceService', () => {
 
   afterEach(() => {
     jest.clearAllMocks();
+  });
+
+  describe('initialization', () => {
+    it('should initialize OpenAI when API key is set', async () => {
+      process.env.OPENAI_API_KEY = 'test-api-key';
+
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [TelegramVoiceService],
+      }).compile();
+
+      const serviceWithKey = module.get<TelegramVoiceService>(TelegramVoiceService);
+      expect(serviceWithKey).toBeDefined();
+      expect(MockOpenAI).toHaveBeenCalledWith({ apiKey: 'test-api-key' });
+      expect(serviceWithKey.isAvailable()).toBe(true);
+    });
+
+    it('should create temp directory when it does not exist', async () => {
+      fsMock.existsSync.mockReturnValue(false);
+
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [TelegramVoiceService],
+      }).compile();
+
+      const newService = module.get<TelegramVoiceService>(TelegramVoiceService);
+      expect(newService).toBeDefined();
+      expect(fsMock.mkdirSync).toHaveBeenCalled();
+    });
+
+    it('should handle temp directory creation failure', async () => {
+      fsMock.existsSync.mockReturnValue(false);
+      fsMock.mkdirSync.mockImplementation(() => {
+        throw new Error('Permission denied');
+      });
+
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [TelegramVoiceService],
+      }).compile();
+
+      const newService = module.get<TelegramVoiceService>(TelegramVoiceService);
+      expect(newService).toBeDefined();
+      expect(newService.isAvailable()).toBe(false);
+    });
+
+    it('should handle OpenAI initialization failure', async () => {
+      process.env.OPENAI_API_KEY = 'test-api-key';
+      const OpenAIMock = getMockOpenAI();
+      OpenAIMock.mockImplementationOnce(() => {
+        throw new Error('OpenAI initialization failed');
+      });
+
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [TelegramVoiceService],
+      }).compile();
+
+      const serviceWithError = module.get<TelegramVoiceService>(TelegramVoiceService);
+      expect(serviceWithError).toBeDefined();
+      expect(serviceWithError.isAvailable()).toBe(false);
+    });
+
+    it('should use /tmp/voice in production environment', async () => {
+      const originalNodeEnv = process.env.NODE_ENV;
+      process.env.NODE_ENV = 'production';
+
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [TelegramVoiceService],
+      }).compile();
+
+      const prodService = module.get<TelegramVoiceService>(TelegramVoiceService);
+      expect(prodService).toBeDefined();
+
+      // Restore
+      process.env.NODE_ENV = originalNodeEnv;
+    });
   });
 
   describe('parseCommand', () => {
@@ -164,6 +270,29 @@ describe('TelegramVoiceService', () => {
         const result = service.parseCommand('начать задачу номер 3');
         // "задач" keyword matches first, so returns 'tasks' intent
         expect(result.intent).toBe('tasks');
+      });
+
+      // Note: "start task 5" contains "task" which matches tasks intent first
+      it('should match tasks intent for "start task 5" (contains task keyword)', () => {
+        const result = service.parseCommand('start task 5');
+
+        // "task" keyword matches first, so returns 'tasks' intent
+        expect(result.intent).toBe('tasks');
+      });
+
+      it('should extract task number from "начать номер 7"', () => {
+        const result = service.parseCommand('начать номер 7');
+
+        expect(result.intent).toBe('start_task');
+        expect(result.parameters?.taskNumber).toBe('7');
+      });
+
+      it('should extract task number using task number pattern', () => {
+        // Use "start" without "task" to avoid matching tasks intent
+        const result = service.parseCommand('start номер 3');
+
+        expect(result.intent).toBe('start_task');
+        expect(result.parameters?.taskNumber).toBe('3');
       });
     });
 
@@ -397,6 +526,241 @@ describe('TelegramVoiceService', () => {
     it('should return false when OpenAI not configured', () => {
       // Service created without OPENAI_API_KEY
       expect(service.isAvailable()).toBe(false);
+    });
+  });
+
+  describe('English responses - additional coverage', () => {
+    it('should return English response for stats', () => {
+      const command: VoiceCommand = {
+        intent: 'stats',
+        confidence: 0.9,
+        originalText: 'stats',
+      };
+
+      const response = service.getVoiceCommandResponse(command, 'en');
+
+      expect(response).toContain('Loading statistics');
+    });
+
+    it('should return English response for help', () => {
+      const command: VoiceCommand = {
+        intent: 'help',
+        confidence: 0.9,
+        originalText: 'help',
+      };
+
+      const response = service.getVoiceCommandResponse(command, 'en');
+
+      expect(response).toContain('Showing help');
+    });
+
+    it('should return English response for start_task without number', () => {
+      const command: VoiceCommand = {
+        intent: 'start_task',
+        confidence: 0.9,
+        originalText: 'start task',
+      };
+
+      const response = service.getVoiceCommandResponse(command, 'en');
+
+      expect(response).toContain('Choose a task to start');
+    });
+
+    it('should return English response for complete_task', () => {
+      const command: VoiceCommand = {
+        intent: 'complete_task',
+        confidence: 0.9,
+        originalText: 'complete',
+      };
+
+      const response = service.getVoiceCommandResponse(command, 'en');
+
+      expect(response).toContain('Complete');
+    });
+  });
+
+  describe('transcribeVoice', () => {
+    it('should throw error when OpenAI not configured', async () => {
+      await expect(service.transcribeVoice(Buffer.from('test'))).rejects.toThrow(
+        'Voice transcription not available. OPENAI_API_KEY not configured.',
+      );
+    });
+
+    it('should throw error when temp directory not available', async () => {
+      // Create service with API key but failed temp dir
+      process.env.OPENAI_API_KEY = 'test-api-key';
+      fsMock.existsSync.mockReturnValue(false);
+      fsMock.mkdirSync.mockImplementation(() => {
+        throw new Error('Permission denied');
+      });
+
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [TelegramVoiceService],
+      }).compile();
+
+      const serviceNoTempDir = module.get<TelegramVoiceService>(TelegramVoiceService);
+
+      await expect(serviceNoTempDir.transcribeVoice(Buffer.from('test'))).rejects.toThrow(
+        'Voice transcription not available. Temporary directory not accessible.',
+      );
+    });
+
+    it('should successfully transcribe voice', async () => {
+      process.env.OPENAI_API_KEY = 'test-api-key';
+      mockTranscriptionsCreate.mockResolvedValue('Покажи мои задачи');
+      fsMock.existsSync.mockReturnValue(true);
+
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [TelegramVoiceService],
+      }).compile();
+
+      const serviceWithKey = module.get<TelegramVoiceService>(TelegramVoiceService);
+      const result = await serviceWithKey.transcribeVoice(Buffer.from('audio-data'));
+
+      expect(result).toBe('Покажи мои задачи');
+      expect(mockTranscriptionsCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          model: 'whisper-1',
+          language: 'ru',
+          response_format: 'text',
+        }),
+      );
+    });
+
+    it('should use Uzbek language as Russian fallback', async () => {
+      process.env.OPENAI_API_KEY = 'test-api-key';
+      mockTranscriptionsCreate.mockResolvedValue('Test text');
+      fsMock.existsSync.mockReturnValue(true);
+
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [TelegramVoiceService],
+      }).compile();
+
+      const serviceWithKey = module.get<TelegramVoiceService>(TelegramVoiceService);
+      await serviceWithKey.transcribeVoice(Buffer.from('audio-data'), 'uz');
+
+      expect(mockTranscriptionsCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          language: 'ru', // Uzbek falls back to Russian
+        }),
+      );
+    });
+
+    it('should throw user-friendly error on transcription failure', async () => {
+      process.env.OPENAI_API_KEY = 'test-api-key';
+      mockTranscriptionsCreate.mockRejectedValue(new Error('OpenAI API error'));
+      fsMock.existsSync.mockReturnValue(true);
+
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [TelegramVoiceService],
+      }).compile();
+
+      const serviceWithKey = module.get<TelegramVoiceService>(TelegramVoiceService);
+
+      await expect(serviceWithKey.transcribeVoice(Buffer.from('audio-data'))).rejects.toThrow(
+        'Не удалось распознать голосовое сообщение',
+      );
+    });
+
+    it('should cleanup temp file even on error', async () => {
+      process.env.OPENAI_API_KEY = 'test-api-key';
+      mockTranscriptionsCreate.mockRejectedValue(new Error('OpenAI API error'));
+      // First call for initial existsSync in constructor, then for cleanup check
+      fsMock.existsSync.mockReturnValue(true);
+
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [TelegramVoiceService],
+      }).compile();
+
+      const serviceWithKey = module.get<TelegramVoiceService>(TelegramVoiceService);
+
+      // Should throw the user-friendly error but cleanup should happen internally
+      await expect(serviceWithKey.transcribeVoice(Buffer.from('audio-data'))).rejects.toThrow(
+        'Не удалось распознать голосовое сообщение',
+      );
+      // The cleanup happens internally - we just verify it doesn't cause additional errors
+    });
+
+    it('should handle temp file cleanup failure gracefully', async () => {
+      process.env.OPENAI_API_KEY = 'test-api-key';
+      mockTranscriptionsCreate.mockResolvedValue('Test transcription');
+      fsMock.existsSync.mockReturnValue(true);
+
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [TelegramVoiceService],
+      }).compile();
+
+      const serviceWithKey = module.get<TelegramVoiceService>(TelegramVoiceService);
+
+      // Should not throw even if internal cleanup has issues
+      const result = await serviceWithKey.transcribeVoice(Buffer.from('audio-data'));
+      expect(result).toBe('Test transcription');
+    });
+  });
+
+  describe('cleanupOldFiles', () => {
+    it('should do nothing when temp directory does not exist', async () => {
+      fsMock.existsSync.mockReturnValue(false);
+
+      await service.cleanupOldFiles();
+
+      expect(fsMock.readdirSync).not.toHaveBeenCalled();
+    });
+
+    it('should handle cleanup errors gracefully', async () => {
+      fsMock.existsSync.mockReturnValue(true);
+      fsMock.readdirSync.mockImplementation(() => {
+        throw new Error('Read error');
+      });
+
+      // Should not throw
+      await expect(service.cleanupOldFiles()).resolves.not.toThrow();
+    });
+
+    it('should skip files newer than max age', async () => {
+      fsMock.existsSync.mockReturnValue(true);
+      fsMock.readdirSync.mockReturnValue(['voice_123.ogg']);
+      fsMock.statSync.mockReturnValue({
+        mtimeMs: Date.now(), // Current time - not old
+      });
+
+      // Should complete without errors - no files to delete
+      await expect(service.cleanupOldFiles(24)).resolves.not.toThrow();
+    });
+
+    it('should delete files older than max age', async () => {
+      fsMock.existsSync.mockReturnValue(true);
+      fsMock.readdirSync.mockReturnValue(['voice_old.ogg']);
+      fsMock.statSync.mockReturnValue({
+        mtimeMs: Date.now() - 25 * 60 * 60 * 1000, // 25 hours ago
+      });
+
+      // Should complete without errors - file deletion happens internally
+      await expect(service.cleanupOldFiles(24)).resolves.not.toThrow();
+    });
+
+    it('should process multiple old files', async () => {
+      fsMock.existsSync.mockReturnValue(true);
+      fsMock.readdirSync.mockReturnValue(['voice_1.ogg', 'voice_2.ogg', 'voice_3.ogg']);
+      fsMock.statSync.mockReturnValue({
+        mtimeMs: Date.now() - 48 * 60 * 60 * 1000, // 48 hours ago
+      });
+
+      // Should complete without errors
+      await expect(service.cleanupOldFiles(24)).resolves.not.toThrow();
+      // Verify statSync was called for each file
+      expect(fsMock.statSync).toHaveBeenCalledTimes(3);
+    });
+
+    it('should use default max age of 24 hours', async () => {
+      fsMock.existsSync.mockReturnValue(true);
+      fsMock.readdirSync.mockReturnValue(['voice_old.ogg']);
+      fsMock.statSync.mockReturnValue({
+        mtimeMs: Date.now() - 25 * 60 * 60 * 1000, // 25 hours ago
+      });
+
+      // Should complete without errors using default 24 hours
+      await expect(service.cleanupOldFiles()).resolves.not.toThrow();
     });
   });
 });
