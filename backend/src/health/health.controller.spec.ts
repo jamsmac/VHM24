@@ -21,6 +21,9 @@ describe('HealthController', () => {
 
     mockCommissionQueue = {
       getJobCounts: jest.fn(),
+      client: {
+        ping: jest.fn(),
+      },
     };
 
     mockSalesImportQueue = {
@@ -91,6 +94,114 @@ describe('HealthController', () => {
       await controller.check();
 
       expect(typeOrmHealthIndicator.pingCheck).toHaveBeenCalledWith('database');
+    });
+
+    it('should return redis up when ping returns PONG', async () => {
+      mockCommissionQueue.client.ping.mockResolvedValue('PONG');
+
+      const healthResult: any = {
+        status: 'ok',
+        info: { database: { status: 'up' }, redis: { status: 'up' } },
+        error: {},
+        details: { database: { status: 'up' }, redis: { status: 'up' } },
+      };
+
+      let redisCheckResult: any;
+      healthCheckService.check.mockImplementation(async (checks: any[]) => {
+        for (const check of checks) {
+          const result = await check();
+          if (result && result.redis) {
+            redisCheckResult = result;
+          }
+        }
+        return healthResult;
+      });
+      typeOrmHealthIndicator.pingCheck.mockResolvedValue({ database: { status: 'up' as const } });
+
+      await controller.check();
+
+      expect(redisCheckResult).toEqual({ redis: { status: 'up' } });
+    });
+
+    it('should return redis down when ping returns unexpected response', async () => {
+      mockCommissionQueue.client.ping.mockResolvedValue('NOT_PONG');
+
+      const healthResult: any = {
+        status: 'error',
+        info: { database: { status: 'up' } },
+        error: { redis: { status: 'down' } },
+        details: { database: { status: 'up' }, redis: { status: 'down' } },
+      };
+
+      let redisCheckResult: any;
+      healthCheckService.check.mockImplementation(async (checks: any[]) => {
+        for (const check of checks) {
+          const result = await check();
+          if (result && result.redis) {
+            redisCheckResult = result;
+          }
+        }
+        return healthResult;
+      });
+      typeOrmHealthIndicator.pingCheck.mockResolvedValue({ database: { status: 'up' as const } });
+
+      await controller.check();
+
+      expect(redisCheckResult).toEqual({ redis: { status: 'down', message: 'Unexpected response' } });
+    });
+
+    it('should return redis down with error message when ping throws Error', async () => {
+      mockCommissionQueue.client.ping.mockRejectedValue(new Error('Connection refused'));
+
+      const healthResult: any = {
+        status: 'error',
+        info: { database: { status: 'up' } },
+        error: { redis: { status: 'down' } },
+        details: { database: { status: 'up' }, redis: { status: 'down' } },
+      };
+
+      let redisCheckResult: any;
+      healthCheckService.check.mockImplementation(async (checks: any[]) => {
+        for (const check of checks) {
+          const result = await check();
+          if (result && result.redis) {
+            redisCheckResult = result;
+          }
+        }
+        return healthResult;
+      });
+      typeOrmHealthIndicator.pingCheck.mockResolvedValue({ database: { status: 'up' as const } });
+
+      await controller.check();
+
+      expect(redisCheckResult).toEqual({ redis: { status: 'down', message: 'Connection refused' } });
+    });
+
+    it('should return redis down with default message when ping throws non-Error', async () => {
+      mockCommissionQueue.client.ping.mockRejectedValue('Unknown error');
+
+      const healthResult: any = {
+        status: 'error',
+        info: { database: { status: 'up' } },
+        error: { redis: { status: 'down' } },
+        details: { database: { status: 'up' }, redis: { status: 'down' } },
+      };
+
+      let redisCheckResult: any;
+      healthCheckService.check.mockImplementation(async (checks: any[]) => {
+        for (const check of checks) {
+          const result = await check();
+          if (result && result.redis) {
+            redisCheckResult = result;
+          }
+        }
+        return healthResult;
+      });
+      typeOrmHealthIndicator.pingCheck.mockResolvedValue({ database: { status: 'up' as const } });
+
+      await controller.check();
+
+      expect(redisCheckResult).toEqual({ redis: { status: 'down', message: 'Connection failed' } });
     });
   });
 
