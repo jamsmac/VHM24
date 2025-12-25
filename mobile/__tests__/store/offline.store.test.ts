@@ -151,11 +151,17 @@ describe('Offline Store', () => {
 
   describe('setOnline', () => {
     it('should update online status', () => {
+      jest.useFakeTimers();
+
       useOfflineStore.getState().setOnline(false);
       expect(useOfflineStore.getState().isOnline).toBe(false);
 
       useOfflineStore.getState().setOnline(true);
       expect(useOfflineStore.getState().isOnline).toBe(true);
+
+      // Advance timers to clear any pending timeouts
+      jest.advanceTimersByTime(3000);
+      jest.useRealTimers();
     });
 
     it('should trigger sync when coming back online', () => {
