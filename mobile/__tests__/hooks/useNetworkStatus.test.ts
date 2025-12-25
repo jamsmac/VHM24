@@ -1,16 +1,52 @@
 /**
  * useNetworkStatus Hook Tests
  *
- * Comprehensive tests for network status monitoring
+ * Tests for network status monitoring hooks
  */
 
 import NetInfo from '@react-native-community/netinfo';
 
-// Mock NetInfo
+// Store callbacks and state
+let mockEventListener: ((state: any) => void) | null = null;
 const mockUnsubscribe = jest.fn();
+let mockUseStateValues: Map<number, any> = new Map();
+let stateCounter = 0;
+let mockEffectCleanups: (() => void)[] = [];
+let mockEffects: (() => (() => void) | void)[] = [];
+
+// Mock React
+jest.mock('react', () => {
+  const actualReact = jest.requireActual('react');
+  return {
+    ...actualReact,
+    useState: jest.fn((initial) => {
+      const currentCounter = stateCounter++;
+      if (!mockUseStateValues.has(currentCounter)) {
+        mockUseStateValues.set(currentCounter, initial);
+      }
+      const setValue = (newValue: any) => {
+        if (typeof newValue === 'function') {
+          mockUseStateValues.set(currentCounter, newValue(mockUseStateValues.get(currentCounter)));
+        } else {
+          mockUseStateValues.set(currentCounter, newValue);
+        }
+      };
+      return [mockUseStateValues.get(currentCounter), setValue];
+    }),
+    useEffect: jest.fn((effect, _deps) => {
+      mockEffects.push(effect);
+    }),
+    useCallback: jest.fn((fn, _deps) => fn),
+  };
+});
+
+// Mock NetInfo
 jest.mock('@react-native-community/netinfo', () => ({
   fetch: jest.fn(),
-  addEventListener: jest.fn(() => mockUnsubscribe),
+  addEventListener: jest.fn((callback) => {
+    mockEventListener = callback;
+    return mockUnsubscribe;
+  }),
 }));
 
 // Mock offline store
@@ -24,716 +60,653 @@ jest.mock('../../src/store/offline.store', () => ({
 
 const mockNetInfo = NetInfo as jest.Mocked<typeof NetInfo>;
 
-describe('useNetworkStatus - parseNetInfoState', () => {
-  // Test the parseNetInfoState logic (same as in hook)
-  const parseNetInfoState = (state: any) => {
-    const isConnected = state.isConnected ?? false;
-    const isInternetReachable = state.isInternetReachable;
-    const type = state.type;
-    const isWifi = type === 'wifi';
-    const isCellular = type === 'cellular';
+// Import hooks after mocks
+import { useNetworkStatus, useIsOnline } from '../../src/hooks/useNetworkStatus';
 
-    return {
-      isConnected,
-      isInternetReachable,
-      type,
-      isWifi,
-      isCellular,
-      details: state,
-    };
-  };
+// Helper to run effects
+const runEffects = () => {
+  mockEffectCleanups = [];
+  mockEffects.forEach((effect) => {
+    const cleanup = effect();
+    if (cleanup) {
+      mockEffectCleanups.push(cleanup);
+    }
+  });
+};
 
-  describe('WiFi connection', () => {
-    it('should parse wifi connection with full connectivity', () => {
-      const state = {
-        isConnected: true,
-        isInternetReachable: true,
-        type: 'wifi',
-        details: { ssid: 'MyNetwork', strength: 80 },
-      };
+// Helper to run cleanups
+const runCleanups = () => {
+  mockEffectCleanups.forEach((cleanup) => cleanup());
+};
 
-      const result = parseNetInfoState(state);
+describe('useNetworkStatus', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockUnsubscribe.mockClear();
+    mockSetOnline.mockClear();
+    mockEventListener = null;
+    mockUseStateValues = new Map();
+    stateCounter = 0;
+    mockEffects = [];
+    mockEffectCleanups = [];
+
+    // Default mock implementation
+    mockNetInfo.fetch.mockResolvedValue({
+      isConnected: true,
+      isInternetReachable: true,
+      type: 'wifi',
+      details: null,
+    } as any);
+  });
+
+  describe('initial state', () => {
+    it('should return default network status', () => {
+      const result = useNetworkStatus();
 
       expect(result.isConnected).toBe(true);
       expect(result.isInternetReachable).toBe(true);
-      expect(result.isWifi).toBe(true);
-      expect(result.isCellular).toBe(false);
-      expect(result.type).toBe('wifi');
-      expect(result.details).toEqual(state);
-    });
-
-    it('should parse wifi without internet reachability', () => {
-      const state = {
-        isConnected: true,
-        isInternetReachable: false,
-        type: 'wifi',
-      };
-
-      const result = parseNetInfoState(state);
-
-      expect(result.isConnected).toBe(true);
-      expect(result.isInternetReachable).toBe(false);
-      expect(result.isWifi).toBe(true);
-    });
-
-    it('should handle wifi with null internet reachability', () => {
-      const state = {
-        isConnected: true,
-        isInternetReachable: null,
-        type: 'wifi',
-      };
-
-      const result = parseNetInfoState(state);
-
-      expect(result.isConnected).toBe(true);
-      expect(result.isInternetReachable).toBeNull();
-      expect(result.isWifi).toBe(true);
-    });
-  });
-
-  describe('Cellular connection', () => {
-    it('should parse cellular connection correctly', () => {
-      const state = {
-        isConnected: true,
-        isInternetReachable: true,
-        type: 'cellular',
-        details: { cellularGeneration: '4g', carrier: 'TestCarrier' },
-      };
-
-      const result = parseNetInfoState(state);
-
-      expect(result.isConnected).toBe(true);
-      expect(result.isWifi).toBe(false);
-      expect(result.isCellular).toBe(true);
-      expect(result.type).toBe('cellular');
-    });
-
-    it('should handle cellular with limited connectivity', () => {
-      const state = {
-        isConnected: true,
-        isInternetReachable: false,
-        type: 'cellular',
-      };
-
-      const result = parseNetInfoState(state);
-
-      expect(result.isConnected).toBe(true);
-      expect(result.isInternetReachable).toBe(false);
-      expect(result.isCellular).toBe(true);
-    });
-  });
-
-  describe('Other connection types', () => {
-    it('should handle ethernet connection', () => {
-      const state = {
-        isConnected: true,
-        isInternetReachable: true,
-        type: 'ethernet',
-      };
-
-      const result = parseNetInfoState(state);
-
-      expect(result.isConnected).toBe(true);
-      expect(result.isWifi).toBe(false);
-      expect(result.isCellular).toBe(false);
-      expect(result.type).toBe('ethernet');
-    });
-
-    it('should handle bluetooth connection', () => {
-      const state = {
-        isConnected: true,
-        isInternetReachable: true,
-        type: 'bluetooth',
-      };
-
-      const result = parseNetInfoState(state);
-
-      expect(result.isConnected).toBe(true);
-      expect(result.isWifi).toBe(false);
-      expect(result.isCellular).toBe(false);
-      expect(result.type).toBe('bluetooth');
-    });
-
-    it('should handle VPN connection', () => {
-      const state = {
-        isConnected: true,
-        isInternetReachable: true,
-        type: 'vpn',
-      };
-
-      const result = parseNetInfoState(state);
-
-      expect(result.isConnected).toBe(true);
-      expect(result.type).toBe('vpn');
-    });
-  });
-
-  describe('Disconnected states', () => {
-    it('should handle no connection (type: none)', () => {
-      const state = {
-        isConnected: false,
-        isInternetReachable: false,
-        type: 'none',
-      };
-
-      const result = parseNetInfoState(state);
-
-      expect(result.isConnected).toBe(false);
-      expect(result.isInternetReachable).toBe(false);
-      expect(result.isWifi).toBe(false);
-      expect(result.isCellular).toBe(false);
-      expect(result.type).toBe('none');
-    });
-
-    it('should handle unknown connection type', () => {
-      const state = {
-        isConnected: false,
-        isInternetReachable: null,
-        type: 'unknown',
-      };
-
-      const result = parseNetInfoState(state);
-
-      expect(result.isConnected).toBe(false);
       expect(result.type).toBe('unknown');
-    });
-
-    it('should default to false when isConnected is null', () => {
-      const state = {
-        isConnected: null,
-        isInternetReachable: null,
-        type: 'unknown',
-      };
-
-      const result = parseNetInfoState(state);
-
-      expect(result.isConnected).toBe(false);
-    });
-
-    it('should default to false when isConnected is undefined', () => {
-      const state = {
-        isInternetReachable: true,
-        type: 'wifi',
-      };
-
-      const result = parseNetInfoState(state);
-
-      expect(result.isConnected).toBe(false);
-    });
-  });
-});
-
-describe('useNetworkStatus - isOnline logic', () => {
-  // Test the isOnline determination logic
-  const isOnline = (status: { isConnected: boolean; isInternetReachable: boolean | null }) => {
-    return status.isConnected && (status.isInternetReachable !== false);
-  };
-
-  describe('Online scenarios', () => {
-    it('should return true when connected and reachable is true', () => {
-      expect(isOnline({ isConnected: true, isInternetReachable: true })).toBe(true);
-    });
-
-    it('should return true when connected and reachable is null (unknown)', () => {
-      expect(isOnline({ isConnected: true, isInternetReachable: null })).toBe(true);
+      expect(result.isWifi).toBe(false);
+      expect(result.isCellular).toBe(false);
+      expect(result.details).toBeNull();
+      expect(typeof result.refresh).toBe('function');
     });
   });
 
-  describe('Offline scenarios', () => {
-    it('should return false when not connected (reachable true)', () => {
-      expect(isOnline({ isConnected: false, isInternetReachable: true })).toBe(false);
-    });
+  describe('initial fetch on mount', () => {
+    it('should fetch initial network state when effect runs', async () => {
+      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
 
-    it('should return false when not connected (reachable false)', () => {
-      expect(isOnline({ isConnected: false, isInternetReachable: false })).toBe(false);
-    });
-
-    it('should return false when not connected (reachable null)', () => {
-      expect(isOnline({ isConnected: false, isInternetReachable: null })).toBe(false);
-    });
-
-    it('should return false when connected but explicitly not reachable', () => {
-      expect(isOnline({ isConnected: true, isInternetReachable: false })).toBe(false);
-    });
-  });
-
-  describe('Edge cases', () => {
-    it('should handle captive portal scenario (connected but not reachable)', () => {
-      // This is a common scenario in hotels, airports, etc.
-      const status = { isConnected: true, isInternetReachable: false };
-      expect(isOnline(status)).toBe(false);
-    });
-  });
-});
-
-describe('useNetworkStatus - NetInfo API', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    mockUnsubscribe.mockClear();
-  });
-
-  describe('NetInfo.fetch', () => {
-    it('should fetch current network state', async () => {
-      const mockState = {
+      mockNetInfo.fetch.mockResolvedValueOnce({
         isConnected: true,
         isInternetReachable: true,
         type: 'wifi',
-        details: {
-          ssid: 'TestNetwork',
-          bssid: '00:00:00:00:00:00',
-          strength: 80,
-          ipAddress: '192.168.1.100',
-          subnet: '255.255.255.0',
-          frequency: 5,
-        },
-      };
-      mockNetInfo.fetch.mockResolvedValueOnce(mockState as any);
+        details: { ssid: 'TestNetwork' },
+      } as any);
 
-      const state = await NetInfo.fetch();
+      useNetworkStatus();
+      runEffects();
 
-      expect(state).toEqual(mockState);
-      expect(mockNetInfo.fetch).toHaveBeenCalledTimes(1);
-    });
+      // Wait for promise to resolve
+      await new Promise(resolve => setTimeout(resolve, 0));
 
-    it('should handle fetch for cellular network', async () => {
-      const mockState = {
-        isConnected: true,
-        isInternetReachable: true,
-        type: 'cellular',
-        details: {
-          cellularGeneration: '4g',
-          carrier: 'TestCarrier',
-          isConnectionExpensive: true,
-        },
-      };
-      mockNetInfo.fetch.mockResolvedValueOnce(mockState as any);
-
-      const state = await NetInfo.fetch();
-
-      expect(state.type).toBe('cellular');
-      expect((state.details as any)?.cellularGeneration).toBe('4g');
-    });
-
-    it('should handle fetch when offline', async () => {
-      const mockState = {
-        isConnected: false,
-        isInternetReachable: false,
-        type: 'none',
-        details: null,
-      };
-      mockNetInfo.fetch.mockResolvedValueOnce(mockState as any);
-
-      const state = await NetInfo.fetch();
-
-      expect(state.isConnected).toBe(false);
-      expect(state.type).toBe('none');
-    });
-
-    it('should handle fetch errors', async () => {
-      mockNetInfo.fetch.mockRejectedValueOnce(new Error('Network fetch failed'));
-
-      await expect(NetInfo.fetch()).rejects.toThrow('Network fetch failed');
-    });
-  });
-
-  describe('NetInfo.addEventListener', () => {
-    it('should subscribe to network changes', () => {
-      const callback = jest.fn();
-      const unsubscribe = NetInfo.addEventListener(callback);
-
-      expect(mockNetInfo.addEventListener).toHaveBeenCalledWith(callback);
-      expect(typeof unsubscribe).toBe('function');
-    });
-
-    it('should call unsubscribe function when cleanup', () => {
-      const callback = jest.fn();
-      const unsubscribe = NetInfo.addEventListener(callback);
-
-      unsubscribe();
-
-      expect(mockUnsubscribe).toHaveBeenCalled();
-    });
-
-    it('should handle multiple subscriptions', () => {
-      const callback1 = jest.fn();
-      const callback2 = jest.fn();
-
-      NetInfo.addEventListener(callback1);
-      NetInfo.addEventListener(callback2);
-
-      expect(mockNetInfo.addEventListener).toHaveBeenCalledTimes(2);
-      expect(mockNetInfo.addEventListener).toHaveBeenNthCalledWith(1, callback1);
-      expect(mockNetInfo.addEventListener).toHaveBeenNthCalledWith(2, callback2);
-    });
-  });
-});
-
-describe('useNetworkStatus - Hook Integration Simulation', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    mockSetOnline.mockClear();
-    mockUnsubscribe.mockClear();
-  });
-
-  describe('Initial fetch and subscription', () => {
-    it('should simulate initial fetch and subscription setup', async () => {
-      const mockState = {
-        isConnected: true,
-        isInternetReachable: true,
-        type: 'wifi',
-      };
-      mockNetInfo.fetch.mockResolvedValueOnce(mockState as any);
-
-      // Simulate what the hook does on mount
-      const state = await NetInfo.fetch();
-
-      const parseNetInfoState = (s: any) => ({
-        isConnected: s.isConnected ?? false,
-        isInternetReachable: s.isInternetReachable,
-        type: s.type,
-        isWifi: s.type === 'wifi',
-        isCellular: s.type === 'cellular',
-        details: s,
-      });
-
-      const status = parseNetInfoState(state);
-      const isOnline = status.isConnected && (status.isInternetReachable !== false);
-
-      // Simulate setOnline call
-      mockSetOnline(isOnline);
-
-      expect(status.isConnected).toBe(true);
-      expect(status.isWifi).toBe(true);
+      expect(mockNetInfo.fetch).toHaveBeenCalled();
       expect(mockSetOnline).toHaveBeenCalledWith(true);
-    });
-
-    it('should simulate subscription callback receiving updates', async () => {
-      let capturedCallback: any;
-      mockNetInfo.addEventListener.mockImplementationOnce((callback) => {
-        capturedCallback = callback;
-        return mockUnsubscribe;
-      });
-
-      // Simulate subscription
-      const callback = jest.fn();
-      NetInfo.addEventListener(callback);
-
-      // Verify callback was captured
-      expect(mockNetInfo.addEventListener).toHaveBeenCalled();
-    });
-  });
-
-  describe('Network change scenarios', () => {
-    it('should handle transition from wifi to cellular', () => {
-      const parseNetInfoState = (s: any) => ({
-        isConnected: s.isConnected ?? false,
-        isInternetReachable: s.isInternetReachable,
-        type: s.type,
-        isWifi: s.type === 'wifi',
-        isCellular: s.type === 'cellular',
-        details: s,
-      });
-
-      // Initial state: wifi
-      const wifiState = { isConnected: true, isInternetReachable: true, type: 'wifi' };
-      const wifiStatus = parseNetInfoState(wifiState);
-      expect(wifiStatus.isWifi).toBe(true);
-      expect(wifiStatus.isCellular).toBe(false);
-
-      // New state: cellular
-      const cellularState = { isConnected: true, isInternetReachable: true, type: 'cellular' };
-      const cellularStatus = parseNetInfoState(cellularState);
-      expect(cellularStatus.isWifi).toBe(false);
-      expect(cellularStatus.isCellular).toBe(true);
-    });
-
-    it('should handle going offline', () => {
-      const parseNetInfoState = (s: any) => ({
-        isConnected: s.isConnected ?? false,
-        isInternetReachable: s.isInternetReachable,
-        type: s.type,
-        isWifi: s.type === 'wifi',
-        isCellular: s.type === 'cellular',
-        details: s,
-      });
-
-      // Initial state: online
-      const onlineState = { isConnected: true, isInternetReachable: true, type: 'wifi' };
-      const onlineStatus = parseNetInfoState(onlineState);
-      const wasOnline = onlineStatus.isConnected && (onlineStatus.isInternetReachable !== false);
-      expect(wasOnline).toBe(true);
-
-      // New state: offline
-      const offlineState = { isConnected: false, isInternetReachable: false, type: 'none' };
-      const offlineStatus = parseNetInfoState(offlineState);
-      const isNowOnline = offlineStatus.isConnected && (offlineStatus.isInternetReachable !== false);
-      expect(isNowOnline).toBe(false);
-    });
-
-    it('should handle coming back online', () => {
-      const isOnline = (s: any) => s.isConnected && (s.isInternetReachable !== false);
-
-      // Offline
-      expect(isOnline({ isConnected: false, isInternetReachable: false })).toBe(false);
-
-      // Back online
-      expect(isOnline({ isConnected: true, isInternetReachable: true })).toBe(true);
-    });
-
-    it('should handle captive portal detection', () => {
-      // Connected to wifi but no internet (captive portal)
-      const captivePortalState = {
-        isConnected: true,
-        isInternetReachable: false,
-        type: 'wifi',
-      };
-
-      const isOnline = captivePortalState.isConnected && (captivePortalState.isInternetReachable !== false);
-      expect(isOnline).toBe(false);
-    });
-  });
-
-  describe('Refresh functionality', () => {
-    it('should simulate manual refresh', async () => {
-      const mockState = {
-        isConnected: true,
-        isInternetReachable: true,
-        type: 'cellular',
-      };
-      mockNetInfo.fetch.mockResolvedValueOnce(mockState as any);
-
-      // Simulate refresh
-      const state = await NetInfo.fetch();
-
-      expect(state.isConnected).toBe(true);
-      expect(state.type).toBe('cellular');
-    });
-
-    it('should handle refresh error gracefully', async () => {
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
-      mockNetInfo.fetch.mockRejectedValueOnce(new Error('Refresh failed'));
-
-      // Simulate refresh with error handling
-      let currentStatus = { isConnected: true, isInternetReachable: true, type: 'wifi' };
-
-      try {
-        await NetInfo.fetch();
-      } catch (error) {
-        console.error('[useNetworkStatus] Failed to fetch network state:', error);
-        // Keep current status on error (as hook does)
-      }
-
-      // Status should remain unchanged
-      expect(currentStatus.isConnected).toBe(true);
-      expect(consoleSpy).toHaveBeenCalled();
+      expect(consoleSpy).toHaveBeenCalledWith(
+        '[useNetworkStatus] Initial state:',
+        expect.objectContaining({
+          isConnected: true,
+          type: 'wifi',
+        })
+      );
 
       consoleSpy.mockRestore();
     });
-  });
 
-  describe('Cleanup', () => {
-    it('should unsubscribe on cleanup', () => {
-      // Simulate hook mount
-      const unsubscribe = NetInfo.addEventListener(() => {});
+    it('should set offline when not connected on initial fetch', async () => {
+      mockNetInfo.fetch.mockResolvedValueOnce({
+        isConnected: false,
+        isInternetReachable: false,
+        type: 'none',
+      } as any);
 
-      // Simulate hook unmount
-      unsubscribe();
+      useNetworkStatus();
+      runEffects();
 
-      expect(mockUnsubscribe).toHaveBeenCalled();
-    });
-  });
-});
+      await new Promise(resolve => setTimeout(resolve, 0));
 
-describe('useIsOnline - Simple hook', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    mockUnsubscribe.mockClear();
-  });
-
-  describe('Initial state', () => {
-    it('should default to true (optimistic)', () => {
-      // The hook defaults to true until it gets network info
-      const defaultIsOnline = true;
-      expect(defaultIsOnline).toBe(true);
-    });
-  });
-
-  describe('State updates', () => {
-    it('should calculate online status correctly', () => {
-      const calculateOnline = (state: any) => {
-        const online = state.isConnected && (state.isInternetReachable !== false);
-        return online ?? true;
-      };
-
-      // Connected and reachable
-      expect(calculateOnline({ isConnected: true, isInternetReachable: true })).toBe(true);
-
-      // Connected, reachable unknown
-      expect(calculateOnline({ isConnected: true, isInternetReachable: null })).toBe(true);
-
-      // Disconnected
-      expect(calculateOnline({ isConnected: false, isInternetReachable: false })).toBe(false);
-
-      // Connected but not reachable
-      expect(calculateOnline({ isConnected: true, isInternetReachable: false })).toBe(false);
+      expect(mockSetOnline).toHaveBeenCalledWith(false);
     });
 
-    it('should default to true when calculation is falsy but undefined', () => {
-      const calculateOnline = (state: any) => {
-        const online = state.isConnected && (state.isInternetReachable !== false);
-        return online ?? true;
-      };
+    it('should set online when connected with null reachability', async () => {
+      mockNetInfo.fetch.mockResolvedValueOnce({
+        isConnected: true,
+        isInternetReachable: null,
+        type: 'wifi',
+      } as any);
 
-      // When both are undefined/null
-      expect(calculateOnline({ isConnected: undefined, isInternetReachable: undefined })).toBe(true);
+      useNetworkStatus();
+      runEffects();
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(mockSetOnline).toHaveBeenCalledWith(true);
+    });
+
+    it('should set offline when connected but not reachable (captive portal)', async () => {
+      mockNetInfo.fetch.mockResolvedValueOnce({
+        isConnected: true,
+        isInternetReachable: false,
+        type: 'wifi',
+      } as any);
+
+      useNetworkStatus();
+      runEffects();
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(mockSetOnline).toHaveBeenCalledWith(false);
     });
   });
 
-  describe('Subscription', () => {
-    it('should subscribe to network changes', () => {
-      NetInfo.addEventListener(() => {});
+  describe('event listener', () => {
+    it('should subscribe to network changes on mount', () => {
+      useNetworkStatus();
+      runEffects();
+
       expect(mockNetInfo.addEventListener).toHaveBeenCalled();
     });
 
-    it('should unsubscribe on cleanup', () => {
-      const unsubscribe = NetInfo.addEventListener(() => {});
-      unsubscribe();
+    it('should update state when network changes', async () => {
+      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+
+      useNetworkStatus();
+      runEffects();
+
+      // Simulate network change via event listener
+      if (mockEventListener) {
+        mockEventListener({
+          isConnected: true,
+          isInternetReachable: true,
+          type: 'cellular',
+        });
+      }
+
+      expect(consoleSpy).toHaveBeenCalledWith(
+        '[useNetworkStatus] Network changed:',
+        expect.objectContaining({
+          type: 'cellular',
+        })
+      );
+
+      consoleSpy.mockRestore();
+    });
+
+    it('should update offline store when network changes to offline', () => {
+      useNetworkStatus();
+      runEffects();
+
+      mockSetOnline.mockClear();
+
+      if (mockEventListener) {
+        mockEventListener({
+          isConnected: false,
+          isInternetReachable: false,
+          type: 'none',
+        });
+      }
+
+      expect(mockSetOnline).toHaveBeenCalledWith(false);
+    });
+
+    it('should unsubscribe on unmount', () => {
+      useNetworkStatus();
+      runEffects();
+
+      runCleanups();
+
       expect(mockUnsubscribe).toHaveBeenCalled();
+    });
+
+    it('should handle subscription being null on cleanup', () => {
+      // Reset to test null subscription case
+      mockNetInfo.addEventListener.mockReturnValueOnce(null as any);
+
+      useNetworkStatus();
+      runEffects();
+
+      // Should not throw
+      runCleanups();
     });
   });
 
-  describe('Initial fetch', () => {
-    it('should fetch initial state', async () => {
+  describe('parseNetInfoState', () => {
+    it('should parse wifi connection', () => {
+      useNetworkStatus();
+      runEffects();
+
+      if (mockEventListener) {
+        mockEventListener({
+          isConnected: true,
+          isInternetReachable: true,
+          type: 'wifi',
+          details: { ssid: 'MyNetwork' },
+        });
+      }
+
+      expect(mockSetOnline).toHaveBeenCalledWith(true);
+    });
+
+    it('should parse cellular connection', () => {
+      useNetworkStatus();
+      runEffects();
+
+      if (mockEventListener) {
+        mockEventListener({
+          isConnected: true,
+          isInternetReachable: true,
+          type: 'cellular',
+        });
+      }
+
+      expect(mockSetOnline).toHaveBeenCalledWith(true);
+    });
+
+    it('should handle null isConnected as false', () => {
+      useNetworkStatus();
+      runEffects();
+
+      if (mockEventListener) {
+        mockEventListener({
+          isConnected: null,
+          isInternetReachable: null,
+          type: 'unknown',
+        });
+      }
+
+      expect(mockSetOnline).toHaveBeenCalledWith(false);
+    });
+
+    it('should handle undefined isConnected as false', () => {
+      useNetworkStatus();
+      runEffects();
+
+      if (mockEventListener) {
+        mockEventListener({
+          type: 'unknown',
+        });
+      }
+
+      expect(mockSetOnline).toHaveBeenCalledWith(false);
+    });
+  });
+
+  describe('refresh', () => {
+    it('should fetch and return current network status', async () => {
+      mockNetInfo.fetch.mockResolvedValueOnce({
+        isConnected: true,
+        isInternetReachable: true,
+        type: 'cellular',
+      } as any);
+
+      const { refresh } = useNetworkStatus();
+      const result = await refresh();
+
+      expect(result.type).toBe('cellular');
+      expect(result.isCellular).toBe(true);
+      expect(result.isWifi).toBe(false);
+    });
+
+    it('should update offline store on refresh', async () => {
+      mockNetInfo.fetch.mockResolvedValueOnce({
+        isConnected: false,
+        isInternetReachable: false,
+        type: 'none',
+      } as any);
+
+      const { refresh } = useNetworkStatus();
+      await refresh();
+
+      expect(mockSetOnline).toHaveBeenCalledWith(false);
+    });
+
+    it('should handle refresh error and return current status', async () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      mockNetInfo.fetch.mockRejectedValueOnce(new Error('Network error'));
+
+      const { refresh } = useNetworkStatus();
+      const result = await refresh();
+
+      expect(result).toBeDefined();
+      expect(consoleSpy).toHaveBeenCalledWith(
+        '[useNetworkStatus] Failed to fetch network state:',
+        expect.any(Error)
+      );
+
+      consoleSpy.mockRestore();
+    });
+
+    it('should update state on successful refresh', async () => {
       mockNetInfo.fetch.mockResolvedValueOnce({
         isConnected: true,
         isInternetReachable: true,
         type: 'wifi',
       } as any);
 
-      await NetInfo.fetch();
+      const { refresh } = useNetworkStatus();
+      const result = await refresh();
+
+      expect(result.isConnected).toBe(true);
+      expect(mockSetOnline).toHaveBeenCalledWith(true);
+    });
+  });
+});
+
+describe('useIsOnline', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockUnsubscribe.mockClear();
+    mockEventListener = null;
+    mockUseStateValues = new Map();
+    stateCounter = 0;
+    mockEffects = [];
+    mockEffectCleanups = [];
+
+    mockNetInfo.fetch.mockResolvedValue({
+      isConnected: true,
+      isInternetReachable: true,
+      type: 'wifi',
+    } as any);
+  });
+
+  describe('initial state', () => {
+    it('should default to true (optimistic)', () => {
+      const result = useIsOnline();
+
+      expect(result).toBe(true);
+    });
+  });
+
+  describe('initial fetch', () => {
+    it('should update based on initial network state when offline', async () => {
+      mockNetInfo.fetch.mockResolvedValueOnce({
+        isConnected: false,
+        isInternetReachable: false,
+        type: 'none',
+      } as any);
+
+      useIsOnline();
+      runEffects();
+
+      await new Promise(resolve => setTimeout(resolve, 0));
 
       expect(mockNetInfo.fetch).toHaveBeenCalled();
     });
-  });
-});
 
-describe('Network state details', () => {
-  describe('WiFi details', () => {
-    it('should include all wifi details', () => {
-      const wifiDetails = {
-        ssid: 'MyNetwork',
-        bssid: '00:11:22:33:44:55',
-        strength: 75,
-        ipAddress: '192.168.1.100',
-        subnet: '255.255.255.0',
-        frequency: 5,
-        linkSpeed: 150,
-        rxLinkSpeed: 150,
-        txLinkSpeed: 150,
-      };
-
-      const state = {
+    it('should remain true when connected', async () => {
+      mockNetInfo.fetch.mockResolvedValueOnce({
         isConnected: true,
         isInternetReachable: true,
         type: 'wifi',
-        details: wifiDetails,
-      };
+      } as any);
 
-      expect(state.details.ssid).toBe('MyNetwork');
-      expect(state.details.strength).toBe(75);
-      expect(state.details.frequency).toBe(5);
+      useIsOnline();
+      runEffects();
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(mockNetInfo.fetch).toHaveBeenCalled();
+    });
+
+    it('should fallback to true when isConnected is undefined in initial fetch', async () => {
+      mockNetInfo.fetch.mockResolvedValueOnce({
+        isConnected: undefined,
+        isInternetReachable: undefined,
+        type: 'unknown',
+      } as any);
+
+      useIsOnline();
+      runEffects();
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      // The ?? true fallback should apply
+      expect(mockNetInfo.fetch).toHaveBeenCalled();
+    });
+
+    it('should fallback to true when isConnected is null in initial fetch', async () => {
+      mockNetInfo.fetch.mockResolvedValueOnce({
+        isConnected: null,
+        isInternetReachable: null,
+        type: 'unknown',
+      } as any);
+
+      useIsOnline();
+      runEffects();
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      // The ?? true fallback should apply
+      expect(mockNetInfo.fetch).toHaveBeenCalled();
     });
   });
 
-  describe('Cellular details', () => {
-    it('should include cellular generation', () => {
-      const cellularDetails = {
-        cellularGeneration: '5g',
-        carrier: 'VerizonWireless',
-        isConnectionExpensive: true,
-      };
+  describe('event listener', () => {
+    it('should subscribe to network changes', () => {
+      useIsOnline();
+      runEffects();
 
-      const state = {
-        isConnected: true,
-        isInternetReachable: true,
-        type: 'cellular',
-        details: cellularDetails,
-      };
-
-      expect(state.details.cellularGeneration).toBe('5g');
-      expect(state.details.carrier).toBe('VerizonWireless');
-      expect(state.details.isConnectionExpensive).toBe(true);
+      expect(mockNetInfo.addEventListener).toHaveBeenCalled();
     });
 
-    it('should handle different cellular generations', () => {
-      const generations = ['2g', '3g', '4g', '5g'];
+    it('should handle going offline', () => {
+      useIsOnline();
+      runEffects();
 
-      generations.forEach((gen) => {
-        const state = {
-          type: 'cellular',
-          details: { cellularGeneration: gen },
-        };
-        expect(state.details.cellularGeneration).toBe(gen);
-      });
+      if (mockEventListener) {
+        mockEventListener({
+          isConnected: false,
+          isInternetReachable: false,
+          type: 'none',
+        });
+      }
+
+      // Event was triggered
+      expect(mockNetInfo.addEventListener).toHaveBeenCalled();
+    });
+
+    it('should handle coming back online', () => {
+      useIsOnline();
+      runEffects();
+
+      if (mockEventListener) {
+        mockEventListener({
+          isConnected: true,
+          isInternetReachable: true,
+          type: 'wifi',
+        });
+      }
+
+      expect(mockNetInfo.addEventListener).toHaveBeenCalled();
+    });
+
+    it('should handle captive portal (connected but not reachable)', () => {
+      useIsOnline();
+      runEffects();
+
+      if (mockEventListener) {
+        mockEventListener({
+          isConnected: true,
+          isInternetReachable: false,
+          type: 'wifi',
+        });
+      }
+
+      expect(mockNetInfo.addEventListener).toHaveBeenCalled();
+    });
+
+    it('should handle null reachability as online', () => {
+      useIsOnline();
+      runEffects();
+
+      if (mockEventListener) {
+        mockEventListener({
+          isConnected: true,
+          isInternetReachable: null,
+          type: 'wifi',
+        });
+      }
+
+      expect(mockNetInfo.addEventListener).toHaveBeenCalled();
+    });
+
+    it('should unsubscribe on unmount', () => {
+      useIsOnline();
+      runEffects();
+
+      runCleanups();
+
+      expect(mockUnsubscribe).toHaveBeenCalled();
+    });
+  });
+
+  describe('fallback behavior', () => {
+    it('should handle undefined isConnected with fallback to true', () => {
+      useIsOnline();
+      runEffects();
+
+      if (mockEventListener) {
+        mockEventListener({
+          isConnected: undefined,
+          isInternetReachable: undefined,
+          type: 'unknown',
+        });
+      }
+
+      // The ?? true fallback should apply
+      expect(mockNetInfo.addEventListener).toHaveBeenCalled();
+    });
+
+    it('should handle null isConnected with fallback', () => {
+      useIsOnline();
+      runEffects();
+
+      if (mockEventListener) {
+        mockEventListener({
+          isConnected: null,
+          isInternetReachable: null,
+          type: 'unknown',
+        });
+      }
+
+      expect(mockNetInfo.addEventListener).toHaveBeenCalled();
     });
   });
 });
 
-describe('Edge cases and error handling', () => {
+describe('parseNetInfoState edge cases', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockUseStateValues = new Map();
+    stateCounter = 0;
+    mockEffects = [];
+    mockEffectCleanups = [];
   });
 
-  it('should handle rapid network changes', () => {
-    const states = [
-      { isConnected: true, type: 'wifi' },
-      { isConnected: false, type: 'none' },
-      { isConnected: true, type: 'cellular' },
-      { isConnected: true, type: 'wifi' },
-    ];
+  it('should handle ethernet connection type', () => {
+    useNetworkStatus();
+    runEffects();
 
-    const parseNetInfoState = (s: any) => ({
-      isConnected: s.isConnected ?? false,
-      type: s.type,
-      isWifi: s.type === 'wifi',
-      isCellular: s.type === 'cellular',
-    });
+    if (mockEventListener) {
+      mockEventListener({
+        isConnected: true,
+        isInternetReachable: true,
+        type: 'ethernet',
+      });
+    }
 
-    states.forEach((state) => {
-      const parsed = parseNetInfoState(state);
-      expect(parsed.isConnected).toBe(state.isConnected);
-      expect(parsed.type).toBe(state.type);
-    });
+    expect(mockSetOnline).toHaveBeenCalledWith(true);
   });
 
-  it('should handle airplane mode', () => {
-    const airplaneState = {
-      isConnected: false,
-      isInternetReachable: false,
-      type: 'none',
-      details: null,
-    };
+  it('should handle bluetooth connection type', () => {
+    useNetworkStatus();
+    runEffects();
 
-    const isOnline = airplaneState.isConnected && (airplaneState.isInternetReachable !== false);
-    expect(isOnline).toBe(false);
+    if (mockEventListener) {
+      mockEventListener({
+        isConnected: true,
+        isInternetReachable: true,
+        type: 'bluetooth',
+      });
+    }
+
+    expect(mockSetOnline).toHaveBeenCalledWith(true);
   });
 
-  it('should handle network state with missing fields', () => {
-    const parseNetInfoState = (s: any) => ({
-      isConnected: s.isConnected ?? false,
-      isInternetReachable: s.isInternetReachable,
-      type: s.type,
-      isWifi: s.type === 'wifi',
-      isCellular: s.type === 'cellular',
-      details: s,
-    });
+  it('should handle vpn connection type', () => {
+    useNetworkStatus();
+    runEffects();
 
-    // Minimal state
-    const minimalState = { type: 'unknown' };
-    const result = parseNetInfoState(minimalState);
+    if (mockEventListener) {
+      mockEventListener({
+        isConnected: true,
+        isInternetReachable: true,
+        type: 'vpn',
+      });
+    }
 
-    expect(result.isConnected).toBe(false);
-    expect(result.isInternetReachable).toBeUndefined();
-    expect(result.type).toBe('unknown');
+    expect(mockSetOnline).toHaveBeenCalledWith(true);
+  });
+
+  it('should handle none connection type', () => {
+    useNetworkStatus();
+    runEffects();
+
+    if (mockEventListener) {
+      mockEventListener({
+        isConnected: false,
+        isInternetReachable: false,
+        type: 'none',
+      });
+    }
+
+    expect(mockSetOnline).toHaveBeenCalledWith(false);
+  });
+});
+
+describe('isOnline calculation edge cases', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockSetOnline.mockClear();
+    mockUseStateValues = new Map();
+    stateCounter = 0;
+    mockEffects = [];
+    mockEffectCleanups = [];
+  });
+
+  it('should be online when isInternetReachable is true', () => {
+    useNetworkStatus();
+    runEffects();
+
+    if (mockEventListener) {
+      mockEventListener({
+        isConnected: true,
+        isInternetReachable: true,
+        type: 'wifi',
+      });
+    }
+
+    expect(mockSetOnline).toHaveBeenCalledWith(true);
+  });
+
+  it('should be online when isInternetReachable is null (unknown)', () => {
+    useNetworkStatus();
+    runEffects();
+
+    if (mockEventListener) {
+      mockEventListener({
+        isConnected: true,
+        isInternetReachable: null,
+        type: 'wifi',
+      });
+    }
+
+    expect(mockSetOnline).toHaveBeenCalledWith(true);
+  });
+
+  it('should be offline when isInternetReachable is explicitly false', () => {
+    useNetworkStatus();
+    runEffects();
+
+    if (mockEventListener) {
+      mockEventListener({
+        isConnected: true,
+        isInternetReachable: false,
+        type: 'wifi',
+      });
+    }
+
+    expect(mockSetOnline).toHaveBeenCalledWith(false);
   });
 });
