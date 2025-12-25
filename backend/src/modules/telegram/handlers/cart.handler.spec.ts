@@ -6,7 +6,7 @@ import { CartStorageService, CartItem } from '../services/cart-storage.service';
 import { UsersService } from '../../users/users.service';
 import { RequestsService } from '../../requests/requests.service';
 import { RequestPriority, RequestStatus } from '../../requests/entities/request.entity';
-import { defaultSessionData } from './fsm-states';
+import { defaultSessionData, CartState } from './fsm-states';
 import { Context } from 'telegraf';
 
 describe('CartHandler', () => {
@@ -407,6 +407,561 @@ describe('CartHandler', () => {
 
       // Assert
       expect(cartStorage.addItem).toHaveBeenCalledWith(mockUserId, item);
+    });
+  });
+
+  describe('handleViewCart', () => {
+    it('should show empty cart message when cart is empty', async () => {
+      const ctx = createMockContext(mockUserId) as Context;
+      cartStorage.getCart.mockResolvedValue([]);
+
+      await (handler as any).handleViewCart(ctx);
+
+      expect(sessionService.setSessionData).toHaveBeenCalledWith(mockUserId, defaultSessionData);
+      expect(ctx.reply).toHaveBeenCalledWith(
+        expect.stringContaining('Корзина пуста'),
+        expect.any(Object),
+      );
+    });
+
+    it('should show cart items when cart is not empty', async () => {
+      const ctx = createMockContext(mockUserId) as Context;
+      cartStorage.getCart.mockResolvedValue(mockCartItems);
+
+      await (handler as any).handleViewCart(ctx);
+
+      expect(ctx.reply).toHaveBeenCalledWith(
+        expect.stringContaining('Ваша корзина'),
+        expect.any(Object),
+      );
+      expect(ctx.reply).toHaveBeenCalledWith(
+        expect.stringContaining('Coffee Beans'),
+        expect.any(Object),
+      );
+    });
+
+    it('should return early if userId is not provided', async () => {
+      const ctx = { from: undefined } as unknown as Context;
+
+      await (handler as any).handleViewCart(ctx);
+
+      expect(cartStorage.getCart).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('handleViewCartCallback', () => {
+    it('should show cart via callback and answer query', async () => {
+      const ctx = createMockContext(mockUserId) as Context;
+      cartStorage.getCart.mockResolvedValue(mockCartItems);
+
+      await (handler as any).handleViewCartCallback(ctx);
+
+      expect(ctx.editMessageText).toHaveBeenCalled();
+      expect(ctx.answerCbQuery).toHaveBeenCalled();
+    });
+
+    it('should show empty cart via callback', async () => {
+      const ctx = createMockContext(mockUserId) as Context;
+      cartStorage.getCart.mockResolvedValue([]);
+
+      await (handler as any).handleViewCartCallback(ctx);
+
+      expect(ctx.editMessageText).toHaveBeenCalledWith(
+        expect.stringContaining('Корзина пуста'),
+        expect.any(Object),
+      );
+    });
+  });
+
+  describe('handleCartIncrease', () => {
+    it('should increase item quantity', async () => {
+      const ctx = {
+        ...createMockContext(mockUserId),
+        match: ['cart_inc:item-1', 'item-1'],
+      } as unknown as Context;
+      const updatedItem = { ...mockCartItems[0], quantity: 6 };
+      cartStorage.updateItemQuantity.mockResolvedValue(updatedItem);
+      cartStorage.getCart.mockResolvedValue([updatedItem, mockCartItems[1]]);
+
+      await (handler as any).handleCartIncrease(ctx);
+
+      expect(cartStorage.updateItemQuantity).toHaveBeenCalledWith(mockUserId, 'item-1', 1);
+      expect(ctx.answerCbQuery).toHaveBeenCalledWith('➕ Coffee Beans: 6');
+    });
+
+    it('should handle null item response', async () => {
+      const ctx = {
+        ...createMockContext(mockUserId),
+        match: ['cart_inc:item-x', 'item-x'],
+      } as unknown as Context;
+      cartStorage.updateItemQuantity.mockResolvedValue(null);
+      cartStorage.getCart.mockResolvedValue(mockCartItems);
+
+      await (handler as any).handleCartIncrease(ctx);
+
+      expect(ctx.answerCbQuery).not.toHaveBeenCalled();
+    });
+
+    it('should return early if userId is not provided', async () => {
+      const ctx = { from: undefined, match: ['cart_inc:item-1', 'item-1'] } as unknown as Context;
+
+      await (handler as any).handleCartIncrease(ctx);
+
+      expect(cartStorage.updateItemQuantity).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('handleCartDecrease', () => {
+    it('should decrease item quantity', async () => {
+      const ctx = {
+        ...createMockContext(mockUserId),
+        match: ['cart_dec:item-1', 'item-1'],
+      } as unknown as Context;
+      const updatedItem = { ...mockCartItems[0], quantity: 4 };
+      cartStorage.getItem.mockResolvedValue(mockCartItems[0]);
+      cartStorage.updateItemQuantity.mockResolvedValue(updatedItem);
+      cartStorage.getCart.mockResolvedValue([updatedItem, mockCartItems[1]]);
+
+      await (handler as any).handleCartDecrease(ctx);
+
+      expect(cartStorage.updateItemQuantity).toHaveBeenCalledWith(mockUserId, 'item-1', -1);
+      expect(ctx.answerCbQuery).toHaveBeenCalledWith('➖ Coffee Beans: 4');
+    });
+
+    it('should show removed message when item quantity reaches zero', async () => {
+      const ctx = {
+        ...createMockContext(mockUserId),
+        match: ['cart_dec:item-1', 'item-1'],
+      } as unknown as Context;
+      cartStorage.getItem.mockResolvedValue(mockCartItems[0]);
+      cartStorage.updateItemQuantity.mockResolvedValue(null); // Item removed
+      cartStorage.getCart.mockResolvedValue([mockCartItems[1]]);
+
+      await (handler as any).handleCartDecrease(ctx);
+
+      expect(ctx.answerCbQuery).toHaveBeenCalledWith('🗑 Coffee Beans удалён');
+    });
+
+    it('should return early if userId is not provided', async () => {
+      const ctx = { from: undefined, match: ['cart_dec:item-1', 'item-1'] } as unknown as Context;
+
+      await (handler as any).handleCartDecrease(ctx);
+
+      expect(cartStorage.updateItemQuantity).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('handleCartDelete', () => {
+    it('should delete item from cart', async () => {
+      const ctx = {
+        ...createMockContext(mockUserId),
+        match: ['cart_del:item-1', 'item-1'],
+      } as unknown as Context;
+      cartStorage.removeItem.mockResolvedValue(mockCartItems[0]);
+      cartStorage.getCart.mockResolvedValue([mockCartItems[1]]);
+
+      await (handler as any).handleCartDelete(ctx);
+
+      expect(cartStorage.removeItem).toHaveBeenCalledWith(mockUserId, 'item-1');
+      expect(ctx.answerCbQuery).toHaveBeenCalledWith('🗑 Удалено: Coffee Beans');
+    });
+
+    it('should handle non-existent item deletion', async () => {
+      const ctx = {
+        ...createMockContext(mockUserId),
+        match: ['cart_del:item-x', 'item-x'],
+      } as unknown as Context;
+      cartStorage.removeItem.mockResolvedValue(null);
+      cartStorage.getCart.mockResolvedValue(mockCartItems);
+
+      await (handler as any).handleCartDelete(ctx);
+
+      expect(ctx.answerCbQuery).not.toHaveBeenCalled();
+    });
+
+    it('should return early if userId is not provided', async () => {
+      const ctx = { from: undefined, match: ['cart_del:item-1', 'item-1'] } as unknown as Context;
+
+      await (handler as any).handleCartDelete(ctx);
+
+      expect(cartStorage.removeItem).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('handleCartClear', () => {
+    it('should clear the cart', async () => {
+      const ctx = createMockContext(mockUserId) as Context;
+
+      await (handler as any).handleCartClear(ctx);
+
+      expect(cartStorage.clearCart).toHaveBeenCalledWith(mockUserId);
+      expect(ctx.editMessageText).toHaveBeenCalledWith(
+        '🗑 <b>Корзина очищена</b>',
+        expect.any(Object),
+      );
+      expect(ctx.answerCbQuery).toHaveBeenCalledWith('🗑 Корзина очищена');
+    });
+
+    it('should return early if userId is not provided', async () => {
+      const ctx = { from: undefined } as unknown as Context;
+
+      await (handler as any).handleCartClear(ctx);
+
+      expect(cartStorage.clearCart).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('handleStartCheckout', () => {
+    it('should start checkout process', async () => {
+      const ctx = createMockContext(mockUserId) as Context;
+      cartStorage.getCart.mockResolvedValue(mockCartItems);
+
+      await (handler as any).handleStartCheckout(ctx);
+
+      expect(sessionService.setSessionData).toHaveBeenCalledWith(
+        mockUserId,
+        expect.objectContaining({
+          checkoutItems: 2,
+          priority: 'normal',
+        }),
+      );
+      expect(ctx.editMessageText).toHaveBeenCalledWith(
+        expect.stringContaining('Оформление заявки'),
+        expect.any(Object),
+      );
+    });
+
+    it('should reject checkout for empty cart', async () => {
+      const ctx = createMockContext(mockUserId) as Context;
+      cartStorage.getCart.mockResolvedValue([]);
+
+      await (handler as any).handleStartCheckout(ctx);
+
+      expect(ctx.answerCbQuery).toHaveBeenCalledWith('❌ Корзина пуста', { show_alert: true });
+    });
+
+    it('should return early if userId is not provided', async () => {
+      const ctx = { from: undefined } as unknown as Context;
+
+      await (handler as any).handleStartCheckout(ctx);
+
+      expect(cartStorage.getCart).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('handleSetPriority', () => {
+    it('should set priority to normal', async () => {
+      const ctx = {
+        ...createMockContext(mockUserId),
+        match: ['priority:normal', 'normal'],
+      } as unknown as Context;
+      sessionService.getSessionData.mockResolvedValue({ priority: 'normal' });
+
+      await (handler as any).handleSetPriority(ctx);
+
+      expect(sessionService.setSessionData).toHaveBeenCalledWith(
+        mockUserId,
+        expect.objectContaining({ priority: 'normal' }),
+      );
+      expect(ctx.answerCbQuery).toHaveBeenCalledWith('Приоритет: 🔵 Обычная');
+    });
+
+    it('should set priority to high', async () => {
+      const ctx = {
+        ...createMockContext(mockUserId),
+        match: ['priority:high', 'high'],
+      } as unknown as Context;
+      sessionService.getSessionData.mockResolvedValue({});
+
+      await (handler as any).handleSetPriority(ctx);
+
+      expect(ctx.answerCbQuery).toHaveBeenCalledWith('Приоритет: 🟡 Высокая');
+    });
+
+    it('should set priority to urgent', async () => {
+      const ctx = {
+        ...createMockContext(mockUserId),
+        match: ['priority:urgent', 'urgent'],
+      } as unknown as Context;
+      sessionService.getSessionData.mockResolvedValue({});
+
+      await (handler as any).handleSetPriority(ctx);
+
+      expect(ctx.answerCbQuery).toHaveBeenCalledWith('Приоритет: 🔴 Срочная');
+    });
+
+    it('should return early if userId is not provided', async () => {
+      const ctx = { from: undefined, match: ['priority:normal', 'normal'] } as unknown as Context;
+
+      await (handler as any).handleSetPriority(ctx);
+
+      expect(sessionService.getSessionData).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('handleAddCommentStart', () => {
+    it('should start comment input state', async () => {
+      const ctx = createMockContext(mockUserId) as Context;
+      sessionService.getSessionData.mockResolvedValue({ priority: 'normal' });
+
+      await (handler as any).handleAddCommentStart(ctx);
+
+      expect(sessionService.setSessionData).toHaveBeenCalledWith(
+        mockUserId,
+        expect.objectContaining({ state: CartState.ENTERING_COMMENT }),
+      );
+      expect(ctx.editMessageText).toHaveBeenCalledWith(
+        expect.stringContaining('Добавьте комментарий'),
+        expect.any(Object),
+      );
+    });
+
+    it('should return early if userId is not provided', async () => {
+      const ctx = { from: undefined } as unknown as Context;
+
+      await (handler as any).handleAddCommentStart(ctx);
+
+      expect(sessionService.getSessionData).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('handleCancelCheckout', () => {
+    it('should cancel checkout and return to cart', async () => {
+      const ctx = createMockContext(mockUserId) as Context;
+      cartStorage.getCart.mockResolvedValue(mockCartItems);
+
+      await (handler as any).handleCancelCheckout(ctx);
+
+      expect(sessionService.setSessionData).toHaveBeenCalledWith(mockUserId, defaultSessionData);
+      expect(ctx.editMessageText).toHaveBeenCalledWith(
+        expect.stringContaining('Оформление отменено'),
+        expect.any(Object),
+      );
+      expect(ctx.answerCbQuery).toHaveBeenCalledWith('Отменено');
+    });
+
+    it('should return early if userId is not provided', async () => {
+      const ctx = { from: undefined } as unknown as Context;
+
+      await (handler as any).handleCancelCheckout(ctx);
+
+      expect(cartStorage.getCart).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('handleTextInput', () => {
+    it('should handle comment input and show checkout summary', async () => {
+      const ctx = {
+        ...createMockContext(mockUserId),
+        message: { text: 'My comment' },
+      } as unknown as Context;
+      sessionService.getSessionData.mockResolvedValue({
+        state: CartState.ENTERING_COMMENT,
+        priority: 'high',
+      });
+      cartStorage.getCart.mockResolvedValue(mockCartItems);
+
+      const next = jest.fn();
+      await (handler as any).handleTextInput(ctx, next);
+
+      expect(sessionService.setSessionData).toHaveBeenCalledWith(
+        mockUserId,
+        expect.objectContaining({
+          state: CartState.IDLE,
+          comment: 'My comment',
+        }),
+      );
+      expect(ctx.reply).toHaveBeenCalledWith(
+        expect.stringContaining('Оформление заявки'),
+        expect.any(Object),
+      );
+      expect(next).not.toHaveBeenCalled();
+    });
+
+    it('should skip comment when /skip is entered', async () => {
+      const ctx = {
+        ...createMockContext(mockUserId),
+        message: { text: '/skip' },
+      } as unknown as Context;
+      sessionService.getSessionData.mockResolvedValue({
+        state: CartState.ENTERING_COMMENT,
+        priority: 'normal',
+      });
+      cartStorage.getCart.mockResolvedValue(mockCartItems);
+
+      const next = jest.fn();
+      await (handler as any).handleTextInput(ctx, next);
+
+      expect(sessionService.setSessionData).toHaveBeenCalledWith(
+        mockUserId,
+        expect.objectContaining({
+          comment: undefined,
+        }),
+      );
+    });
+
+    it('should truncate long comments to 500 characters', async () => {
+      const longComment = 'x'.repeat(600);
+      const ctx = {
+        ...createMockContext(mockUserId),
+        message: { text: longComment },
+      } as unknown as Context;
+      sessionService.getSessionData.mockResolvedValue({
+        state: CartState.ENTERING_COMMENT,
+        priority: 'normal',
+      });
+      cartStorage.getCart.mockResolvedValue(mockCartItems);
+
+      const next = jest.fn();
+      await (handler as any).handleTextInput(ctx, next);
+
+      expect(sessionService.setSessionData).toHaveBeenCalledWith(
+        mockUserId,
+        expect.objectContaining({
+          comment: 'x'.repeat(500),
+        }),
+      );
+    });
+
+    it('should pass to next middleware when not in comment state', async () => {
+      const ctx = {
+        ...createMockContext(mockUserId),
+        message: { text: 'Some text' },
+      } as unknown as Context;
+      sessionService.getSessionData.mockResolvedValue({ state: CartState.IDLE });
+
+      const next = jest.fn();
+      await (handler as any).handleTextInput(ctx, next);
+
+      expect(next).toHaveBeenCalled();
+    });
+
+    it('should pass to next when no session data', async () => {
+      const ctx = {
+        ...createMockContext(mockUserId),
+        message: { text: 'Some text' },
+      } as unknown as Context;
+      sessionService.getSessionData.mockResolvedValue(null);
+
+      const next = jest.fn();
+      await (handler as any).handleTextInput(ctx, next);
+
+      expect(next).toHaveBeenCalled();
+    });
+
+    it('should pass to next when message has no text', async () => {
+      const ctx = {
+        ...createMockContext(mockUserId),
+        message: { photo: [] },
+      } as unknown as Context;
+
+      const next = jest.fn();
+      await (handler as any).handleTextInput(ctx, next);
+
+      expect(next).toHaveBeenCalled();
+    });
+
+    it('should return early if userId is not provided', async () => {
+      const ctx = { from: undefined, message: { text: 'test' } } as unknown as Context;
+
+      const next = jest.fn();
+      await (handler as any).handleTextInput(ctx, next);
+
+      expect(next).toHaveBeenCalled();
+    });
+
+    it('should display comment in summary when present', async () => {
+      const ctx = {
+        ...createMockContext(mockUserId),
+        message: { text: 'Short comment' },
+      } as unknown as Context;
+      sessionService.getSessionData.mockResolvedValue({
+        state: CartState.ENTERING_COMMENT,
+        priority: 'normal',
+      });
+      cartStorage.getCart.mockResolvedValue(mockCartItems);
+
+      const next = jest.fn();
+      await (handler as any).handleTextInput(ctx, next);
+
+      expect(ctx.reply).toHaveBeenCalledWith(
+        expect.stringContaining('Комментарий'),
+        expect.any(Object),
+      );
+    });
+
+    it('should truncate long comments in display', async () => {
+      const ctx = {
+        ...createMockContext(mockUserId),
+        message: { text: 'A'.repeat(100) },
+      } as unknown as Context;
+      sessionService.getSessionData.mockResolvedValue({
+        state: CartState.ENTERING_COMMENT,
+        priority: 'normal',
+      });
+      cartStorage.getCart.mockResolvedValue(mockCartItems);
+
+      const next = jest.fn();
+      await (handler as any).handleTextInput(ctx, next);
+
+      expect(ctx.reply).toHaveBeenCalledWith(
+        expect.stringContaining('...'),
+        expect.any(Object),
+      );
+    });
+  });
+
+  describe('updateCartView', () => {
+    it('should update cart view with items', async () => {
+      const ctx = createMockContext(mockUserId) as Context;
+
+      await (handler as any).updateCartView(ctx, mockCartItems);
+
+      expect(ctx.editMessageText).toHaveBeenCalledWith(
+        expect.stringContaining('Ваша корзина'),
+        expect.any(Object),
+      );
+    });
+
+    it('should show empty message when cart becomes empty', async () => {
+      const ctx = createMockContext(mockUserId) as Context;
+
+      await (handler as any).updateCartView(ctx, []);
+
+      expect(ctx.editMessageText).toHaveBeenCalledWith(
+        '🛒 <b>Корзина пуста</b>',
+        expect.any(Object),
+      );
+    });
+
+    it('should handle editMessageText errors gracefully', async () => {
+      const ctx = createMockContext(mockUserId) as Context;
+      (ctx.editMessageText as jest.Mock).mockRejectedValue(new Error('Nothing changed'));
+
+      // Should not throw
+      await expect((handler as any).updateCartView(ctx, mockCartItems)).resolves.not.toThrow();
+    });
+  });
+
+  describe('showCart (callback vs text)', () => {
+    it('should use editMessageText for callback', async () => {
+      const ctx = createMockContext(mockUserId) as Context;
+      cartStorage.getCart.mockResolvedValue(mockCartItems);
+
+      await (handler as any).showCart(ctx, true);
+
+      expect(ctx.editMessageText).toHaveBeenCalled();
+      expect(ctx.reply).not.toHaveBeenCalled();
+    });
+
+    it('should use reply for text message', async () => {
+      const ctx = createMockContext(mockUserId) as Context;
+      cartStorage.getCart.mockResolvedValue(mockCartItems);
+
+      await (handler as any).showCart(ctx, false);
+
+      expect(ctx.reply).toHaveBeenCalled();
+      expect(ctx.editMessageText).not.toHaveBeenCalled();
     });
   });
 });
