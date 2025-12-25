@@ -122,6 +122,16 @@ describe('OfflineService', () => {
         // Test null isInternetReachable
         networkListenerCallback({ isConnected: true, isInternetReachable: null });
         expect(setOnline).toHaveBeenCalledWith(true);
+
+        // Test null isConnected (falls back to true via ?? operator)
+        setOnline.mockClear();
+        networkListenerCallback({ isConnected: null, isInternetReachable: true });
+        expect(setOnline).toHaveBeenCalledWith(true);
+
+        // Test undefined isConnected (falls back to true via ?? operator)
+        setOnline.mockClear();
+        networkListenerCallback({ isConnected: undefined, isInternetReachable: true });
+        expect(setOnline).toHaveBeenCalledWith(true);
       }
     });
   });
@@ -560,6 +570,156 @@ describe('OfflineService', () => {
       jest.advanceTimersByTime(5 * 60 * 1000);
 
       expect(syncAll).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('periodic sync interval', () => {
+    it('should trigger syncAll when online and queue has items', async () => {
+      const syncAll = jest.fn().mockResolvedValue({ success: true, synced: 2, failed: 0 });
+      mockUseOfflineStore.getState.mockReturnValue({
+        isOnline: true,
+        isSyncing: false,
+        taskQueue: [{ tempId: '1' }, { tempId: '2' }],
+        photoQueue: [],
+        loadFromStorage: jest.fn().mockResolvedValue(undefined),
+        addTaskToQueue: jest.fn(),
+        addPhotoToQueue: jest.fn(),
+        setOnline: jest.fn(),
+        getQueueCount: jest.fn(() => 2),
+        syncAll,
+        clearQueue: jest.fn(),
+      } as any);
+
+      // Reset singleton state for this test by directly calling private method
+      (offlineService as any).syncIntervalId = null;
+      (offlineService as any).startPeriodicSync();
+
+      // Advance timer by 5 minutes to trigger interval
+      jest.advanceTimersByTime(5 * 60 * 1000);
+
+      expect(syncAll).toHaveBeenCalled();
+    });
+
+    it('should not trigger syncAll when offline', async () => {
+      const syncAll = jest.fn().mockResolvedValue({ success: true, synced: 0, failed: 0 });
+      mockUseOfflineStore.getState.mockReturnValue({
+        isOnline: false,
+        isSyncing: false,
+        taskQueue: [{ tempId: '1' }],
+        photoQueue: [],
+        loadFromStorage: jest.fn().mockResolvedValue(undefined),
+        addTaskToQueue: jest.fn(),
+        addPhotoToQueue: jest.fn(),
+        setOnline: jest.fn(),
+        getQueueCount: jest.fn(() => 1),
+        syncAll,
+        clearQueue: jest.fn(),
+      } as any);
+
+      // Reset and start periodic sync
+      (offlineService as any).syncIntervalId = null;
+      (offlineService as any).startPeriodicSync();
+
+      // Advance timer by 5 minutes
+      jest.advanceTimersByTime(5 * 60 * 1000);
+
+      expect(syncAll).not.toHaveBeenCalled();
+    });
+
+    it('should not trigger syncAll when queue is empty', async () => {
+      const syncAll = jest.fn().mockResolvedValue({ success: true, synced: 0, failed: 0 });
+      mockUseOfflineStore.getState.mockReturnValue({
+        isOnline: true,
+        isSyncing: false,
+        taskQueue: [],
+        photoQueue: [],
+        loadFromStorage: jest.fn().mockResolvedValue(undefined),
+        addTaskToQueue: jest.fn(),
+        addPhotoToQueue: jest.fn(),
+        setOnline: jest.fn(),
+        getQueueCount: jest.fn(() => 0),
+        syncAll,
+        clearQueue: jest.fn(),
+      } as any);
+
+      // Reset and start periodic sync
+      (offlineService as any).syncIntervalId = null;
+      (offlineService as any).startPeriodicSync();
+
+      // Advance timer by 5 minutes
+      jest.advanceTimersByTime(5 * 60 * 1000);
+
+      expect(syncAll).not.toHaveBeenCalled();
+    });
+
+    it('should clear existing interval when startPeriodicSync is called again', () => {
+      const clearIntervalSpy = jest.spyOn(global, 'clearInterval');
+
+      // First call - sets up interval
+      (offlineService as any).syncIntervalId = null;
+      (offlineService as any).startPeriodicSync();
+
+      const firstIntervalId = (offlineService as any).syncIntervalId;
+      expect(firstIntervalId).not.toBeNull();
+
+      // Second call - should clear existing interval first
+      (offlineService as any).startPeriodicSync();
+
+      expect(clearIntervalSpy).toHaveBeenCalledWith(firstIntervalId);
+
+      clearIntervalSpy.mockRestore();
+    });
+
+    it('should trigger multiple syncs across multiple intervals', async () => {
+      const syncAll = jest.fn().mockResolvedValue({ success: true, synced: 1, failed: 0 });
+      mockUseOfflineStore.getState.mockReturnValue({
+        isOnline: true,
+        isSyncing: false,
+        taskQueue: [{ tempId: '1' }],
+        photoQueue: [],
+        loadFromStorage: jest.fn().mockResolvedValue(undefined),
+        addTaskToQueue: jest.fn(),
+        addPhotoToQueue: jest.fn(),
+        setOnline: jest.fn(),
+        getQueueCount: jest.fn(() => 1),
+        syncAll,
+        clearQueue: jest.fn(),
+      } as any);
+
+      // Reset and start periodic sync
+      (offlineService as any).syncIntervalId = null;
+      (offlineService as any).startPeriodicSync();
+
+      // Advance timer by 10 minutes (2 intervals)
+      jest.advanceTimersByTime(10 * 60 * 1000);
+
+      expect(syncAll).toHaveBeenCalledTimes(2);
+    });
+
+    it('should log when periodic sync is triggered', async () => {
+      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+      const syncAll = jest.fn().mockResolvedValue({ success: true, synced: 1, failed: 0 });
+      mockUseOfflineStore.getState.mockReturnValue({
+        isOnline: true,
+        isSyncing: false,
+        taskQueue: [{ tempId: '1' }],
+        photoQueue: [],
+        loadFromStorage: jest.fn().mockResolvedValue(undefined),
+        addTaskToQueue: jest.fn(),
+        addPhotoToQueue: jest.fn(),
+        setOnline: jest.fn(),
+        getQueueCount: jest.fn(() => 1),
+        syncAll,
+        clearQueue: jest.fn(),
+      } as any);
+
+      (offlineService as any).syncIntervalId = null;
+      (offlineService as any).startPeriodicSync();
+
+      jest.advanceTimersByTime(5 * 60 * 1000);
+
+      expect(consoleSpy).toHaveBeenCalledWith('[OfflineService] Periodic sync triggered');
+      consoleSpy.mockRestore();
     });
   });
 });
