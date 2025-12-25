@@ -66,17 +66,28 @@ describe('Button', () => {
     expect(button.className).toContain('inline-flex')
   })
 
-  it.skip('should render as child component when asChild is true', () => {
-    // Skip: Radix Slot requires special test configuration
-    render(
-      <Button asChild>
+  it('should render as child component when asChild is true', () => {
+    // When asChild is true, the Button uses Radix Slot to merge props with the single child element
+    const { container } = render(
+      <Button asChild variant="primary">
         <a href="/test">Link button</a>
       </Button>
     )
 
-    const link = screen.getByRole('link', { name: /link button/i })
+    const link = container.querySelector('a')
     expect(link).toBeInTheDocument()
     expect(link).toHaveAttribute('href', '/test')
+    expect(link?.textContent).toBe('Link button')
+    // The link should have button styles applied via Slot
+    expect(link?.className).toContain('inline-flex')
+  })
+
+  it('should render as button element when asChild is false', () => {
+    render(<Button asChild={false}>Regular button</Button>)
+
+    const button = screen.getByRole('button', { name: /regular button/i })
+    expect(button).toBeInTheDocument()
+    expect(button.tagName).toBe('BUTTON')
   })
 
   it('should apply custom className', () => {
