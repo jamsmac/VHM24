@@ -105,7 +105,7 @@ describe('AlertsController', () => {
       it('should return filtered rules by is_enabled=true', async () => {
         alertsService.findAllRules.mockResolvedValue([mockAlertRule] as any);
 
-        const result = await controller.findAllRules('true');
+        await controller.findAllRules('true');
 
         expect(alertsService.findAllRules).toHaveBeenCalledWith({ is_enabled: true });
       });
@@ -113,7 +113,7 @@ describe('AlertsController', () => {
       it('should return filtered rules by is_enabled=false', async () => {
         alertsService.findAllRules.mockResolvedValue([] as any);
 
-        const result = await controller.findAllRules('false');
+        await controller.findAllRules('false');
 
         expect(alertsService.findAllRules).toHaveBeenCalledWith({ is_enabled: false });
       });
@@ -121,7 +121,7 @@ describe('AlertsController', () => {
       it('should return filtered rules by metric', async () => {
         alertsService.findAllRules.mockResolvedValue([mockAlertRule] as any);
 
-        const result = await controller.findAllRules(undefined, AlertMetric.LOW_STOCK_PERCENTAGE);
+        await controller.findAllRules(undefined, AlertMetric.LOW_STOCK_PERCENTAGE);
 
         expect(alertsService.findAllRules).toHaveBeenCalledWith({
           metric: AlertMetric.LOW_STOCK_PERCENTAGE,
@@ -131,7 +131,7 @@ describe('AlertsController', () => {
       it('should return filtered rules by severity', async () => {
         alertsService.findAllRules.mockResolvedValue([mockAlertRule] as any);
 
-        const result = await controller.findAllRules(undefined, undefined, AlertSeverity.CRITICAL);
+        await controller.findAllRules(undefined, undefined, AlertSeverity.CRITICAL);
 
         expect(alertsService.findAllRules).toHaveBeenCalledWith({
           severity: AlertSeverity.CRITICAL,
@@ -141,7 +141,7 @@ describe('AlertsController', () => {
       it('should return filtered rules with all filters', async () => {
         alertsService.findAllRules.mockResolvedValue([mockAlertRule] as any);
 
-        const result = await controller.findAllRules(
+        await controller.findAllRules(
           'true',
           AlertMetric.LOW_STOCK_PERCENTAGE,
           AlertSeverity.WARNING,

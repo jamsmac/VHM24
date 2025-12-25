@@ -1,4 +1,4 @@
-import { RateLimitGuard, RateLimitOptions, RATE_LIMIT_KEY } from './rate-limit.guard';
+import { RateLimitGuard, RateLimitOptions } from './rate-limit.guard';
 import { ExecutionContext, HttpException, HttpStatus } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { RateLimiterService, RateLimitResult } from '../services/rate-limiter.service';
