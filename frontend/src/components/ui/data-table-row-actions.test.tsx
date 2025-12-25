@@ -366,6 +366,90 @@ describe('DataTableRowActions', () => {
       expect(separators.length).toBeGreaterThan(0)
     })
 
+    it('should render action group as first item without extra separator', async () => {
+      const user = userEvent.setup()
+      const actions: (RowAction<TestRow> | RowActionGroup<TestRow>)[] = [
+        {
+          label: 'Primary Actions',
+          actions: [
+            { label: 'Edit', onClick: vi.fn() },
+            { label: 'Delete', onClick: vi.fn() },
+          ],
+        },
+      ]
+
+      render(<DataTableRowActions row={mockRow} actions={actions} />)
+
+      await user.click(screen.getByRole('button', { name: /действия/i }))
+
+      await waitFor(() => {
+        expect(screen.getByRole('menuitem', { name: /edit/i })).toBeInTheDocument()
+        expect(screen.getByRole('menuitem', { name: /delete/i })).toBeInTheDocument()
+      })
+
+      // Group label should be rendered
+      expect(screen.getByText('Primary Actions')).toBeInTheDocument()
+    })
+
+    it('should render action group without label', async () => {
+      const user = userEvent.setup()
+      const actions: (RowAction<TestRow> | RowActionGroup<TestRow>)[] = [
+        { label: 'View', onClick: vi.fn() },
+        {
+          // No label property - group without header
+          actions: [
+            { label: 'Edit', onClick: vi.fn() },
+            { label: 'Delete', onClick: vi.fn() },
+          ],
+        },
+      ]
+
+      render(<DataTableRowActions row={mockRow} actions={actions} />)
+
+      await user.click(screen.getByRole('button', { name: /действия/i }))
+
+      await waitFor(() => {
+        expect(screen.getByRole('menuitem', { name: /view/i })).toBeInTheDocument()
+        expect(screen.getByRole('menuitem', { name: /edit/i })).toBeInTheDocument()
+        expect(screen.getByRole('menuitem', { name: /delete/i })).toBeInTheDocument()
+      })
+
+      // No group label should be rendered (only the menu label "Действия")
+      const labels = screen.getAllByText(/действия/i)
+      expect(labels).toHaveLength(2) // sr-only span + menu label
+    })
+
+    it('should render multiple action groups with separators between them', async () => {
+      const user = userEvent.setup()
+      const actions: (RowAction<TestRow> | RowActionGroup<TestRow>)[] = [
+        {
+          label: 'View Actions',
+          actions: [{ label: 'View', onClick: vi.fn() }],
+        },
+        {
+          label: 'Edit Actions',
+          actions: [{ label: 'Edit', onClick: vi.fn() }],
+        },
+      ]
+
+      render(<DataTableRowActions row={mockRow} actions={actions} />)
+
+      await user.click(screen.getByRole('button', { name: /действия/i }))
+
+      await waitFor(() => {
+        expect(screen.getByRole('menuitem', { name: /view/i })).toBeInTheDocument()
+        expect(screen.getByRole('menuitem', { name: /edit/i })).toBeInTheDocument()
+      })
+
+      // Both group labels should be rendered
+      expect(screen.getByText('View Actions')).toBeInTheDocument()
+      expect(screen.getByText('Edit Actions')).toBeInTheDocument()
+
+      // Should have separators between groups
+      const separators = document.querySelectorAll('[role="separator"]')
+      expect(separators.length).toBeGreaterThanOrEqual(2)
+    })
+
     it('should not render empty action groups', async () => {
       const user = userEvent.setup()
       const actions: (RowAction<TestRow> | RowActionGroup<TestRow>)[] = [
