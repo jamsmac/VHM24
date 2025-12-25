@@ -626,4 +626,43 @@ describe('ClientApiService', () => {
       expect(result.language).toBe('uz');
     });
   });
+
+  describe('API URL configuration', () => {
+    it('should use production URL when __DEV__ is false', () => {
+      // Save original __DEV__ value
+      const originalDev = (global as any).__DEV__;
+
+      // Set __DEV__ to false to test production URL branch
+      (global as any).__DEV__ = false;
+
+      // Re-import module to test production URL
+      jest.isolateModules(() => {
+        // Re-mock axios in isolated context
+        jest.doMock('axios', () => {
+          const mockAxiosInstance = {
+            get: jest.fn(),
+            post: jest.fn(),
+            patch: jest.fn(),
+            interceptors: {
+              request: { use: jest.fn() },
+              response: { use: jest.fn() },
+            },
+          };
+          return {
+            create: jest.fn((config) => {
+              // Verify production URL is used
+              expect(config.baseURL).toBe('https://your-domain.com/api/v1/client');
+              return mockAxiosInstance;
+            }),
+          };
+        });
+
+        // This will trigger the production URL branch
+        require('../../src/services/clientApi');
+      });
+
+      // Restore original __DEV__ value
+      (global as any).__DEV__ = originalDev;
+    });
+  });
 });
