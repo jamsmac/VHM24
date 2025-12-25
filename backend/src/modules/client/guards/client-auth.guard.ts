@@ -76,6 +76,7 @@ export class ClientAuthGuard implements CanActivate {
 import { createParamDecorator } from '@nestjs/common';
 
 export const CurrentClientUser = createParamDecorator(
+  /* istanbul ignore next - decorator factory executed by NestJS at runtime */
   (data: unknown, ctx: ExecutionContext) => {
     const request = ctx.switchToHttp().getRequest();
     return request.clientUser;
