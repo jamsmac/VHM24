@@ -134,6 +134,18 @@ describe('ClientStore', () => {
       expect(state.error).toBe('Telegram verification failed');
     });
 
+    it('should use fallback error message when error has no message', async () => {
+      const error: any = {};
+      mockClientApi.loginWithTelegram.mockRejectedValueOnce(error);
+
+      await expect(
+        useClientStore.getState().loginWithTelegram(mockInitData)
+      ).rejects.toBeDefined();
+
+      const state = useClientStore.getState();
+      expect(state.error).toBe('Login failed');
+    });
+
     it('should not authenticate if no access_token in response', async () => {
       mockClientApi.loginWithTelegram.mockResolvedValueOnce({
         access_token: '',
