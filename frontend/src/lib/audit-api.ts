@@ -13,7 +13,7 @@ export interface AuditLog {
   description: string
   ip_address: string
   user_agent?: string
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
   created_at: string
 }
 

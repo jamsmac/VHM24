@@ -170,7 +170,7 @@ export interface AuditLog {
   ip_address: string | null
   user_agent: string | null
   description: string | null
-  metadata: Record<string, any>
+  metadata: Record<string, unknown>
   success: boolean
   error_message: string | null
   created_at: string

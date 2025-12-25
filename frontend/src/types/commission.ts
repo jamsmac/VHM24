@@ -28,7 +28,7 @@ export interface CommissionCalculation {
   // Commission calculation
   commission_amount: number // Рассчитанная комиссия (UZS)
   commission_type: string // Тип комиссии на момент расчета
-  calculation_details: Record<string, any> | null // Детали расчета (JSON)
+  calculation_details: Record<string, unknown> | null // Детали расчета (JSON)
 
   // Payment status
   payment_status: PaymentStatus

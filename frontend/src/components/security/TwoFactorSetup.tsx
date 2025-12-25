@@ -160,6 +160,7 @@ export function TwoFactorSetup({ userId, email, onSuccess, onCancel }: TwoFactor
           {/* QR Code */}
           <div className="flex justify-center">
             <div className="p-4 bg-white border-2 border-gray-200 rounded-lg">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={setupData.qrCodeUrl}
                 alt="QR Code для 2FA"

@@ -273,6 +273,7 @@ export function UserPopover({ user, children, className }: UserPopoverProps) {
       <PopoverContent>
         <div className="flex items-center gap-3">
           {user.avatar ? (
+            /* eslint-disable-next-line @next/next/no-img-element */
             <img
               src={user.avatar}
               alt={user.name}

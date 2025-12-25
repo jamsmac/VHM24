@@ -121,5 +121,5 @@ export interface CommissionPreview {
   commission_type: CommissionType
   estimated_revenue: number
   estimated_commission: number
-  calculation_details: Record<string, any>
+  calculation_details: Record<string, unknown>
 }

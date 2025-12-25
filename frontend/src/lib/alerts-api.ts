@@ -93,7 +93,7 @@ export interface AlertHistory {
     current_value: number
     threshold: number
     metric: string
-    additional_data?: Record<string, any>
+    additional_data?: Record<string, unknown>
   } | null
   acknowledged_at: string | null
   acknowledged_by_id: string | null

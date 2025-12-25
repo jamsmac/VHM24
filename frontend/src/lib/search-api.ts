@@ -41,7 +41,7 @@ export interface SearchResult {
   category: SearchCategory
   url: string
   icon?: string
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 }
 
 export interface QuickAction {

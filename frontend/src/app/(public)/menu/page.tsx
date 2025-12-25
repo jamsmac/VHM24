@@ -96,6 +96,7 @@ function MenuContent() {
                   >
                     {item.image_url ? (
                       <div className="h-48 bg-muted relative">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={item.image_url}
                           alt={item.name}

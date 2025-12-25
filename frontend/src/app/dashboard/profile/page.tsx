@@ -386,6 +386,7 @@ function SecurityTab({
                   1. Отсканируйте QR-код в приложении аутентификатора (Google Authenticator, Authy и т.д.)
                 </p>
                 <div className="bg-white p-4 rounded-lg border inline-block">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={setup2FAData.qrCode} alt="QR Code" className="w-48 h-48" />
                 </div>
               </div>

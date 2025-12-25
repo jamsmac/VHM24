@@ -15,7 +15,7 @@ export interface AccessRequest {
   created_user_id: string | null
   created_at: string
   processed_at: string | null
-  metadata: Record<string, any> | null
+  metadata: Record<string, unknown> | null
 }
 
 export interface ApproveAccessRequestDto {

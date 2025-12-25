@@ -104,7 +104,7 @@ export interface Notification {
   recipient?: NotificationUser
   title: string
   message: string
-  data: Record<string, any> | null
+  data: Record<string, unknown> | null
   action_url: string | null
   sent_at: string | null
   delivered_at: string | null
@@ -123,7 +123,7 @@ export interface NotificationPreference {
   notification_type: NotificationType
   channel: NotificationChannel
   is_enabled: boolean
-  settings: Record<string, any> | null
+  settings: Record<string, unknown> | null
 }
 
 export interface NotificationStats {
@@ -140,13 +140,13 @@ export interface CreateNotificationDto {
   title: string
   message: string
   priority?: NotificationPriority
-  data?: Record<string, any>
+  data?: Record<string, unknown>
   action_url?: string
 }
 
 export interface UpdatePreferenceDto {
   is_enabled?: boolean
-  settings?: Record<string, any>
+  settings?: Record<string, unknown>
 }
 
 export const notificationsApi = {
@@ -157,7 +157,7 @@ export const notificationsApi = {
     status?: NotificationStatus,
     unreadOnly?: boolean
   ): Promise<Notification[]> => {
-    const params: Record<string, any> = {}
+    const params: Record<string, string | boolean> = {}
     if (status) params.status = status
     if (unreadOnly) params.unreadOnly = true
 

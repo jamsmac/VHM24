@@ -44,7 +44,7 @@ export interface Transaction {
   collection_task_id?: string
   expense_category?: ExpenseCategory
   description?: string
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
   created_at: string
   created_by?: {
     full_name: string
