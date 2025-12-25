@@ -100,6 +100,134 @@ describe('Auth API', () => {
     })
   })
 
+  describe('verify2FA', () => {
+    it('should successfully verify 2FA TOTP code', async () => {
+      const mockResponse = {
+        data: {
+          access_token: 'full-access-token',
+          refresh_token: 'refresh-token',
+          expires_in: 900,
+          user: {
+            id: '123',
+            email: 'test@example.com',
+            full_name: 'Test User',
+            role: 'admin',
+            two_factor_enabled: true,
+          },
+        },
+      }
+
+      vi.mocked(apiClient.post).mockResolvedValue(mockResponse)
+
+      const result = await authApi.verify2FA({
+        temp_token: 'temp-jwt-token',
+        token: '123456',
+      })
+
+      expect(apiClient.post).toHaveBeenCalledWith(
+        '/auth/2fa/login',
+        { token: '123456' },
+        { headers: { Authorization: 'Bearer temp-jwt-token' } }
+      )
+      expect(result).toEqual(mockResponse.data)
+      expect(result.access_token).toBe('full-access-token')
+    })
+
+    it('should handle invalid 2FA code error', async () => {
+      const mockError = {
+        response: {
+          status: 401,
+          data: {
+            message: 'Invalid 2FA code',
+          },
+        },
+      }
+
+      vi.mocked(apiClient.post).mockRejectedValue(mockError)
+
+      await expect(
+        authApi.verify2FA({
+          temp_token: 'temp-jwt-token',
+          token: '000000',
+        })
+      ).rejects.toEqual(mockError)
+    })
+  })
+
+  describe('verify2FABackup', () => {
+    it('should successfully verify 2FA backup code', async () => {
+      const mockResponse = {
+        data: {
+          access_token: 'full-access-token',
+          refresh_token: 'refresh-token',
+          expires_in: 900,
+          user: {
+            id: '123',
+            email: 'test@example.com',
+            full_name: 'Test User',
+            role: 'admin',
+            two_factor_enabled: true,
+          },
+        },
+      }
+
+      vi.mocked(apiClient.post).mockResolvedValue(mockResponse)
+
+      const result = await authApi.verify2FABackup({
+        temp_token: 'temp-jwt-token',
+        backup_code: 'ABCD-1234-EFGH',
+      })
+
+      expect(apiClient.post).toHaveBeenCalledWith(
+        '/auth/2fa/login/backup',
+        { code: 'ABCD-1234-EFGH' },
+        { headers: { Authorization: 'Bearer temp-jwt-token' } }
+      )
+      expect(result).toEqual(mockResponse.data)
+      expect(result.access_token).toBe('full-access-token')
+    })
+
+    it('should handle invalid backup code error', async () => {
+      const mockError = {
+        response: {
+          status: 401,
+          data: {
+            message: 'Invalid backup code',
+          },
+        },
+      }
+
+      vi.mocked(apiClient.post).mockRejectedValue(mockError)
+
+      await expect(
+        authApi.verify2FABackup({
+          temp_token: 'temp-jwt-token',
+          backup_code: 'INVALID-CODE',
+        })
+      ).rejects.toEqual(mockError)
+    })
+
+    it('should handle expired temp token', async () => {
+      const mockError = {
+        response: {
+          status: 401,
+          data: {
+            message: 'Temporary token expired',
+          },
+        },
+      }
+
+      vi.mocked(apiClient.post).mockRejectedValue(mockError)
+
+      await expect(
+        authApi.verify2FABackup({
+          temp_token: 'expired-temp-token',
+          backup_code: 'ABCD-1234-EFGH',
+        })
+      ).rejects.toEqual(mockError)
+    })
+  })
+
   describe('logout', () => {
     it('should successfully logout', async () => {
       vi.mocked(apiClient.post).mockResolvedValue({ data: { success: true } })
@@ -115,6 +243,52 @@ describe('Auth API', () => {
       vi.mocked(apiClient.post).mockRejectedValue(mockError)
 
       await expect(authApi.logout()).rejects.toThrow('Logout failed')
+    })
+  })
+
+  describe('getProfile', () => {
+    it('should successfully get user profile', async () => {
+      const mockResponse = {
+        data: {
+          id: '123',
+          email: 'test@example.com',
+          full_name: 'Test User',
+          role: 'admin',
+          status: 'active',
+          avatar_url: 'https://example.com/avatar.jpg',
+          phone: '+1234567890',
+        },
+      }
+
+      vi.mocked(apiClient.get).mockResolvedValue(mockResponse)
+
+      const result = await authApi.getProfile()
+
+      expect(apiClient.get).toHaveBeenCalledWith('/auth/profile')
+      expect(result).toEqual(mockResponse.data)
+      expect(result.email).toBe('test@example.com')
+    })
+
+    it('should handle unauthorized error', async () => {
+      const mockError = {
+        response: {
+          status: 401,
+          data: {
+            message: 'Unauthorized',
+          },
+        },
+      }
+
+      vi.mocked(apiClient.get).mockRejectedValue(mockError)
+
+      await expect(authApi.getProfile()).rejects.toEqual(mockError)
+    })
+
+    it('should handle network error', async () => {
+      const mockError = new Error('Network Error')
+      vi.mocked(apiClient.get).mockRejectedValue(mockError)
+
+      await expect(authApi.getProfile()).rejects.toThrow('Network Error')
     })
   })
 

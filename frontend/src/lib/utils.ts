@@ -128,9 +128,11 @@ export function getErrorMessage(error: unknown, fallback = 'Произошла �
     return error.response?.data?.message || error.message || fallback
   }
 
+  /* c8 ignore start - Defensive code: Error objects have 'message' property, so isAxiosError catches them first */
   if (error instanceof Error) {
     return error.message
   }
+  /* c8 ignore stop */
 
   return fallback
 }

@@ -159,6 +159,36 @@ describe('useAuth - Phase 2', () => {
       expect(authStorage.clearStorage).toHaveBeenCalled()
       expect(mockPush).toHaveBeenCalledWith('/login')
     })
+
+    it('should still logout even if API call fails', async () => {
+      const { apiClient } = await import('@/lib/axios')
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+      // Mock API to reject
+      vi.mocked(apiClient.post).mockRejectedValueOnce(new Error('Network error'))
+
+      vi.mocked(authStorage.getUser).mockReturnValue(mockUser)
+      vi.mocked(authStorage.isLoggedIn).mockReturnValue(true)
+
+      const { result } = renderHook(() => useAuth())
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false)
+      })
+
+      await act(async () => {
+        await result.current.logout()
+      })
+
+      // Verify error was logged
+      expect(consoleErrorSpy).toHaveBeenCalledWith('Logout API error:', expect.any(Error))
+
+      // Verify logout still proceeded despite API error
+      expect(authStorage.clearStorage).toHaveBeenCalled()
+      expect(mockPush).toHaveBeenCalledWith('/login')
+
+      consoleErrorSpy.mockRestore()
+    })
   })
 
   describe('refreshAuth', () => {
@@ -271,6 +301,78 @@ describe('useAuth - Phase 2', () => {
       })
 
       expect(result.current.user).toEqual(updatedUser)
+    })
+
+    it('should handle user-updated event when getUser returns null', async () => {
+      vi.mocked(authStorage.getUser).mockReturnValue(mockUser)
+      vi.mocked(authStorage.isLoggedIn).mockReturnValue(true)
+
+      const { result } = renderHook(() => useAuth())
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false)
+      })
+
+      expect(result.current.user).toEqual(mockUser)
+
+      // Mock getUser to return null (edge case: user data cleared)
+      vi.mocked(authStorage.getUser).mockReturnValue(null)
+
+      // Simulate user-updated event with null user data
+      act(() => {
+        if (subscriberCallback) {
+          subscriberCallback('user-updated')
+        }
+      })
+
+      // User should remain unchanged when getUser returns null
+      expect(result.current.user).toEqual(mockUser)
+    })
+
+    it('should ignore unhandled auth events', async () => {
+      vi.mocked(authStorage.getUser).mockReturnValue(mockUser)
+      vi.mocked(authStorage.isLoggedIn).mockReturnValue(true)
+
+      const { result } = renderHook(() => useAuth())
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false)
+      })
+
+      expect(result.current.user).toEqual(mockUser)
+
+      // Simulate token-refreshed event (not handled by the hook)
+      act(() => {
+        if (subscriberCallback) {
+          subscriberCallback('token-refreshed')
+        }
+      })
+
+      // State should remain unchanged for unhandled events
+      expect(result.current.user).toEqual(mockUser)
+      expect(mockPush).not.toHaveBeenCalled()
+    })
+
+    it('should ignore login event in subscriber', async () => {
+      vi.mocked(authStorage.getUser).mockReturnValue(mockUser)
+      vi.mocked(authStorage.isLoggedIn).mockReturnValue(true)
+
+      const { result } = renderHook(() => useAuth())
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false)
+      })
+
+      // Simulate login event (not handled in subscriber, login is handled via login() method)
+      act(() => {
+        if (subscriberCallback) {
+          subscriberCallback('login')
+        }
+      })
+
+      // State should remain unchanged
+      expect(result.current.user).toEqual(mockUser)
+      expect(mockPush).not.toHaveBeenCalled()
     })
   })
 

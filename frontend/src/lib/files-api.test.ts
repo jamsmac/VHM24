@@ -75,6 +75,41 @@ describe('Files API', () => {
       expect(result).toEqual(mockUploadedFile)
     })
 
+    it('should upload file with uploaded_by_user_id', async () => {
+      const mockFile = new File(['content'], 'photo.jpg', { type: 'image/jpeg' })
+
+      const uploadParams: FileUploadParams = {
+        file: mockFile,
+        entity_type: 'task',
+        entity_id: 'task-1',
+        category_code: 'task_photo_before',
+        uploaded_by_user_id: 'user-123',
+      }
+
+      const mockUploadedFile: UploadedFile = {
+        id: 'file-with-user',
+        entity_type: 'task',
+        entity_id: 'task-1',
+        category_code: 'task_photo_before',
+        file_name: 'photo.jpg',
+        file_url: 'https://storage.example.com/files/photo.jpg',
+        file_size: 50000,
+        mime_type: 'image/jpeg',
+        uploaded_by_user_id: 'user-123',
+        created_at: new Date(),
+        updated_at: new Date(),
+      }
+
+      vi.mocked(apiClient.post).mockResolvedValue({ data: mockUploadedFile })
+
+      const result = await filesApi.upload(uploadParams)
+
+      const callArgs = vi.mocked(apiClient.post).mock.calls[0]
+      const formData = callArgs[1] as FormData
+      expect(formData.get('uploaded_by_user_id')).toBe('user-123')
+      expect(result.uploaded_by_user_id).toBe('user-123')
+    })
+
     it('should upload file with tags', async () => {
       const mockFile = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
 

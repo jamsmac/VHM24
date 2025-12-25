@@ -73,6 +73,20 @@ describe('Axios Client - Phase 2', () => {
 
       expect(result.url).toBe('/auth/login')
     })
+
+    it('should reject errors in request interceptor', async () => {
+      const { apiClient } = await import('./axios')
+
+      const mockError = new Error('Request interceptor error')
+
+      type InterceptorHandler = {
+        fulfilled: (config: unknown) => Promise<unknown>
+        rejected: (error: unknown) => Promise<never>
+      }
+      const interceptor = (apiClient.interceptors.request as unknown as { handlers: Array<InterceptorHandler> }).handlers[0]
+
+      await expect(interceptor.rejected(mockError)).rejects.toThrow('Request interceptor error')
+    })
   })
 
   describe('Response Interceptor - Success', () => {
@@ -130,6 +144,180 @@ describe('Axios Client - Phase 2', () => {
       const interceptor = (apiClient.interceptors.response as unknown as { handlers: Array<{ fulfilled: (response: unknown) => unknown; rejected: (error: unknown) => Promise<never> }> }).handlers[0]
 
       await expect(interceptor.rejected(mockError)).rejects.toEqual(mockError)
+    })
+
+    it('should retry original request after successful token refresh', async () => {
+      vi.resetModules()
+
+      const mockRetryResponse = {
+        status: 200,
+        data: { message: 'Retry successful' },
+      }
+
+      // Mock axios.create to return a controllable instance
+      const mockAxiosInstance = {
+        defaults: {
+          headers: { 'Content-Type': 'application/json' },
+          withCredentials: true,
+          timeout: 30000,
+        },
+        interceptors: {
+          request: { use: vi.fn(), handlers: [] as unknown[] },
+          response: { use: vi.fn(), handlers: [] as unknown[] },
+        },
+        post: vi.fn(),
+        get: vi.fn(),
+        request: vi.fn(),
+      }
+
+      // Capture the interceptor callbacks
+      type InterceptorCallback = (...args: unknown[]) => unknown
+      let _requestInterceptor: { fulfilled: InterceptorCallback; rejected: InterceptorCallback }
+      let responseInterceptor: { fulfilled: InterceptorCallback; rejected: InterceptorCallback }
+
+      mockAxiosInstance.interceptors.request.use = vi.fn((fulfilled, rejected) => {
+        _requestInterceptor = { fulfilled, rejected }
+        mockAxiosInstance.interceptors.request.handlers.push({ fulfilled, rejected })
+      })
+
+      mockAxiosInstance.interceptors.response.use = vi.fn((fulfilled, rejected) => {
+        responseInterceptor = { fulfilled, rejected }
+        mockAxiosInstance.interceptors.response.handlers.push({ fulfilled, rejected })
+      })
+
+      // Make the instance callable (axios instances are callable)
+      const callableInstance = Object.assign(
+        vi.fn().mockResolvedValue(mockRetryResponse),
+        mockAxiosInstance
+      )
+
+      // Mock axios.create
+      vi.doMock('axios', () => ({
+        default: {
+          create: vi.fn(() => callableInstance),
+        },
+        AxiosError: Error,
+      }))
+
+      // Now import our module which will use the mocked axios
+      const { apiClient: _apiClient } = await import('./axios')
+
+      // Set up the post mock for refresh
+      callableInstance.post.mockResolvedValueOnce({ status: 200, data: {} })
+
+      const mockError = {
+        response: {
+          status: 401,
+          data: { message: 'Unauthorized' },
+        },
+        config: {
+          url: '/api/protected-resource',
+          headers: {},
+          method: 'GET',
+        },
+      }
+
+      // Call the response interceptor's error handler
+      const result = await responseInterceptor!.rejected(mockError)
+
+      // Verify refresh was called
+      expect(callableInstance.post).toHaveBeenCalledWith('/auth/refresh', {})
+
+      // Verify the retry was called (the callable instance)
+      expect(callableInstance).toHaveBeenCalled()
+
+      // Result should be the retry response
+      expect(result).toEqual(mockRetryResponse)
+
+      vi.doUnmock('axios')
+    })
+
+    it('should clear storage and redirect when refresh returns non-200 status', async () => {
+      vi.resetModules()
+
+      // Mock window.location
+      const mockLocation = { href: '' }
+      Object.defineProperty(window, 'location', {
+        value: mockLocation,
+        writable: true,
+      })
+
+      // Mock axios.create to return a controllable instance
+      const mockAxiosInstance = {
+        defaults: {
+          headers: { 'Content-Type': 'application/json' },
+          withCredentials: true,
+          timeout: 30000,
+        },
+        interceptors: {
+          request: { use: vi.fn(), handlers: [] as unknown[] },
+          response: { use: vi.fn(), handlers: [] as unknown[] },
+        },
+        post: vi.fn(),
+        get: vi.fn(),
+        request: vi.fn(),
+      }
+
+      // Capture the interceptor callbacks
+      type InterceptorFn = (...args: unknown[]) => unknown
+      let responseInterceptor: { fulfilled: InterceptorFn; rejected: InterceptorFn }
+
+      mockAxiosInstance.interceptors.request.use = vi.fn((fulfilled, rejected) => {
+        mockAxiosInstance.interceptors.request.handlers.push({ fulfilled, rejected })
+      })
+
+      mockAxiosInstance.interceptors.response.use = vi.fn((fulfilled, rejected) => {
+        responseInterceptor = { fulfilled, rejected }
+        mockAxiosInstance.interceptors.response.handlers.push({ fulfilled, rejected })
+      })
+
+      // Make the instance callable
+      const callableInstance = Object.assign(
+        vi.fn(),
+        mockAxiosInstance
+      )
+
+      // Mock axios.create
+      vi.doMock('axios', () => ({
+        default: {
+          create: vi.fn(() => callableInstance),
+        },
+        AxiosError: Error,
+      }))
+
+      // Now import our module which will use the mocked axios
+      await import('./axios')
+
+      // Set up the post mock for refresh to return 204 (not 200)
+      callableInstance.post.mockResolvedValueOnce({ status: 204, data: {} })
+
+      const mockError = {
+        response: {
+          status: 401,
+          data: { message: 'Unauthorized' },
+        },
+        config: {
+          url: '/api/protected-resource',
+          headers: {},
+          method: 'GET',
+        },
+      }
+
+      // Call the response interceptor's error handler
+      try {
+        await responseInterceptor!.rejected(mockError)
+      } catch {
+        // Expected to reject
+      }
+
+      // Verify refresh was called
+      expect(callableInstance.post).toHaveBeenCalledWith('/auth/refresh', {})
+
+      // Should clear storage and redirect since status was not 200
+      expect(authStorage.clearStorage).toHaveBeenCalled()
+      expect(mockLocation.href).toBe('/login')
+
+      vi.doUnmock('axios')
     })
 
     it('should clear storage and redirect on auth failure', async () => {

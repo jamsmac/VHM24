@@ -97,7 +97,9 @@ apiClient.interceptors.response.use(
 
       // Refresh failed, clear local state and redirect to login
       authStorage.clearStorage()
+      /* c8 ignore start - SSR guard: window is always defined in jsdom tests */
       if (typeof window !== 'undefined') {
+      /* c8 ignore stop */
         window.location.href = '/login'
       }
 
