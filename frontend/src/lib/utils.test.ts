@@ -259,5 +259,30 @@ describe('utils', () => {
     it('should return fallback for empty object', () => {
       expect(getErrorMessage({})).toBe('Произошла ошибка')
     })
+
+    it('should return fallback when axios error has no message properties', () => {
+      // Axios error structure but with no message anywhere
+      const axiosError = {
+        response: {
+          data: {},
+          status: 500,
+        },
+        isAxiosError: true,
+      }
+      expect(getErrorMessage(axiosError)).toBe('Произошла ошибка')
+    })
+
+    it('should return custom fallback when axios error has empty message', () => {
+      const axiosError = {
+        response: {
+          data: {
+            message: '',
+          },
+        },
+        message: '',
+        isAxiosError: true,
+      }
+      expect(getErrorMessage(axiosError, 'Custom fallback')).toBe('Custom fallback')
+    })
   })
 })
