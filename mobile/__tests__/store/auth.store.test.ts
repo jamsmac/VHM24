@@ -100,6 +100,15 @@ describe('AuthStore', () => {
       expect(state.error).toBe('Invalid credentials');
     });
 
+    it('should use fallback message when login fails without message', async () => {
+      mockApiClient.login.mockResolvedValueOnce({ success: false });
+
+      await expect(useAuthStore.getState().login(mockCredentials)).rejects.toThrow('Login failed');
+
+      const state = useAuthStore.getState();
+      expect(state.error).toBe('Login failed');
+    });
+
     it('should handle API error with response data', async () => {
       const error = new Error('Network error');
       (error as any).response = { data: { message: 'Server error' } };
@@ -119,6 +128,16 @@ describe('AuthStore', () => {
 
       const state = useAuthStore.getState();
       expect(state.error).toBe('Network error');
+    });
+
+    it('should use fallback error message when error has no message', async () => {
+      const error: any = {};
+      mockApiClient.login.mockRejectedValueOnce(error);
+
+      await expect(useAuthStore.getState().login(mockCredentials)).rejects.toBeDefined();
+
+      const state = useAuthStore.getState();
+      expect(state.error).toBe('Login failed');
     });
 
     it('should call login API with credentials', async () => {
