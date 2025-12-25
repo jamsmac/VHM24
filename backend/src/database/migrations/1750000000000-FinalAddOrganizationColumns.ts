@@ -195,7 +195,7 @@ export class FinalAddOrganizationColumns1750000000000 implements MigrationInterf
     console.log('==========================================');
   }
 
-  public async down(queryRunner: QueryRunner): Promise<void> {
+  public async down(_queryRunner: QueryRunner): Promise<void> {
     console.log('FinalAddOrganizationColumns down - skipping (data preservation)');
   }
 }

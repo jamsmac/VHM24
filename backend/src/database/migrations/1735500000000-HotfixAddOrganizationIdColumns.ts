@@ -180,7 +180,7 @@ export class HotfixAddOrganizationIdColumns1735500000000 implements MigrationInt
     console.log('Hotfix migration completed successfully!');
   }
 
-  public async down(queryRunner: QueryRunner): Promise<void> {
+  public async down(_queryRunner: QueryRunner): Promise<void> {
     // This is a hotfix, down migration is not implemented
     // Use the original AddOrganizationsTable migration's down() if needed
     console.log('Hotfix down migration - no action taken');

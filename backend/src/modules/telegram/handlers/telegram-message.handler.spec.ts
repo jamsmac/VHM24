@@ -14,7 +14,7 @@ import {
 
 describe('TelegramMessageHandler', () => {
   let handler: TelegramMessageHandler;
-  let i18nService: jest.Mocked<TelegramI18nService>;
+  let _i18nService: jest.Mocked<TelegramI18nService>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -46,7 +46,7 @@ describe('TelegramMessageHandler', () => {
     }).compile();
 
     handler = module.get<TelegramMessageHandler>(TelegramMessageHandler);
-    i18nService = module.get(TelegramI18nService);
+    _i18nService = module.get(TelegramI18nService);
   });
 
   afterEach(() => {
