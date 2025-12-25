@@ -31,6 +31,8 @@ const mockApiClient = apiClient as jest.Mocked<typeof apiClient>;
 
 describe('Offline Store', () => {
   beforeEach(() => {
+    jest.clearAllMocks();
+
     // Reset store state before each test
     useOfflineStore.setState({
       taskQueue: [],
@@ -332,6 +334,65 @@ describe('Offline Store', () => {
 
       expect(result.success).toBe(true); // Still completes even if individual items fail
     });
+
+    it('should handle critical sync failure when syncTasks throws', async () => {
+      const task = createOfflineTaskUpdate('task-1', TaskStatus.IN_PROGRESS);
+
+      // Store original syncTasks to restore later
+      const originalSyncTasks = useOfflineStore.getState().syncTasks;
+
+      useOfflineStore.setState({
+        isOnline: true,
+        isSyncing: false,
+        taskQueue: [task],
+        photoQueue: [],
+        // Override syncTasks to throw an unhandled error
+        syncTasks: async () => {
+          throw new Error('Critical sync failure');
+        },
+      });
+
+      const result = await useOfflineStore.getState().syncAll();
+
+      // Restore original syncTasks for other tests
+      useOfflineStore.setState({ syncTasks: originalSyncTasks });
+
+      expect(result.success).toBe(false);
+
+      const state = useOfflineStore.getState();
+      expect(state.isSyncing).toBe(false);
+      expect(state.syncError).toBe('Critical sync failure');
+    });
+
+    it('should use fallback error message when error has no message', async () => {
+      const task = createOfflineTaskUpdate('task-1', TaskStatus.IN_PROGRESS);
+
+      // Store original syncTasks to restore later
+      const originalSyncTasks = useOfflineStore.getState().syncTasks;
+
+      useOfflineStore.setState({
+        isOnline: true,
+        isSyncing: false,
+        taskQueue: [task],
+        photoQueue: [],
+        // Override syncTasks to throw an error without message
+        syncTasks: async () => {
+          const error: any = new Error();
+          error.message = '';
+          throw error;
+        },
+      });
+
+      const result = await useOfflineStore.getState().syncAll();
+
+      // Restore original syncTasks for other tests
+      useOfflineStore.setState({ syncTasks: originalSyncTasks });
+
+      expect(result.success).toBe(false);
+
+      const state = useOfflineStore.getState();
+      expect(state.syncError).toBe('Sync failed');
+    });
   });
 
   describe('syncTasks', () => {
@@ -359,6 +420,28 @@ describe('Offline Store', () => {
       expect(mockApiClient.completeTask).toHaveBeenCalledWith('task-1', 'Done');
     });
 
+    it('should sync create tasks via syncOfflineData', async () => {
+      // Manually create a task with 'create' action (not via helper which only creates update/complete)
+      const createTask = {
+        tempId: generateTempId(),
+        task: {
+          id: 'new-task-1',
+          status: TaskStatus.PENDING,
+        },
+        action: 'create' as const,
+        timestamp: Date.now(),
+        synced: false,
+      };
+
+      useOfflineStore.setState({ taskQueue: [createTask] });
+      mockApiClient.syncOfflineData.mockResolvedValueOnce({ success: true });
+
+      const synced = await useOfflineStore.getState().syncTasks();
+
+      expect(synced).toBe(1);
+      expect(mockApiClient.syncOfflineData).toHaveBeenCalledWith(createTask);
+    });
+
     it('should keep failed tasks in queue', async () => {
       const task = createOfflineTaskUpdate('task-1', TaskStatus.IN_PROGRESS);
 
@@ -370,6 +453,73 @@ describe('Offline Store', () => {
       expect(synced).toBe(0);
       // Task should still be in queue
       expect(useOfflineStore.getState().taskQueue).toHaveLength(1);
+    });
+
+    it('should handle task without id for update action', async () => {
+      const taskWithoutId = {
+        tempId: generateTempId(),
+        task: {
+          status: TaskStatus.IN_PROGRESS,
+          // No id field
+        },
+        action: 'update' as const,
+        timestamp: Date.now(),
+        synced: false,
+      };
+
+      useOfflineStore.setState({ taskQueue: [taskWithoutId] });
+
+      const synced = await useOfflineStore.getState().syncTasks();
+
+      // Should not call API since there's no task id
+      expect(mockApiClient.updateTaskStatus).not.toHaveBeenCalled();
+      // Task should be removed anyway (synced count 1)
+      expect(synced).toBe(1);
+    });
+
+    it('should handle task without id for complete action', async () => {
+      const taskWithoutId = {
+        tempId: generateTempId(),
+        task: {
+          status: TaskStatus.COMPLETED,
+          notes: 'Done',
+          // No id field
+        },
+        action: 'complete' as const,
+        timestamp: Date.now(),
+        synced: false,
+      };
+
+      useOfflineStore.setState({ taskQueue: [taskWithoutId] });
+
+      const synced = await useOfflineStore.getState().syncTasks();
+
+      // Should not call API since there's no task id
+      expect(mockApiClient.completeTask).not.toHaveBeenCalled();
+      // Task should be removed anyway
+      expect(synced).toBe(1);
+    });
+
+    it('should handle complete task without notes', async () => {
+      const task = {
+        tempId: generateTempId(),
+        task: {
+          id: 'task-1',
+          status: TaskStatus.COMPLETED,
+          // No notes field
+        },
+        action: 'complete' as const,
+        timestamp: Date.now(),
+        synced: false,
+      };
+
+      useOfflineStore.setState({ taskQueue: [task] });
+      mockApiClient.completeTask.mockResolvedValueOnce({ success: true });
+
+      const synced = await useOfflineStore.getState().syncTasks();
+
+      expect(synced).toBe(1);
+      expect(mockApiClient.completeTask).toHaveBeenCalledWith('task-1', '');
     });
   });
 
