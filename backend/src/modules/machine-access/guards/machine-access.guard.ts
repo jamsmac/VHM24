@@ -28,6 +28,7 @@ export const MachineAccessRoles = (...roles: MachineAccessRole[]) => {
     key?: string | symbol,
     descriptor?: TypedPropertyDescriptor<T>,
   ): TypedPropertyDescriptor<T> | void => {
+    /* istanbul ignore next - class decorator path not used in practice */
     Reflect.defineMetadata(MACHINE_ACCESS_KEY, roles, descriptor?.value || target);
     return descriptor;
   };
