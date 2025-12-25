@@ -1,4 +1,4 @@
-import { CsrfGuard, CSRF_TOKEN_HEADER, CSRF_TOKEN_COOKIE, generateCsrfToken } from './csrf.guard';
+import { CsrfGuard, CSRF_TOKEN_HEADER, CSRF_TOKEN_COOKIE, generateCsrfToken, SkipCsrf, CsrfProtection, CSRF_KEY } from './csrf.guard';
 import { ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
@@ -212,6 +212,70 @@ describe('CsrfGuard', () => {
 
       // Should allow even without tokens in development
       expect(devGuard.canActivate(context)).toBe(true);
+    });
+  });
+
+  describe('SkipCsrf decorator', () => {
+    it('should set skip metadata on the method', () => {
+      class TestController {
+        @SkipCsrf()
+        testMethod() {
+          return 'test';
+        }
+      }
+
+      const controller = new TestController();
+      const metadata = Reflect.getMetadata(CSRF_KEY, controller.testMethod);
+
+      expect(metadata).toEqual({ skip: true });
+    });
+  });
+
+  describe('CsrfProtection decorator', () => {
+    it('should set options metadata on a method', () => {
+      const options = { methods: ['POST', 'DELETE'] };
+
+      class TestController {
+        @CsrfProtection(options)
+        testMethod() {
+          return 'test';
+        }
+      }
+
+      const controller = new TestController();
+      const metadata = Reflect.getMetadata(CSRF_KEY, controller.testMethod);
+
+      expect(metadata).toEqual(options);
+    });
+
+    it('should set options metadata on a class', () => {
+      const options = { methods: ['POST'] };
+
+      @CsrfProtection(options)
+      class TestController {
+        testMethod() {
+          return 'test';
+        }
+      }
+
+      const metadata = Reflect.getMetadata(CSRF_KEY, TestController);
+
+      expect(metadata).toEqual(options);
+    });
+  });
+
+  describe('compareTokens edge cases', () => {
+    it('should return false for tokens with invalid encoding', () => {
+      // Create tokens that would cause Buffer.from to fail or timingSafeEqual to throw
+      const context = createMockContext(
+        'POST',
+        { [CSRF_TOKEN_HEADER]: '\u0000\u0001\u0002' },
+        { [CSRF_TOKEN_COOKIE]: generateCsrfToken() },
+      );
+      reflector.get.mockReturnValue(undefined);
+
+      // Should throw because tokens don't match (different lengths)
+      expect(() => guard.canActivate(context)).toThrow(ForbiddenException);
     });
   });
 });
