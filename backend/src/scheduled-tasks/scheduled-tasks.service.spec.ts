@@ -1572,4 +1572,533 @@ describe('ScheduledTasksService', () => {
       );
     });
   });
+
+  // ============================================================================
+  // LOW STOCK NOTIFICATION - NO RECIPIENT BRANCH TESTS
+  // ============================================================================
+
+  describe('checkLowStockMachines - no recipient branch', () => {
+    it('should log warning when no recipient found for notification (line 245)', async () => {
+      const lowStockItems = [
+        {
+          machine_id: 'machine-1',
+          current_quantity: 5,
+          min_stock_level: 10,
+          machine: { id: 'machine-1', machine_number: 'M-001', assigned_to_user_id: null },
+          nomenclature: { name: 'Coffee' },
+        },
+      ];
+
+      const queryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue(lowStockItems),
+      };
+      machineInventoryRepository.createQueryBuilder.mockReturnValue(queryBuilder as any);
+
+      // Mock getFirstAdminId to return null (no recipient)
+      _usersService.getFirstAdminId.mockResolvedValue(null);
+
+      const warnSpy = jest.spyOn(service['logger'], 'warn');
+
+      await service.checkLowStockMachines();
+
+      expect(warnSpy).toHaveBeenCalledWith('No recipient found for low stock notification');
+    });
+
+    it('should handle notification error gracefully (line 248)', async () => {
+      const lowStockItems = [
+        {
+          machine_id: 'machine-1',
+          current_quantity: 5,
+          min_stock_level: 10,
+          machine: { id: 'machine-1', machine_number: 'M-001', assigned_to_user_id: 'user-uuid' },
+          nomenclature: { name: 'Coffee' },
+        },
+      ];
+
+      const queryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue(lowStockItems),
+      };
+      machineInventoryRepository.createQueryBuilder.mockReturnValue(queryBuilder as any);
+
+      notificationsService.create.mockRejectedValue(new Error('Notification send failed'));
+
+      const errorSpy = jest.spyOn(service['logger'], 'error');
+
+      await service.checkLowStockMachines();
+
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to send low stock notification for machine'),
+        expect.any(String),
+      );
+    });
+  });
+
+  describe('checkLowStockWarehouse - no recipient branch', () => {
+    it('should log warning when no recipient found for warehouse notification (line 299)', async () => {
+      const lowStockItems = [
+        {
+          current_quantity: 5,
+          min_stock_level: 10,
+          nomenclature: { name: 'Coffee' },
+        },
+      ];
+
+      const queryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue(lowStockItems),
+      };
+      warehouseInventoryRepository.createQueryBuilder.mockReturnValue(queryBuilder as any);
+
+      // Mock getFirstAdminId to return null (no recipient)
+      _usersService.getFirstAdminId.mockResolvedValue(null);
+
+      const warnSpy = jest.spyOn(service['logger'], 'warn');
+
+      await service.checkLowStockWarehouse();
+
+      expect(warnSpy).toHaveBeenCalledWith('No recipient found for warehouse low stock notification');
+    });
+
+    it('should handle notification error gracefully (line 296)', async () => {
+      const lowStockItems = [
+        {
+          current_quantity: 5,
+          min_stock_level: 10,
+          nomenclature: { name: 'Coffee' },
+        },
+      ];
+
+      const queryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue(lowStockItems),
+      };
+      warehouseInventoryRepository.createQueryBuilder.mockReturnValue(queryBuilder as any);
+
+      _usersService.getFirstAdminId.mockResolvedValue('admin-uuid');
+      notificationsService.create.mockRejectedValue(new Error('Notification send failed'));
+
+      const errorSpy = jest.spyOn(service['logger'], 'error');
+
+      await service.checkLowStockWarehouse();
+
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to send warehouse low stock notification'),
+        expect.any(String),
+      );
+    });
+  });
+
+  // ============================================================================
+  // MONITOR INVENTORY THRESHOLDS TESTS
+  // ============================================================================
+
+  describe('monitorInventoryThresholds', () => {
+    let inventoryDifferenceService: jest.Mocked<InventoryDifferenceService>;
+
+    beforeEach(() => {
+      inventoryDifferenceService = service['inventoryDifferenceService'] as any;
+      // Add getDifferencesReport mock if not present
+      if (!inventoryDifferenceService.getDifferencesReport) {
+        inventoryDifferenceService.getDifferencesReport = jest.fn();
+      }
+    });
+
+    it('should return early when ENABLE_SCHEDULED_TASKS is false', async () => {
+      process.env.ENABLE_SCHEDULED_TASKS = 'false';
+
+      await service.monitorInventoryThresholds();
+
+      expect(inventoryDifferenceService.getDifferencesReport).not.toHaveBeenCalled();
+    });
+
+    it('should get differences report with threshold violations', async () => {
+      inventoryDifferenceService.getDifferencesReport = jest.fn().mockResolvedValue({
+        data: [],
+        total: 0,
+      });
+
+      await service.monitorInventoryThresholds();
+
+      expect(inventoryDifferenceService.getDifferencesReport).toHaveBeenCalledWith(
+        expect.objectContaining({
+          threshold_exceeded_only: true,
+          limit: 500,
+        }),
+      );
+    });
+
+    it('should return early when no threshold violations found (line 1228)', async () => {
+      inventoryDifferenceService.getDifferencesReport = jest.fn().mockResolvedValue({
+        data: [],
+        total: 0,
+      });
+
+      const debugSpy = jest.spyOn(service['logger'], 'debug');
+
+      await service.monitorInventoryThresholds();
+
+      expect(debugSpy).toHaveBeenCalledWith('No threshold violations found');
+    });
+
+    it('should send notification for critical violations', async () => {
+      const differences = [
+        {
+          severity: 'CRITICAL',
+          nomenclature_name: 'Coffee',
+          difference_abs: 50.5,
+          difference_rel: 25.3,
+        },
+        {
+          severity: 'WARNING',
+          nomenclature_name: 'Sugar',
+          difference_abs: 20.0,
+          difference_rel: 10.0,
+        },
+      ];
+
+      inventoryDifferenceService.getDifferencesReport = jest.fn().mockResolvedValue({
+        data: differences,
+        total: 2,
+      });
+
+      await service.monitorInventoryThresholds();
+
+      expect(notificationsService.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: expect.stringContaining('Критические расхождения остатков'),
+          data: expect.objectContaining({
+            critical_count: 1,
+            warning_count: 1,
+          }),
+        }),
+      );
+    });
+
+    it('should not send notification when no critical violations', async () => {
+      const differences = [
+        {
+          severity: 'WARNING',
+          nomenclature_name: 'Sugar',
+          difference_abs: 20.0,
+          difference_rel: 10.0,
+        },
+        {
+          severity: 'INFO',
+          nomenclature_name: 'Cups',
+          difference_abs: 5.0,
+          difference_rel: 2.0,
+        },
+      ];
+
+      inventoryDifferenceService.getDifferencesReport = jest.fn().mockResolvedValue({
+        data: differences,
+        total: 2,
+      });
+
+      await service.monitorInventoryThresholds();
+
+      expect(notificationsService.create).not.toHaveBeenCalled();
+    });
+
+    it('should handle errors gracefully (line 1277)', async () => {
+      inventoryDifferenceService.getDifferencesReport = jest.fn().mockRejectedValue(
+        new Error('Database connection failed'),
+      );
+
+      const errorSpy = jest.spyOn(service['logger'], 'error');
+
+      await service.monitorInventoryThresholds();
+
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Error monitoring inventory thresholds'),
+        expect.any(String),
+      );
+    });
+  });
+
+  // ============================================================================
+  // PROCESS ALERT ESCALATIONS TESTS
+  // ============================================================================
+
+  describe('processAlertEscalations', () => {
+    beforeEach(() => {
+      // Add processEscalations mock
+      _alertsService.processEscalations = jest.fn().mockResolvedValue(undefined);
+    });
+
+    it('should return early when ENABLE_SCHEDULED_TASKS is false', async () => {
+      process.env.ENABLE_SCHEDULED_TASKS = 'false';
+
+      await service.processAlertEscalations();
+
+      expect(_alertsService.processEscalations).not.toHaveBeenCalled();
+    });
+
+    it('should call alertsService.processEscalations', async () => {
+      await service.processAlertEscalations();
+
+      expect(_alertsService.processEscalations).toHaveBeenCalled();
+    });
+
+    it('should handle errors gracefully (line 1296)', async () => {
+      _alertsService.processEscalations = jest.fn().mockRejectedValue(
+        new Error('Escalation processing failed'),
+      );
+
+      const errorSpy = jest.spyOn(service['logger'], 'error');
+
+      await service.processAlertEscalations();
+
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Error processing alert escalations'),
+        expect.any(String),
+      );
+    });
+  });
+
+  // ============================================================================
+  // EVALUATE ALERT RULES TESTS
+  // ============================================================================
+
+  describe('evaluateAlertRules', () => {
+    beforeEach(() => {
+      // Add findAllRules and evaluateRule mocks
+      _alertsService.findAllRules = jest.fn().mockResolvedValue([]);
+      _alertsService.evaluateRule = jest.fn().mockResolvedValue(null);
+    });
+
+    it('should return early when ENABLE_SCHEDULED_TASKS is false', async () => {
+      process.env.ENABLE_SCHEDULED_TASKS = 'false';
+
+      await service.evaluateAlertRules();
+
+      expect(_alertsService.findAllRules).not.toHaveBeenCalled();
+    });
+
+    it('should get all enabled alert rules', async () => {
+      await service.evaluateAlertRules();
+
+      expect(_alertsService.findAllRules).toHaveBeenCalledWith({ is_enabled: true });
+    });
+
+    it('should evaluate low_stock_percentage rule for each machine', async () => {
+      const rule = {
+        id: 'rule-1',
+        metric: 'low_stock_percentage',
+        name: 'Low Stock Alert',
+        scope_filters: null,
+      };
+      _alertsService.findAllRules = jest.fn().mockResolvedValue([rule]);
+
+      const machine = {
+        id: 'machine-1',
+        machine_number: 'M-001',
+        name: 'Test Machine',
+      };
+      machineRepository.find.mockResolvedValue([machine as Machine]);
+
+      const inventory = [
+        { current_quantity: 50, max_capacity: 100 },
+      ];
+      machineInventoryRepository.find = jest.fn().mockResolvedValue(inventory);
+
+      await service.evaluateAlertRules();
+
+      expect(_alertsService.evaluateRule).toHaveBeenCalledWith(
+        'rule-1',
+        50, // 50% fill
+        expect.objectContaining({
+          machine_id: 'machine-1',
+        }),
+      );
+    });
+
+    it('should skip machines not in scope_filters.machine_ids', async () => {
+      const rule = {
+        id: 'rule-1',
+        metric: 'low_stock_percentage',
+        name: 'Low Stock Alert',
+        scope_filters: { machine_ids: ['other-machine'] },
+      };
+      _alertsService.findAllRules = jest.fn().mockResolvedValue([rule]);
+
+      const machine = {
+        id: 'machine-1',
+        machine_number: 'M-001',
+        name: 'Test Machine',
+      };
+      machineRepository.find.mockResolvedValue([machine as Machine]);
+
+      await service.evaluateAlertRules();
+
+      expect(_alertsService.evaluateRule).not.toHaveBeenCalled();
+    });
+
+    it('should skip machines with no inventory', async () => {
+      const rule = {
+        id: 'rule-1',
+        metric: 'low_stock_percentage',
+        name: 'Low Stock Alert',
+        scope_filters: null,
+      };
+      _alertsService.findAllRules = jest.fn().mockResolvedValue([rule]);
+
+      const machine = { id: 'machine-1', machine_number: 'M-001', name: 'Test Machine' };
+      machineRepository.find.mockResolvedValue([machine as Machine]);
+
+      machineInventoryRepository.find = jest.fn().mockResolvedValue([]);
+
+      await service.evaluateAlertRules();
+
+      expect(_alertsService.evaluateRule).not.toHaveBeenCalled();
+    });
+
+    it('should evaluate task_overdue_hours rule for overdue tasks', async () => {
+      const rule = {
+        id: 'rule-2',
+        metric: 'task_overdue_hours',
+        name: 'Overdue Task Alert',
+        scope_filters: null,
+      };
+      _alertsService.findAllRules = jest.fn().mockResolvedValue([rule]);
+
+      const overdueTask = {
+        id: 'task-1',
+        type_code: 'refill',
+        status: TaskStatus.IN_PROGRESS,
+        due_date: new Date(Date.now() - 5 * 60 * 60 * 1000), // 5 hours overdue
+        machine_id: 'machine-1',
+        machine: { machine_number: 'M-001' },
+      };
+      taskRepository.find.mockResolvedValue([overdueTask as Task]);
+
+      await service.evaluateAlertRules();
+
+      expect(_alertsService.evaluateRule).toHaveBeenCalledWith(
+        'rule-2',
+        5, // 5 hours overdue
+        expect.objectContaining({
+          machine_id: 'machine-1',
+          additional_data: expect.objectContaining({
+            task_id: 'task-1',
+          }),
+        }),
+      );
+    });
+
+    it('should skip tasks without due_date in task_overdue_hours', async () => {
+      const rule = {
+        id: 'rule-2',
+        metric: 'task_overdue_hours',
+        name: 'Overdue Task Alert',
+        scope_filters: null,
+      };
+      _alertsService.findAllRules = jest.fn().mockResolvedValue([rule]);
+
+      const taskNoDueDate = {
+        id: 'task-1',
+        type_code: 'refill',
+        status: TaskStatus.IN_PROGRESS,
+        due_date: null,
+        machine_id: 'machine-1',
+      };
+      taskRepository.find.mockResolvedValue([taskNoDueDate as Task]);
+
+      await service.evaluateAlertRules();
+
+      expect(_alertsService.evaluateRule).not.toHaveBeenCalled();
+    });
+
+    it('should handle unknown metric type gracefully (line 1410)', async () => {
+      const rule = {
+        id: 'rule-3',
+        metric: 'unknown_metric',
+        name: 'Unknown Alert',
+        scope_filters: null,
+      };
+      _alertsService.findAllRules = jest.fn().mockResolvedValue([rule]);
+
+      const debugSpy = jest.spyOn(service['logger'], 'debug');
+
+      await service.evaluateAlertRules();
+
+      expect(debugSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Metric type unknown_metric evaluation not implemented'),
+      );
+    });
+
+    it('should count triggered alerts', async () => {
+      const rule = {
+        id: 'rule-1',
+        metric: 'low_stock_percentage',
+        name: 'Low Stock Alert',
+        scope_filters: null,
+      };
+      _alertsService.findAllRules = jest.fn().mockResolvedValue([rule]);
+
+      const machine = { id: 'machine-1', machine_number: 'M-001', name: 'Test Machine' };
+      machineRepository.find.mockResolvedValue([machine as Machine]);
+
+      machineInventoryRepository.find = jest.fn().mockResolvedValue([
+        { current_quantity: 20, max_capacity: 100 },
+      ]);
+
+      // Alert is triggered
+      _alertsService.evaluateRule = jest.fn().mockResolvedValue({ id: 'alert-1' });
+
+      const logSpy = jest.spyOn(service['logger'], 'log');
+
+      await service.evaluateAlertRules();
+
+      expect(logSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Alert triggered for machine'),
+      );
+    });
+
+    it('should handle rule evaluation errors gracefully (line 1412-1416)', async () => {
+      const rule = {
+        id: 'rule-1',
+        metric: 'low_stock_percentage',
+        name: 'Low Stock Alert',
+        scope_filters: null,
+      };
+      _alertsService.findAllRules = jest.fn().mockResolvedValue([rule]);
+
+      machineRepository.find.mockRejectedValue(new Error('Machine query failed'));
+
+      const errorSpy = jest.spyOn(service['logger'], 'error');
+
+      await service.evaluateAlertRules();
+
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Error evaluating rule'),
+        expect.any(String),
+      );
+    });
+
+    it('should handle top-level errors gracefully (line 1425)', async () => {
+      _alertsService.findAllRules = jest.fn().mockRejectedValue(
+        new Error('Database connection failed'),
+      );
+
+      const errorSpy = jest.spyOn(service['logger'], 'error');
+
+      await service.evaluateAlertRules();
+
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Error evaluating alert rules'),
+        expect.any(String),
+      );
+    });
+  });
 });
