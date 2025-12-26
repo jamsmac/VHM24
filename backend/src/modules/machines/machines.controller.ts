@@ -181,19 +181,6 @@ export class MachinesController {
     return this.machinesService.findAllSimple({ location_id: locationId });
   }
 
-  // @Get('by-operator/:operatorId')
-  // @ApiOperation({ summary: 'Получить аппараты оператора' })
-  // @ApiParam({ name: 'operatorId', description: 'UUID оператора' })
-  // @ApiResponse({
-  //   status: 200,
-  //   description: 'Список аппаратов оператора',
-  //   type: [Machine],
-  // })
-  // findByOperator(@Param('operatorId') operatorId: string): Promise<Machine[]> {
-  //   // TODO: Implement findByOperator - needs relation with operators
-  //   return Promise.resolve([]);
-  // }
-
   @Get(':id')
   @ApiOperation({ summary: 'Получить аппарат по ID' })
   @ApiParam({ name: 'id', description: 'UUID аппарата' })
@@ -408,32 +395,6 @@ export class MachinesController {
 
   // ========== Location History Endpoints (REQ-MD-MACH-02) ==========
 
-  // @Post(':id/move')
-  // @HttpCode(HttpStatus.OK)
-  // @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
-  // @ApiOperation({
-  //   summary: 'Переместить аппарат в новую локацию',
-  //   description:
-  //     'Перемещает аппарат в новую локацию и создает запись в истории перемещений. ' +
-  //     'REQ-MD-MACH-02: История перемещений аппаратов между локациями',
-  // })
-  // @ApiParam({ name: 'id', description: 'UUID аппарата' })
-  // @ApiResponse({
-  //   status: 200,
-  //   description: 'Аппарат успешно перемещен',
-  //   type: Machine,
-  // })
-  // @ApiResponse({ status: 400, description: 'Некорректные данные или аппарат уже в этой локации' })
-  // @ApiResponse({ status: 404, description: 'Аппарат не найден' })
-  // moveToLocation(
-  //   @Param('id') id: string,
-  //   @Body() moveMachineDto: MoveMachineDto,
-  //   @CurrentUser() user: User,
-  // ): Promise<Machine> {
-  //   // TODO: Implement moveMachine method
-  //   return this.machinesService.update(id, { location_id: moveMachineDto.location_id });
-  // }
-
   @Get(':id/location-history')
   @ApiOperation({
     summary: 'Получить историю перемещений аппарата',
@@ -451,24 +412,6 @@ export class MachinesController {
   }
 
   // ========== QR Code & Connectivity Endpoints ==========
-
-  // @Post(':id/ping')
-  // @HttpCode(HttpStatus.OK)
-  // @ApiOperation({ summary: 'Зарегистрировать пинг от аппарата (обновить статус онлайн)' })
-  // @ApiParam({ name: 'id', description: 'UUID аппарата' })
-  // @ApiResponse({
-  //   status: 200,
-  //   description: 'Пинг зарегистрирован, статус обновлен',
-  //   type: Machine,
-  // })
-  // @ApiResponse({ status: 404, description: 'Аппарат не найден' })
-  // recordPing(@Param('id') id: string): Promise<Machine> {
-  //   // TODO: Implement recordPing method
-  //   return this.machinesService.update(id, {
-  //     last_ping_at: new Date(),
-  //     is_online: true
-  //   });
-  // }
 
   @Get('connectivity/status')
   @UseInterceptors(ReportsCacheInterceptor)

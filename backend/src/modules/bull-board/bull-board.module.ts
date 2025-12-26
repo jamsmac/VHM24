@@ -21,6 +21,9 @@ import { BullBoardController } from './bull-board.controller';
     BullModule.registerQueue({
       name: 'sales-import',
     }),
+    BullModule.registerQueue({
+      name: 'commission-calculations',
+    }),
   ],
   controllers: [BullBoardController],
 })

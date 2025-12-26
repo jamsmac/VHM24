@@ -2,8 +2,13 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Machine } from '@modules/machines/entities/machine.entity';
-// TODO: Import Equipment when equipment module is implemented
-// import { Equipment } from '@modules/equipment/entities/equipment.entity';
+
+/**
+ * Note: Equipment depreciation is not yet implemented.
+ * The equipment module currently handles components (hoppers, grinders, etc.)
+ * but doesn't have a standalone Equipment entity with depreciation fields.
+ * Equipment depreciation returns empty array until this is implemented.
+ */
 
 export interface DepreciationReport {
   period: {
@@ -54,9 +59,6 @@ export class DepreciationReportService {
   constructor(
     @InjectRepository(Machine)
     private readonly machineRepository: Repository<Machine>,
-    // TODO: Re-enable when equipment module is implemented
-    // @InjectRepository(Equipment)
-    // private readonly equipmentRepository: Repository<Equipment>,
   ) {}
 
   /**
@@ -156,44 +158,11 @@ export class DepreciationReportService {
 
   /**
    * Get depreciation data for equipment
+   *
+   * Note: Returns empty array until Equipment entity with depreciation
+   * fields is implemented. See module header comment for details.
    */
   private async getEquipmentDepreciation(): Promise<DepreciationReport['equipment']> {
-    // TODO: Implement when equipment module is ready
     return [];
-
-    /* Commented out until equipment module is implemented
-    const equipment = await this.equipmentRepository.find({
-      where: {},
-    });
-
-    return equipment
-      .filter((item) => item.purchase_price != null && item.purchase_price > 0)
-      .map((item) => {
-        const purchasePrice = Number(item.purchase_price || 0);
-        const depreciationYears = Number(item.depreciation_years || 5);
-        const accumulatedDepreciation = Number(item.accumulated_depreciation || 0);
-        const monthlyDepreciation = purchasePrice / (depreciationYears * 12);
-        const currentValue = Math.max(0, purchasePrice - accumulatedDepreciation);
-
-        const depreciationPercentage =
-          purchasePrice > 0 ? (accumulatedDepreciation / purchasePrice) * 100 : 0;
-
-        const status = depreciationPercentage >= 100 ? 'fully_depreciated' : 'active';
-
-        return {
-          equipment_name: item.name || 'Unknown',
-          serial_number: item.serial_number,
-          type: item.type,
-          purchase_price: purchasePrice,
-          purchase_date: item.purchase_date || new Date(),
-          depreciation_years: depreciationYears,
-          accumulated_depreciation: accumulatedDepreciation,
-          current_value: currentValue,
-          monthly_depreciation: monthlyDepreciation,
-          status,
-        };
-      })
-      .sort((a, b) => b.current_value - a.current_value);
-    */
   }
 }

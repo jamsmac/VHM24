@@ -180,9 +180,87 @@ export class HotfixAddOrganizationIdColumns1735500000000 implements MigrationInt
     console.log('Hotfix migration completed successfully!');
   }
 
-  public async down(_queryRunner: QueryRunner): Promise<void> {
-    // This is a hotfix, down migration is not implemented
-    // Use the original AddOrganizationsTable migration's down() if needed
-    console.log('Hotfix down migration - no action taken');
+  public async down(queryRunner: QueryRunner): Promise<void> {
+    console.log('Rolling back HotfixAddOrganizationIdColumns...');
+
+    // Remove organization_id from transactions if exists
+    const transactionOrgExists = await queryRunner.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.columns
+        WHERE table_name = 'transactions'
+        AND column_name = 'organization_id'
+      )
+    `);
+
+    if (transactionOrgExists[0].exists) {
+      console.log('Removing organization_id from transactions table...');
+      await queryRunner.query(`
+        ALTER TABLE "transactions" DROP CONSTRAINT IF EXISTS "FK_transactions_organization"
+      `);
+      await queryRunner.query(`DROP INDEX IF EXISTS "IDX_transactions_organization_id"`);
+      await queryRunner.query(`ALTER TABLE "transactions" DROP COLUMN "organization_id"`);
+    }
+
+    // Remove organization_id from users if exists
+    const userOrgExists = await queryRunner.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.columns
+        WHERE table_name = 'users'
+        AND column_name = 'organization_id'
+      )
+    `);
+
+    if (userOrgExists[0].exists) {
+      console.log('Removing organization_id from users table...');
+      await queryRunner.query(`
+        ALTER TABLE "users" DROP CONSTRAINT IF EXISTS "FK_users_organization"
+      `);
+      await queryRunner.query(`DROP INDEX IF EXISTS "IDX_users_organization_id"`);
+      await queryRunner.query(`ALTER TABLE "users" DROP COLUMN "organization_id"`);
+    }
+
+    // Remove organization_id from machines if exists
+    const machineOrgExists = await queryRunner.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.columns
+        WHERE table_name = 'machines'
+        AND column_name = 'organization_id'
+      )
+    `);
+
+    if (machineOrgExists[0].exists) {
+      console.log('Removing organization_id from machines table...');
+      await queryRunner.query(`
+        ALTER TABLE "machines" DROP CONSTRAINT IF EXISTS "FK_machines_organization"
+      `);
+      await queryRunner.query(`DROP INDEX IF EXISTS "IDX_machines_organization_id"`);
+      await queryRunner.query(`ALTER TABLE "machines" DROP COLUMN "organization_id"`);
+    }
+
+    // Check if organizations table exists and drop it
+    const organizationsExists = await queryRunner.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables
+        WHERE table_schema = 'public'
+        AND table_name = 'organizations'
+      )
+    `);
+
+    if (organizationsExists[0].exists) {
+      console.log('Dropping organizations table...');
+      await queryRunner.query(`DROP INDEX IF EXISTS "IDX_organizations_is_active"`);
+      await queryRunner.query(`DROP INDEX IF EXISTS "IDX_organizations_type"`);
+      await queryRunner.query(`DROP INDEX IF EXISTS "IDX_organizations_parent_id"`);
+      await queryRunner.query(`DROP INDEX IF EXISTS "IDX_organizations_slug"`);
+      await queryRunner.query(`
+        ALTER TABLE "organizations" DROP CONSTRAINT IF EXISTS "FK_organizations_parent"
+      `);
+      await queryRunner.query(`
+        ALTER TABLE "organizations" DROP CONSTRAINT IF EXISTS "UQ_organizations_slug"
+      `);
+      await queryRunner.query(`DROP TABLE "organizations"`);
+    }
+
+    console.log('Hotfix rollback completed successfully!');
   }
 }

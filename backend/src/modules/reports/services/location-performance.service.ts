@@ -4,8 +4,12 @@ import { Repository } from 'typeorm';
 import { Location } from '@modules/locations/entities/location.entity';
 import { Machine } from '@modules/machines/entities/machine.entity';
 import { Transaction } from '@modules/transactions/entities/transaction.entity';
-// TODO: Import FinancialOperation when financial-operations module is implemented
-// import { FinancialOperation } from '@modules/financial-operations/entities/financial-operation.entity';
+
+/**
+ * Note: Financial operations (expenses, commissions) are not yet implemented.
+ * When implemented, add FinancialOperation entity injection here.
+ * See: https://github.com/your-org/vendhub/issues/XXX
+ */
 
 export interface LocationPerformanceReport {
   location: {
@@ -56,9 +60,6 @@ export class LocationPerformanceService {
     private readonly machineRepository: Repository<Machine>,
     @InjectRepository(Transaction)
     private readonly transactionRepository: Repository<Transaction>,
-    // TODO: Re-enable when financial-operations module is implemented
-    // @InjectRepository(FinancialOperation)
-    // private readonly financialOperationRepository: Repository<FinancialOperation>,
   ) {}
 
   /**
@@ -232,35 +233,10 @@ export class LocationPerformanceService {
 
     const totalRevenue = parseFloat(revenueRaw?.total_revenue || '0');
 
-    // TODO: Re-enable when financial-operations module is implemented
-    // Total expenses for machines at this location
-    // const expensesRaw = await this.financialOperationRepository
-    //   .createQueryBuilder('f')
-    //   .select('SUM(f.amount)', 'total_expenses')
-    //   .where('f.machine_id IN (:...machineIds)', { machineIds })
-    //   .andWhere('f.operation_date BETWEEN :startDate AND :endDate', {
-    //     startDate,
-    //     endDate,
-    //   })
-    //   .andWhere('f.type = :type', { type: 'expense' })
-    //   .getRawOne();
-
-    const totalExpenses = 0; // parseFloat(expensesRaw?.total_expenses || '0');
-
-    // Owner commission (if location-based commission operations exist)
-    // const commissionRaw = await this.financialOperationRepository
-    //   .createQueryBuilder('f')
-    //   .select('SUM(f.amount)', 'owner_commission')
-    //   .where('f.location_id = :locationId', { locationId })
-    //   .andWhere('f.operation_date BETWEEN :startDate AND :endDate', {
-    //     startDate,
-    //     endDate,
-    //   })
-    //   .andWhere('f.category = :category', { category: 'commission' })
-    //   .andWhere('f.type = :type', { type: 'expense' })
-    //   .getRawOne();
-
-    const ownerCommission = 0; // parseFloat(commissionRaw?.owner_commission || '0');
+    // Note: Expenses and commissions tracking requires financial-operations module
+    // These are currently stubbed to 0 until that module is implemented
+    const totalExpenses = 0;
+    const ownerCommission = 0;
 
     // Calculate metrics
     const netProfit = totalRevenue - totalExpenses;

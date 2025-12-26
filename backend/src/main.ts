@@ -5,6 +5,7 @@ import helmet from 'helmet';
 import * as cookieParser from 'cookie-parser';
 import * as compression from 'compression';
 import { useContainer } from 'class-validator';
+import { Request, Response, NextFunction } from 'express';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { CorsOptions } from '@nestjs/common/interfaces/external/cors-options.interface';
@@ -42,27 +43,109 @@ async function bootstrap() {
   );
 
 
-  // Security headers via Helmet
+  // SEC-2: Security headers via Helmet
+  // Comprehensive security headers configuration
+  const isProduction = process.env.NODE_ENV === 'production';
+  const frontendOrigin = process.env.FRONTEND_URL || 'http://localhost:3001';
+  const minioOrigin = process.env.MINIO_ENDPOINT
+    ? `https://${process.env.MINIO_ENDPOINT}`
+    : 'http://localhost:9000';
+
   app.use(
     helmet({
+      // Content Security Policy - controls which resources can be loaded
       contentSecurityPolicy: {
         directives: {
           defaultSrc: ["'self'"],
-          styleSrc: ["'self'", "'unsafe-inline'"],
-          scriptSrc: ["'self'"],
-          imgSrc: ["'self'", 'data:', 'https:'],
+          scriptSrc: ["'self'", "'unsafe-inline'"], // unsafe-inline needed for Swagger UI
+          styleSrc: ["'self'", "'unsafe-inline'"], // unsafe-inline needed for Swagger UI
+          imgSrc: ["'self'", 'data:', 'https:', 'blob:'],
+          fontSrc: ["'self'", 'https:', 'data:'],
+          connectSrc: ["'self'", frontendOrigin, minioOrigin, 'wss:', 'ws:'],
+          frameSrc: ["'none'"],
+          objectSrc: ["'none'"],
+          mediaSrc: ["'self'"],
+          workerSrc: ["'self'", 'blob:'],
+          formAction: ["'self'"],
+          frameAncestors: ["'self'"],
+          baseUri: ["'self'"],
+          upgradeInsecureRequests: isProduction ? [] : null,
         },
       },
+
+      // HSTS - Strict Transport Security
+      // Forces HTTPS for 1 year, includes subdomains
+      strictTransportSecurity: {
+        maxAge: 31536000, // 1 year in seconds
+        includeSubDomains: true,
+        preload: true,
+      },
+
+      // X-Frame-Options - prevent clickjacking
+      frameguard: {
+        action: 'deny',
+      },
+
+      // X-Content-Type-Options - prevent MIME type sniffing
+      noSniff: true,
+
+      // X-XSS-Protection - legacy XSS protection for older browsers
+      xssFilter: true,
+
+      // Referrer-Policy - control referrer information
+      referrerPolicy: {
+        policy: 'strict-origin-when-cross-origin',
+      },
+
+      // X-DNS-Prefetch-Control - control DNS prefetching
+      dnsPrefetchControl: {
+        allow: false,
+      },
+
+      // X-Permitted-Cross-Domain-Policies
+      permittedCrossDomainPolicies: {
+        permittedPolicies: 'none',
+      },
+
+      // Hide X-Powered-By header
+      hidePoweredBy: true,
+
+      // Cross-Origin-Embedder-Policy - disabled for compatibility with external resources
       crossOriginEmbedderPolicy: false,
+
+      // Cross-Origin-Opener-Policy
+      crossOriginOpenerPolicy: {
+        policy: 'same-origin',
+      },
+
+      // Cross-Origin-Resource-Policy
+      crossOriginResourcePolicy: {
+        policy: 'same-origin',
+      },
+
+      // Origin-Agent-Cluster header
+      originAgentCluster: true,
     }),
   );
+
+  // SEC-3: Permissions-Policy header (not included in Helmet)
+  // Controls browser features the application can use
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    res.setHeader(
+      'Permissions-Policy',
+      'accelerometer=(), camera=(), geolocation=(self), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()',
+    );
+    next();
+  });
+
+  logger.log(`Security headers configured for ${isProduction ? 'production' : 'development'} environment`);
 
   // Global exception filter
   app.useGlobalFilters(new HttpExceptionFilter());
 
   // CORS configuration
+  // Note: isProduction and frontendOrigin already defined above for security headers
   const frontendUrl = process.env.FRONTEND_URL;
-  const isProduction = process.env.NODE_ENV === 'production';
 
   // In production, warn if FRONTEND_URL is not set but don't fail
   if (isProduction && !frontendUrl) {

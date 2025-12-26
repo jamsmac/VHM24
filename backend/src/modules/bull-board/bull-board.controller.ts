@@ -26,9 +26,8 @@ export class BullBoardController {
   private serverAdapter: ExpressAdapter;
 
   constructor(
-    // TODO: Re-enable when commission module is implemented
-    // @InjectQueue('commission-calculations')
-    // private commissionQueue: Queue,
+    @InjectQueue('commission-calculations')
+    private commissionQueue: Queue,
     @InjectQueue('sales-import')
     private salesImportQueue: Queue,
   ) {
@@ -39,8 +38,7 @@ export class BullBoardController {
     // Create Bull Board with all queues
     createBullBoard({
       queues: [
-        // TODO: Re-enable when commission module is implemented
-        // new BullAdapter(this.commissionQueue),
+        new BullAdapter(this.commissionQueue),
         new BullAdapter(this.salesImportQueue),
       ],
       serverAdapter: this.serverAdapter,

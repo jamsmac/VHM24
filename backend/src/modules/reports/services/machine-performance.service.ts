@@ -5,8 +5,11 @@ import { Transaction } from '@modules/transactions/entities/transaction.entity';
 import { Task } from '@modules/tasks/entities/task.entity';
 import { Incident } from '@modules/incidents/entities/incident.entity';
 import { Machine } from '@modules/machines/entities/machine.entity';
-// TODO: Import FinancialOperation when financial-operations module is implemented
-// import { FinancialOperation } from '@modules/financial-operations/entities/financial-operation.entity';
+
+/**
+ * Note: Financial operations (expenses tracking) are not yet implemented.
+ * Expense-related metrics return 0 until financial-operations module is built.
+ */
 
 export interface MachinePerformanceReport {
   machine: {
@@ -91,9 +94,6 @@ export class MachinePerformanceService {
     private readonly incidentRepository: Repository<Incident>,
     @InjectRepository(Machine)
     private readonly machineRepository: Repository<Machine>,
-    // TODO: Re-enable when financial-operations module is implemented
-    // @InjectRepository(FinancialOperation)
-    // private readonly financialOperationRepository: Repository<FinancialOperation>,
   ) {}
 
   /**
@@ -318,37 +318,15 @@ export class MachinePerformanceService {
 
   /**
    * Get expenses data for machine
+   *
+   * Note: Returns empty data until financial-operations module is implemented.
+   * See module header comment for details.
    */
   private async getExpensesData(
     _machineId: string,
     _startDate: Date,
     _endDate: Date,
   ): Promise<MachinePerformanceReport['expenses']> {
-    // TODO: Re-enable when financial-operations module is implemented
-    // const expensesRaw = await this.financialOperationRepository
-    //   .createQueryBuilder('f')
-    //   .select('f.category', 'category')
-    //   .addSelect('SUM(f.amount)', 'amount')
-    //   .where('f.machine_id = :machineId', { machineId })
-    //   .andWhere('f.operation_date BETWEEN :startDate AND :endDate', {
-    //     startDate,
-    //     endDate,
-    //   })
-    //   .andWhere('f.type = :type', { type: 'expense' })
-    //   .groupBy('f.category')
-    //   .getRawMany();
-
-    // const total = expensesRaw.reduce(
-    //   (sum: number, item: { amount: string }) => sum + parseFloat(item.amount),
-    //   0,
-    // );
-
-    // const byCategory = expensesRaw.map((item: { category: string; amount: string }) => ({
-    //   category: item.category,
-    //   amount: parseFloat(item.amount),
-    //   percentage: total > 0 ? (parseFloat(item.amount) / total) * 100 : 0,
-    // }));
-
     return {
       total: 0,
       by_category: [],

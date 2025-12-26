@@ -195,7 +195,78 @@ export class FinalAddOrganizationColumns1750000000000 implements MigrationInterf
     console.log('==========================================');
   }
 
-  public async down(_queryRunner: QueryRunner): Promise<void> {
-    console.log('FinalAddOrganizationColumns down - skipping (data preservation)');
+  public async down(queryRunner: QueryRunner): Promise<void> {
+    console.log('========================================');
+    console.log('=== FinalAddOrganizationColumns DOWN ===');
+    console.log('========================================');
+
+    // Step 1: Remove FK constraint from transactions
+    console.log('Step 1: Removing FK constraint from transactions...');
+    await queryRunner.query(`
+      ALTER TABLE "transactions" DROP CONSTRAINT IF EXISTS "FK_transactions_organization"
+    `);
+    await queryRunner.query(`DROP INDEX IF EXISTS "IDX_transactions_organization_id"`);
+    await queryRunner.query(`
+      DO $$ BEGIN
+        IF EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_name = 'transactions' AND column_name = 'organization_id'
+        ) THEN
+          ALTER TABLE "transactions" DROP COLUMN "organization_id";
+        END IF;
+      END $$
+    `);
+    console.log('Step 1: Done');
+
+    // Step 2: Remove FK constraint from users
+    console.log('Step 2: Removing FK constraint from users...');
+    await queryRunner.query(`
+      ALTER TABLE "users" DROP CONSTRAINT IF EXISTS "FK_users_organization"
+    `);
+    await queryRunner.query(`DROP INDEX IF EXISTS "IDX_users_organization_id"`);
+    await queryRunner.query(`
+      DO $$ BEGIN
+        IF EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_name = 'users' AND column_name = 'organization_id'
+        ) THEN
+          ALTER TABLE "users" DROP COLUMN "organization_id";
+        END IF;
+      END $$
+    `);
+    console.log('Step 2: Done');
+
+    // Step 3: Remove FK constraint from machines
+    console.log('Step 3: Removing FK constraint from machines...');
+    await queryRunner.query(`
+      ALTER TABLE "machines" DROP CONSTRAINT IF EXISTS "FK_machines_organization"
+    `);
+    await queryRunner.query(`DROP INDEX IF EXISTS "IDX_machines_organization_id"`);
+    await queryRunner.query(`
+      DO $$ BEGIN
+        IF EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_name = 'machines' AND column_name = 'organization_id'
+        ) THEN
+          ALTER TABLE "machines" DROP COLUMN "organization_id";
+        END IF;
+      END $$
+    `);
+    console.log('Step 3: Done');
+
+    // Step 4: Drop organizations table
+    console.log('Step 4: Dropping organizations table...');
+    await queryRunner.query(`DROP INDEX IF EXISTS "IDX_organizations_is_active"`);
+    await queryRunner.query(`DROP INDEX IF EXISTS "IDX_organizations_type"`);
+    await queryRunner.query(`DROP INDEX IF EXISTS "IDX_organizations_slug"`);
+    await queryRunner.query(`
+      ALTER TABLE "organizations" DROP CONSTRAINT IF EXISTS "UQ_organizations_slug"
+    `);
+    await queryRunner.query(`DROP TABLE IF EXISTS "organizations"`);
+    console.log('Step 4: Done');
+
+    console.log('============================================');
+    console.log('=== FinalAddOrganizationColumns DOWN END ===');
+    console.log('============================================');
   }
 }
