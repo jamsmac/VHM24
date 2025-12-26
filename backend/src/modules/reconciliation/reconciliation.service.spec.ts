@@ -479,6 +479,204 @@ describe('ReconciliationService', () => {
     });
   });
 
+  describe('source loading - payment systems', () => {
+    it('should load from FISCAL source (not yet implemented)', async () => {
+      // Arrange
+      mockTransactionRepository.createQueryBuilder.mockReturnValue(createMockQueryBuilder([]) as any);
+
+      const run = {
+        ...mockRun,
+        sources: [ReconciliationSource.FISCAL],
+      };
+
+      mockRunRepository.create.mockReturnValue(run as ReconciliationRun);
+      mockRunRepository.save.mockResolvedValue(run as ReconciliationRun);
+      mockRunRepository.findOne.mockResolvedValue(run as ReconciliationRun);
+      mockRunRepository.update.mockResolvedValue({ affected: 1 } as any);
+
+      // Act
+      await service.createAndRun(mockUserId, {
+        date_from: '2025-01-01',
+        date_to: '2025-01-31',
+        sources: [ReconciliationSource.FISCAL],
+      });
+
+      // Wait for async processing
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // Assert - FISCAL returns empty array, run should complete
+      expect(mockRunRepository.update).toHaveBeenCalled();
+    });
+
+    it('should load from PAYME payment system', async () => {
+      // Arrange
+      const paymeTransaction = {
+        ...mockTransaction,
+        payment_method: PaymentMethod.MOBILE,
+        metadata: { payment_system: 'payme' },
+      };
+
+      mockTransactionRepository.createQueryBuilder.mockReturnValue(
+        createMockQueryBuilder([paymeTransaction]) as any,
+      );
+
+      const run = {
+        ...mockRun,
+        sources: [ReconciliationSource.PAYME],
+      };
+
+      mockRunRepository.create.mockReturnValue(run as ReconciliationRun);
+      mockRunRepository.save.mockResolvedValue(run as ReconciliationRun);
+      mockRunRepository.findOne.mockResolvedValue(run as ReconciliationRun);
+      mockRunRepository.update.mockResolvedValue({ affected: 1 } as any);
+
+      // Act
+      await service.createAndRun(mockUserId, {
+        date_from: '2025-01-01',
+        date_to: '2025-01-31',
+        sources: [ReconciliationSource.PAYME],
+      });
+
+      // Wait for async processing
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // Assert
+      expect(mockTransactionRepository.createQueryBuilder).toHaveBeenCalled();
+    });
+
+    it('should load from CLICK payment system', async () => {
+      // Arrange
+      const clickTransaction = {
+        ...mockTransaction,
+        payment_method: PaymentMethod.MOBILE,
+        metadata: { payment_system: 'click' },
+      };
+
+      mockTransactionRepository.createQueryBuilder.mockReturnValue(
+        createMockQueryBuilder([clickTransaction]) as any,
+      );
+
+      const run = {
+        ...mockRun,
+        sources: [ReconciliationSource.CLICK],
+      };
+
+      mockRunRepository.create.mockReturnValue(run as ReconciliationRun);
+      mockRunRepository.save.mockResolvedValue(run as ReconciliationRun);
+      mockRunRepository.findOne.mockResolvedValue(run as ReconciliationRun);
+      mockRunRepository.update.mockResolvedValue({ affected: 1 } as any);
+
+      // Act
+      await service.createAndRun(mockUserId, {
+        date_from: '2025-01-01',
+        date_to: '2025-01-31',
+        sources: [ReconciliationSource.CLICK],
+      });
+
+      // Wait for async processing
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // Assert
+      expect(mockTransactionRepository.createQueryBuilder).toHaveBeenCalled();
+    });
+
+    it('should load from UZUM payment system', async () => {
+      // Arrange
+      const uzumTransaction = {
+        ...mockTransaction,
+        payment_method: PaymentMethod.QR,
+        metadata: { payment_system: 'uzum' },
+      };
+
+      mockTransactionRepository.createQueryBuilder.mockReturnValue(
+        createMockQueryBuilder([uzumTransaction]) as any,
+      );
+
+      const run = {
+        ...mockRun,
+        sources: [ReconciliationSource.UZUM],
+      };
+
+      mockRunRepository.create.mockReturnValue(run as ReconciliationRun);
+      mockRunRepository.save.mockResolvedValue(run as ReconciliationRun);
+      mockRunRepository.findOne.mockResolvedValue(run as ReconciliationRun);
+      mockRunRepository.update.mockResolvedValue({ affected: 1 } as any);
+
+      // Act
+      await service.createAndRun(mockUserId, {
+        date_from: '2025-01-01',
+        date_to: '2025-01-31',
+        sources: [ReconciliationSource.UZUM],
+      });
+
+      // Wait for async processing
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // Assert
+      expect(mockTransactionRepository.createQueryBuilder).toHaveBeenCalled();
+    });
+
+    it('should handle unknown source gracefully', async () => {
+      // Arrange
+      mockTransactionRepository.createQueryBuilder.mockReturnValue(createMockQueryBuilder([]) as any);
+
+      const run = {
+        ...mockRun,
+        sources: ['UNKNOWN_SOURCE' as ReconciliationSource],
+      };
+
+      mockRunRepository.create.mockReturnValue(run as ReconciliationRun);
+      mockRunRepository.save.mockResolvedValue(run as ReconciliationRun);
+      mockRunRepository.findOne.mockResolvedValue(run as ReconciliationRun);
+      mockRunRepository.update.mockResolvedValue({ affected: 1 } as any);
+
+      // Act
+      await service.createAndRun(mockUserId, {
+        date_from: '2025-01-01',
+        date_to: '2025-01-31',
+        sources: ['UNKNOWN_SOURCE' as ReconciliationSource],
+      });
+
+      // Wait for async processing
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // Assert - should complete without error, unknown sources return empty array
+      expect(mockRunRepository.update).toHaveBeenCalled();
+    });
+
+    it('should filter payment system data by machine_ids when provided', async () => {
+      // Arrange
+      const mockQb = createMockQueryBuilder([mockTransaction]);
+      mockTransactionRepository.createQueryBuilder.mockReturnValue(mockQb as any);
+
+      const run = {
+        ...mockRun,
+        sources: [ReconciliationSource.PAYME],
+        machine_ids: [mockMachineId],
+      };
+
+      mockRunRepository.create.mockReturnValue(run as ReconciliationRun);
+      mockRunRepository.save.mockResolvedValue(run as ReconciliationRun);
+      mockRunRepository.findOne.mockResolvedValue(run as ReconciliationRun);
+      mockRunRepository.update.mockResolvedValue({ affected: 1 } as any);
+
+      // Act
+      await service.createAndRun(mockUserId, {
+        date_from: '2025-01-01',
+        date_to: '2025-01-31',
+        sources: [ReconciliationSource.PAYME],
+        machine_ids: [mockMachineId],
+      });
+
+      // Wait for async processing
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // Assert - query builder should be called with machine filter
+      expect(mockTransactionRepository.createQueryBuilder).toHaveBeenCalled();
+      expect(mockQb.andWhere).toHaveBeenCalled();
+    });
+  });
+
   describe('matching algorithm', () => {
     it('should match records within time and amount tolerance', async () => {
       // Arrange - Create transactions and HW data that should match
