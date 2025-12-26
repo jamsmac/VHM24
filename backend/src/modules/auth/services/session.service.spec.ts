@@ -102,6 +102,50 @@ describe('SessionService', () => {
       metadata: { source: 'web' },
     };
 
+    it('should fallback to raw SQL when refresh_token_hint column does not exist', async () => {
+      const expectedSession = createMockSession();
+      mockSessionRepository.find.mockResolvedValue([]);
+      mockSessionRepository.create.mockReturnValue(expectedSession);
+      // Simulate column doesn't exist error
+      mockSessionRepository.save.mockRejectedValueOnce(
+        new Error('column "refresh_token_hint" does not exist'),
+      );
+      mockSessionRepository.query = jest.fn().mockResolvedValue([
+        {
+          id: mockSessionId,
+          user_id: mockUserId,
+          refresh_token_hash: mockRefreshTokenHash,
+          is_active: true,
+        },
+      ]);
+      mockedBcrypt.hash.mockResolvedValue(mockRefreshTokenHash as never);
+
+      const result = await service.createSession(createSessionData);
+
+      expect(result).toBeDefined();
+      expect(mockSessionRepository.query).toHaveBeenCalled();
+    });
+
+    it('should throw error for non-column-related errors', async () => {
+      mockSessionRepository.find.mockResolvedValue([]);
+      mockSessionRepository.create.mockReturnValue(createMockSession());
+      mockSessionRepository.save.mockRejectedValueOnce(new Error('Database connection failed'));
+      mockedBcrypt.hash.mockResolvedValue(mockRefreshTokenHash as never);
+
+      await expect(service.createSession(createSessionData)).rejects.toThrow(
+        'Database connection failed',
+      );
+    });
+
+    it('should handle non-Error exceptions in createSession', async () => {
+      mockSessionRepository.find.mockResolvedValue([]);
+      mockSessionRepository.create.mockReturnValue(createMockSession());
+      mockSessionRepository.save.mockRejectedValueOnce('string error');
+      mockedBcrypt.hash.mockResolvedValue(mockRefreshTokenHash as never);
+
+      await expect(service.createSession(createSessionData)).rejects.toBe('string error');
+    });
+
     it('should create a new session successfully', async () => {
       const expectedSession = createMockSession();
       mockSessionRepository.find.mockResolvedValue([]);
@@ -289,6 +333,46 @@ describe('SessionService', () => {
         last_used_at: expect.any(Date),
       });
     });
+
+    it('should fallback to updating without hint when column does not exist', async () => {
+      const newRefreshToken = 'new-refresh-token';
+      const newHashedToken = 'new-hashed-token';
+      mockedBcrypt.hash.mockResolvedValue(newHashedToken as never);
+
+      // First call fails with column error, second call succeeds
+      mockSessionRepository.update
+        .mockRejectedValueOnce(new Error('column "refresh_token_hint" does not exist'))
+        .mockResolvedValueOnce({ affected: 1 } as any);
+
+      await service.rotateRefreshToken(mockSessionId, newRefreshToken);
+
+      expect(mockSessionRepository.update).toHaveBeenCalledTimes(2);
+      // Second call should be without hint
+      expect(mockSessionRepository.update).toHaveBeenLastCalledWith(mockSessionId, {
+        refresh_token_hash: newHashedToken,
+        last_used_at: expect.any(Date),
+      });
+    });
+
+    it('should throw error for non-column-related errors', async () => {
+      const newRefreshToken = 'new-refresh-token';
+      mockedBcrypt.hash.mockResolvedValue('hashed' as never);
+      mockSessionRepository.update.mockRejectedValueOnce(new Error('Database error'));
+
+      await expect(service.rotateRefreshToken(mockSessionId, newRefreshToken)).rejects.toThrow(
+        'Database error',
+      );
+    });
+
+    it('should handle non-Error exceptions in rotateRefreshToken', async () => {
+      const newRefreshToken = 'new-refresh-token';
+      mockedBcrypt.hash.mockResolvedValue('hashed' as never);
+      mockSessionRepository.update.mockRejectedValueOnce('string error');
+
+      await expect(service.rotateRefreshToken(mockSessionId, newRefreshToken)).rejects.toBe(
+        'string error',
+      );
+    });
   });
 
   describe('verifyRefreshToken', () => {
@@ -389,6 +473,93 @@ describe('SessionService', () => {
 
       expect(result).toBeNull();
     });
+
+    it('should fallback to sessions without hint and backfill hint', async () => {
+      const sessionWithoutHint = createMockSession({ refresh_token_hint: null as any });
+      Object.defineProperty(sessionWithoutHint, 'isValid', {
+        get: () => true,
+      });
+
+      // First call returns empty (no sessions with hint), second call returns session without hint
+      mockSessionRepository.find
+        .mockResolvedValueOnce([]) // sessions with hint
+        .mockResolvedValueOnce([sessionWithoutHint]); // sessions without hint
+      mockedBcrypt.compare.mockResolvedValue(true as never);
+      mockSessionRepository.update.mockResolvedValue({ affected: 1 } as any);
+
+      const result = await service.findSessionByRefreshToken(mockRefreshToken);
+
+      expect(result).toEqual(sessionWithoutHint);
+      // Should backfill hint
+      expect(mockSessionRepository.update).toHaveBeenCalledWith(sessionWithoutHint.id, {
+        refresh_token_hint: expect.any(String),
+      });
+    });
+
+    it('should return null when sessions without hint do not match', async () => {
+      const sessionWithoutHint = createMockSession({ refresh_token_hint: null as any });
+      Object.defineProperty(sessionWithoutHint, 'isValid', {
+        get: () => true,
+      });
+
+      mockSessionRepository.find
+        .mockResolvedValueOnce([]) // sessions with hint
+        .mockResolvedValueOnce([sessionWithoutHint]); // sessions without hint
+      mockedBcrypt.compare.mockResolvedValue(false as never);
+
+      const result = await service.findSessionByRefreshToken(mockRefreshToken);
+
+      expect(result).toBeNull();
+    });
+
+    it('should fallback to full scan when refresh_token_hint column does not exist', async () => {
+      const expectedSession = createMockSession();
+      Object.defineProperty(expectedSession, 'isValid', {
+        get: () => true,
+      });
+
+      // First call throws column error, subsequent calls work
+      mockSessionRepository.find
+        .mockRejectedValueOnce(new Error('column "refresh_token_hint" does not exist'))
+        .mockResolvedValueOnce([expectedSession]); // full scan fallback
+      mockedBcrypt.compare.mockResolvedValue(true as never);
+
+      const result = await service.findSessionByRefreshToken(mockRefreshToken);
+
+      expect(result).toEqual(expectedSession);
+    });
+
+    it('should return null from full scan when no matching session', async () => {
+      const session = createMockSession();
+      Object.defineProperty(session, 'isValid', {
+        get: () => true,
+      });
+
+      mockSessionRepository.find
+        .mockRejectedValueOnce(new Error('column "refresh_token_hint" does not exist'))
+        .mockResolvedValueOnce([session]);
+      mockedBcrypt.compare.mockResolvedValue(false as never);
+
+      const result = await service.findSessionByRefreshToken(mockRefreshToken);
+
+      expect(result).toBeNull();
+    });
+
+    it('should throw error for non-column-related errors', async () => {
+      mockSessionRepository.find.mockRejectedValueOnce(new Error('Database connection error'));
+
+      await expect(service.findSessionByRefreshToken(mockRefreshToken)).rejects.toThrow(
+        'Database connection error',
+      );
+    });
+
+    it('should handle non-Error exceptions in findSessionByRefreshToken', async () => {
+      mockSessionRepository.find.mockRejectedValueOnce('string error');
+
+      await expect(service.findSessionByRefreshToken(mockRefreshToken)).rejects.toBe(
+        'string error',
+      );
+    });
   });
 
   describe('getActiveSessions', () => {
@@ -417,6 +588,74 @@ describe('SessionService', () => {
       mockSessionRepository.find.mockResolvedValue([]);
 
       const result = await service.getActiveSessions(mockUserId);
+
+      expect(result).toEqual([]);
+    });
+
+    it('should fallback to query builder when refresh_token_hint column does not exist', async () => {
+      const sessions = [createMockSession({ id: 'session-1' })];
+
+      const mockQueryBuilder = {
+        select: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue(sessions),
+      };
+
+      mockSessionRepository.find.mockRejectedValueOnce(
+        new Error('column "refresh_token_hint" does not exist'),
+      );
+      mockSessionRepository.createQueryBuilder = jest.fn().mockReturnValue(mockQueryBuilder);
+
+      const result = await service.getActiveSessions(mockUserId);
+
+      expect(result).toEqual(sessions);
+      expect(mockSessionRepository.createQueryBuilder).toHaveBeenCalledWith('session');
+      expect(mockQueryBuilder.select).toHaveBeenCalled();
+      expect(mockQueryBuilder.where).toHaveBeenCalledWith('session.user_id = :userId', {
+        userId: mockUserId,
+      });
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith('session.is_active = true');
+      expect(mockQueryBuilder.orderBy).toHaveBeenCalledWith('session.last_used_at', 'DESC');
+    });
+
+    it('should throw error for non-column-related errors in getActiveSessions', async () => {
+      mockSessionRepository.find.mockRejectedValueOnce(new Error('Database error'));
+
+      await expect(service.getActiveSessions(mockUserId)).rejects.toThrow('Database error');
+    });
+
+    it('should handle non-Error exceptions in getActiveSessions', async () => {
+      mockSessionRepository.find.mockRejectedValueOnce('string error');
+
+      await expect(service.getActiveSessions(mockUserId)).rejects.toBe('string error');
+    });
+  });
+
+  describe('getAllSessions', () => {
+    it('should return all sessions for user including inactive', async () => {
+      const sessions = [
+        createMockSession({ id: 'session-1', is_active: true }),
+        createMockSession({ id: 'session-2', is_active: false }),
+      ];
+      mockSessionRepository.find.mockResolvedValue(sessions);
+
+      const result = await service.getAllSessions(mockUserId);
+
+      expect(result).toEqual(sessions);
+      expect(mockSessionRepository.find).toHaveBeenCalledWith({
+        where: { user_id: mockUserId },
+        order: {
+          created_at: 'DESC',
+        },
+      });
+    });
+
+    it('should return empty array when no sessions exist', async () => {
+      mockSessionRepository.find.mockResolvedValue([]);
+
+      const result = await service.getAllSessions(mockUserId);
 
       expect(result).toEqual([]);
     });
@@ -624,6 +863,69 @@ describe('SessionService', () => {
           device_name: null,
           os: null,
           browser: null,
+        }),
+      );
+    });
+
+    it('should handle unknown/minimal user agent that results in empty device info', async () => {
+      // Use a minimal user agent that may not parse completely
+      const unknownUA = 'UnknownBot/1.0';
+
+      mockSessionRepository.find.mockResolvedValue([]);
+      mockSessionRepository.create.mockReturnValue(createMockSession());
+      mockSessionRepository.save.mockResolvedValue(createMockSession());
+      mockedBcrypt.hash.mockResolvedValue(mockRefreshTokenHash as never);
+
+      await service.createSession({
+        userId: mockUserId,
+        refreshToken: mockRefreshToken,
+        userAgent: unknownUA,
+      });
+
+      expect(mockSessionRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          device_type: expect.any(String), // Will default to 'desktop'
+        }),
+      );
+    });
+
+    it('should handle user agent with partial device info', async () => {
+      // A bot user agent with minimal device info
+      const botUA = 'curl/7.68.0';
+
+      mockSessionRepository.find.mockResolvedValue([]);
+      mockSessionRepository.create.mockReturnValue(createMockSession());
+      mockSessionRepository.save.mockResolvedValue(createMockSession());
+      mockedBcrypt.hash.mockResolvedValue(mockRefreshTokenHash as never);
+
+      await service.createSession({
+        userId: mockUserId,
+        refreshToken: mockRefreshToken,
+        userAgent: botUA,
+      });
+
+      // curl is recognized as a client but without OS info
+      expect(mockSessionRepository.create).toHaveBeenCalled();
+    });
+
+    it('should handle tablet user agent', async () => {
+      const tabletUA =
+        'Mozilla/5.0 (iPad; CPU OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1';
+
+      mockSessionRepository.find.mockResolvedValue([]);
+      mockSessionRepository.create.mockReturnValue(createMockSession());
+      mockSessionRepository.save.mockResolvedValue(createMockSession());
+      mockedBcrypt.hash.mockResolvedValue(mockRefreshTokenHash as never);
+
+      await service.createSession({
+        userId: mockUserId,
+        refreshToken: mockRefreshToken,
+        userAgent: tabletUA,
+      });
+
+      expect(mockSessionRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          device_type: 'tablet',
         }),
       );
     });
