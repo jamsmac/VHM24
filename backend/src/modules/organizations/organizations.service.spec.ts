@@ -61,7 +61,7 @@ describe('OrganizationsService', () => {
 
   describe('update', () => {
     it('should update organization', async () => {
-      mockRepository.save.mockImplementation(async (e) => e);
+      mockRepository.save.mockImplementation(async (e: any) => e);
       const result = await service.update('org-1', { name: 'Updated' });
       expect(result.name).toBe('Updated');
     });
