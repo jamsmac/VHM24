@@ -4,7 +4,7 @@ import { TasksService } from '../../tasks/tasks.service';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { UsersService } from '../../users/users.service';
 import { UserRole } from '../../users/entities/user.entity';
-import { TelegramNotificationsService } from '../../telegram/services/telegram-notifications.service';
+import { TelegramNotificationsService } from '../../telegram/notifications/services/telegram-notifications.service';
 import { MachineAccessService } from '../../machine-access/machine-access.service';
 import {
   InventoryDifferenceThreshold,

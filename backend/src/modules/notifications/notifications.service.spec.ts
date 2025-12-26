@@ -13,7 +13,7 @@ import {
 import { NotificationPreference } from './entities/notification-preference.entity';
 import { CreateNotificationDto, BulkNotificationDto } from './dto/create-notification.dto';
 import { EmailService } from '../email/email.service';
-import { TelegramNotificationsService } from '../telegram/services/telegram-notifications.service';
+import { TelegramNotificationsService } from '../telegram/notifications/services/telegram-notifications.service';
 import { WebPushService } from '../web-push/web-push.service';
 import { FcmService } from '../fcm/fcm.service';
 import { SmsService } from '../sms/sms.service';

@@ -1,0 +1,68 @@
+import { Module, forwardRef } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { BullModule } from '@nestjs/bull';
+
+import { TelegramBotService } from './services/telegram-bot.service';
+
+// Shared entities
+import { TelegramUser } from '../shared/entities/telegram-user.entity';
+import { TelegramSettings } from '../shared/entities/telegram-settings.entity';
+import { TelegramMessageLog } from '../shared/entities/telegram-message-log.entity';
+
+// Submodule imports
+import { TelegramInfrastructureModule } from '../infrastructure/telegram-infrastructure.module';
+import { TelegramMediaModule } from '../media/telegram-media.module';
+import { TelegramManagersModule } from '../managers/telegram-managers.module';
+
+// External modules
+import { TasksModule } from '../../tasks/tasks.module';
+import { FilesModule } from '../../files/files.module';
+import { UsersModule } from '../../users/users.module';
+import { MachinesModule } from '../../machines/machines.module';
+import { IncidentsModule } from '../../incidents/incidents.module';
+import { TransactionsModule } from '../../transactions/transactions.module';
+import { InventoryModule } from '../../inventory/inventory.module';
+import { AccessRequestsModule } from '../../access-requests/access-requests.module';
+
+/**
+ * Telegram Core Module
+ *
+ * Core module containing the main TelegramBotService.
+ * This is the central orchestrator for all Telegram bot functionality.
+ *
+ * Dependencies:
+ * - TelegramInfrastructureModule: Session management
+ * - TelegramMediaModule: Voice and photo handling
+ * - TelegramManagersModule: Manager tools
+ * - External modules: Tasks, Files, Users, Machines, etc.
+ *
+ * @module TelegramCoreModule
+ */
+@Module({
+  imports: [
+    TypeOrmModule.forFeature([
+      TelegramUser,
+      TelegramSettings,
+      TelegramMessageLog,
+    ]),
+    BullModule.registerQueue({
+      name: 'telegram-messages',
+    }),
+    // Submodules
+    TelegramInfrastructureModule,
+    TelegramMediaModule,
+    TelegramManagersModule,
+    // External modules with forwardRef for circular dependencies
+    forwardRef(() => TasksModule),
+    FilesModule,
+    UsersModule,
+    forwardRef(() => MachinesModule),
+    forwardRef(() => IncidentsModule),
+    forwardRef(() => TransactionsModule),
+    forwardRef(() => InventoryModule),
+    AccessRequestsModule,
+  ],
+  providers: [TelegramBotService],
+  exports: [TelegramBotService],
+})
+export class TelegramCoreModule {}

@@ -1,0 +1,597 @@
+import { Injectable, Logger } from '@nestjs/common';
+import { Context, Telegraf } from 'telegraf';
+import { TelegramSessionService } from '../../infrastructure/services/telegram-session.service';
+import { TelegramNotificationsService } from '../../notifications/services/telegram-notifications.service';
+import { CartStorageService, CartItem } from '../services/cart-storage.service';
+import { CartState, defaultSessionData } from './fsm-states';
+import { getCartKeyboard, getCartEmptyKeyboard, getCheckoutKeyboard } from './keyboards';
+import { UsersService } from '../../../users/users.service';
+import { RequestsService } from '../../../requests/requests.service';
+import { RequestPriority, Request } from '../../../requests/entities/request.entity';
+
+/** Context with match groups from regex action handlers */
+interface ActionContext extends Context {
+  match: RegExpExecArray;
+}
+
+/**
+ * Обработчик корзины и оформления заказа.
+ * Портировано из Python vendhub-bot/handlers/cart.py
+ *
+ * PERF-4: Cart storage migrated to Redis with 24h TTL
+ * - Survives server restarts
+ * - Shared across multiple instances
+ * - 24-hour cart persistence for better UX
+ */
+@Injectable()
+export class CartHandler {
+  private readonly logger = new Logger(CartHandler.name);
+
+  constructor(
+    private readonly sessionService: TelegramSessionService,
+    private readonly cartStorage: CartStorageService,
+    private readonly usersService: UsersService,
+    private readonly requestsService: RequestsService,
+    private readonly notificationsService: TelegramNotificationsService,
+  ) {}
+
+  /**
+   * Регистрирует все обработчики корзины.
+   */
+  registerHandlers(bot: Telegraf<Context>) {
+    // Просмотр корзины
+    bot.hears('🛒 Корзина', (ctx) => this.handleViewCart(ctx));
+    bot.action('cart:view', (ctx) => this.handleViewCartCallback(ctx));
+
+    // Управление позициями
+    bot.action(/^cart_inc:(.+)$/, (ctx) => this.handleCartIncrease(ctx));
+    bot.action(/^cart_dec:(.+)$/, (ctx) => this.handleCartDecrease(ctx));
+    bot.action(/^cart_del:(.+)$/, (ctx) => this.handleCartDelete(ctx));
+    bot.action('cart:clear', (ctx) => this.handleCartClear(ctx));
+
+    // Оформление заказа
+    bot.action('cart:checkout', (ctx) => this.handleStartCheckout(ctx));
+    bot.action(/^priority:(.+)$/, (ctx) => this.handleSetPriority(ctx));
+    bot.action('checkout:comment', (ctx) => this.handleAddCommentStart(ctx));
+    bot.action('checkout:cancel', (ctx) => this.handleCancelCheckout(ctx));
+    bot.action('checkout:confirm', (ctx) => this.handleConfirmCheckout(ctx));
+
+    // Мои заявки
+    bot.hears('📋 Мои заявки', (ctx) => this.handleMyRequests(ctx));
+
+    // Обработка текстовых сообщений
+    bot.on('text', (ctx, next) => this.handleTextInput(ctx, next));
+
+    this.logger.log('Cart handlers registered');
+  }
+
+  /**
+   * Добавить в корзину (вызывается из CatalogHandler).
+   * Now uses Redis-backed storage with 24h TTL.
+   */
+  async addToCart(userId: string, item: CartItem): Promise<void> {
+    await this.cartStorage.addItem(userId, item);
+  }
+
+  /**
+   * Просмотр корзины (текстовое сообщение).
+   */
+  private async handleViewCart(ctx: Context) {
+    await this.showCart(ctx, false);
+  }
+
+  /**
+   * Просмотр корзины (callback).
+   */
+  private async handleViewCartCallback(ctx: Context) {
+    await this.showCart(ctx, true);
+    await ctx.answerCbQuery();
+  }
+
+  /**
+   * Показать содержимое корзины.
+   */
+  private async showCart(ctx: Context, isCallback: boolean) {
+    const userId = ctx.from?.id?.toString();
+    if (!userId) return;
+
+    const cart = await this.cartStorage.getCart(userId);
+
+    // Сбрасываем состояние
+    await this.sessionService.setSessionData(userId, defaultSessionData);
+
+    if (cart.length === 0) {
+      const text = '🛒 <b>Корзина пуста</b>\n\n' + 'Добавьте материалы из каталога.';
+
+      if (isCallback) {
+        await ctx.editMessageText(text, {
+          parse_mode: 'HTML',
+          reply_markup: getCartEmptyKeyboard().reply_markup,
+        });
+      } else {
+        await ctx.reply(text, {
+          parse_mode: 'HTML',
+          reply_markup: getCartEmptyKeyboard().reply_markup,
+        });
+      }
+      return;
+    }
+
+    // Формируем текст корзины
+    const lines = ['🛒 <b>Ваша корзина</b>\n'];
+    let totalItems = 0;
+
+    cart.forEach((item, i) => {
+      lines.push(`${i + 1}. ${item.name}`);
+      lines.push(`   📦 ${item.quantity} ${item.unit}`);
+      totalItems += item.quantity;
+    });
+
+    lines.push(`\n📊 <b>Всего позиций:</b> ${cart.length}`);
+    lines.push(`📦 <b>Всего единиц:</b> ${totalItems}`);
+
+    const text = lines.join('\n');
+    const keyboard = getCartKeyboard(cart);
+
+    if (isCallback) {
+      await ctx.editMessageText(text, {
+        parse_mode: 'HTML',
+        reply_markup: keyboard.reply_markup,
+      });
+    } else {
+      await ctx.reply(text, {
+        parse_mode: 'HTML',
+        reply_markup: keyboard.reply_markup,
+      });
+    }
+  }
+
+  /**
+   * Увеличить количество позиции.
+   */
+  private async handleCartIncrease(ctx: ActionContext) {
+    const userId = ctx.from?.id?.toString();
+    if (!userId) return;
+
+    const itemId = ctx.match[1];
+
+    const item = await this.cartStorage.updateItemQuantity(userId, itemId, 1);
+
+    if (item) {
+      await ctx.answerCbQuery(`➕ ${item.name}: ${item.quantity}`);
+    }
+
+    const cart = await this.cartStorage.getCart(userId);
+    await this.updateCartView(ctx, cart);
+  }
+
+  /**
+   * Уменьшить количество позиции.
+   */
+  private async handleCartDecrease(ctx: ActionContext) {
+    const userId = ctx.from?.id?.toString();
+    if (!userId) return;
+
+    const itemId = ctx.match[1];
+
+    // Get item before update to show name in callback
+    const existingItem = await this.cartStorage.getItem(userId, itemId);
+    const itemName = existingItem?.name || 'Товар';
+
+    const item = await this.cartStorage.updateItemQuantity(userId, itemId, -1);
+
+    if (item) {
+      await ctx.answerCbQuery(`➖ ${item.name}: ${item.quantity}`);
+    } else if (existingItem) {
+      // Item was removed (quantity was 1)
+      await ctx.answerCbQuery(`🗑 ${itemName} удалён`);
+    }
+
+    const cart = await this.cartStorage.getCart(userId);
+    await this.updateCartView(ctx, cart);
+  }
+
+  /**
+   * Удалить позицию из корзины.
+   */
+  private async handleCartDelete(ctx: ActionContext) {
+    const userId = ctx.from?.id?.toString();
+    if (!userId) return;
+
+    const itemId = ctx.match[1];
+
+    const item = await this.cartStorage.removeItem(userId, itemId);
+
+    if (item) {
+      await ctx.answerCbQuery(`🗑 Удалено: ${item.name}`);
+    }
+
+    const cart = await this.cartStorage.getCart(userId);
+    await this.updateCartView(ctx, cart);
+  }
+
+  /**
+   * Очистить корзину.
+   */
+  private async handleCartClear(ctx: Context) {
+    const userId = ctx.from?.id?.toString();
+    if (!userId) return;
+
+    await this.cartStorage.clearCart(userId);
+
+    await ctx.editMessageText('🗑 <b>Корзина очищена</b>', {
+      parse_mode: 'HTML',
+      reply_markup: getCartEmptyKeyboard().reply_markup,
+    });
+    await ctx.answerCbQuery('🗑 Корзина очищена');
+  }
+
+  /**
+   * Обновить отображение корзины.
+   */
+  private async updateCartView(ctx: Context, cart: CartItem[]) {
+    if (cart.length === 0) {
+      await ctx.editMessageText('🛒 <b>Корзина пуста</b>', {
+        parse_mode: 'HTML',
+        reply_markup: getCartEmptyKeyboard().reply_markup,
+      });
+      return;
+    }
+
+    const lines = ['🛒 <b>Ваша корзина</b>\n'];
+    let totalItems = 0;
+
+    cart.forEach((item, i) => {
+      lines.push(`${i + 1}. ${item.name}`);
+      lines.push(`   📦 ${item.quantity} ${item.unit}`);
+      totalItems += item.quantity;
+    });
+
+    lines.push(`\n📊 <b>Позиций:</b> ${cart.length}`);
+    lines.push(`📦 <b>Единиц:</b> ${totalItems}`);
+
+    try {
+      await ctx.editMessageText(lines.join('\n'), {
+        parse_mode: 'HTML',
+        reply_markup: getCartKeyboard(cart).reply_markup,
+      });
+    } catch {
+      // Ignore if nothing changed
+    }
+  }
+
+  /**
+   * Начать оформление заказа.
+   */
+  private async handleStartCheckout(ctx: Context) {
+    const userId = ctx.from?.id?.toString();
+    if (!userId) return;
+
+    const cart = await this.cartStorage.getCart(userId);
+
+    if (cart.length === 0) {
+      await ctx.answerCbQuery('❌ Корзина пуста', { show_alert: true });
+      return;
+    }
+
+    // Сохраняем данные checkout
+    await this.sessionService.setSessionData(userId, {
+      ...defaultSessionData,
+      checkoutItems: cart.length,
+      priority: 'normal',
+      comment: undefined,
+    });
+
+    // Формируем summary
+    const lines = ['📋 <b>Оформление заявки</b>\n'];
+
+    for (const item of cart) {
+      lines.push(`• ${item.name}: ${item.quantity} ${item.unit}`);
+    }
+
+    lines.push('\n<b>Выберите приоритет:</b>');
+    lines.push('🔵 Обычная — стандартная обработка');
+    lines.push('🟡 Высокая — ускоренная обработка');
+    lines.push('🔴 Срочная — немедленная обработка');
+
+    await ctx.editMessageText(lines.join('\n'), {
+      parse_mode: 'HTML',
+      reply_markup: getCheckoutKeyboard().reply_markup,
+    });
+    await ctx.answerCbQuery();
+  }
+
+  /**
+   * Установить приоритет.
+   */
+  private async handleSetPriority(ctx: ActionContext) {
+    const userId = ctx.from?.id?.toString();
+    if (!userId) return;
+
+    const priority = ctx.match[1] as 'normal' | 'high' | 'urgent';
+
+    const session = await this.sessionService.getSessionData(userId);
+    await this.sessionService.setSessionData(userId, {
+      ...session,
+      priority,
+    });
+
+    const priorityNames: Record<string, string> = {
+      normal: '🔵 Обычная',
+      high: '🟡 Высокая',
+      urgent: '🔴 Срочная',
+    };
+
+    await ctx.answerCbQuery(`Приоритет: ${priorityNames[priority] || priority}`);
+  }
+
+  /**
+   * Начать добавление комментария.
+   */
+  private async handleAddCommentStart(ctx: Context) {
+    const userId = ctx.from?.id?.toString();
+    if (!userId) return;
+
+    const session = await this.sessionService.getSessionData(userId);
+    await this.sessionService.setSessionData(userId, {
+      ...session,
+      state: CartState.ENTERING_COMMENT,
+    });
+
+    await ctx.editMessageText(
+      '💬 <b>Добавьте комментарий</b>\n\n' + 'Введите текст или отправьте /skip чтобы пропустить:',
+      { parse_mode: 'HTML' },
+    );
+    await ctx.answerCbQuery();
+  }
+
+  /**
+   * Отменить оформление.
+   */
+  private async handleCancelCheckout(ctx: Context) {
+    const userId = ctx.from?.id?.toString();
+    if (!userId) return;
+
+    const cart = await this.cartStorage.getCart(userId);
+
+    await this.sessionService.setSessionData(userId, defaultSessionData);
+
+    await ctx.editMessageText('❌ <b>Оформление отменено</b>\n\n' + 'Ваша корзина сохранена.', {
+      parse_mode: 'HTML',
+      reply_markup: getCartKeyboard(cart).reply_markup,
+    });
+    await ctx.answerCbQuery('Отменено');
+  }
+
+  /**
+   * Подтвердить и создать заявку.
+   */
+  private async handleConfirmCheckout(ctx: Context) {
+    const telegramId = ctx.from?.id?.toString();
+    if (!telegramId) return;
+
+    const cart = await this.cartStorage.getCart(telegramId);
+
+    if (cart.length === 0) {
+      await ctx.answerCbQuery('❌ Корзина пуста', { show_alert: true });
+      return;
+    }
+
+    // Get user by telegram ID
+    const user = await this.usersService.findByTelegramId(telegramId);
+    if (!user) {
+      await ctx.answerCbQuery('❌ Пользователь не найден', { show_alert: true });
+      return;
+    }
+
+    const session = await this.sessionService.getSessionData(telegramId);
+    const priority = session?.priority || 'normal';
+    const comment = session?.comment;
+
+    // Map priority to RequestPriority enum
+    const priorityMap: Record<string, RequestPriority> = {
+      normal: RequestPriority.NORMAL,
+      high: RequestPriority.HIGH,
+      urgent: RequestPriority.URGENT,
+    };
+
+    try {
+      // Create request through RequestsService
+      const request = await this.requestsService.create(user.id, {
+        priority: priorityMap[priority] || RequestPriority.NORMAL,
+        comment: comment,
+        items: cart.map((item) => ({
+          material_id: item.materialId,
+          quantity: item.quantity,
+        })),
+      });
+
+      // Clear cart and session
+      await this.cartStorage.clearCart(telegramId);
+      await this.sessionService.setSessionData(telegramId, defaultSessionData);
+
+      const priorityEmoji: Record<string, string> = {
+        normal: '🔵',
+        high: '🟡',
+        urgent: '🔴',
+      };
+
+      // Notify administrators about new request
+      await this.notifyAdminsAboutRequest(request, user.full_name || user.username || 'Пользователь', cart);
+
+      await ctx.editMessageText(
+        `✅ <b>Заявка ${request.request_number} создана!</b>\n\n` +
+          `📦 Позиций: ${cart.length}\n` +
+          `${priorityEmoji[priority] || '🔵'} Приоритет: ${priority}\n\n` +
+          'Администратор получил уведомление.\n' +
+          'Следите за статусом в разделе «📋 Мои заявки»',
+        {
+          parse_mode: 'HTML',
+        },
+      );
+      await ctx.answerCbQuery('✅ Заявка создана!');
+    } catch (error) {
+      this.logger.error('Failed to create request:', error);
+      await ctx.answerCbQuery('❌ Ошибка создания заявки', { show_alert: true });
+    }
+  }
+
+  /**
+   * Notify administrators about a new material request.
+   */
+  private async notifyAdminsAboutRequest(
+    request: Request,
+    userName: string,
+    cart: CartItem[],
+  ): Promise<void> {
+    try {
+      const priorityLabels: Record<string, string> = {
+        [RequestPriority.LOW]: '🟢 Низкий',
+        [RequestPriority.NORMAL]: '🔵 Обычный',
+        [RequestPriority.HIGH]: '🟡 Высокий',
+        [RequestPriority.URGENT]: '🔴 Срочный',
+      };
+
+      const itemsList = cart
+        .map((item, i) => `${i + 1}. ${item.name}: ${item.quantity} ${item.unit}`)
+        .join('\n');
+
+      await this.notificationsService.sendNotification({
+        broadcast: true, // Send to all admins with request notifications enabled
+        type: 'new_request',
+        title: '📋 Новая заявка на материалы',
+        message:
+          `<b>Заявка ${request.request_number}</b>\n\n` +
+          `👤 От: ${userName}\n` +
+          `📊 Приоритет: ${priorityLabels[request.priority] || 'Обычный'}\n` +
+          `📦 Позиций: ${cart.length}\n\n` +
+          `<b>Материалы:</b>\n${itemsList}` +
+          (request.comment ? `\n\n💬 Комментарий: ${request.comment}` : ''),
+        data: {
+          requestId: request.id,
+          requestNumber: request.request_number,
+        },
+      });
+    } catch (error) {
+      this.logger.error('Failed to notify admins about new request:', error);
+      // Don't throw - notification failure shouldn't block request creation
+    }
+  }
+
+  /**
+   * Показать мои заявки.
+   */
+  private async handleMyRequests(ctx: Context) {
+    const telegramId = ctx.from?.id?.toString();
+    if (!telegramId) return;
+
+    // Get user by telegram ID
+    const user = await this.usersService.findByTelegramId(telegramId);
+    if (!user) {
+      await ctx.reply(
+        '❌ <b>Пользователь не найден</b>\n\n' + 'Обратитесь к администратору.',
+        { parse_mode: 'HTML' },
+      );
+      return;
+    }
+
+    try {
+      // Get user's requests through RequestsService
+      const { items: requests } = await this.requestsService.findAll({
+        created_by_user_id: user.id,
+        limit: 15,
+      });
+
+      if (requests.length === 0) {
+        await ctx.reply(
+          '📋 <b>У вас пока нет заявок</b>\n\n' + 'Создайте первую заявку через «📦 Создать заявку»',
+          { parse_mode: 'HTML' },
+        );
+        return;
+      }
+
+      const statusLabels: Record<string, string> = {
+        new: '🆕 Новая',
+        approved: '✅ Одобрена',
+        rejected: '❌ Отклонена',
+        sent: '📤 Отправлена',
+        partial_delivered: '📦 Частично',
+        completed: '✔️ Завершена',
+        cancelled: '🚫 Отменена',
+      };
+
+      const lines = ['📋 <b>Ваши заявки</b>\n'];
+
+      for (const req of requests) {
+        const date = req.created_at?.toISOString().slice(0, 10) || '';
+        const statusLabel = statusLabels[req.status] || req.status;
+        lines.push(`<b>${req.request_number}</b> • ${statusLabel}`);
+        lines.push(`   📦 ${req.items?.length || 0} поз. • ${date}`);
+      }
+
+      await ctx.reply(lines.join('\n'), { parse_mode: 'HTML' });
+    } catch (error) {
+      this.logger.error('Failed to fetch user requests:', error);
+      await ctx.reply('❌ Ошибка при загрузке заявок', { parse_mode: 'HTML' });
+    }
+  }
+
+  /**
+   * Обработка текстового ввода.
+   */
+  private async handleTextInput(ctx: Context, next: () => Promise<void>) {
+    const userId = ctx.from?.id?.toString();
+    if (!userId || !ctx.message || !('text' in ctx.message)) {
+      return next();
+    }
+
+    const session = await this.sessionService.getSessionData(userId);
+    if (!session) {
+      return next();
+    }
+
+    const text = ctx.message.text;
+
+    // Обработка ввода комментария
+    if (session.state === CartState.ENTERING_COMMENT) {
+      const comment = text === '/skip' ? undefined : text.slice(0, 500);
+
+      const cart = await this.cartStorage.getCart(userId);
+
+      await this.sessionService.setSessionData(userId, {
+        ...session,
+        state: CartState.IDLE,
+        comment,
+      });
+
+      // Показываем checkout снова
+      const lines = ['📋 <b>Оформление заявки</b>\n'];
+
+      for (const item of cart) {
+        lines.push(`• ${item.name}: ${item.quantity} ${item.unit}`);
+      }
+
+      const priorityNames: Record<string, string> = {
+        normal: '🔵 Обычная',
+        high: '🟡 Высокая',
+        urgent: '🔴 Срочная',
+      };
+
+      lines.push(`\n<b>Приоритет:</b> ${priorityNames[session.priority || 'normal']}`);
+
+      if (comment) {
+        lines.push(
+          `<b>Комментарий:</b> ${comment.length > 50 ? comment.slice(0, 50) + '...' : comment}`,
+        );
+      }
+
+      await ctx.reply(lines.join('\n'), {
+        parse_mode: 'HTML',
+        reply_markup: getCheckoutKeyboard().reply_markup,
+      });
+      return;
+    }
+
+    return next();
+  }
+}
