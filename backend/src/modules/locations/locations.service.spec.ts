@@ -521,6 +521,293 @@ describe('LocationsService', () => {
     });
   });
 
+  describe('getMapData', () => {
+    it('should return empty array when no locations with coordinates', async () => {
+      // Arrange
+      const mockQueryBuilder = createMockQueryBuilder();
+      mockQueryBuilder.getMany.mockResolvedValue([]);
+      mockLocationRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder as any);
+
+      // Act
+      const result = await service.getMapData();
+
+      // Assert
+      expect(result).toEqual([]);
+      expect(mockQueryBuilder.where).toHaveBeenCalledWith('location.latitude IS NOT NULL');
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith('location.longitude IS NOT NULL');
+    });
+
+    it('should return locations with machine statistics', async () => {
+      // Arrange - use fresh location data to avoid test isolation issues
+      const freshLocation1 = {
+        id: 'loc-fresh-1',
+        name: 'Fresh Location 1',
+        type_code: 'office',
+        status: LocationStatus.ACTIVE,
+        city: 'TestCity',
+        address: 'Test Address 1',
+        latitude: 41.3111,
+        longitude: 69.2797,
+      } as Location;
+
+      const freshLocation2 = {
+        id: 'loc-fresh-2',
+        name: 'Fresh Location 2',
+        type_code: 'mall',
+        status: LocationStatus.ACTIVE,
+        city: 'TestCity2',
+        address: 'Test Address 2',
+        latitude: 41.3200,
+        longitude: 69.2800,
+      } as Location;
+
+      const locationsWithCoords = [freshLocation1, freshLocation2];
+
+      const mockLocationQB = createMockQueryBuilder();
+      mockLocationQB.getMany.mockResolvedValue(locationsWithCoords);
+      mockLocationRepository.createQueryBuilder.mockReturnValue(mockLocationQB as any);
+
+      const mockMachineQB = {
+        select: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        groupBy: jest.fn().mockReturnThis(),
+        getRawMany: jest.fn().mockResolvedValue([
+          { location_id: 'loc-fresh-1', total: '5', active: '3', error: '1', low_stock: '1' },
+          { location_id: 'loc-fresh-2', total: '3', active: '2', error: '0', low_stock: '1' },
+        ]),
+      };
+      mockMachineRepository.createQueryBuilder.mockReturnValue(mockMachineQB as any);
+
+      // Act
+      const result = await service.getMapData();
+
+      // Assert
+      expect(result).toHaveLength(2);
+      expect(result[0]).toEqual({
+        id: 'loc-fresh-1',
+        name: 'Fresh Location 1',
+        address: 'Test Address 1',
+        city: 'TestCity',
+        latitude: 41.3111,
+        longitude: 69.2797,
+        status: LocationStatus.ACTIVE,
+        machine_count: 5,
+        machines_active: 3,
+        machines_error: 1,
+        machines_low_stock: 1,
+      });
+      expect(result[1]).toEqual({
+        id: 'loc-fresh-2',
+        name: 'Fresh Location 2',
+        address: 'Test Address 2',
+        city: 'TestCity2',
+        latitude: 41.3200,
+        longitude: 69.2800,
+        status: LocationStatus.ACTIVE,
+        machine_count: 3,
+        machines_active: 2,
+        machines_error: 0,
+        machines_low_stock: 1,
+      });
+    });
+
+    it('should return locations with zero machine counts when no machines', async () => {
+      // Arrange - use fresh data
+      const freshLocation = {
+        id: 'loc-zero-machines',
+        name: 'Zero Machines Location',
+        type_code: 'office',
+        status: LocationStatus.ACTIVE,
+        city: 'TestCity',
+        address: 'Test Address',
+        latitude: 41.3111,
+        longitude: 69.2797,
+      } as Location;
+
+      const mockLocationQB = createMockQueryBuilder();
+      mockLocationQB.getMany.mockResolvedValue([freshLocation]);
+      mockLocationRepository.createQueryBuilder.mockReturnValue(mockLocationQB as any);
+
+      const mockMachineQB = {
+        select: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        groupBy: jest.fn().mockReturnThis(),
+        getRawMany: jest.fn().mockResolvedValue([]), // No machines
+      };
+      mockMachineRepository.createQueryBuilder.mockReturnValue(mockMachineQB as any);
+
+      // Act
+      const result = await service.getMapData();
+
+      // Assert
+      expect(result).toHaveLength(1);
+      expect(result[0].machine_count).toBe(0);
+      expect(result[0].machines_active).toBe(0);
+      expect(result[0].machines_error).toBe(0);
+      expect(result[0].machines_low_stock).toBe(0);
+    });
+
+    it('should handle locations without machine stats in map', async () => {
+      // Arrange - Location exists but has no entries in machineStats
+      const freshLocation = {
+        id: 'loc-no-stats',
+        name: 'No Stats Location',
+        type_code: 'office',
+        status: LocationStatus.ACTIVE,
+        city: 'TestCity',
+        address: 'Test Address',
+        latitude: 41.3111,
+        longitude: 69.2797,
+      } as Location;
+
+      const mockLocationQB = createMockQueryBuilder();
+      mockLocationQB.getMany.mockResolvedValue([freshLocation]);
+      mockLocationRepository.createQueryBuilder.mockReturnValue(mockLocationQB as any);
+
+      const mockMachineQB = {
+        select: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        groupBy: jest.fn().mockReturnThis(),
+        getRawMany: jest.fn().mockResolvedValue([
+          // Different location_id - stats for a different location
+          { location_id: 'other-location', total: '5', active: '3', error: '1', low_stock: '1' },
+        ]),
+      };
+      mockMachineRepository.createQueryBuilder.mockReturnValue(mockMachineQB as any);
+
+      // Act
+      const result = await service.getMapData();
+
+      // Assert
+      expect(result).toHaveLength(1);
+      expect(result[0].machine_count).toBe(0);
+    });
+
+    it('should handle null/undefined values in machine stats', async () => {
+      // Arrange - use fresh data
+      const freshLocation = {
+        id: 'loc-null-stats',
+        name: 'Null Stats Location',
+        type_code: 'office',
+        status: LocationStatus.ACTIVE,
+        city: 'TestCity',
+        address: 'Test Address',
+        latitude: 41.3111,
+        longitude: 69.2797,
+      } as Location;
+
+      const mockLocationQB = createMockQueryBuilder();
+      mockLocationQB.getMany.mockResolvedValue([freshLocation]);
+      mockLocationRepository.createQueryBuilder.mockReturnValue(mockLocationQB as any);
+
+      const mockMachineQB = {
+        select: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        groupBy: jest.fn().mockReturnThis(),
+        getRawMany: jest.fn().mockResolvedValue([
+          { location_id: 'loc-null-stats', total: null, active: undefined, error: '', low_stock: 'invalid' },
+        ]),
+      };
+      mockMachineRepository.createQueryBuilder.mockReturnValue(mockMachineQB as any);
+
+      // Act
+      const result = await service.getMapData();
+
+      // Assert
+      expect(result).toHaveLength(1);
+      expect(result[0].machine_count).toBe(0);
+      expect(result[0].machines_active).toBe(0);
+      expect(result[0].machines_error).toBe(0);
+      expect(result[0].machines_low_stock).toBe(0);
+    });
+
+    it('should convert latitude and longitude to float', async () => {
+      // Arrange - use fresh data with string coordinates
+      const freshLocation = {
+        id: 'loc-string-coords',
+        name: 'String Coords Location',
+        type_code: 'office',
+        status: LocationStatus.ACTIVE,
+        city: 'TestCity',
+        address: 'Test Address',
+        latitude: '41.3111' as any,
+        longitude: '69.2797' as any,
+      } as Location;
+
+      const mockLocationQB = createMockQueryBuilder();
+      mockLocationQB.getMany.mockResolvedValue([freshLocation]);
+      mockLocationRepository.createQueryBuilder.mockReturnValue(mockLocationQB as any);
+
+      const mockMachineQB = {
+        select: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        groupBy: jest.fn().mockReturnThis(),
+        getRawMany: jest.fn().mockResolvedValue([]),
+      };
+      mockMachineRepository.createQueryBuilder.mockReturnValue(mockMachineQB as any);
+
+      // Act
+      const result = await service.getMapData();
+
+      // Assert
+      expect(result).toHaveLength(1);
+      expect(typeof result[0].latitude).toBe('number');
+      expect(typeof result[0].longitude).toBe('number');
+      expect(result[0].latitude).toBe(41.3111);
+      expect(result[0].longitude).toBe(69.2797);
+    });
+
+    it('should query machines only for locations with coordinates', async () => {
+      // Arrange - use fresh isolated data
+      const loc1 = {
+        id: 'loc-query-1',
+        name: 'Query Test Location 1',
+        type_code: 'office',
+        status: LocationStatus.ACTIVE,
+        city: 'TestCity',
+        address: 'Address 1',
+        latitude: 41.3111,
+        longitude: 69.2797,
+      } as Location;
+      const loc2 = {
+        id: 'loc-query-2',
+        name: 'Query Test Location 2',
+        type_code: 'mall',
+        status: LocationStatus.ACTIVE,
+        city: 'TestCity',
+        address: 'Address 2',
+        latitude: 41.3200,
+        longitude: 69.2800,
+      } as Location;
+
+      const mockLocationQB = createMockQueryBuilder();
+      mockLocationQB.getMany.mockResolvedValue([loc1, loc2]);
+      mockLocationRepository.createQueryBuilder.mockReturnValue(mockLocationQB as any);
+
+      const mockMachineQB = {
+        select: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        groupBy: jest.fn().mockReturnThis(),
+        getRawMany: jest.fn().mockResolvedValue([]),
+      };
+      mockMachineRepository.createQueryBuilder.mockReturnValue(mockMachineQB as any);
+
+      // Act
+      await service.getMapData();
+
+      // Assert
+      expect(mockMachineQB.where).toHaveBeenCalledWith('machine.location_id IN (:...locationIds)', {
+        locationIds: ['loc-query-1', 'loc-query-2'],
+      });
+    });
+  });
+
   describe('Edge cases', () => {
     it('should handle special characters in location name', async () => {
       // Arrange
