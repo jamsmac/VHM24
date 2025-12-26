@@ -642,4 +642,355 @@ describe('TaskCompletionService', () => {
       );
     });
   });
+
+  describe('completeTask - Cleaning task', () => {
+    let washingSchedulesService: jest.Mocked<WashingSchedulesService>;
+
+    beforeEach(() => {
+      washingSchedulesService = (service as any).washingSchedulesService;
+    });
+
+    it('should complete cleaning task without washing schedule', async () => {
+      const task = createMockTask({
+        type_code: TaskType.CLEANING,
+        metadata: {},
+      });
+      filesService.validateTaskPhotos.mockResolvedValue({
+        hasPhotoBefore: true,
+        hasPhotoAfter: true,
+        photosBefore: [],
+        photosAfter: [],
+      });
+      taskRepository.save.mockResolvedValue({
+        ...task,
+        status: TaskStatus.COMPLETED,
+      });
+
+      const result = await service.completeTask(task, mockUserId, {});
+
+      expect(result.status).toBe(TaskStatus.COMPLETED);
+      expect(washingSchedulesService.completeWashing).not.toHaveBeenCalled();
+    });
+
+    it('should update washing schedule when completing cleaning task', async () => {
+      const washingScheduleId = 'washing-123';
+      const task = createMockTask({
+        type_code: TaskType.CLEANING,
+        metadata: { washing_schedule_id: washingScheduleId },
+      });
+      filesService.validateTaskPhotos.mockResolvedValue({
+        hasPhotoBefore: true,
+        hasPhotoAfter: true,
+        photosBefore: [],
+        photosAfter: [],
+      });
+      taskRepository.save.mockResolvedValue({
+        ...task,
+        status: TaskStatus.COMPLETED,
+      });
+
+      await service.completeTask(task, mockUserId, {
+        completion_notes: 'Cleaned thoroughly',
+      });
+
+      expect(washingSchedulesService.completeWashing).toHaveBeenCalledWith(
+        washingScheduleId,
+        {
+          performed_by_user_id: mockUserId,
+          task_id: task.id,
+          notes: 'Cleaned thoroughly',
+        },
+      );
+    });
+
+    it('should handle error when updating washing schedule fails', async () => {
+      const washingScheduleId = 'washing-123';
+      const task = createMockTask({
+        type_code: TaskType.CLEANING,
+        metadata: { washing_schedule_id: washingScheduleId },
+      });
+      filesService.validateTaskPhotos.mockResolvedValue({
+        hasPhotoBefore: true,
+        hasPhotoAfter: true,
+        photosBefore: [],
+        photosAfter: [],
+      });
+      taskRepository.save.mockResolvedValue({
+        ...task,
+        status: TaskStatus.COMPLETED,
+      });
+      washingSchedulesService.completeWashing.mockRejectedValue(new Error('DB error'));
+
+      // Should not throw - errors are caught and logged
+      const result = await service.completeTask(task, mockUserId, {});
+
+      expect(result.status).toBe(TaskStatus.COMPLETED);
+    });
+  });
+
+  describe('completeTask - Component replacement tasks', () => {
+    let componentMovementsService: jest.Mocked<ComponentMovementsService>;
+
+    beforeEach(() => {
+      componentMovementsService = (service as any).componentMovementsService;
+    });
+
+    it('should complete hopper replacement task without components', async () => {
+      const task = createMockTask({
+        type_code: TaskType.REPLACE_HOPPER,
+        components: [],
+      });
+      filesService.validateTaskPhotos.mockResolvedValue({
+        hasPhotoBefore: true,
+        hasPhotoAfter: true,
+        photosBefore: [],
+        photosAfter: [],
+      });
+      taskRepository.save.mockResolvedValue({
+        ...task,
+        status: TaskStatus.COMPLETED,
+      });
+
+      const result = await service.completeTask(task, mockUserId, {});
+
+      expect(result.status).toBe(TaskStatus.COMPLETED);
+      expect(componentMovementsService.createMovement).not.toHaveBeenCalled();
+    });
+
+    it('should complete grinder replacement task with component movements', async () => {
+      const oldComponent = { component_id: 'old-comp-1', role: 'old', notes: 'Worn out' } as any;
+      const newComponent = { component_id: 'new-comp-1', role: 'new', notes: 'Fresh' } as any;
+
+      const task = createMockTask({
+        type_code: TaskType.REPLACE_GRINDER,
+        components: [oldComponent, newComponent],
+      });
+      filesService.validateTaskPhotos.mockResolvedValue({
+        hasPhotoBefore: true,
+        hasPhotoAfter: true,
+        photosBefore: [],
+        photosAfter: [],
+      });
+      taskRepository.save.mockResolvedValue({
+        ...task,
+        status: TaskStatus.COMPLETED,
+      });
+
+      const result = await service.completeTask(task, mockUserId, {});
+
+      expect(result.status).toBe(TaskStatus.COMPLETED);
+      // Should create removal movement for old component
+      expect(componentMovementsService.createMovement).toHaveBeenCalledWith(
+        expect.objectContaining({
+          componentId: 'old-comp-1',
+          movementType: 'remove',
+          relatedMachineId: mockMachineId,
+        }),
+      );
+      // Should create install movement for new component
+      expect(componentMovementsService.createMovement).toHaveBeenCalledWith(
+        expect.objectContaining({
+          componentId: 'new-comp-1',
+          movementType: 'install',
+          relatedMachineId: mockMachineId,
+        }),
+      );
+      // Should log audit event
+      expect(auditLogService.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          user_id: mockUserId,
+          description: expect.stringContaining('Замена компонентов'),
+        }),
+      );
+    });
+
+    it('should complete brew unit replacement task', async () => {
+      const task = createMockTask({
+        type_code: TaskType.REPLACE_BREW_UNIT,
+        components: [],
+      });
+      filesService.validateTaskPhotos.mockResolvedValue({
+        hasPhotoBefore: true,
+        hasPhotoAfter: true,
+        photosBefore: [],
+        photosAfter: [],
+      });
+      taskRepository.save.mockResolvedValue({
+        ...task,
+        status: TaskStatus.COMPLETED,
+      });
+
+      const result = await service.completeTask(task, mockUserId, {});
+
+      expect(result.status).toBe(TaskStatus.COMPLETED);
+    });
+
+    it('should complete mixer replacement task', async () => {
+      const task = createMockTask({
+        type_code: TaskType.REPLACE_MIXER,
+        components: [],
+      });
+      filesService.validateTaskPhotos.mockResolvedValue({
+        hasPhotoBefore: true,
+        hasPhotoAfter: true,
+        photosBefore: [],
+        photosAfter: [],
+      });
+      taskRepository.save.mockResolvedValue({
+        ...task,
+        status: TaskStatus.COMPLETED,
+      });
+
+      const result = await service.completeTask(task, mockUserId, {});
+
+      expect(result.status).toBe(TaskStatus.COMPLETED);
+    });
+
+    it('should handle error when creating component removal movement fails', async () => {
+      const oldComponent = { component_id: 'old-comp-1', role: 'old', notes: '' } as any;
+
+      const task = createMockTask({
+        type_code: TaskType.REPLACE_HOPPER,
+        components: [oldComponent],
+      });
+      filesService.validateTaskPhotos.mockResolvedValue({
+        hasPhotoBefore: true,
+        hasPhotoAfter: true,
+        photosBefore: [],
+        photosAfter: [],
+      });
+      taskRepository.save.mockResolvedValue({
+        ...task,
+        status: TaskStatus.COMPLETED,
+      });
+      componentMovementsService.createMovement.mockRejectedValue(new Error('Movement failed'));
+
+      // Should not throw - errors are caught and logged
+      const result = await service.completeTask(task, mockUserId, {});
+
+      expect(result.status).toBe(TaskStatus.COMPLETED);
+    });
+
+    it('should handle error when creating component install movement fails', async () => {
+      const newComponent = { component_id: 'new-comp-1', role: 'new', notes: '' } as any;
+
+      const task = createMockTask({
+        type_code: TaskType.REPLACE_GRINDER,
+        components: [newComponent],
+      });
+      filesService.validateTaskPhotos.mockResolvedValue({
+        hasPhotoBefore: true,
+        hasPhotoAfter: true,
+        photosBefore: [],
+        photosAfter: [],
+      });
+      taskRepository.save.mockResolvedValue({
+        ...task,
+        status: TaskStatus.COMPLETED,
+      });
+      componentMovementsService.createMovement.mockRejectedValue(new Error('Movement failed'));
+
+      // Should not throw - errors are caught and logged
+      const result = await service.completeTask(task, mockUserId, {});
+
+      expect(result.status).toBe(TaskStatus.COMPLETED);
+    });
+  });
+
+  describe('completeTask - Inspection task', () => {
+    it('should complete inspection task and log audit', async () => {
+      const task = createMockTask({
+        type_code: TaskType.INSPECTION,
+        checklist: [
+          { item: 'Check doors', completed: true },
+          { item: 'Check display', completed: true },
+        ],
+      });
+      filesService.validateTaskPhotos.mockResolvedValue({
+        hasPhotoBefore: true,
+        hasPhotoAfter: true,
+        photosBefore: [],
+        photosAfter: [],
+      });
+      taskRepository.save.mockResolvedValue({
+        ...task,
+        status: TaskStatus.COMPLETED,
+      });
+
+      const result = await service.completeTask(task, mockUserId, {
+        completion_notes: 'All items checked',
+      });
+
+      expect(result.status).toBe(TaskStatus.COMPLETED);
+      expect(auditLogService.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          user_id: mockUserId,
+          description: expect.stringContaining('Проведена проверка'),
+          metadata: expect.objectContaining({
+            task_id: task.id,
+            machine_id: mockMachineId,
+            inspection_notes: 'All items checked',
+            checklist_completed: true,
+          }),
+        }),
+      );
+    });
+
+    it('should handle empty checklist array in inspection audit', async () => {
+      const task = createMockTask({
+        type_code: TaskType.INSPECTION,
+        checklist: [], // Empty checklist
+      });
+      filesService.validateTaskPhotos.mockResolvedValue({
+        hasPhotoBefore: true,
+        hasPhotoAfter: true,
+        photosBefore: [],
+        photosAfter: [],
+      });
+      taskRepository.save.mockResolvedValue({
+        ...task,
+        status: TaskStatus.COMPLETED,
+      });
+
+      const result = await service.completeTask(task, mockUserId, {});
+
+      expect(result.status).toBe(TaskStatus.COMPLETED);
+      // Empty array every() returns true, so checklist_completed should be true
+      expect(auditLogService.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          metadata: expect.objectContaining({
+            checklist_completed: true,
+          }),
+        }),
+      );
+    });
+
+    it('should complete inspection task without checklist', async () => {
+      const task = createMockTask({
+        type_code: TaskType.INSPECTION,
+        checklist: null,
+      });
+      filesService.validateTaskPhotos.mockResolvedValue({
+        hasPhotoBefore: true,
+        hasPhotoAfter: true,
+        photosBefore: [],
+        photosAfter: [],
+      });
+      taskRepository.save.mockResolvedValue({
+        ...task,
+        status: TaskStatus.COMPLETED,
+      });
+
+      const result = await service.completeTask(task, mockUserId, {});
+
+      expect(result.status).toBe(TaskStatus.COMPLETED);
+      expect(auditLogService.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          metadata: expect.objectContaining({
+            checklist_completed: false,
+          }),
+        }),
+      );
+    });
+  });
 });
