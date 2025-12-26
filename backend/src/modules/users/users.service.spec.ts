@@ -1362,4 +1362,429 @@ describe('UsersService', () => {
       );
     });
   });
+
+  // ============================================================================
+  // FIND BY IDS TESTS
+  // ============================================================================
+
+  describe('findByIds', () => {
+    it('should return empty array when ids array is empty', async () => {
+      const result = await service.findByIds([]);
+
+      expect(result).toEqual([]);
+      expect(userRepository.find).not.toHaveBeenCalled();
+    });
+
+    it('should return users matching the provided ids', async () => {
+      const user1 = { ...mockUser, id: 'user-1' };
+      const user2 = { ...mockUser, id: 'user-2' };
+      userRepository.find.mockResolvedValue([user1, user2] as any);
+
+      const result = await service.findByIds(['user-1', 'user-2']);
+
+      expect(result).toHaveLength(2);
+      expect(userRepository.find).toHaveBeenCalledWith({
+        where: { id: expect.anything() },
+      });
+    });
+
+    it('should return only found users when some ids do not exist', async () => {
+      const user1 = { ...mockUser, id: 'user-1' };
+      userRepository.find.mockResolvedValue([user1] as any);
+
+      const result = await service.findByIds(['user-1', 'non-existent']);
+
+      expect(result).toHaveLength(1);
+    });
+
+    it('should return empty array when no users match ids', async () => {
+      userRepository.find.mockResolvedValue([]);
+
+      const result = await service.findByIds(['non-existent-1', 'non-existent-2']);
+
+      expect(result).toEqual([]);
+    });
+  });
+
+  // ============================================================================
+  // CREATE PENDING FROM TELEGRAM TESTS
+  // ============================================================================
+
+  describe('createPendingFromTelegram', () => {
+    const telegramData = {
+      telegram_id: '123456789',
+      telegram_username: 'testuser',
+      telegram_first_name: 'Test',
+      telegram_last_name: 'User',
+    };
+
+    it('should create pending user from telegram data', async () => {
+      const newUser = {
+        ...mockPendingUser,
+        telegram_user_id: telegramData.telegram_id,
+        telegram_username: telegramData.telegram_username,
+        full_name: 'Test User',
+        email: `telegram_${telegramData.telegram_id}@vendhub.temp`,
+        status: UserStatus.PENDING,
+      };
+
+      userRepository.findOne.mockResolvedValue(null); // No existing user
+      userRepository.create.mockReturnValue(newUser as any);
+      userRepository.save.mockResolvedValue(newUser as any);
+
+      const result = await service.createPendingFromTelegram(telegramData);
+
+      expect(result.telegram_user_id).toBe(telegramData.telegram_id);
+      expect(result.status).toBe(UserStatus.PENDING);
+      expect(userRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          telegram_user_id: telegramData.telegram_id,
+          email: `telegram_${telegramData.telegram_id}@vendhub.temp`,
+          status: UserStatus.PENDING,
+        }),
+      );
+    });
+
+    it('should throw ConflictException if telegram user already exists', async () => {
+      const existingUser = { ...mockUser, telegram_user_id: telegramData.telegram_id };
+      userRepository.findOne.mockResolvedValue(existingUser as any);
+
+      await expect(service.createPendingFromTelegram(telegramData)).rejects.toThrow(
+        ConflictException,
+      );
+      await expect(service.createPendingFromTelegram(telegramData)).rejects.toThrow(
+        'Пользователь с таким Telegram ID уже существует',
+      );
+    });
+
+    it('should use telegram_username as full_name when first/last name not provided', async () => {
+      const telegramDataWithUsername = {
+        telegram_id: '123456789',
+        telegram_username: 'testuser',
+      };
+
+      userRepository.findOne.mockResolvedValue(null);
+      userRepository.create.mockImplementation((data) => data as any);
+      userRepository.save.mockImplementation((user) => Promise.resolve(user as any));
+
+      await service.createPendingFromTelegram(telegramDataWithUsername);
+
+      expect(userRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          full_name: '@testuser',
+        }),
+      );
+    });
+
+    it('should use telegram_id as full_name when no name or username provided', async () => {
+      const telegramDataMinimal = {
+        telegram_id: '123456789',
+      };
+
+      userRepository.findOne.mockResolvedValue(null);
+      userRepository.create.mockImplementation((data) => data as any);
+      userRepository.save.mockImplementation((user) => Promise.resolve(user as any));
+
+      await service.createPendingFromTelegram(telegramDataMinimal);
+
+      expect(userRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          full_name: 'Telegram User 123456789',
+        }),
+      );
+    });
+
+    it('should use only first name when last name not provided', async () => {
+      const telegramDataFirstNameOnly = {
+        telegram_id: '123456789',
+        telegram_first_name: 'John',
+      };
+
+      userRepository.findOne.mockResolvedValue(null);
+      userRepository.create.mockImplementation((data) => data as any);
+      userRepository.save.mockImplementation((user) => Promise.resolve(user as any));
+
+      await service.createPendingFromTelegram(telegramDataFirstNameOnly);
+
+      expect(userRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          full_name: 'John',
+        }),
+      );
+    });
+
+    it('should combine first and last name for full_name', async () => {
+      userRepository.findOne.mockResolvedValue(null);
+      userRepository.create.mockImplementation((data) => data as any);
+      userRepository.save.mockImplementation((user) => Promise.resolve(user as any));
+
+      await service.createPendingFromTelegram(telegramData);
+
+      expect(userRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          full_name: 'Test User',
+        }),
+      );
+    });
+
+    it('should set telegram_username to null when not provided', async () => {
+      const telegramDataNoUsername = {
+        telegram_id: '123456789',
+        telegram_first_name: 'Test',
+      };
+
+      userRepository.findOne.mockResolvedValue(null);
+      userRepository.create.mockImplementation((data) => data as any);
+      userRepository.save.mockImplementation((user) => Promise.resolve(user as any));
+
+      await service.createPendingFromTelegram(telegramDataNoUsername);
+
+      expect(userRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          telegram_username: null,
+        }),
+      );
+    });
+  });
+
+  // ============================================================================
+  // FIND BY ROLE TESTS
+  // ============================================================================
+
+  describe('findByRole', () => {
+    it('should return active users with specified role by default', async () => {
+      const operators = [
+        { ...mockUser, id: 'op-1', role: UserRole.OPERATOR },
+        { ...mockUser, id: 'op-2', role: UserRole.OPERATOR },
+      ];
+      userRepository.find.mockResolvedValue(operators as any);
+
+      const result = await service.findByRole(UserRole.OPERATOR);
+
+      expect(result).toHaveLength(2);
+      expect(userRepository.find).toHaveBeenCalledWith({
+        where: { role: UserRole.OPERATOR, status: UserStatus.ACTIVE },
+        order: { created_at: 'DESC' },
+      });
+    });
+
+    it('should return all users with specified role when activeOnly is false', async () => {
+      const allOperators = [
+        { ...mockUser, id: 'op-1', role: UserRole.OPERATOR, status: UserStatus.ACTIVE },
+        { ...mockUser, id: 'op-2', role: UserRole.OPERATOR, status: UserStatus.INACTIVE },
+      ];
+      userRepository.find.mockResolvedValue(allOperators as any);
+
+      const result = await service.findByRole(UserRole.OPERATOR, false);
+
+      expect(result).toHaveLength(2);
+      expect(userRepository.find).toHaveBeenCalledWith({
+        where: { role: UserRole.OPERATOR },
+        order: { created_at: 'DESC' },
+      });
+    });
+
+    it('should return empty array when no users with role exist', async () => {
+      userRepository.find.mockResolvedValue([]);
+
+      const result = await service.findByRole(UserRole.OWNER);
+
+      expect(result).toEqual([]);
+    });
+  });
+
+  // ============================================================================
+  // FIND BY ROLES TESTS
+  // ============================================================================
+
+  describe('findByRoles', () => {
+    it('should return active users with any of the specified roles', async () => {
+      const admins = [
+        { ...mockUser, id: 'admin-1', role: UserRole.ADMIN },
+        { ...mockUser, id: 'owner-1', role: UserRole.OWNER },
+      ];
+
+      const mockQueryBuilder = {
+        whereInIds: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue(admins),
+      };
+      userRepository.createQueryBuilder = jest.fn().mockReturnValue(mockQueryBuilder);
+
+      const result = await service.findByRoles([UserRole.ADMIN, UserRole.OWNER]);
+
+      expect(result).toHaveLength(2);
+      expect(mockQueryBuilder.where).toHaveBeenCalledWith('user.role IN (:...roles)', {
+        roles: [UserRole.ADMIN, UserRole.OWNER],
+      });
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith('user.status = :status', {
+        status: UserStatus.ACTIVE,
+      });
+    });
+
+    it('should return all users when activeOnly is false', async () => {
+      const allAdmins = [
+        { ...mockUser, id: 'admin-1', role: UserRole.ADMIN, status: UserStatus.ACTIVE },
+        { ...mockUser, id: 'admin-2', role: UserRole.ADMIN, status: UserStatus.INACTIVE },
+      ];
+
+      const mockQueryBuilder = {
+        whereInIds: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue(allAdmins),
+      };
+      userRepository.createQueryBuilder = jest.fn().mockReturnValue(mockQueryBuilder);
+
+      const result = await service.findByRoles([UserRole.ADMIN], false);
+
+      expect(result).toHaveLength(2);
+      expect(mockQueryBuilder.andWhere).not.toHaveBeenCalled();
+    });
+
+    it('should not filter by role when roles array is empty', async () => {
+      const mockQueryBuilder = {
+        whereInIds: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue([]),
+      };
+      userRepository.createQueryBuilder = jest.fn().mockReturnValue(mockQueryBuilder);
+
+      await service.findByRoles([]);
+
+      expect(mockQueryBuilder.where).not.toHaveBeenCalled();
+    });
+
+    it('should return empty array when no users match roles', async () => {
+      const mockQueryBuilder = {
+        whereInIds: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue([]),
+      };
+      userRepository.createQueryBuilder = jest.fn().mockReturnValue(mockQueryBuilder);
+
+      const result = await service.findByRoles([UserRole.OWNER]);
+
+      expect(result).toEqual([]);
+    });
+  });
+
+  // ============================================================================
+  // GET ADMIN USER IDS TESTS
+  // ============================================================================
+
+  describe('getAdminUserIds', () => {
+    it('should return IDs of all active Owner and Admin users', async () => {
+      const admins = [
+        { ...mockUser, id: 'owner-1', role: UserRole.OWNER },
+        { ...mockUser, id: 'admin-1', role: UserRole.ADMIN },
+      ];
+
+      const mockQueryBuilder = {
+        whereInIds: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue(admins),
+      };
+      userRepository.createQueryBuilder = jest.fn().mockReturnValue(mockQueryBuilder);
+
+      const result = await service.getAdminUserIds();
+
+      expect(result).toEqual(['owner-1', 'admin-1']);
+    });
+
+    it('should return empty array when no admins exist', async () => {
+      const mockQueryBuilder = {
+        whereInIds: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue([]),
+      };
+      userRepository.createQueryBuilder = jest.fn().mockReturnValue(mockQueryBuilder);
+
+      const result = await service.getAdminUserIds();
+
+      expect(result).toEqual([]);
+    });
+  });
+
+  // ============================================================================
+  // GET MANAGER USER IDS TESTS
+  // ============================================================================
+
+  describe('getManagerUserIds', () => {
+    it('should return IDs of all active Manager users', async () => {
+      const managers = [
+        { ...mockUser, id: 'manager-1', role: UserRole.MANAGER },
+        { ...mockUser, id: 'manager-2', role: UserRole.MANAGER },
+      ];
+      userRepository.find.mockResolvedValue(managers as any);
+
+      const result = await service.getManagerUserIds();
+
+      expect(result).toEqual(['manager-1', 'manager-2']);
+      expect(userRepository.find).toHaveBeenCalledWith({
+        where: { role: UserRole.MANAGER, status: UserStatus.ACTIVE },
+        order: { created_at: 'DESC' },
+      });
+    });
+
+    it('should return empty array when no managers exist', async () => {
+      userRepository.find.mockResolvedValue([]);
+
+      const result = await service.getManagerUserIds();
+
+      expect(result).toEqual([]);
+    });
+  });
+
+  // ============================================================================
+  // GET FIRST ADMIN ID TESTS
+  // ============================================================================
+
+  describe('getFirstAdminId', () => {
+    it('should return first admin user ID', async () => {
+      const admins = [
+        { ...mockUser, id: 'admin-1', role: UserRole.ADMIN },
+        { ...mockUser, id: 'admin-2', role: UserRole.ADMIN },
+      ];
+
+      const mockQueryBuilder = {
+        whereInIds: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue(admins),
+      };
+      userRepository.createQueryBuilder = jest.fn().mockReturnValue(mockQueryBuilder);
+
+      const result = await service.getFirstAdminId();
+
+      expect(result).toBe('admin-1');
+    });
+
+    it('should return null when no admins exist', async () => {
+      const mockQueryBuilder = {
+        whereInIds: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue([]),
+      };
+      userRepository.createQueryBuilder = jest.fn().mockReturnValue(mockQueryBuilder);
+
+      const result = await service.getFirstAdminId();
+
+      expect(result).toBeNull();
+    });
+  });
 });
