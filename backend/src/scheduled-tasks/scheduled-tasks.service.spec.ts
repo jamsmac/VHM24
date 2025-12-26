@@ -1584,7 +1584,7 @@ describe('ScheduledTasksService', () => {
           machine_id: 'machine-1',
           current_quantity: 5,
           min_stock_level: 10,
-          machine: { id: 'machine-1', machine_number: 'M-001', assigned_to_user_id: null },
+          machine: { id: 'machine-1', machine_number: 'M-001', assigned_operator_id: null },
           nomenclature: { name: 'Coffee' },
         },
       ];
@@ -1597,7 +1597,8 @@ describe('ScheduledTasksService', () => {
       };
       machineInventoryRepository.createQueryBuilder.mockReturnValue(queryBuilder as any);
 
-      // Mock getFirstAdminId to return null (no recipient)
+      // Mock all fallback recipients to return null/empty (no recipient)
+      _usersService.getManagerUserIds.mockResolvedValue([]);
       _usersService.getFirstAdminId.mockResolvedValue(null);
 
       const warnSpy = jest.spyOn(service['logger'], 'warn');
@@ -1657,7 +1658,8 @@ describe('ScheduledTasksService', () => {
       };
       warehouseInventoryRepository.createQueryBuilder.mockReturnValue(queryBuilder as any);
 
-      // Mock getFirstAdminId to return null (no recipient)
+      // Mock all fallback recipients to return null/empty (no recipient)
+      _usersService.getManagerUserIds.mockResolvedValue([]);
       _usersService.getFirstAdminId.mockResolvedValue(null);
 
       const warnSpy = jest.spyOn(service['logger'], 'warn');
@@ -2081,8 +2083,7 @@ describe('ScheduledTasksService', () => {
       await service.evaluateAlertRules();
 
       expect(errorSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Error evaluating rule'),
-        expect.any(String),
+        expect.stringContaining('Error evaluating rule rule-1 (Low Stock Alert): Machine query failed'),
       );
     });
 
