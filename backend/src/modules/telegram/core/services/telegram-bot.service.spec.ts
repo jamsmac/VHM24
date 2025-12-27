@@ -19,6 +19,7 @@ import { TelegramManagerToolsService } from '../../managers/services/telegram-ma
 import { TelegramCommandHandlerService } from './telegram-command-handler.service';
 import { TelegramCallbackHandlerService } from './telegram-callback-handler.service';
 import { TelegramTaskCallbackService } from './telegram-task-callback.service';
+import { TelegramAdminCallbackService } from './telegram-admin-callback.service';
 import { TaskType, TaskStatus } from '../../../tasks/entities/task.entity';
 import { UserRole } from '../../../users/entities/user.entity';
 
@@ -153,6 +154,20 @@ describe('TelegramBotService', () => {
             getExecutionState: jest.fn(),
             updateExecutionState: jest.fn(),
             showCurrentStep: jest.fn(),
+          },
+        },
+        {
+          provide: TelegramAdminCallbackService,
+          useValue: {
+            handleExpandUser: jest.fn(),
+            handleApproveUser: jest.fn(),
+            handleRejectUser: jest.fn(),
+            handleRefreshPendingUsers: jest.fn(),
+            handleRejectUserInput: jest.fn().mockResolvedValue(false),
+            isSuperAdmin: jest.fn(),
+            notifyAdminAboutNewUser: jest.fn(),
+            handlePendingUsersCommand: jest.fn(),
+            getAdminApprovalKeyboard: jest.fn(),
           },
         },
         {
@@ -472,27 +487,7 @@ describe('TelegramBotService', () => {
       });
     });
 
-    describe('formatRole', () => {
-      it('should format OWNER role in Russian', () => {
-        const formatted = (service as any).formatRole(UserRole.OWNER, TelegramLanguage.RU);
-        expect(formatted).toContain('Владелец');
-      });
-
-      it('should format OWNER role in English', () => {
-        const formatted = (service as any).formatRole(UserRole.OWNER, TelegramLanguage.EN);
-        expect(formatted).toContain('Owner');
-      });
-
-      it('should format ADMIN role', () => {
-        const formatted = (service as any).formatRole(UserRole.ADMIN, TelegramLanguage.RU);
-        expect(formatted).toContain('Админ');
-      });
-
-      it('should format OPERATOR role', () => {
-        const formatted = (service as any).formatRole(UserRole.OPERATOR, TelegramLanguage.RU);
-        expect(formatted).toContain('Оператор');
-      });
-    });
+    // Note: formatRole tests moved to telegram-admin-callback.service.spec.ts
 
     describe('t (translation)', () => {
       it('should return Russian translation for main_menu', () => {
@@ -560,40 +555,7 @@ describe('TelegramBotService', () => {
       });
     });
 
-    describe('isSuperAdmin', () => {
-      it('should return false if SUPER_ADMIN_TELEGRAM_ID not set', () => {
-        const originalEnv = process.env.SUPER_ADMIN_TELEGRAM_ID;
-        delete process.env.SUPER_ADMIN_TELEGRAM_ID;
-
-        const result = (service as any).isSuperAdmin('123456789');
-
-        expect(result).toBe(false);
-
-        process.env.SUPER_ADMIN_TELEGRAM_ID = originalEnv;
-      });
-
-      it('should return true if telegramId matches SUPER_ADMIN_TELEGRAM_ID', () => {
-        const originalEnv = process.env.SUPER_ADMIN_TELEGRAM_ID;
-        process.env.SUPER_ADMIN_TELEGRAM_ID = '123456789';
-
-        const result = (service as any).isSuperAdmin('123456789');
-
-        expect(result).toBe(true);
-
-        process.env.SUPER_ADMIN_TELEGRAM_ID = originalEnv;
-      });
-
-      it('should return false if telegramId does not match', () => {
-        const originalEnv = process.env.SUPER_ADMIN_TELEGRAM_ID;
-        process.env.SUPER_ADMIN_TELEGRAM_ID = '999999999';
-
-        const result = (service as any).isSuperAdmin('123456789');
-
-        expect(result).toBe(false);
-
-        process.env.SUPER_ADMIN_TELEGRAM_ID = originalEnv;
-      });
-    });
+    // Note: isSuperAdmin tests moved to telegram-admin-callback.service.spec.ts
 
     describe('updateUserLanguage', () => {
       it('should update user language in repository', async () => {
@@ -875,41 +837,7 @@ describe('TelegramBotService', () => {
       });
     });
 
-    describe('formatPendingUsersMessage', () => {
-      it('should format pending users list in Russian', () => {
-        const users = [
-          {
-            id: 'user-1',
-            full_name: 'John Doe',
-            email: 'john@example.com',
-            phone: '+1234567890',
-            created_at: new Date().toISOString(),
-          },
-        ];
-        const message = (service as any).formatPendingUsersMessage(users, TelegramLanguage.RU);
-
-        expect(message).toContain('John Doe');
-        expect(message).toContain('john@example.com');
-        expect(message).toContain('Пользователи в ожидании');
-      });
-
-      it('should format pending users list in English', () => {
-        const users = [
-          {
-            id: 'user-1',
-            full_name: 'Jane Smith',
-            email: 'jane@example.com',
-            phone: null,
-            created_at: new Date().toISOString(),
-          },
-        ];
-        const message = (service as any).formatPendingUsersMessage(users, TelegramLanguage.EN);
-
-        expect(message).toContain('Jane Smith');
-        expect(message).toContain('Pending Users');
-        expect(message).toContain('N/A');
-      });
-    });
+    // Note: formatPendingUsersMessage tests moved to telegram-admin-callback.service.spec.ts
   });
 
   describe('getTasksKeyboard', () => {
@@ -1126,67 +1054,7 @@ describe('TelegramBotService', () => {
     });
   });
 
-  describe('additional formatRole cases', () => {
-    beforeEach(async () => {
-      telegramSettingsRepository.findOne.mockResolvedValue(mockSettings as TelegramSettings);
-      await service.initializeBot();
-    });
-
-    it('should format MANAGER role in Russian', () => {
-      const formatted = (service as any).formatRole(UserRole.MANAGER, TelegramLanguage.RU);
-      expect(formatted).toBe('Менеджер');
-    });
-
-    it('should format MANAGER role in English', () => {
-      const formatted = (service as any).formatRole(UserRole.MANAGER, TelegramLanguage.EN);
-      expect(formatted).toBe('Manager');
-    });
-
-    it('should format COLLECTOR role in Russian', () => {
-      const formatted = (service as any).formatRole(UserRole.COLLECTOR, TelegramLanguage.RU);
-      expect(formatted).toBe('Инкассатор');
-    });
-
-    it('should format COLLECTOR role in English', () => {
-      const formatted = (service as any).formatRole(UserRole.COLLECTOR, TelegramLanguage.EN);
-      expect(formatted).toBe('Collector');
-    });
-
-    it('should format TECHNICIAN role in Russian', () => {
-      const formatted = (service as any).formatRole(UserRole.TECHNICIAN, TelegramLanguage.RU);
-      expect(formatted).toBe('Техник');
-    });
-
-    it('should format TECHNICIAN role in English', () => {
-      const formatted = (service as any).formatRole(UserRole.TECHNICIAN, TelegramLanguage.EN);
-      expect(formatted).toBe('Technician');
-    });
-
-    it('should format VIEWER role in Russian', () => {
-      const formatted = (service as any).formatRole(UserRole.VIEWER, TelegramLanguage.RU);
-      expect(formatted).toBe('Просмотр');
-    });
-
-    it('should format VIEWER role in English', () => {
-      const formatted = (service as any).formatRole(UserRole.VIEWER, TelegramLanguage.EN);
-      expect(formatted).toBe('Viewer');
-    });
-
-    it('should format ADMIN role in English', () => {
-      const formatted = (service as any).formatRole(UserRole.ADMIN, TelegramLanguage.EN);
-      expect(formatted).toBe('Admin');
-    });
-
-    it('should format OPERATOR role in English', () => {
-      const formatted = (service as any).formatRole(UserRole.OPERATOR, TelegramLanguage.EN);
-      expect(formatted).toBe('Operator');
-    });
-
-    it('should return role itself for unknown role', () => {
-      const formatted = (service as any).formatRole('unknown_role', TelegramLanguage.RU);
-      expect(formatted).toBe('unknown_role');
-    });
-  });
+  // Note: additional formatRole cases tests moved to telegram-admin-callback.service.spec.ts
 
   describe('additional translation tests', () => {
     beforeEach(async () => {
@@ -1473,124 +1341,8 @@ describe('TelegramBotService', () => {
     });
   });
 
-  describe('formatPendingUsersMessage edge cases', () => {
-    beforeEach(async () => {
-      telegramSettingsRepository.findOne.mockResolvedValue(mockSettings as TelegramSettings);
-      await service.initializeBot();
-    });
-
-    it('should handle empty pending users', () => {
-      const message = (service as any).formatPendingUsersMessage([], TelegramLanguage.RU);
-      expect(message).toBeDefined();
-    });
-
-    it('should handle users without email', () => {
-      const users = [
-        {
-          id: 'user-1',
-          full_name: 'John Doe',
-          email: null,
-          phone: '+1234567890',
-          created_at: new Date().toISOString(),
-        },
-      ];
-      const message = (service as any).formatPendingUsersMessage(users, TelegramLanguage.RU);
-      expect(message).toContain('John Doe');
-    });
-
-    it('should handle users with all fields', () => {
-      const users = [
-        {
-          id: 'user-1',
-          full_name: 'Complete User',
-          email: 'complete@example.com',
-          phone: '+9876543210',
-          created_at: new Date().toISOString(),
-        },
-      ];
-      const message = (service as any).formatPendingUsersMessage(users, TelegramLanguage.EN);
-      expect(message).toContain('Complete User');
-      expect(message).toContain('complete@example.com');
-    });
-  });
-
-  describe('getPendingUsersKeyboard', () => {
-    beforeEach(async () => {
-      telegramSettingsRepository.findOne.mockResolvedValue(mockSettings as TelegramSettings);
-      await service.initializeBot();
-    });
-
-    it('should return keyboard with users in Russian', () => {
-      const users = [
-        { id: 'user-1', full_name: 'John Doe', email: 'john@example.com', phone: null, created_at: new Date().toISOString() },
-        { id: 'user-2', full_name: 'Jane Smith', email: 'jane@example.com', phone: null, created_at: new Date().toISOString() },
-      ];
-      const keyboard = (service as any).getPendingUsersKeyboard(users, TelegramLanguage.RU);
-      expect(keyboard).toBeDefined();
-    });
-
-    it('should return keyboard with users in English', () => {
-      const users = [
-        { id: 'user-1', full_name: 'Alice Brown', email: 'alice@example.com', phone: null, created_at: new Date().toISOString() },
-      ];
-      const keyboard = (service as any).getPendingUsersKeyboard(users, TelegramLanguage.EN);
-      expect(keyboard).toBeDefined();
-    });
-
-    it('should limit to 5 users', () => {
-      const users = Array.from({ length: 10 }, (_, i) => ({
-        id: `user-${i}`,
-        full_name: `User ${i}`,
-        email: `user${i}@example.com`,
-        phone: null,
-        created_at: new Date().toISOString(),
-      }));
-      const keyboard = (service as any).getPendingUsersKeyboard(users, TelegramLanguage.RU);
-      expect(keyboard).toBeDefined();
-    });
-
-    it('should truncate long names', () => {
-      const users = [
-        { id: 'user-1', full_name: 'This is a very long name that exceeds twenty characters', email: 'long@example.com', phone: null, created_at: new Date().toISOString() },
-      ];
-      const keyboard = (service as any).getPendingUsersKeyboard(users, TelegramLanguage.RU);
-      expect(keyboard).toBeDefined();
-    });
-  });
-
-  describe('getAdminApprovalKeyboard', () => {
-    beforeEach(async () => {
-      telegramSettingsRepository.findOne.mockResolvedValue(mockSettings as TelegramSettings);
-      await service.initializeBot();
-    });
-
-    it('should return keyboard with approval options in Russian', () => {
-      const keyboard = (service as any).getAdminApprovalKeyboard('user-123', TelegramLanguage.RU);
-      expect(keyboard).toBeDefined();
-    });
-
-    it('should return keyboard with approval options in English', () => {
-      const keyboard = (service as any).getAdminApprovalKeyboard('user-456', TelegramLanguage.EN);
-      expect(keyboard).toBeDefined();
-    });
-  });
-
-  describe('getRoleSelectionKeyboard', () => {
-    beforeEach(async () => {
-      telegramSettingsRepository.findOne.mockResolvedValue(mockSettings as TelegramSettings);
-      await service.initializeBot();
-    });
-
-    it('should return keyboard with all role options in Russian', () => {
-      const keyboard = (service as any).getRoleSelectionKeyboard('user-123', TelegramLanguage.RU);
-      expect(keyboard).toBeDefined();
-    });
-
-    it('should return keyboard with all role options in English', () => {
-      const keyboard = (service as any).getRoleSelectionKeyboard('user-456', TelegramLanguage.EN);
-      expect(keyboard).toBeDefined();
-    });
-  });
+  // Note: formatPendingUsersMessage, getPendingUsersKeyboard, getAdminApprovalKeyboard,
+  // and getRoleSelectionKeyboard tests moved to telegram-admin-callback.service.spec.ts
 
   describe('stopBot lifecycle', () => {
     it('should stop bot and reset ready state', async () => {
