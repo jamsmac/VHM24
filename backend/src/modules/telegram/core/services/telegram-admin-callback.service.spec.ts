@@ -278,6 +278,191 @@ describe('TelegramAdminCallbackService', () => {
 
       process.env.SUPER_ADMIN_TELEGRAM_ID = originalEnv;
     });
+
+    it('should reply error if admin not found', async () => {
+      const originalEnv = process.env.SUPER_ADMIN_TELEGRAM_ID;
+      process.env.SUPER_ADMIN_TELEGRAM_ID = '123456789';
+
+      const ctx = createMockContext();
+      usersService.findByTelegramId.mockResolvedValue(null);
+
+      await service.handleApproveUser(ctx, 'user-1', UserRole.OPERATOR, mockSendMessage);
+
+      expect(ctx.reply).toHaveBeenCalledWith(expect.stringContaining('Администратор не найден'));
+
+      process.env.SUPER_ADMIN_TELEGRAM_ID = originalEnv;
+    });
+
+    it('should reply error in English if admin not found', async () => {
+      const originalEnv = process.env.SUPER_ADMIN_TELEGRAM_ID;
+      process.env.SUPER_ADMIN_TELEGRAM_ID = '123456789';
+
+      const ctx = createMockContext({
+        telegramUser: { ...mockTelegramUser, language: TelegramLanguage.EN } as TelegramUser,
+      });
+      usersService.findByTelegramId.mockResolvedValue(null);
+
+      await service.handleApproveUser(ctx, 'user-1', UserRole.OPERATOR, mockSendMessage);
+
+      expect(ctx.reply).toHaveBeenCalledWith(expect.stringContaining('Administrator not found'));
+
+      process.env.SUPER_ADMIN_TELEGRAM_ID = originalEnv;
+    });
+
+    it('should handle telegram notification failure gracefully', async () => {
+      const originalEnv = process.env.SUPER_ADMIN_TELEGRAM_ID;
+      process.env.SUPER_ADMIN_TELEGRAM_ID = '123456789';
+
+      const ctx = createMockContext();
+      const mockAdminUser = { id: 'admin-1', full_name: 'Admin' };
+      const mockApprovalResult = {
+        user: {
+          id: 'user-1',
+          full_name: 'John Doe',
+          email: 'john@example.com',
+          telegram_user_id: '111111111',
+        },
+        credentials: {
+          username: 'john.doe',
+          password: 'temp123',
+        },
+      };
+
+      usersService.findByTelegramId.mockResolvedValue(mockAdminUser as any);
+      usersService.approveUser.mockResolvedValue(mockApprovalResult as any);
+      telegramUserRepository.findOne.mockResolvedValue({
+        chat_id: '111111111',
+        language: TelegramLanguage.RU,
+      } as TelegramUser);
+      mockSendMessage.mockRejectedValueOnce(new Error('Telegram error'));
+
+      // Should not throw
+      await expect(
+        service.handleApproveUser(ctx, 'user-1', UserRole.OPERATOR, mockSendMessage),
+      ).resolves.not.toThrow();
+
+      process.env.SUPER_ADMIN_TELEGRAM_ID = originalEnv;
+    });
+
+    it('should send notification in English to user', async () => {
+      const originalEnv = process.env.SUPER_ADMIN_TELEGRAM_ID;
+      process.env.SUPER_ADMIN_TELEGRAM_ID = '123456789';
+
+      const ctx = createMockContext();
+      const mockAdminUser = { id: 'admin-1', full_name: 'Admin' };
+      const mockApprovalResult = {
+        user: {
+          id: 'user-1',
+          full_name: 'John Doe',
+          email: 'john@example.com',
+          telegram_user_id: '111111111',
+        },
+        credentials: {
+          username: 'john.doe',
+          password: 'temp123',
+        },
+      };
+
+      usersService.findByTelegramId.mockResolvedValue(mockAdminUser as any);
+      usersService.approveUser.mockResolvedValue(mockApprovalResult as any);
+      telegramUserRepository.findOne.mockResolvedValue({
+        chat_id: '111111111',
+        language: TelegramLanguage.EN,
+      } as TelegramUser);
+
+      await service.handleApproveUser(ctx, 'user-1', UserRole.OPERATOR, mockSendMessage);
+
+      expect(mockSendMessage).toHaveBeenCalledWith(
+        '111111111',
+        expect.stringContaining('Your account has been approved'),
+      );
+
+      process.env.SUPER_ADMIN_TELEGRAM_ID = originalEnv;
+    });
+
+    it('should use telegram_user_id as chat_id fallback', async () => {
+      const originalEnv = process.env.SUPER_ADMIN_TELEGRAM_ID;
+      process.env.SUPER_ADMIN_TELEGRAM_ID = '123456789';
+
+      const ctx = createMockContext();
+      const mockAdminUser = { id: 'admin-1', full_name: 'Admin' };
+      const mockApprovalResult = {
+        user: {
+          id: 'user-1',
+          full_name: 'John Doe',
+          email: 'john@example.com',
+          telegram_user_id: '111111111',
+        },
+        credentials: {
+          username: 'john.doe',
+          password: 'temp123',
+        },
+      };
+
+      usersService.findByTelegramId.mockResolvedValue(mockAdminUser as any);
+      usersService.approveUser.mockResolvedValue(mockApprovalResult as any);
+      telegramUserRepository.findOne.mockResolvedValue(null); // No telegram user record
+
+      await service.handleApproveUser(ctx, 'user-1', UserRole.OPERATOR, mockSendMessage);
+
+      expect(mockSendMessage).toHaveBeenCalledWith(
+        '111111111', // Uses telegram_user_id as fallback
+        expect.any(String),
+      );
+
+      process.env.SUPER_ADMIN_TELEGRAM_ID = originalEnv;
+    });
+
+    it('should handle approval error gracefully', async () => {
+      const originalEnv = process.env.SUPER_ADMIN_TELEGRAM_ID;
+      process.env.SUPER_ADMIN_TELEGRAM_ID = '123456789';
+
+      const ctx = createMockContext();
+      const mockAdminUser = { id: 'admin-1', full_name: 'Admin' };
+
+      usersService.findByTelegramId.mockResolvedValue(mockAdminUser as any);
+      usersService.approveUser.mockRejectedValue(new Error('Approval failed'));
+
+      await service.handleApproveUser(ctx, 'user-1', UserRole.OPERATOR, mockSendMessage);
+
+      expect(ctx.reply).toHaveBeenCalledWith(expect.stringContaining('Ошибка при одобрении'));
+
+      process.env.SUPER_ADMIN_TELEGRAM_ID = originalEnv;
+    });
+
+    it('should format confirmation in English', async () => {
+      const originalEnv = process.env.SUPER_ADMIN_TELEGRAM_ID;
+      process.env.SUPER_ADMIN_TELEGRAM_ID = '123456789';
+
+      const ctx = createMockContext({
+        telegramUser: { ...mockTelegramUser, language: TelegramLanguage.EN } as TelegramUser,
+      });
+      const mockAdminUser = { id: 'admin-1', full_name: 'Admin' };
+      const mockApprovalResult = {
+        user: {
+          id: 'user-1',
+          full_name: 'John Doe',
+          email: 'john@example.com',
+          telegram_user_id: null,
+        },
+        credentials: {
+          username: 'john.doe',
+          password: 'temp123',
+        },
+      };
+
+      usersService.findByTelegramId.mockResolvedValue(mockAdminUser as any);
+      usersService.approveUser.mockResolvedValue(mockApprovalResult as any);
+
+      await service.handleApproveUser(ctx, 'user-1', UserRole.OPERATOR, mockSendMessage);
+
+      expect(ctx.editMessageText).toHaveBeenCalledWith(
+        expect.stringContaining('User approved'),
+        expect.any(Object),
+      );
+
+      process.env.SUPER_ADMIN_TELEGRAM_ID = originalEnv;
+    });
   });
 
   describe('handleRejectUser', () => {
@@ -359,6 +544,296 @@ describe('TelegramAdminCallbackService', () => {
       expect(ctx.reply).toHaveBeenCalled();
 
       process.env.SUPER_ADMIN_TELEGRAM_ID = originalEnv;
+    });
+
+    it('should reject non-super admin with valid reason', async () => {
+      const originalEnv = process.env.SUPER_ADMIN_TELEGRAM_ID;
+      process.env.SUPER_ADMIN_TELEGRAM_ID = '999999999'; // Different from ctx.from.id
+
+      const ctx = createMockContext({
+        telegramUser: {
+          ...mockTelegramUser,
+          metadata: { pending_rejection_user_id: 'user-1' },
+        } as TelegramUser,
+      });
+
+      const result = await service.handleRejectUserInput(ctx, 'This is a valid rejection reason', mockSendMessage);
+
+      expect(result).toBe(true);
+      expect(ctx.reply).toHaveBeenCalledWith(expect.stringContaining('Недостаточно прав'));
+      expect(usersService.rejectUser).not.toHaveBeenCalled();
+
+      process.env.SUPER_ADMIN_TELEGRAM_ID = originalEnv;
+    });
+
+    it('should reject non-super admin with message in English', async () => {
+      const originalEnv = process.env.SUPER_ADMIN_TELEGRAM_ID;
+      process.env.SUPER_ADMIN_TELEGRAM_ID = '999999999';
+
+      const ctx = createMockContext({
+        telegramUser: {
+          ...mockTelegramUser,
+          language: TelegramLanguage.EN,
+          metadata: { pending_rejection_user_id: 'user-1' },
+        } as TelegramUser,
+      });
+
+      const result = await service.handleRejectUserInput(ctx, 'This is a valid rejection reason', mockSendMessage);
+
+      expect(result).toBe(true);
+      expect(ctx.reply).toHaveBeenCalledWith(expect.stringContaining('Insufficient permissions'));
+
+      process.env.SUPER_ADMIN_TELEGRAM_ID = originalEnv;
+    });
+
+    it('should reply error if admin not found', async () => {
+      const originalEnv = process.env.SUPER_ADMIN_TELEGRAM_ID;
+      process.env.SUPER_ADMIN_TELEGRAM_ID = '123456789';
+
+      const ctx = createMockContext({
+        telegramUser: {
+          ...mockTelegramUser,
+          metadata: { pending_rejection_user_id: 'user-1' },
+        } as TelegramUser,
+      });
+
+      usersService.findByTelegramId.mockResolvedValue(null);
+
+      const result = await service.handleRejectUserInput(ctx, 'This is a valid rejection reason', mockSendMessage);
+
+      expect(result).toBe(true);
+      expect(ctx.reply).toHaveBeenCalledWith(expect.stringContaining('Администратор не найден'));
+
+      process.env.SUPER_ADMIN_TELEGRAM_ID = originalEnv;
+    });
+
+    it('should reply error in English if admin not found', async () => {
+      const originalEnv = process.env.SUPER_ADMIN_TELEGRAM_ID;
+      process.env.SUPER_ADMIN_TELEGRAM_ID = '123456789';
+
+      const ctx = createMockContext({
+        telegramUser: {
+          ...mockTelegramUser,
+          language: TelegramLanguage.EN,
+          metadata: { pending_rejection_user_id: 'user-1' },
+        } as TelegramUser,
+      });
+
+      usersService.findByTelegramId.mockResolvedValue(null);
+
+      const result = await service.handleRejectUserInput(ctx, 'This is a valid rejection reason', mockSendMessage);
+
+      expect(result).toBe(true);
+      expect(ctx.reply).toHaveBeenCalledWith(expect.stringContaining('Administrator not found'));
+
+      process.env.SUPER_ADMIN_TELEGRAM_ID = originalEnv;
+    });
+
+    it('should send rejection notification to user with telegram', async () => {
+      const originalEnv = process.env.SUPER_ADMIN_TELEGRAM_ID;
+      process.env.SUPER_ADMIN_TELEGRAM_ID = '123456789';
+
+      const ctx = createMockContext({
+        telegramUser: {
+          ...mockTelegramUser,
+          metadata: { pending_rejection_user_id: 'user-1' },
+        } as TelegramUser,
+      });
+
+      const mockAdminUser = { id: 'admin-1', full_name: 'Admin' };
+      const mockRejectedUser = {
+        id: 'user-1',
+        full_name: 'John Doe',
+        email: 'john@example.com',
+        telegram_user_id: '111111111',
+      };
+
+      usersService.findByTelegramId.mockResolvedValue(mockAdminUser as any);
+      usersService.rejectUser.mockResolvedValue(mockRejectedUser as any);
+      telegramUserRepository.save.mockResolvedValue(ctx.telegramUser as TelegramUser);
+      telegramUserRepository.findOne.mockResolvedValue({
+        chat_id: '111111111',
+        language: TelegramLanguage.RU,
+      } as TelegramUser);
+
+      await service.handleRejectUserInput(ctx, 'This is a valid rejection reason', mockSendMessage);
+
+      expect(mockSendMessage).toHaveBeenCalledWith(
+        '111111111',
+        expect.stringContaining('Ваша заявка отклонена'),
+      );
+
+      process.env.SUPER_ADMIN_TELEGRAM_ID = originalEnv;
+    });
+
+    it('should send rejection notification in English to user', async () => {
+      const originalEnv = process.env.SUPER_ADMIN_TELEGRAM_ID;
+      process.env.SUPER_ADMIN_TELEGRAM_ID = '123456789';
+
+      const ctx = createMockContext({
+        telegramUser: {
+          ...mockTelegramUser,
+          metadata: { pending_rejection_user_id: 'user-1' },
+        } as TelegramUser,
+      });
+
+      const mockAdminUser = { id: 'admin-1', full_name: 'Admin' };
+      const mockRejectedUser = {
+        id: 'user-1',
+        full_name: 'John Doe',
+        email: 'john@example.com',
+        telegram_user_id: '111111111',
+      };
+
+      usersService.findByTelegramId.mockResolvedValue(mockAdminUser as any);
+      usersService.rejectUser.mockResolvedValue(mockRejectedUser as any);
+      telegramUserRepository.save.mockResolvedValue(ctx.telegramUser as TelegramUser);
+      telegramUserRepository.findOne.mockResolvedValue({
+        chat_id: '111111111',
+        language: TelegramLanguage.EN,
+      } as TelegramUser);
+
+      await service.handleRejectUserInput(ctx, 'This is a valid rejection reason', mockSendMessage);
+
+      expect(mockSendMessage).toHaveBeenCalledWith(
+        '111111111',
+        expect.stringContaining('Your application has been rejected'),
+      );
+
+      process.env.SUPER_ADMIN_TELEGRAM_ID = originalEnv;
+    });
+
+    it('should handle telegram notification failure gracefully', async () => {
+      const originalEnv = process.env.SUPER_ADMIN_TELEGRAM_ID;
+      process.env.SUPER_ADMIN_TELEGRAM_ID = '123456789';
+
+      const ctx = createMockContext({
+        telegramUser: {
+          ...mockTelegramUser,
+          metadata: { pending_rejection_user_id: 'user-1' },
+        } as TelegramUser,
+      });
+
+      const mockAdminUser = { id: 'admin-1', full_name: 'Admin' };
+      const mockRejectedUser = {
+        id: 'user-1',
+        full_name: 'John Doe',
+        email: 'john@example.com',
+        telegram_user_id: '111111111',
+      };
+
+      usersService.findByTelegramId.mockResolvedValue(mockAdminUser as any);
+      usersService.rejectUser.mockResolvedValue(mockRejectedUser as any);
+      telegramUserRepository.save.mockResolvedValue(ctx.telegramUser as TelegramUser);
+      telegramUserRepository.findOne.mockResolvedValue({
+        chat_id: '111111111',
+        language: TelegramLanguage.RU,
+      } as TelegramUser);
+      mockSendMessage.mockRejectedValueOnce(new Error('Telegram error'));
+
+      const result = await service.handleRejectUserInput(ctx, 'This is a valid rejection reason', mockSendMessage);
+
+      expect(result).toBe(true); // Should still return true
+
+      process.env.SUPER_ADMIN_TELEGRAM_ID = originalEnv;
+    });
+
+    it('should handle rejection error gracefully', async () => {
+      const originalEnv = process.env.SUPER_ADMIN_TELEGRAM_ID;
+      process.env.SUPER_ADMIN_TELEGRAM_ID = '123456789';
+
+      const ctx = createMockContext({
+        telegramUser: {
+          ...mockTelegramUser,
+          metadata: { pending_rejection_user_id: 'user-1' },
+        } as TelegramUser,
+      });
+
+      const mockAdminUser = { id: 'admin-1', full_name: 'Admin' };
+
+      usersService.findByTelegramId.mockResolvedValue(mockAdminUser as any);
+      usersService.rejectUser.mockRejectedValue(new Error('Rejection failed'));
+
+      const result = await service.handleRejectUserInput(ctx, 'This is a valid rejection reason', mockSendMessage);
+
+      expect(result).toBe(true);
+      expect(ctx.reply).toHaveBeenCalledWith(expect.stringContaining('Ошибка'));
+
+      process.env.SUPER_ADMIN_TELEGRAM_ID = originalEnv;
+    });
+
+    it('should handle rejection error in English', async () => {
+      const originalEnv = process.env.SUPER_ADMIN_TELEGRAM_ID;
+      process.env.SUPER_ADMIN_TELEGRAM_ID = '123456789';
+
+      const ctx = createMockContext({
+        telegramUser: {
+          ...mockTelegramUser,
+          language: TelegramLanguage.EN,
+          metadata: { pending_rejection_user_id: 'user-1' },
+        } as TelegramUser,
+      });
+
+      const mockAdminUser = { id: 'admin-1', full_name: 'Admin' };
+
+      usersService.findByTelegramId.mockResolvedValue(mockAdminUser as any);
+      usersService.rejectUser.mockRejectedValue(new Error('Rejection failed'));
+
+      const result = await service.handleRejectUserInput(ctx, 'This is a valid rejection reason', mockSendMessage);
+
+      expect(result).toBe(true);
+      expect(ctx.reply).toHaveBeenCalledWith(expect.stringContaining('Error'));
+
+      process.env.SUPER_ADMIN_TELEGRAM_ID = originalEnv;
+    });
+
+    it('should format rejection confirmation in English', async () => {
+      const originalEnv = process.env.SUPER_ADMIN_TELEGRAM_ID;
+      process.env.SUPER_ADMIN_TELEGRAM_ID = '123456789';
+
+      const ctx = createMockContext({
+        telegramUser: {
+          ...mockTelegramUser,
+          language: TelegramLanguage.EN,
+          metadata: { pending_rejection_user_id: 'user-1' },
+        } as TelegramUser,
+      });
+
+      const mockAdminUser = { id: 'admin-1', full_name: 'Admin' };
+      const mockRejectedUser = {
+        id: 'user-1',
+        full_name: 'John Doe',
+        email: 'john@example.com',
+        telegram_user_id: null,
+      };
+
+      usersService.findByTelegramId.mockResolvedValue(mockAdminUser as any);
+      usersService.rejectUser.mockResolvedValue(mockRejectedUser as any);
+      telegramUserRepository.save.mockResolvedValue(ctx.telegramUser as TelegramUser);
+
+      await service.handleRejectUserInput(ctx, 'This is a valid rejection reason', mockSendMessage);
+
+      expect(ctx.reply).toHaveBeenCalledWith(
+        expect.stringContaining('User rejected'),
+        expect.any(Object),
+      );
+
+      process.env.SUPER_ADMIN_TELEGRAM_ID = originalEnv;
+    });
+
+    it('should show error in English for short reason', async () => {
+      const ctx = createMockContext({
+        telegramUser: {
+          ...mockTelegramUser,
+          language: TelegramLanguage.EN,
+          metadata: { pending_rejection_user_id: 'user-1' },
+        } as TelegramUser,
+      });
+
+      const result = await service.handleRejectUserInput(ctx, 'short', mockSendMessage);
+
+      expect(result).toBe(true);
+      expect(ctx.reply).toHaveBeenCalledWith(expect.stringContaining('at least 10 characters'));
     });
   });
 
@@ -458,6 +933,62 @@ describe('TelegramAdminCallbackService', () => {
 
       process.env.SUPER_ADMIN_TELEGRAM_ID = originalEnv;
     });
+
+    it('should call logMessage callback when provided', async () => {
+      const originalEnv = process.env.SUPER_ADMIN_TELEGRAM_ID;
+      process.env.SUPER_ADMIN_TELEGRAM_ID = '123456789';
+
+      const ctx = createMockContext();
+      const mockLogMessage = jest.fn().mockResolvedValue(undefined);
+      usersService.getPendingUsers.mockResolvedValue([]);
+
+      await service.handlePendingUsersCommand(ctx, mockLogMessage);
+
+      expect(mockLogMessage).toHaveBeenCalledWith(
+        ctx,
+        TelegramMessageType.COMMAND,
+        '/pending_users',
+      );
+
+      process.env.SUPER_ADMIN_TELEGRAM_ID = originalEnv;
+    });
+
+    it('should handle error when fetching pending users fails', async () => {
+      const originalEnv = process.env.SUPER_ADMIN_TELEGRAM_ID;
+      process.env.SUPER_ADMIN_TELEGRAM_ID = '123456789';
+
+      const ctx = createMockContext();
+      usersService.getPendingUsers.mockRejectedValue(new Error('Database error'));
+
+      await service.handlePendingUsersCommand(ctx);
+
+      expect(ctx.reply).toHaveBeenCalledWith(
+        expect.stringContaining('Ошибка при загрузке пользователей'),
+      );
+
+      process.env.SUPER_ADMIN_TELEGRAM_ID = originalEnv;
+    });
+
+    it('should show error in English when fetching fails and user prefers English', async () => {
+      const originalEnv = process.env.SUPER_ADMIN_TELEGRAM_ID;
+      process.env.SUPER_ADMIN_TELEGRAM_ID = '123456789';
+
+      const ctx = createMockContext({
+        telegramUser: {
+          ...mockTelegramUser,
+          language: TelegramLanguage.EN,
+        } as TelegramUser,
+      });
+      usersService.getPendingUsers.mockRejectedValue(new Error('Database error'));
+
+      await service.handlePendingUsersCommand(ctx);
+
+      expect(ctx.reply).toHaveBeenCalledWith(
+        expect.stringContaining('Error loading users'),
+      );
+
+      process.env.SUPER_ADMIN_TELEGRAM_ID = originalEnv;
+    });
   });
 
   describe('notifyAdminAboutNewUser', () => {
@@ -529,6 +1060,46 @@ describe('TelegramAdminCallbackService', () => {
       );
 
       expect(mockSendMessage).toHaveBeenCalled();
+
+      process.env.SUPER_ADMIN_TELEGRAM_ID = originalEnv;
+    });
+
+    it('should handle sendMessage error gracefully', async () => {
+      const originalEnv = process.env.SUPER_ADMIN_TELEGRAM_ID;
+      process.env.SUPER_ADMIN_TELEGRAM_ID = '999999999';
+
+      telegramUserRepository.findOne.mockResolvedValue(mockAdminTelegramUser as TelegramUser);
+      mockSendMessage.mockRejectedValueOnce(new Error('Telegram error'));
+
+      // Should not throw
+      await expect(
+        service.notifyAdminAboutNewUser(
+          'user-1',
+          { id: 123456789, first_name: 'John' },
+          mockSendMessage,
+        ),
+      ).resolves.not.toThrow();
+
+      process.env.SUPER_ADMIN_TELEGRAM_ID = originalEnv;
+    });
+
+    it('should format name with username when first/last name missing', async () => {
+      const originalEnv = process.env.SUPER_ADMIN_TELEGRAM_ID;
+      process.env.SUPER_ADMIN_TELEGRAM_ID = '999999999';
+
+      telegramUserRepository.findOne.mockResolvedValue(mockAdminTelegramUser as TelegramUser);
+
+      await service.notifyAdminAboutNewUser(
+        'user-1',
+        { id: 123456789, username: 'johndoe' },
+        mockSendMessage,
+      );
+
+      expect(mockSendMessage).toHaveBeenCalledWith(
+        '999999999',
+        expect.stringContaining('@johndoe'),
+        expect.any(Object),
+      );
 
       process.env.SUPER_ADMIN_TELEGRAM_ID = originalEnv;
     });
