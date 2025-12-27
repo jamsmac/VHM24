@@ -6,16 +6,6 @@ import { TelegramUser, TelegramLanguage } from '../../shared/entities/telegram-u
 import { TelegramSettings } from '../../shared/entities/telegram-settings.entity';
 import { TelegramMessageLog } from '../../shared/entities/telegram-message-log.entity';
 import { TelegramSessionService } from '../../infrastructure/services/telegram-session.service';
-import { TelegramVoiceService } from '../../media/services/telegram-voice.service';
-import { TasksService } from '../../../tasks/tasks.service';
-import { FilesService } from '../../../files/files.service';
-import { UsersService } from '../../../users/users.service';
-import { MachinesService } from '../../../machines/machines.service';
-import { IncidentsService } from '../../../incidents/incidents.service';
-import { TransactionsService } from '../../../transactions/transactions.service';
-import { InventoryService } from '../../../inventory/inventory.service';
-import { AccessRequestsService } from '../../../access-requests/access-requests.service';
-import { TelegramManagerToolsService } from '../../managers/services/telegram-manager-tools.service';
 import { TelegramCommandHandlerService } from './telegram-command-handler.service';
 import { TelegramCallbackHandlerService } from './telegram-callback-handler.service';
 import { TelegramTaskCallbackService } from './telegram-task-callback.service';
@@ -23,8 +13,7 @@ import { TelegramAdminCallbackService } from './telegram-admin-callback.service'
 import { TelegramSprint3Service } from './telegram-sprint3.service';
 import { TelegramTaskOperationsService } from './telegram-task-operations.service';
 import { TelegramDataCommandsService } from './telegram-data-commands.service';
-import { TaskType, TaskStatus } from '../../../tasks/entities/task.entity';
-import { UserRole } from '../../../users/entities/user.entity';
+import { TelegramUIService } from './telegram-ui.service';
 
 // Mock Telegraf
 jest.mock('telegraf', () => ({
@@ -54,8 +43,7 @@ describe('TelegramBotService', () => {
   let telegramUserRepository: jest.Mocked<Repository<TelegramUser>>;
   let telegramSettingsRepository: jest.Mocked<Repository<TelegramSettings>>;
   let telegramMessageLogRepository: jest.Mocked<Repository<TelegramMessageLog>>;
-  let tasksService: jest.Mocked<TasksService>;
-  let usersService: jest.Mocked<UsersService>;
+  let uiService: jest.Mocked<TelegramUIService>;
 
   const mockTelegramUser: Partial<TelegramUser> = {
     id: 'tg-user-1',
@@ -105,15 +93,6 @@ describe('TelegramBotService', () => {
             getSession: jest.fn(),
             saveSession: jest.fn(),
             updateSessionState: jest.fn(),
-          },
-        },
-        {
-          provide: TelegramVoiceService,
-          useValue: {
-            isAvailable: jest.fn(),
-            transcribeVoice: jest.fn(),
-            parseCommand: jest.fn(),
-            getVoiceCommandResponse: jest.fn(),
           },
         },
         {
@@ -216,70 +195,20 @@ describe('TelegramBotService', () => {
           },
         },
         {
-          provide: TasksService,
+          provide: TelegramUIService,
           useValue: {
-            findOne: jest.fn(),
-            findAll: jest.fn(),
-            update: jest.fn(),
-            startTask: jest.fn(),
-            completeTask: jest.fn(),
-          },
-        },
-        {
-          provide: FilesService,
-          useValue: {
-            uploadFile: jest.fn(),
-            getFilesByEntity: jest.fn(),
-          },
-        },
-        {
-          provide: UsersService,
-          useValue: {
-            findOne: jest.fn(),
-            findByTelegramId: jest.fn(),
-            createPendingFromTelegram: jest.fn(),
-          },
-        },
-        {
-          provide: MachinesService,
-          useValue: {
-            findAll: jest.fn(),
-            findOne: jest.fn(),
-            findByMachineNumber: jest.fn(),
-          },
-        },
-        {
-          provide: IncidentsService,
-          useValue: {
-            create: jest.fn(),
-            findAll: jest.fn(),
-          },
-        },
-        {
-          provide: TransactionsService,
-          useValue: {
-            findAll: jest.fn(),
-            getSummary: jest.fn(),
-          },
-        },
-        {
-          provide: InventoryService,
-          useValue: {
-            getMachineInventory: jest.fn(),
-          },
-        },
-        {
-          provide: AccessRequestsService,
-          useValue: {
-            findAll: jest.fn(),
-            approve: jest.fn(),
-            reject: jest.fn(),
-          },
-        },
-        {
-          provide: TelegramManagerToolsService,
-          useValue: {
-            getOperatorsStatus: jest.fn(),
+            t: jest.fn((lang, key) => key),
+            getMainMenuKeyboard: jest.fn(() => ({ reply_markup: { inline_keyboard: [] } })),
+            getVerificationKeyboard: jest.fn(() => ({ reply_markup: { inline_keyboard: [] } })),
+            getSettingsKeyboard: jest.fn(() => ({ reply_markup: { inline_keyboard: [] } })),
+            getNotificationSettingsKeyboard: jest.fn(() => ({ reply_markup: { inline_keyboard: [] } })),
+            getMachinesKeyboard: jest.fn(() => ({ reply_markup: { inline_keyboard: [] } })),
+            getAlertsKeyboard: jest.fn(() => ({ reply_markup: { inline_keyboard: [] } })),
+            getTasksKeyboard: jest.fn(() => ({ reply_markup: { inline_keyboard: [] } })),
+            formatTasksMessage: jest.fn(() => 'Tasks message'),
+            formatMachinesMessage: jest.fn(() => 'Machines message'),
+            formatAlertsMessage: jest.fn(() => 'Alerts message'),
+            formatStatsMessage: jest.fn(() => 'Stats message'),
           },
         },
       ],
@@ -289,8 +218,7 @@ describe('TelegramBotService', () => {
     telegramUserRepository = module.get(getRepositoryToken(TelegramUser));
     telegramSettingsRepository = module.get(getRepositoryToken(TelegramSettings));
     telegramMessageLogRepository = module.get(getRepositoryToken(TelegramMessageLog));
-    tasksService = module.get(TasksService);
-    usersService = module.get(UsersService);
+    uiService = module.get(TelegramUIService);
   });
 
   afterEach(() => {
@@ -437,35 +365,7 @@ describe('TelegramBotService', () => {
 
     // Note: getTaskTypeEmoji, getTaskTypeLabel, getIncidentTypeLabel tests moved to telegram-sprint3.service.spec.ts
     // Note: formatRole tests moved to telegram-admin-callback.service.spec.ts
-
-    describe('t (translation)', () => {
-      it('should return Russian translation for main_menu', () => {
-        const translation = (service as any).t(TelegramLanguage.RU, 'main_menu');
-        expect(translation).toContain('Главное меню');
-      });
-
-      it('should return English translation for main_menu', () => {
-        const translation = (service as any).t(TelegramLanguage.EN, 'main_menu');
-        expect(translation).toContain('Main Menu');
-      });
-
-      it('should return key if translation not found', () => {
-        const translation = (service as any).t(TelegramLanguage.RU, 'nonexistent_key');
-        expect(translation).toBe('nonexistent_key');
-      });
-
-      it('should handle function translations with args', () => {
-        const translation = (service as any).t(TelegramLanguage.RU, 'welcome_back', 'John');
-        expect(translation).toContain('John');
-        expect(translation).toContain('Привет');
-      });
-
-      it('should fallback to Russian for unsupported language', () => {
-        const translation = (service as any).t('uz' as TelegramLanguage, 'main_menu');
-        expect(translation).toContain('Главное меню');
-      });
-    });
-
+    // Note: t() translation tests moved to telegram-ui.service.spec.ts
     // Note: initializeExecutionState tests moved to telegram-task-operations.service.spec.ts
     // Note: isSuperAdmin tests moved to telegram-admin-callback.service.spec.ts
 
@@ -567,487 +467,18 @@ describe('TelegramBotService', () => {
     });
   });
 
-  describe('keyboard builders', () => {
-    beforeEach(async () => {
-      telegramSettingsRepository.findOne.mockResolvedValue(mockSettings as TelegramSettings);
-      await service.initializeBot();
-    });
-
-    describe('getMainMenuKeyboard', () => {
-      it('should return inline keyboard with menu buttons', () => {
-        const keyboard = (service as any).getMainMenuKeyboard(TelegramLanguage.RU);
-
-        expect(keyboard).toBeDefined();
-        expect(keyboard.reply_markup).toBeDefined();
-      });
-    });
-
-    describe('getVerificationKeyboard', () => {
-      it('should return keyboard with web app link', () => {
-        const keyboard = (service as any).getVerificationKeyboard(TelegramLanguage.RU);
-
-        expect(keyboard).toBeDefined();
-      });
-    });
-
-    describe('getSettingsKeyboard', () => {
-      it('should return settings keyboard', () => {
-        const keyboard = (service as any).getSettingsKeyboard(TelegramLanguage.RU);
-
-        expect(keyboard).toBeDefined();
-      });
-    });
-
-    describe('getNotificationSettingsKeyboard', () => {
-      it('should return notification settings keyboard', () => {
-        const user = {
-          ...mockTelegramUser,
-          notification_preferences: { machine_offline: true, low_stock: false },
-        };
-        const keyboard = (service as any).getNotificationSettingsKeyboard(
-          TelegramLanguage.RU,
-          user,
-        );
-
-        expect(keyboard).toBeDefined();
-      });
-    });
-
-    describe('getMachinesKeyboard', () => {
-      it('should return machines keyboard with limited items', () => {
-        const machines = [
-          { id: '1', name: 'Machine 1', status: 'online' },
-          { id: '2', name: 'Machine 2', status: 'offline' },
-        ];
-        const keyboard = (service as any).getMachinesKeyboard(machines, TelegramLanguage.RU);
-
-        expect(keyboard).toBeDefined();
-      });
-
-      it('should limit to 5 machines', () => {
-        const machines = Array.from({ length: 10 }, (_, i) => ({
-          id: `${i}`,
-          name: `Machine ${i}`,
-          status: 'online',
-        }));
-        const keyboard = (service as any).getMachinesKeyboard(machines, TelegramLanguage.RU);
-
-        expect(keyboard).toBeDefined();
-      });
-    });
-
-    describe('getAlertsKeyboard', () => {
-      it('should return alerts keyboard', () => {
-        const alerts = [{ id: '1', type: 'offline', message: 'Machine offline' }];
-        const keyboard = (service as any).getAlertsKeyboard(alerts, TelegramLanguage.RU);
-
-        expect(keyboard).toBeDefined();
-      });
-    });
-  });
-
-  describe('message formatters', () => {
-    beforeEach(async () => {
-      telegramSettingsRepository.findOne.mockResolvedValue(mockSettings as TelegramSettings);
-      await service.initializeBot();
-    });
-
-    describe('formatTasksMessage', () => {
-      it('should format tasks list for Russian', () => {
-        const tasks = [
-          {
-            id: 'task-1',
-            type_code: TaskType.REFILL,
-            status: TaskStatus.PENDING,
-            machine: { machine_number: 'M-001', location: { name: 'Lobby' } },
-            scheduled_date: new Date().toISOString(),
-          },
-        ];
-        const message = (service as any).formatTasksMessage(tasks, TelegramLanguage.RU);
-
-        expect(message).toContain('Мои задачи');
-        expect(message).toContain('M-001');
-      });
-
-      it('should format tasks list for English', () => {
-        const tasks = [
-          {
-            id: 'task-1',
-            type_code: TaskType.COLLECTION,
-            status: TaskStatus.IN_PROGRESS,
-            machine: { machine_number: 'M-002', location: { name: 'Office' } },
-            scheduled_date: new Date().toISOString(),
-          },
-        ];
-        const message = (service as any).formatTasksMessage(tasks, TelegramLanguage.EN);
-
-        expect(message).toContain('My Tasks');
-        expect(message).toContain('M-002');
-      });
-    });
-
-    describe('formatMachinesMessage', () => {
-      it('should format machines list', () => {
-        const machines = [
-          { id: '1', name: 'Machine A', machine_number: 'M-001', status: 'online' },
-        ];
-        const message = (service as any).formatMachinesMessage(machines, TelegramLanguage.RU);
-
-        expect(message).toContain('Machine A');
-      });
-    });
-
-    describe('formatAlertsMessage', () => {
-      it('should return no alerts message when empty', () => {
-        const message = (service as any).formatAlertsMessage([], TelegramLanguage.RU);
-
-        expect(message).toContain('Нет активных уведомлений');
-      });
-
-      it('should format alerts list', () => {
-        const alerts = [
-          { id: '1', type: 'machine_offline', machine_name: 'Test Machine', created_at: new Date() },
-        ];
-        const message = (service as any).formatAlertsMessage(alerts, TelegramLanguage.RU);
-
-        expect(message).toBeDefined();
-      });
-    });
-
-    describe('formatStatsMessage', () => {
-      it('should format statistics in Russian', () => {
-        const stats = {
-          total_machines: 10,
-          online: 8,
-          offline: 2,
-          today_revenue: 5000,
-          today_sales: 100,
-          pending_tasks: 5,
-        };
-        const message = (service as any).formatStatsMessage(stats, TelegramLanguage.RU);
-
-        expect(message).toContain('10');
-        expect(message).toContain('5,000'); // Formatted number
-        expect(message).toContain('100');
-        expect(message).toContain('Статистика');
-      });
-
-      it('should format statistics in English', () => {
-        const stats = {
-          total_machines: 15,
-          online: 12,
-          offline: 3,
-          today_revenue: 10000,
-          today_sales: 200,
-          pending_tasks: 3,
-        };
-        const message = (service as any).formatStatsMessage(stats, TelegramLanguage.EN);
-
-        expect(message).toContain('15');
-        expect(message).toContain('10,000');
-        expect(message).toContain('Statistics');
-      });
-    });
-
-    // Note: formatPendingUsersMessage tests moved to telegram-admin-callback.service.spec.ts
-  });
-
-  describe('getTasksKeyboard', () => {
-    beforeEach(async () => {
-      telegramSettingsRepository.findOne.mockResolvedValue(mockSettings as TelegramSettings);
-      await service.initializeBot();
-    });
-
-    it('should create keyboard for tasks', () => {
-      const tasks = [
-        { id: 'task-1', type_code: TaskType.REFILL, status: TaskStatus.PENDING },
-        { id: 'task-2', type_code: TaskType.COLLECTION, status: TaskStatus.ASSIGNED },
-      ];
-      const keyboard = (service as any).getTasksKeyboard(tasks, TelegramLanguage.RU);
-
-      expect(keyboard).toBeDefined();
-    });
-
-    it('should add pagination for more than 8 tasks', () => {
-      const tasks = Array.from({ length: 12 }, (_, i) => ({
-        id: `task-${i}`,
-        type_code: TaskType.REFILL,
-        status: TaskStatus.PENDING,
-      }));
-      const keyboard = (service as any).getTasksKeyboard(tasks, TelegramLanguage.RU);
-
-      expect(keyboard).toBeDefined();
-    });
-  });
-
-  // Note: additional getTaskTypeEmoji, getTaskTypeLabel, getIncidentTypeLabel tests moved to telegram-sprint3.service.spec.ts
-  // Note: additional formatRole cases tests moved to telegram-admin-callback.service.spec.ts
-
-  describe('additional translation tests', () => {
-    beforeEach(async () => {
-      telegramSettingsRepository.findOne.mockResolvedValue(mockSettings as TelegramSettings);
-      await service.initializeBot();
-    });
-
-    it('should translate settings_menu in Russian', () => {
-      const translation = (service as any).t(TelegramLanguage.RU, 'settings_menu');
-      expect(translation).toContain('Настройки');
-    });
-
-    it('should translate settings_menu in English', () => {
-      const translation = (service as any).t(TelegramLanguage.EN, 'settings_menu');
-      expect(translation).toContain('Settings');
-    });
-
-    it('should translate notifications in Russian', () => {
-      const translation = (service as any).t(TelegramLanguage.RU, 'notifications');
-      expect(translation).toBe('Уведомления');
-    });
-
-    it('should translate notifications in English', () => {
-      const translation = (service as any).t(TelegramLanguage.EN, 'notifications');
-      expect(translation).toBe('Notifications');
-    });
-
-    it('should translate language in Russian', () => {
-      const translation = (service as any).t(TelegramLanguage.RU, 'language');
-      expect(translation).toBe('Язык');
-    });
-
-    it('should translate language in English', () => {
-      const translation = (service as any).t(TelegramLanguage.EN, 'language');
-      expect(translation).toBe('Language');
-    });
-
-    it('should translate back in Russian', () => {
-      const translation = (service as any).t(TelegramLanguage.RU, 'back');
-      expect(translation).toBe('« Назад');
-    });
-
-    it('should translate back in English', () => {
-      const translation = (service as any).t(TelegramLanguage.EN, 'back');
-      expect(translation).toBe('« Back');
-    });
-
-    it('should translate online in Russian', () => {
-      const translation = (service as any).t(TelegramLanguage.RU, 'online');
-      expect(translation).toBe('Онлайн');
-    });
-
-    it('should translate online in English', () => {
-      const translation = (service as any).t(TelegramLanguage.EN, 'online');
-      expect(translation).toBe('Online');
-    });
-
-    it('should translate offline in Russian', () => {
-      const translation = (service as any).t(TelegramLanguage.RU, 'offline');
-      expect(translation).toBe('Оффлайн');
-    });
-
-    it('should translate offline in English', () => {
-      const translation = (service as any).t(TelegramLanguage.EN, 'offline');
-      expect(translation).toBe('Offline');
-    });
-
-    it('should translate not_verified in Russian', () => {
-      const translation = (service as any).t(TelegramLanguage.RU, 'not_verified');
-      expect(translation).toContain('свяжите ваш аккаунт');
-    });
-
-    it('should translate not_verified in English', () => {
-      const translation = (service as any).t(TelegramLanguage.EN, 'not_verified');
-      expect(translation).toContain('link your account');
-    });
-
-    it('should translate help in Russian', () => {
-      const translation = (service as any).t(TelegramLanguage.RU, 'help');
-      expect(translation).toContain('Справка');
-      expect(translation).toContain('/menu');
-    });
-
-    it('should translate help in English', () => {
-      const translation = (service as any).t(TelegramLanguage.EN, 'help');
-      expect(translation).toContain('Help');
-      expect(translation).toContain('/menu');
-    });
-
-    it('should translate refresh in Russian', () => {
-      const translation = (service as any).t(TelegramLanguage.RU, 'refresh');
-      expect(translation).toBe('🔄 Обновить');
-    });
-
-    it('should translate refresh in English', () => {
-      const translation = (service as any).t(TelegramLanguage.EN, 'refresh');
-      expect(translation).toBe('🔄 Refresh');
-    });
-
-    it('should translate access_request_pending in Russian', () => {
-      const translation = (service as any).t(TelegramLanguage.RU, 'access_request_pending');
-      expect(translation).toContain('ожидает одобрения');
-    });
-
-    it('should translate access_request_pending in English', () => {
-      const translation = (service as any).t(TelegramLanguage.EN, 'access_request_pending');
-      expect(translation).toContain('pending');
-    });
-
-    it('should translate welcome_new with argument', () => {
-      const translation = (service as any).t(TelegramLanguage.RU, 'welcome_new', 'Alice');
-      expect(translation).toContain('Alice');
-      expect(translation).toContain('Добро пожаловать');
-    });
-
-    it('should translate welcome_new in English with argument', () => {
-      const translation = (service as any).t(TelegramLanguage.EN, 'welcome_new', 'Bob');
-      expect(translation).toContain('Bob');
-      expect(translation).toContain('Welcome');
-    });
-
-    it('should translate access_request_created with argument', () => {
-      const translation = (service as any).t(TelegramLanguage.RU, 'access_request_created', 'Charlie');
-      expect(translation).toContain('Charlie');
-      expect(translation).toContain('отправлена');
-    });
-
-    it('should translate access_request_error in Russian', () => {
-      const translation = (service as any).t(TelegramLanguage.RU, 'access_request_error');
-      expect(translation).toContain('ошибка');
-    });
-
-    it('should translate access_request_error in English', () => {
-      const translation = (service as any).t(TelegramLanguage.EN, 'access_request_error');
-      expect(translation).toContain('error');
-    });
-  });
-
-  describe('getLanguageKeyboard', () => {
-    beforeEach(async () => {
-      telegramSettingsRepository.findOne.mockResolvedValue(mockSettings as TelegramSettings);
-      await service.initializeBot();
-    });
-
-    it('should return language selection keyboard', () => {
-      const keyboard = (service as any).getLanguageKeyboard?.();
-      // If method exists, verify it returns a keyboard
-      if (keyboard) {
-        expect(keyboard).toBeDefined();
-      }
-    });
-  });
-
-  describe('getUserRoleKeyboard', () => {
-    beforeEach(async () => {
-      telegramSettingsRepository.findOne.mockResolvedValue(mockSettings as TelegramSettings);
-      await service.initializeBot();
-    });
-
-    it('should return user role keyboard if exists', () => {
-      const keyboard = (service as any).getUserRoleKeyboard?.('user-123', TelegramLanguage.RU);
-      if (keyboard) {
-        expect(keyboard).toBeDefined();
-      }
-    });
-  });
-
+  // Note: keyboard builders tests moved to telegram-ui.service.spec.ts
+  // (getMainMenuKeyboard, getVerificationKeyboard, getSettingsKeyboard,
+  // getNotificationSettingsKeyboard, getMachinesKeyboard, getAlertsKeyboard)
+
+  // Note: message formatters tests moved to telegram-ui.service.spec.ts
+  // (formatTasksMessage, formatMachinesMessage, formatAlertsMessage, formatStatsMessage)
+  // Note: getTasksKeyboard tests moved to telegram-ui.service.spec.ts
+
+  // Note: all translation tests (t()) moved to telegram-ui.service.spec.ts
+  // Note: all keyboard tests (getLanguageKeyboard, etc.) moved to telegram-ui.service.spec.ts
+  // Note: all formatMessage edge cases moved to telegram-ui.service.spec.ts
   // Note: initializeExecutionState edge cases moved to telegram-task-operations.service.spec.ts
-
-  describe('formatTasksMessage edge cases', () => {
-    beforeEach(async () => {
-      telegramSettingsRepository.findOne.mockResolvedValue(mockSettings as TelegramSettings);
-      await service.initializeBot();
-    });
-
-    it('should handle empty tasks array', () => {
-      const message = (service as any).formatTasksMessage([], TelegramLanguage.RU);
-      expect(message).toBeDefined();
-    });
-
-    it('should handle task without machine location', () => {
-      const tasks = [
-        {
-          id: 'task-1',
-          type_code: TaskType.REFILL,
-          status: TaskStatus.PENDING,
-          machine: { machine_number: 'M-001', location: null },
-          scheduled_date: new Date().toISOString(),
-        },
-      ];
-      const message = (service as any).formatTasksMessage(tasks, TelegramLanguage.RU);
-      expect(message).toContain('M-001');
-    });
-
-    it('should handle multiple task types', () => {
-      const tasks = [
-        {
-          id: 'task-1',
-          type_code: TaskType.REFILL,
-          status: TaskStatus.PENDING,
-          machine: { machine_number: 'M-001', location: { name: 'Lobby' } },
-          scheduled_date: new Date().toISOString(),
-        },
-        {
-          id: 'task-2',
-          type_code: TaskType.COLLECTION,
-          status: TaskStatus.IN_PROGRESS,
-          machine: { machine_number: 'M-002', location: { name: 'Office' } },
-          scheduled_date: new Date().toISOString(),
-        },
-      ];
-      const message = (service as any).formatTasksMessage(tasks, TelegramLanguage.RU);
-      expect(message).toContain('📦');
-      expect(message).toContain('💰');
-    });
-  });
-
-  describe('formatMachinesMessage edge cases', () => {
-    beforeEach(async () => {
-      telegramSettingsRepository.findOne.mockResolvedValue(mockSettings as TelegramSettings);
-      await service.initializeBot();
-    });
-
-    it('should handle empty machines array', () => {
-      const message = (service as any).formatMachinesMessage([], TelegramLanguage.RU);
-      expect(message).toBeDefined();
-    });
-
-    it('should handle machines in English', () => {
-      const machines = [
-        { id: '1', name: 'Machine A', machine_number: 'M-001', status: 'online' },
-      ];
-      const message = (service as any).formatMachinesMessage(machines, TelegramLanguage.EN);
-      expect(message).toContain('Machine A');
-    });
-
-    it('should handle offline machines', () => {
-      const machines = [
-        { id: '1', name: 'Machine A', machine_number: 'M-001', status: 'offline' },
-      ];
-      const message = (service as any).formatMachinesMessage(machines, TelegramLanguage.RU);
-      expect(message).toContain('Machine A');
-    });
-  });
-
-  describe('formatAlertsMessage edge cases', () => {
-    beforeEach(async () => {
-      telegramSettingsRepository.findOne.mockResolvedValue(mockSettings as TelegramSettings);
-      await service.initializeBot();
-    });
-
-    it('should return no alerts message in English', () => {
-      const message = (service as any).formatAlertsMessage([], TelegramLanguage.EN);
-      expect(message).toContain('No active alerts');
-    });
-
-    it('should format multiple alerts', () => {
-      const alerts = [
-        { id: '1', type: 'machine_offline', machine_name: 'Machine 1', created_at: new Date() },
-        { id: '2', type: 'low_stock', machine_name: 'Machine 2', created_at: new Date() },
-      ];
-      const message = (service as any).formatAlertsMessage(alerts, TelegramLanguage.RU);
-      expect(message).toBeDefined();
-    });
-  });
-
   // Note: formatPendingUsersMessage, getPendingUsersKeyboard, getAdminApprovalKeyboard,
   // and getRoleSelectionKeyboard tests moved to telegram-admin-callback.service.spec.ts
 
@@ -1088,216 +519,5 @@ describe('TelegramBotService', () => {
     });
   });
 
-  describe('additional translation edge cases', () => {
-    beforeEach(async () => {
-      telegramSettingsRepository.findOne.mockResolvedValue(mockSettings as TelegramSettings);
-      await service.initializeBot();
-    });
-
-    it('should translate machines in Russian', () => {
-      const translation = (service as any).t(TelegramLanguage.RU, 'machines');
-      expect(translation).toBe('Машины');
-    });
-
-    it('should translate machines in English', () => {
-      const translation = (service as any).t(TelegramLanguage.EN, 'machines');
-      expect(translation).toBe('Machines');
-    });
-
-    it('should translate alerts in Russian', () => {
-      const translation = (service as any).t(TelegramLanguage.RU, 'alerts');
-      expect(translation).toBe('Уведомления');
-    });
-
-    it('should translate alerts in English', () => {
-      const translation = (service as any).t(TelegramLanguage.EN, 'alerts');
-      expect(translation).toBe('Alerts');
-    });
-
-    it('should translate stats in Russian', () => {
-      const translation = (service as any).t(TelegramLanguage.RU, 'stats');
-      expect(translation).toBe('Статистика');
-    });
-
-    it('should translate stats in English', () => {
-      const translation = (service as any).t(TelegramLanguage.EN, 'stats');
-      expect(translation).toBe('Statistics');
-    });
-
-    it('should translate settings in Russian', () => {
-      const translation = (service as any).t(TelegramLanguage.RU, 'settings');
-      expect(translation).toBe('Настройки');
-    });
-
-    it('should translate settings in English', () => {
-      const translation = (service as any).t(TelegramLanguage.EN, 'settings');
-      expect(translation).toBe('Settings');
-    });
-
-    it('should translate open_web_app in Russian', () => {
-      const translation = (service as any).t(TelegramLanguage.RU, 'open_web_app');
-      expect(translation).toBe('🌐 Открыть VendHub');
-    });
-
-    it('should translate open_web_app in English', () => {
-      const translation = (service as any).t(TelegramLanguage.EN, 'open_web_app');
-      expect(translation).toBe('🌐 Open VendHub');
-    });
-
-    it('should translate notification_settings in Russian', () => {
-      const translation = (service as any).t(TelegramLanguage.RU, 'notification_settings');
-      expect(translation).toContain('уведомлений');
-    });
-
-    it('should translate notification_settings in English', () => {
-      const translation = (service as any).t(TelegramLanguage.EN, 'notification_settings');
-      expect(translation).toContain('Notification Settings');
-    });
-
-    it('should translate notif_machine_offline in Russian', () => {
-      const translation = (service as any).t(TelegramLanguage.RU, 'notif_machine_offline');
-      expect(translation).toBe('Машина оффлайн');
-    });
-
-    it('should translate notif_machine_offline in English', () => {
-      const translation = (service as any).t(TelegramLanguage.EN, 'notif_machine_offline');
-      expect(translation).toBe('Machine offline');
-    });
-
-    it('should translate notif_low_stock in Russian', () => {
-      const translation = (service as any).t(TelegramLanguage.RU, 'notif_low_stock');
-      expect(translation).toBe('Низкий запас');
-    });
-
-    it('should translate notif_low_stock in English', () => {
-      const translation = (service as any).t(TelegramLanguage.EN, 'notif_low_stock');
-      expect(translation).toBe('Low stock');
-    });
-
-    it('should translate notif_maintenance_due in Russian', () => {
-      const translation = (service as any).t(TelegramLanguage.RU, 'notif_maintenance_due');
-      expect(translation).toBe('Требуется обслуживание');
-    });
-
-    it('should translate notif_maintenance_due in English', () => {
-      const translation = (service as any).t(TelegramLanguage.EN, 'notif_maintenance_due');
-      expect(translation).toBe('Maintenance due');
-    });
-
-    it('should translate notif_task_assigned in Russian', () => {
-      const translation = (service as any).t(TelegramLanguage.RU, 'notif_task_assigned');
-      expect(translation).toBe('Новая задача');
-    });
-
-    it('should translate notif_task_assigned in English', () => {
-      const translation = (service as any).t(TelegramLanguage.EN, 'notif_task_assigned');
-      expect(translation).toBe('New task');
-    });
-
-    it('should translate no_alerts in Russian', () => {
-      const translation = (service as any).t(TelegramLanguage.RU, 'no_alerts');
-      expect(translation).toBe('Нет активных уведомлений');
-    });
-
-    it('should translate no_alerts in English', () => {
-      const translation = (service as any).t(TelegramLanguage.EN, 'no_alerts');
-      expect(translation).toBe('No active alerts');
-    });
-
-    it('should translate alert_offline in Russian', () => {
-      const translation = (service as any).t(TelegramLanguage.RU, 'alert_offline');
-      expect(translation).toBe('Машина оффлайн');
-    });
-
-    it('should translate alert_offline in English', () => {
-      const translation = (service as any).t(TelegramLanguage.EN, 'alert_offline');
-      expect(translation).toBe('Machine offline');
-    });
-
-    it('should translate alert_low_stock in Russian', () => {
-      const translation = (service as any).t(TelegramLanguage.RU, 'alert_low_stock');
-      expect(translation).toBe('Низкий запас');
-    });
-
-    it('should translate alert_low_stock in English', () => {
-      const translation = (service as any).t(TelegramLanguage.EN, 'alert_low_stock');
-      expect(translation).toBe('Low stock');
-    });
-
-    it('should translate acknowledge in Russian', () => {
-      const translation = (service as any).t(TelegramLanguage.RU, 'acknowledge');
-      expect(translation).toBe('Подтвердить');
-    });
-
-    it('should translate acknowledge in English', () => {
-      const translation = (service as any).t(TelegramLanguage.EN, 'acknowledge');
-      expect(translation).toBe('Acknowledge');
-    });
-
-    it('should translate statistics in Russian', () => {
-      const translation = (service as any).t(TelegramLanguage.RU, 'statistics');
-      expect(translation).toBe('Статистика');
-    });
-
-    it('should translate statistics in English', () => {
-      const translation = (service as any).t(TelegramLanguage.EN, 'statistics');
-      expect(translation).toBe('Statistics');
-    });
-
-    it('should translate total_machines in Russian', () => {
-      const translation = (service as any).t(TelegramLanguage.RU, 'total_machines');
-      expect(translation).toBe('Всего машин');
-    });
-
-    it('should translate total_machines in English', () => {
-      const translation = (service as any).t(TelegramLanguage.EN, 'total_machines');
-      expect(translation).toBe('Total machines');
-    });
-
-    it('should translate today_revenue in Russian', () => {
-      const translation = (service as any).t(TelegramLanguage.RU, 'today_revenue');
-      expect(translation).toBe('Выручка сегодня');
-    });
-
-    it('should translate today_revenue in English', () => {
-      const translation = (service as any).t(TelegramLanguage.EN, 'today_revenue');
-      expect(translation).toBe('Today revenue');
-    });
-
-    it('should translate today_sales in Russian', () => {
-      const translation = (service as any).t(TelegramLanguage.RU, 'today_sales');
-      expect(translation).toBe('Продаж сегодня');
-    });
-
-    it('should translate today_sales in English', () => {
-      const translation = (service as any).t(TelegramLanguage.EN, 'today_sales');
-      expect(translation).toBe('Today sales');
-    });
-
-    it('should translate pending_tasks in Russian', () => {
-      const translation = (service as any).t(TelegramLanguage.RU, 'pending_tasks');
-      expect(translation).toBe('Задач в работе');
-    });
-
-    it('should translate pending_tasks in English', () => {
-      const translation = (service as any).t(TelegramLanguage.EN, 'pending_tasks');
-      expect(translation).toBe('Pending tasks');
-    });
-
-    it('should translate settings_updated in Russian', () => {
-      const translation = (service as any).t(TelegramLanguage.RU, 'settings_updated');
-      expect(translation).toBe('✓ Настройки обновлены');
-    });
-
-    it('should translate settings_updated in English', () => {
-      const translation = (service as any).t(TelegramLanguage.EN, 'settings_updated');
-      expect(translation).toBe('✓ Settings updated');
-    });
-
-    it('should translate access_request_created in English', () => {
-      const translation = (service as any).t(TelegramLanguage.EN, 'access_request_created', 'TestUser');
-      expect(translation).toContain('TestUser');
-      expect(translation).toContain('access request');
-    });
-  });
+  // Note: additional translation edge cases moved to telegram-ui.service.spec.ts
 });
