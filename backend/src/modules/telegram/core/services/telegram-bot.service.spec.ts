@@ -20,6 +20,7 @@ import { TelegramCommandHandlerService } from './telegram-command-handler.servic
 import { TelegramCallbackHandlerService } from './telegram-callback-handler.service';
 import { TelegramTaskCallbackService } from './telegram-task-callback.service';
 import { TelegramAdminCallbackService } from './telegram-admin-callback.service';
+import { TelegramSprint3Service } from './telegram-sprint3.service';
 import { TaskType, TaskStatus } from '../../../tasks/entities/task.entity';
 import { UserRole } from '../../../users/entities/user.entity';
 
@@ -168,6 +169,26 @@ describe('TelegramBotService', () => {
             notifyAdminAboutNewUser: jest.fn(),
             handlePendingUsersCommand: jest.fn(),
             getAdminApprovalKeyboard: jest.fn(),
+          },
+        },
+        {
+          provide: TelegramSprint3Service,
+          useValue: {
+            setHelpers: jest.fn(),
+            handleStockMachineCallback: jest.fn(),
+            handleStaffRefreshCallback: jest.fn(),
+            handleStaffAnalyticsCallback: jest.fn(),
+            handleIncidentTypeCallback: jest.fn(),
+            handleIncidentMachineCallback: jest.fn(),
+            handleIncidentCancelCallback: jest.fn(),
+            handleIncidentCommand: jest.fn(),
+            handleStockCommand: jest.fn(),
+            handleStaffCommand: jest.fn(),
+            handleReportCommand: jest.fn(),
+            sendMachineStockInfo: jest.fn(),
+            getTaskTypeEmoji: jest.fn(),
+            getTaskTypeLabel: jest.fn(),
+            getIncidentTypeLabel: jest.fn(),
           },
         },
         {
@@ -390,103 +411,7 @@ describe('TelegramBotService', () => {
       await service.initializeBot();
     });
 
-    describe('getTaskTypeEmoji', () => {
-      it('should return correct emoji for REFILL', () => {
-        // Access via the formatting that uses this method internally
-        const emoji = (service as any).getTaskTypeEmoji(TaskType.REFILL);
-        expect(emoji).toBe('📦');
-      });
-
-      it('should return correct emoji for COLLECTION', () => {
-        const emoji = (service as any).getTaskTypeEmoji(TaskType.COLLECTION);
-        expect(emoji).toBe('💰');
-      });
-
-      it('should return correct emoji for CLEANING', () => {
-        const emoji = (service as any).getTaskTypeEmoji(TaskType.CLEANING);
-        expect(emoji).toBe('🧹');
-      });
-
-      it('should return correct emoji for REPAIR', () => {
-        const emoji = (service as any).getTaskTypeEmoji(TaskType.REPAIR);
-        expect(emoji).toBe('🔧');
-      });
-
-      it('should return correct emoji for INSTALL', () => {
-        const emoji = (service as any).getTaskTypeEmoji(TaskType.INSTALL);
-        expect(emoji).toBe('🔌');
-      });
-
-      it('should return correct emoji for REMOVAL', () => {
-        const emoji = (service as any).getTaskTypeEmoji(TaskType.REMOVAL);
-        expect(emoji).toBe('📤');
-      });
-
-      it('should return correct emoji for AUDIT', () => {
-        const emoji = (service as any).getTaskTypeEmoji(TaskType.AUDIT);
-        expect(emoji).toBe('📊');
-      });
-
-      it('should return correct emoji for INSPECTION', () => {
-        const emoji = (service as any).getTaskTypeEmoji(TaskType.INSPECTION);
-        expect(emoji).toBe('🔍');
-      });
-
-      it('should return default emoji for unknown type', () => {
-        const emoji = (service as any).getTaskTypeEmoji('unknown_type');
-        expect(emoji).toBe('📌');
-      });
-    });
-
-    describe('getTaskTypeLabel', () => {
-      it('should return Russian label for REFILL', () => {
-        const label = (service as any).getTaskTypeLabel(TaskType.REFILL, TelegramLanguage.RU);
-        expect(label).toBe('Пополнение');
-      });
-
-      it('should return English label for REFILL', () => {
-        const label = (service as any).getTaskTypeLabel(TaskType.REFILL, TelegramLanguage.EN);
-        expect(label).toBe('Refill');
-      });
-
-      it('should return Russian label for COLLECTION', () => {
-        const label = (service as any).getTaskTypeLabel(TaskType.COLLECTION, TelegramLanguage.RU);
-        expect(label).toBe('Инкассация');
-      });
-
-      it('should return English label for COLLECTION', () => {
-        const label = (service as any).getTaskTypeLabel(TaskType.COLLECTION, TelegramLanguage.EN);
-        expect(label).toBe('Collection');
-      });
-
-      it('should return type itself for unknown type', () => {
-        const label = (service as any).getTaskTypeLabel('unknown_type', TelegramLanguage.RU);
-        expect(label).toBe('unknown_type');
-      });
-    });
-
-    describe('getIncidentTypeLabel', () => {
-      it('should return Russian label for breakdown', () => {
-        const label = (service as any).getIncidentTypeLabel('breakdown', TelegramLanguage.RU);
-        expect(label).toBe('Поломка');
-      });
-
-      it('should return English label for breakdown', () => {
-        const label = (service as any).getIncidentTypeLabel('breakdown', TelegramLanguage.EN);
-        expect(label).toBe('Breakdown');
-      });
-
-      it('should return Russian label for offline', () => {
-        const label = (service as any).getIncidentTypeLabel('offline', TelegramLanguage.RU);
-        expect(label).toBe('Офлайн');
-      });
-
-      it('should return type itself for unknown type', () => {
-        const label = (service as any).getIncidentTypeLabel('unknown', TelegramLanguage.RU);
-        expect(label).toBe('unknown');
-      });
-    });
-
+    // Note: getTaskTypeEmoji, getTaskTypeLabel, getIncidentTypeLabel tests moved to telegram-sprint3.service.spec.ts
     // Note: formatRole tests moved to telegram-admin-callback.service.spec.ts
 
     describe('t (translation)', () => {
@@ -868,192 +793,7 @@ describe('TelegramBotService', () => {
     });
   });
 
-  describe('additional getTaskTypeEmoji cases', () => {
-    beforeEach(async () => {
-      telegramSettingsRepository.findOne.mockResolvedValue(mockSettings as TelegramSettings);
-      await service.initializeBot();
-    });
-
-    it('should return correct emoji for REPLACE_HOPPER', () => {
-      const emoji = (service as any).getTaskTypeEmoji(TaskType.REPLACE_HOPPER);
-      expect(emoji).toBe('🥤');
-    });
-
-    it('should return correct emoji for REPLACE_GRINDER', () => {
-      const emoji = (service as any).getTaskTypeEmoji(TaskType.REPLACE_GRINDER);
-      expect(emoji).toBe('⚙️');
-    });
-
-    it('should return correct emoji for REPLACE_BREW_UNIT', () => {
-      const emoji = (service as any).getTaskTypeEmoji(TaskType.REPLACE_BREW_UNIT);
-      expect(emoji).toBe('☕');
-    });
-
-    it('should return correct emoji for REPLACE_MIXER', () => {
-      const emoji = (service as any).getTaskTypeEmoji(TaskType.REPLACE_MIXER);
-      expect(emoji).toBe('🔄');
-    });
-  });
-
-  describe('additional getTaskTypeLabel cases', () => {
-    beforeEach(async () => {
-      telegramSettingsRepository.findOne.mockResolvedValue(mockSettings as TelegramSettings);
-      await service.initializeBot();
-    });
-
-    it('should return Russian label for CLEANING', () => {
-      const label = (service as any).getTaskTypeLabel(TaskType.CLEANING, TelegramLanguage.RU);
-      expect(label).toBe('Чистка');
-    });
-
-    it('should return English label for CLEANING', () => {
-      const label = (service as any).getTaskTypeLabel(TaskType.CLEANING, TelegramLanguage.EN);
-      expect(label).toBe('Cleaning');
-    });
-
-    it('should return Russian label for REPAIR', () => {
-      const label = (service as any).getTaskTypeLabel(TaskType.REPAIR, TelegramLanguage.RU);
-      expect(label).toBe('Ремонт');
-    });
-
-    it('should return English label for REPAIR', () => {
-      const label = (service as any).getTaskTypeLabel(TaskType.REPAIR, TelegramLanguage.EN);
-      expect(label).toBe('Repair');
-    });
-
-    it('should return Russian label for INSTALL', () => {
-      const label = (service as any).getTaskTypeLabel(TaskType.INSTALL, TelegramLanguage.RU);
-      expect(label).toBe('Установка');
-    });
-
-    it('should return English label for INSTALL', () => {
-      const label = (service as any).getTaskTypeLabel(TaskType.INSTALL, TelegramLanguage.EN);
-      expect(label).toBe('Installation');
-    });
-
-    it('should return Russian label for REMOVAL', () => {
-      const label = (service as any).getTaskTypeLabel(TaskType.REMOVAL, TelegramLanguage.RU);
-      expect(label).toBe('Демонтаж');
-    });
-
-    it('should return English label for REMOVAL', () => {
-      const label = (service as any).getTaskTypeLabel(TaskType.REMOVAL, TelegramLanguage.EN);
-      expect(label).toBe('Removal');
-    });
-
-    it('should return Russian label for AUDIT', () => {
-      const label = (service as any).getTaskTypeLabel(TaskType.AUDIT, TelegramLanguage.RU);
-      expect(label).toBe('Аудит');
-    });
-
-    it('should return English label for AUDIT', () => {
-      const label = (service as any).getTaskTypeLabel(TaskType.AUDIT, TelegramLanguage.EN);
-      expect(label).toBe('Audit');
-    });
-
-    it('should return Russian label for INSPECTION', () => {
-      const label = (service as any).getTaskTypeLabel(TaskType.INSPECTION, TelegramLanguage.RU);
-      expect(label).toBe('Проверка');
-    });
-
-    it('should return English label for INSPECTION', () => {
-      const label = (service as any).getTaskTypeLabel(TaskType.INSPECTION, TelegramLanguage.EN);
-      expect(label).toBe('Inspection');
-    });
-
-    it('should return Russian label for REPLACE_HOPPER', () => {
-      const label = (service as any).getTaskTypeLabel(TaskType.REPLACE_HOPPER, TelegramLanguage.RU);
-      expect(label).toBe('Замена хоппера');
-    });
-
-    it('should return English label for REPLACE_HOPPER', () => {
-      const label = (service as any).getTaskTypeLabel(TaskType.REPLACE_HOPPER, TelegramLanguage.EN);
-      expect(label).toBe('Hopper replacement');
-    });
-
-    it('should return Russian label for REPLACE_GRINDER', () => {
-      const label = (service as any).getTaskTypeLabel(TaskType.REPLACE_GRINDER, TelegramLanguage.RU);
-      expect(label).toBe('Замена кофемолки');
-    });
-
-    it('should return English label for REPLACE_GRINDER', () => {
-      const label = (service as any).getTaskTypeLabel(TaskType.REPLACE_GRINDER, TelegramLanguage.EN);
-      expect(label).toBe('Grinder replacement');
-    });
-
-    it('should return Russian label for REPLACE_BREW_UNIT', () => {
-      const label = (service as any).getTaskTypeLabel(TaskType.REPLACE_BREW_UNIT, TelegramLanguage.RU);
-      expect(label).toBe('Замена заварника');
-    });
-
-    it('should return English label for REPLACE_BREW_UNIT', () => {
-      const label = (service as any).getTaskTypeLabel(TaskType.REPLACE_BREW_UNIT, TelegramLanguage.EN);
-      expect(label).toBe('Brew unit replacement');
-    });
-
-    it('should return Russian label for REPLACE_MIXER', () => {
-      const label = (service as any).getTaskTypeLabel(TaskType.REPLACE_MIXER, TelegramLanguage.RU);
-      expect(label).toBe('Замена миксера');
-    });
-
-    it('should return English label for REPLACE_MIXER', () => {
-      const label = (service as any).getTaskTypeLabel(TaskType.REPLACE_MIXER, TelegramLanguage.EN);
-      expect(label).toBe('Mixer replacement');
-    });
-  });
-
-  describe('additional getIncidentTypeLabel cases', () => {
-    beforeEach(async () => {
-      telegramSettingsRepository.findOne.mockResolvedValue(mockSettings as TelegramSettings);
-      await service.initializeBot();
-    });
-
-    it('should return Russian label for out_of_stock', () => {
-      const label = (service as any).getIncidentTypeLabel('out_of_stock', TelegramLanguage.RU);
-      expect(label).toBe('Нет товара');
-    });
-
-    it('should return English label for out_of_stock', () => {
-      const label = (service as any).getIncidentTypeLabel('out_of_stock', TelegramLanguage.EN);
-      expect(label).toBe('Out of stock');
-    });
-
-    it('should return Russian label for leak', () => {
-      const label = (service as any).getIncidentTypeLabel('leak', TelegramLanguage.RU);
-      expect(label).toBe('Утечка');
-    });
-
-    it('should return English label for leak', () => {
-      const label = (service as any).getIncidentTypeLabel('leak', TelegramLanguage.EN);
-      expect(label).toBe('Leak');
-    });
-
-    it('should return Russian label for vandalism', () => {
-      const label = (service as any).getIncidentTypeLabel('vandalism', TelegramLanguage.RU);
-      expect(label).toBe('Вандализм');
-    });
-
-    it('should return English label for vandalism', () => {
-      const label = (service as any).getIncidentTypeLabel('vandalism', TelegramLanguage.EN);
-      expect(label).toBe('Vandalism');
-    });
-
-    it('should return Russian label for other', () => {
-      const label = (service as any).getIncidentTypeLabel('other', TelegramLanguage.RU);
-      expect(label).toBe('Другое');
-    });
-
-    it('should return English label for other', () => {
-      const label = (service as any).getIncidentTypeLabel('other', TelegramLanguage.EN);
-      expect(label).toBe('Other');
-    });
-
-    it('should return English label for offline', () => {
-      const label = (service as any).getIncidentTypeLabel('offline', TelegramLanguage.EN);
-      expect(label).toBe('Offline');
-    });
-  });
-
+  // Note: additional getTaskTypeEmoji, getTaskTypeLabel, getIncidentTypeLabel tests moved to telegram-sprint3.service.spec.ts
   // Note: additional formatRole cases tests moved to telegram-admin-callback.service.spec.ts
 
   describe('additional translation tests', () => {
