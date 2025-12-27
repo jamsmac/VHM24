@@ -5,6 +5,7 @@ import { BullModule } from '@nestjs/bull';
 import { TelegramBotService } from './services/telegram-bot.service';
 import { TelegramCommandHandlerService } from './services/telegram-command-handler.service';
 import { TelegramCallbackHandlerService } from './services/telegram-callback-handler.service';
+import { TelegramTaskCallbackService } from './services/telegram-task-callback.service';
 
 // Shared entities
 import { TelegramUser } from '../shared/entities/telegram-user.entity';
@@ -64,7 +65,17 @@ import { AccessRequestsModule } from '../../access-requests/access-requests.modu
     forwardRef(() => InventoryModule),
     AccessRequestsModule,
   ],
-  providers: [TelegramBotService, TelegramCommandHandlerService, TelegramCallbackHandlerService],
-  exports: [TelegramBotService, TelegramCommandHandlerService, TelegramCallbackHandlerService],
+  providers: [
+    TelegramBotService,
+    TelegramCommandHandlerService,
+    TelegramCallbackHandlerService,
+    TelegramTaskCallbackService,
+  ],
+  exports: [
+    TelegramBotService,
+    TelegramCommandHandlerService,
+    TelegramCallbackHandlerService,
+    TelegramTaskCallbackService,
+  ],
 })
 export class TelegramCoreModule {}

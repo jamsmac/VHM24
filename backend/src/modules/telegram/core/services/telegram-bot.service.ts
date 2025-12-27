@@ -9,6 +9,7 @@ import { TelegramSessionService, UserSession, ConversationState } from '../../in
 import { TelegramVoiceService } from '../../media/services/telegram-voice.service';
 import { TelegramCommandHandlerService } from './telegram-command-handler.service';
 import { TelegramCallbackHandlerService } from './telegram-callback-handler.service';
+import { TelegramTaskCallbackService } from './telegram-task-callback.service';
 import { TasksService } from '../../../tasks/tasks.service';
 import { FilesService } from '../../../files/files.service';
 import { UsersService } from '../../../users/users.service';
@@ -78,6 +79,7 @@ export class TelegramBotService implements OnModuleInit {
     private readonly voiceService: TelegramVoiceService,
     private readonly commandHandlerService: TelegramCommandHandlerService,
     private readonly callbackHandlerService: TelegramCallbackHandlerService,
+    private readonly taskCallbackService: TelegramTaskCallbackService,
     private readonly tasksService: TasksService,
     private readonly filesService: FilesService,
     private readonly usersService: UsersService,
@@ -408,114 +410,33 @@ export class TelegramBotService implements OnModuleInit {
     });
 
     // ============================================================================
-    // COMPLEX CALLBACKS (remain in TelegramBotService for now)
+    // TASK STEP CALLBACKS (delegated to TelegramTaskCallbackService)
     // ============================================================================
 
     // Task start callback (from inline button)
     this.bot.action(/task_start_(.+)/, async (ctx) => {
-      await ctx.answerCbQuery();
       const taskId = ctx.match[1];
-
-      const lang = ctx.telegramUser?.language || TelegramLanguage.RU;
-
-      try {
-        const user = await this.usersService.findByTelegramId(ctx.telegramUser!.telegram_id);
-        if (!user) {
-          await ctx.reply(
-            lang === TelegramLanguage.RU ? '❌ Пользователь не найден' : '❌ User not found',
-          );
-          return;
-        }
-
-        const task = await this.tasksService.startTask(taskId, user.id);
-
-        // 🎯 SET CONVERSATION STATE - Request BEFORE photo
-        await this.sessionService.requestPhoto(user.id, taskId, 'before');
-
-        await ctx.reply(
-          lang === TelegramLanguage.RU
-            ? `🎉 Задача "${task.type_code}" начата!\n\n` +
-                `🎯 Аппарат: ${task.machine?.machine_number || 'N/A'}\n` +
-                `📍 Локация: ${task.machine?.location?.name || 'N/A'}\n\n` +
-                `📸 <b>Теперь просто отправьте фото ДО начала работы</b>\n` +
-                `<i>(подпись не нужна, я запомнил что вы в этой задаче)</i>`
-            : `🎉 Task "${task.type_code}" started!\n\n` +
-                `🎯 Machine: ${task.machine?.machine_number || 'N/A'}\n` +
-                `📍 Location: ${task.machine?.location?.name || 'N/A'}\n\n` +
-                `📸 <b>Now just send BEFORE photo</b>\n` +
-                `<i>(no caption needed, I remember you're in this task)</i>`,
-          { parse_mode: 'HTML' },
-        );
-      } catch (error) {
-        this.logger.error('Error starting task:', error);
-        await ctx.reply(
-          lang === TelegramLanguage.RU
-            ? `❌ Ошибка: ${error.message}`
-            : `❌ Error: ${error.message}`,
-        );
-      }
+      await this.taskCallbackService.handleTaskStart(ctx, taskId);
     });
-
-    // ============================================================================
-    // STEP-BY-STEP TASK EXECUTION CALLBACKS
-    // ============================================================================
 
     // Handle "Done" button - mark step as completed
     this.bot.action(/^step_done_(.+)_(\d+)$/, async (ctx) => {
-      const match = ctx.match;
-      const taskId = match[1];
-      const stepIndex = parseInt(match[2], 10);
-
-      await ctx.answerCbQuery('✅');
-      await this.handleStepCompletion(ctx, taskId, stepIndex, false);
+      const taskId = ctx.match[1];
+      const stepIndex = parseInt(ctx.match[2], 10);
+      await this.taskCallbackService.handleStepDone(ctx, taskId, stepIndex);
     });
 
     // Handle "Skip" button - skip current step
     this.bot.action(/^step_skip_(.+)_(\d+)$/, async (ctx) => {
-      const match = ctx.match;
-      const taskId = match[1];
-      const stepIndex = parseInt(match[2], 10);
-
-      await ctx.answerCbQuery('⏭️');
-      await this.handleStepCompletion(ctx, taskId, stepIndex, true);
+      const taskId = ctx.match[1];
+      const stepIndex = parseInt(ctx.match[2], 10);
+      await this.taskCallbackService.handleStepSkip(ctx, taskId, stepIndex);
     });
 
     // Handle "Back" button - go to previous step
     this.bot.action(/^step_back_(.+)$/, async (ctx) => {
-      const match = ctx.match;
-      const taskId = match[1];
-
-      if (!ctx.telegramUser?.is_verified) {
-        return;
-      }
-
-      const lang = ctx.telegramUser.language;
-
-      try {
-        const task = await this.tasksService.findOne(taskId);
-        const state = this.getExecutionState(task);
-
-        if (!state) {
-          await ctx.answerCbQuery('❌ State not found');
-          return;
-        }
-
-        if (state.current_step > 0) {
-          state.current_step -= 1;
-          await this.updateExecutionState(taskId, state);
-
-          await ctx.answerCbQuery('◀️');
-          const updatedTask = await this.tasksService.findOne(taskId);
-          await this.showCurrentStep(ctx, updatedTask, state, lang);
-        } else {
-          await ctx.answerCbQuery(
-            lang === TelegramLanguage.RU ? 'Уже на первом шаге' : 'Already at first step',
-          );
-        }
-      } catch (error) {
-        this.logger.error('Error going back:', error);
-        await ctx.answerCbQuery('❌ Error');
-      }
+      const taskId = ctx.match[1];
+      await this.taskCallbackService.handleStepBack(ctx, taskId);
     });
 
     // ============================================================================
@@ -1077,7 +998,7 @@ export class TelegramBotService implements OnModuleInit {
 
       // Initialize execution state
       const state = this.initializeExecutionState(task);
-      await this.updateExecutionState(task.id, state);
+      await this.taskCallbackService.updateExecutionState(task.id, state);
 
       // Show task info
       await ctx.reply(
@@ -1103,7 +1024,7 @@ export class TelegramBotService implements OnModuleInit {
 
       // Show first step if checklist exists
       if (task.checklist && task.checklist.length > 0) {
-        await this.showCurrentStep(ctx, task, state, lang);
+        await this.taskCallbackService.showCurrentStep(ctx, task, state, lang);
       }
     } catch (error) {
       this.logger.error('Error starting task:', error);
@@ -1417,7 +1338,7 @@ export class TelegramBotService implements OnModuleInit {
       // Update task execution state metadata
       try {
         const task = await this.tasksService.findOne(taskId);
-        const state = this.getExecutionState(task);
+        const state = this.taskCallbackService.getExecutionState(task);
 
         if (state) {
           if (isAwaitingBefore) {
@@ -1426,7 +1347,7 @@ export class TelegramBotService implements OnModuleInit {
             state.photos_uploaded.after = true;
           }
 
-          await this.updateExecutionState(taskId, state);
+          await this.taskCallbackService.updateExecutionState(taskId, state);
         }
       } catch (error) {
         this.logger.warn(`Failed to update execution state after photo upload: ${error.message}`);
@@ -3105,226 +3026,6 @@ export class TelegramBotService implements OnModuleInit {
       started_at: new Date().toISOString(),
       last_interaction_at: new Date().toISOString(),
     };
-  }
-
-  /**
-   * Get execution state from task metadata
-   */
-  private getExecutionState(task: TelegramTaskInfo): TaskExecutionState | null {
-    return (
-      ((task.metadata as Record<string, unknown> | null)
-        ?.telegram_execution_state as TaskExecutionState | null) || null
-    );
-  }
-
-  /**
-   * Update task execution state with pessimistic locking to prevent race conditions
-   * Uses QueryRunner to ensure atomic updates of task metadata
-   *
-   * @param taskId - Task ID to update
-   * @param state - New execution state
-   * @throws Error if task not found or update fails
-   */
-  private async updateExecutionState(taskId: string, state: TaskExecutionState): Promise<void> {
-    try {
-      const task = await this.tasksService.findOne(taskId);
-
-      if (!task) {
-        throw new Error(`Task ${taskId} not found`);
-      }
-
-      // Update task metadata with new execution state
-      const metadata = task.metadata || {};
-      metadata.telegram_execution_state = {
-        ...state,
-        last_interaction_at: new Date().toISOString(),
-      };
-
-      // Update the task via service
-      await this.tasksService.update(taskId, { metadata });
-    } catch (error) {
-      this.logger.error(`Failed to update execution state for task ${taskId}:`, error);
-      throw error;
-    }
-  }
-
-  /**
-   * Show current step with inline keyboard
-   */
-  private async showCurrentStep(
-    ctx: BotContext,
-    task: TelegramTaskInfo,
-    state: TaskExecutionState,
-    lang: TelegramLanguage,
-  ): Promise<void> {
-    const checklist = task.checklist || [];
-
-    if (!checklist.length) {
-      // No checklist, just show basic instructions
-      await ctx.reply(
-        lang === TelegramLanguage.RU
-          ? `📋 Задача без чек-листа\n\n` +
-              `📸 Загрузите фото ДО и ПОСЛЕ выполнения\n` +
-              `После загрузки фото используйте /complete_task ${task.id}`
-          : `📋 Task without checklist\n\n` +
-              `📸 Upload BEFORE and AFTER photos\n` +
-              `After uploading photos use /complete_task ${task.id}`,
-      );
-      return;
-    }
-
-    const currentStep = state.current_step;
-    const totalSteps = checklist.length;
-    const currentItem = checklist[currentStep];
-
-    if (currentStep >= totalSteps) {
-      // All steps completed
-      await ctx.reply(
-        lang === TelegramLanguage.RU
-          ? `✅ Все шаги выполнены! (${totalSteps}/${totalSteps})\n\n` +
-              `${state.photos_uploaded.before ? '✅' : '❌'} Фото ДО\n` +
-              `${state.photos_uploaded.after ? '✅' : '❌'} Фото ПОСЛЕ\n\n` +
-              (state.photos_uploaded.before && state.photos_uploaded.after
-                ? `🎉 Задача готова к завершению!\n\n` + `Используйте /complete_task ${task.id}`
-                : `📸 Загрузите ${!state.photos_uploaded.before ? 'фото ДО' : 'фото ПОСЛЕ'}`)
-          : `✅ All steps completed! (${totalSteps}/${totalSteps})\n\n` +
-              `${state.photos_uploaded.before ? '✅' : '❌'} BEFORE photo\n` +
-              `${state.photos_uploaded.after ? '✅' : '❌'} AFTER photo\n\n` +
-              (state.photos_uploaded.before && state.photos_uploaded.after
-                ? `🎉 Task ready to complete!\n\n` + `Use /complete_task ${task.id}`
-                : `📸 Upload ${!state.photos_uploaded.before ? 'BEFORE photo' : 'AFTER photo'}`),
-        Markup.inlineKeyboard([
-          [
-            Markup.button.callback(
-              lang === TelegramLanguage.RU ? '◀️ Назад' : '◀️ Back',
-              `step_back_${task.id}`,
-            ),
-          ],
-        ]),
-      );
-      return;
-    }
-
-    // Show current step
-    const progressBar = this.buildProgressBar(state.checklist_progress, totalSteps);
-    const completedCount = Object.values(state.checklist_progress).filter(
-      (p) => p.completed,
-    ).length;
-
-    await ctx.reply(
-      lang === TelegramLanguage.RU
-        ? `📋 Шаг ${currentStep + 1}/${totalSteps}\n` +
-            `${progressBar}\n\n` +
-            `${currentItem.item}\n\n` +
-            `✅ Выполнено: ${completedCount}/${totalSteps}`
-        : `📋 Step ${currentStep + 1}/${totalSteps}\n` +
-            `${progressBar}\n\n` +
-            `${currentItem.item}\n\n` +
-            `✅ Completed: ${completedCount}/${totalSteps}`,
-      Markup.inlineKeyboard([
-        [
-          Markup.button.callback(
-            lang === TelegramLanguage.RU ? '✅ Готово' : '✅ Done',
-            `step_done_${task.id}_${currentStep}`,
-          ),
-          Markup.button.callback(
-            lang === TelegramLanguage.RU ? '⏭️ Пропустить' : '⏭️ Skip',
-            `step_skip_${task.id}_${currentStep}`,
-          ),
-        ],
-        currentStep > 0
-          ? [
-              Markup.button.callback(
-                lang === TelegramLanguage.RU ? '◀️ Назад' : '◀️ Back',
-                `step_back_${task.id}`,
-              ),
-            ]
-          : [],
-      ]),
-    );
-  }
-
-  /**
-   * Build visual progress bar
-   */
-  private buildProgressBar(progress: Record<number, any>, total: number): string {
-    let bar = '';
-    for (let i = 0; i < total; i++) {
-      bar += progress[i]?.completed ? '🟩' : '⬜';
-    }
-    return bar;
-  }
-
-  /**
-   * Mark current step as completed and move to next
-   */
-  private async handleStepCompletion(
-    ctx: BotContext,
-    taskId: string,
-    stepIndex: number,
-    skipped: boolean = false,
-  ): Promise<void> {
-    if (!ctx.telegramUser?.is_verified) {
-      return;
-    }
-
-    const lang = ctx.telegramUser.language;
-
-    try {
-      const task = await this.tasksService.findOne(taskId);
-      const state = this.getExecutionState(task);
-
-      if (!state) {
-        await ctx.reply(
-          lang === TelegramLanguage.RU
-            ? '❌ Состояние выполнения не найдено'
-            : '❌ Execution state not found',
-        );
-        return;
-      }
-
-      // Validate step index bounds
-      const checklistLength = task.checklist?.length || 0;
-      if (stepIndex < 0 || stepIndex >= checklistLength) {
-        this.logger.warn(
-          `Step index out of bounds for task ${taskId}: index=${stepIndex}, checklist_length=${checklistLength}`,
-        );
-        await ctx.reply(
-          lang === TelegramLanguage.RU ? '❌ Некорректный номер шага' : '❌ Invalid step number',
-        );
-        return;
-      }
-
-      // Mark step as completed
-      state.checklist_progress[stepIndex] = {
-        completed: !skipped,
-        completed_at: new Date().toISOString(),
-      };
-
-      // Move to next step with bounds check
-      // Cap at checklist length to prevent overflow
-      state.current_step = Math.min(stepIndex + 1, checklistLength);
-
-      // Update task checklist
-      if (task.checklist && task.checklist[stepIndex]) {
-        task.checklist[stepIndex].completed = !skipped;
-        await this.tasksService.update(taskId, {
-          checklist: task.checklist,
-        });
-      }
-
-      // Save state
-      await this.updateExecutionState(taskId, state);
-
-      // Show next step
-      const updatedTask = await this.tasksService.findOne(taskId);
-      await this.showCurrentStep(ctx, updatedTask, state, lang);
-    } catch (error) {
-      this.logger.error('Error handling step completion:', error);
-      await ctx.reply(
-        lang === TelegramLanguage.RU ? `❌ Ошибка: ${error.message}` : `❌ Error: ${error.message}`,
-      );
-    }
   }
 
   async stopBot(): Promise<void> {

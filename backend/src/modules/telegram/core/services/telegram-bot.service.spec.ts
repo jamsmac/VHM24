@@ -18,6 +18,7 @@ import { AccessRequestsService } from '../../../access-requests/access-requests.
 import { TelegramManagerToolsService } from '../../managers/services/telegram-manager-tools.service';
 import { TelegramCommandHandlerService } from './telegram-command-handler.service';
 import { TelegramCallbackHandlerService } from './telegram-callback-handler.service';
+import { TelegramTaskCallbackService } from './telegram-task-callback.service';
 import { TaskType, TaskStatus } from '../../../tasks/entities/task.entity';
 import { UserRole } from '../../../users/entities/user.entity';
 
@@ -140,6 +141,18 @@ describe('TelegramBotService', () => {
             handleSettingsLanguage: jest.fn(),
             handleNotificationToggle: jest.fn(),
             handleRefreshTasks: jest.fn(),
+          },
+        },
+        {
+          provide: TelegramTaskCallbackService,
+          useValue: {
+            handleTaskStart: jest.fn(),
+            handleStepDone: jest.fn(),
+            handleStepSkip: jest.fn(),
+            handleStepBack: jest.fn(),
+            getExecutionState: jest.fn(),
+            updateExecutionState: jest.fn(),
+            showCurrentStep: jest.fn(),
           },
         },
         {
@@ -547,74 +560,6 @@ describe('TelegramBotService', () => {
       });
     });
 
-    describe('getExecutionState', () => {
-      it('should return null if no metadata', () => {
-        const task = { id: 'task-1', metadata: null };
-        const state = (service as any).getExecutionState(task);
-
-        expect(state).toBeNull();
-      });
-
-      it('should return null if no execution state in metadata', () => {
-        const task = { id: 'task-1', metadata: {} };
-        const state = (service as any).getExecutionState(task);
-
-        expect(state).toBeNull();
-      });
-
-      it('should return execution state from metadata', () => {
-        const executionState = {
-          current_step: 2,
-          checklist_progress: {},
-          photos_uploaded: { before: true, after: false },
-          started_at: '2024-01-01',
-          last_interaction_at: '2024-01-01',
-        };
-        const task = {
-          id: 'task-1',
-          metadata: { telegram_execution_state: executionState },
-        };
-        const state = (service as any).getExecutionState(task);
-
-        expect(state).toEqual(executionState);
-      });
-    });
-
-    describe('updateExecutionState', () => {
-      it('should update task metadata with new state', async () => {
-        const mockTask = { id: 'task-1', metadata: {} };
-        tasksService.findOne.mockResolvedValue(mockTask as any);
-        tasksService.update.mockResolvedValue(mockTask as any);
-
-        const newState = {
-          current_step: 1,
-          checklist_progress: {},
-          photos_uploaded: { before: true, after: false },
-          started_at: '2024-01-01',
-          last_interaction_at: '2024-01-01',
-        };
-
-        await (service as any).updateExecutionState('task-1', newState);
-
-        expect(tasksService.findOne).toHaveBeenCalledWith('task-1');
-        expect(tasksService.update).toHaveBeenCalledWith('task-1', expect.objectContaining({
-          metadata: expect.objectContaining({
-            telegram_execution_state: expect.objectContaining({
-              current_step: 1,
-            }),
-          }),
-        }));
-      });
-
-      it('should throw error if task not found', async () => {
-        tasksService.findOne.mockResolvedValue(null as any);
-
-        await expect(
-          (service as any).updateExecutionState('nonexistent', {}),
-        ).rejects.toThrow('Task nonexistent not found');
-      });
-    });
-
     describe('isSuperAdmin', () => {
       it('should return false if SUPER_ADMIN_TELEGRAM_ID not set', () => {
         const originalEnv = process.env.SUPER_ADMIN_TELEGRAM_ID;
@@ -647,32 +592,6 @@ describe('TelegramBotService', () => {
         expect(result).toBe(false);
 
         process.env.SUPER_ADMIN_TELEGRAM_ID = originalEnv;
-      });
-    });
-
-    describe('buildProgressBar', () => {
-      it('should build progress bar with all incomplete', () => {
-        const progress = { 0: { completed: false }, 1: { completed: false } };
-        const bar = (service as any).buildProgressBar(progress, 2);
-
-        expect(bar).toContain('⬜');
-        expect(bar).not.toContain('🟩');
-      });
-
-      it('should build progress bar with some complete', () => {
-        const progress = { 0: { completed: true }, 1: { completed: false } };
-        const bar = (service as any).buildProgressBar(progress, 2);
-
-        expect(bar).toContain('🟩');
-        expect(bar).toContain('⬜');
-      });
-
-      it('should build progress bar with all complete', () => {
-        const progress = { 0: { completed: true }, 1: { completed: true } };
-        const bar = (service as any).buildProgressBar(progress, 2);
-
-        expect(bar).toContain('🟩');
-        expect(bar).not.toContain('⬜');
       });
     });
 
@@ -1457,31 +1376,6 @@ describe('TelegramBotService', () => {
     });
   });
 
-  describe('buildProgressBar edge cases', () => {
-    beforeEach(async () => {
-      telegramSettingsRepository.findOne.mockResolvedValue(mockSettings as TelegramSettings);
-      await service.initializeBot();
-    });
-
-    it('should handle empty progress', () => {
-      const bar = (service as any).buildProgressBar({}, 0);
-      expect(bar).toBeDefined();
-    });
-
-    it('should handle single item progress', () => {
-      const progress = { 0: { completed: true } };
-      const bar = (service as any).buildProgressBar(progress, 1);
-      expect(bar).toContain('🟩');
-    });
-
-    it('should handle partial progress correctly', () => {
-      const progress = { 0: { completed: true }, 1: { completed: true }, 2: { completed: false } };
-      const bar = (service as any).buildProgressBar(progress, 3);
-      expect(bar).toContain('🟩');
-      expect(bar).toContain('⬜');
-    });
-  });
-
   describe('formatTasksMessage edge cases', () => {
     beforeEach(async () => {
       telegramSettingsRepository.findOne.mockResolvedValue(mockSettings as TelegramSettings);
@@ -1695,127 +1589,6 @@ describe('TelegramBotService', () => {
     it('should return keyboard with all role options in English', () => {
       const keyboard = (service as any).getRoleSelectionKeyboard('user-456', TelegramLanguage.EN);
       expect(keyboard).toBeDefined();
-    });
-  });
-
-  describe('showCurrentStep', () => {
-    beforeEach(async () => {
-      telegramSettingsRepository.findOne.mockResolvedValue(mockSettings as TelegramSettings);
-      await service.initializeBot();
-    });
-
-    it('should show message for task without checklist', async () => {
-      const ctx = {
-        reply: jest.fn().mockResolvedValue(undefined),
-      };
-      const task = { id: 'task-1', checklist: [] };
-      const state = {
-        current_step: 0,
-        checklist_progress: {},
-        photos_uploaded: { before: false, after: false },
-        started_at: new Date().toISOString(),
-        last_interaction_at: new Date().toISOString(),
-      };
-
-      await (service as any).showCurrentStep(ctx, task, state, TelegramLanguage.RU);
-      expect(ctx.reply).toHaveBeenCalled();
-    });
-
-    it('should show message for task without checklist in English', async () => {
-      const ctx = {
-        reply: jest.fn().mockResolvedValue(undefined),
-      };
-      const task = { id: 'task-2', checklist: null };
-      const state = {
-        current_step: 0,
-        checklist_progress: {},
-        photos_uploaded: { before: false, after: false },
-        started_at: new Date().toISOString(),
-        last_interaction_at: new Date().toISOString(),
-      };
-
-      await (service as any).showCurrentStep(ctx, task, state, TelegramLanguage.EN);
-      expect(ctx.reply).toHaveBeenCalled();
-    });
-
-    it('should show completion message when all steps done', async () => {
-      const ctx = {
-        reply: jest.fn().mockResolvedValue(undefined),
-      };
-      const task = {
-        id: 'task-3',
-        checklist: [{ item: 'Step 1' }, { item: 'Step 2' }],
-      };
-      const state = {
-        current_step: 2, // Beyond last step
-        checklist_progress: { 0: { completed: true }, 1: { completed: true } },
-        photos_uploaded: { before: true, after: true },
-        started_at: new Date().toISOString(),
-        last_interaction_at: new Date().toISOString(),
-      };
-
-      await (service as any).showCurrentStep(ctx, task, state, TelegramLanguage.RU);
-      expect(ctx.reply).toHaveBeenCalled();
-    });
-
-    it('should show completion message in English', async () => {
-      const ctx = {
-        reply: jest.fn().mockResolvedValue(undefined),
-      };
-      const task = {
-        id: 'task-4',
-        checklist: [{ item: 'Step 1' }],
-      };
-      const state = {
-        current_step: 1,
-        checklist_progress: { 0: { completed: true } },
-        photos_uploaded: { before: false, after: true },
-        started_at: new Date().toISOString(),
-        last_interaction_at: new Date().toISOString(),
-      };
-
-      await (service as any).showCurrentStep(ctx, task, state, TelegramLanguage.EN);
-      expect(ctx.reply).toHaveBeenCalled();
-    });
-
-    it('should show current step with progress', async () => {
-      const ctx = {
-        reply: jest.fn().mockResolvedValue(undefined),
-      };
-      const task = {
-        id: 'task-5',
-        checklist: [{ item: 'First step' }, { item: 'Second step' }, { item: 'Third step' }],
-      };
-      const state = {
-        current_step: 1,
-        checklist_progress: { 0: { completed: true }, 1: { completed: false }, 2: { completed: false } },
-        photos_uploaded: { before: false, after: false },
-        started_at: new Date().toISOString(),
-        last_interaction_at: new Date().toISOString(),
-      };
-
-      await (service as any).showCurrentStep(ctx, task, state, TelegramLanguage.RU);
-      expect(ctx.reply).toHaveBeenCalled();
-    });
-
-    it('should show current step in English', async () => {
-      const ctx = {
-        reply: jest.fn().mockResolvedValue(undefined),
-      };
-      const task = {
-        id: 'task-6',
-        checklist: [{ item: 'English step 1' }, { item: 'English step 2' }],
-      };
-      const state = {
-        current_step: 0,
-        checklist_progress: { 0: { completed: false }, 1: { completed: false } },
-        photos_uploaded: { before: false, after: false },
-        started_at: new Date().toISOString(),
-        last_interaction_at: new Date().toISOString(),
-      };
-
-      await (service as any).showCurrentStep(ctx, task, state, TelegramLanguage.EN);
-      expect(ctx.reply).toHaveBeenCalled();
     });
   });
 
