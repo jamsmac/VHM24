@@ -8,6 +8,7 @@ import { TelegramCallbackHandlerService } from './services/telegram-callback-han
 import { TelegramTaskCallbackService } from './services/telegram-task-callback.service';
 import { TelegramAdminCallbackService } from './services/telegram-admin-callback.service';
 import { TelegramSprint3Service } from './services/telegram-sprint3.service';
+import { TelegramTaskOperationsService } from './services/telegram-task-operations.service';
 
 // Shared entities
 import { TelegramUser } from '../shared/entities/telegram-user.entity';
@@ -74,6 +75,7 @@ import { AccessRequestsModule } from '../../access-requests/access-requests.modu
     TelegramTaskCallbackService,
     TelegramAdminCallbackService,
     TelegramSprint3Service,
+    TelegramTaskOperationsService,
   ],
   exports: [
     TelegramBotService,
@@ -82,6 +84,7 @@ import { AccessRequestsModule } from '../../access-requests/access-requests.modu
     TelegramTaskCallbackService,
     TelegramAdminCallbackService,
     TelegramSprint3Service,
+    TelegramTaskOperationsService,
   ],
 })
 export class TelegramCoreModule {}

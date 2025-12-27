@@ -21,6 +21,7 @@ import { TelegramCallbackHandlerService } from './telegram-callback-handler.serv
 import { TelegramTaskCallbackService } from './telegram-task-callback.service';
 import { TelegramAdminCallbackService } from './telegram-admin-callback.service';
 import { TelegramSprint3Service } from './telegram-sprint3.service';
+import { TelegramTaskOperationsService } from './telegram-task-operations.service';
 import { TaskType, TaskStatus } from '../../../tasks/entities/task.entity';
 import { UserRole } from '../../../users/entities/user.entity';
 
@@ -189,6 +190,18 @@ describe('TelegramBotService', () => {
             getTaskTypeEmoji: jest.fn(),
             getTaskTypeLabel: jest.fn(),
             getIncidentTypeLabel: jest.fn(),
+          },
+        },
+        {
+          provide: TelegramTaskOperationsService,
+          useValue: {
+            setHelpers: jest.fn(),
+            handleStartTaskCommand: jest.fn(),
+            handleCompleteTaskCommand: jest.fn(),
+            handlePhotoUpload: jest.fn(),
+            handleVoiceMessage: jest.fn(),
+            validatePhotoUpload: jest.fn(),
+            initializeExecutionState: jest.fn(),
           },
         },
         {
@@ -442,44 +455,7 @@ describe('TelegramBotService', () => {
       });
     });
 
-    describe('initializeExecutionState', () => {
-      it('should initialize state with empty checklist', () => {
-        const task = { id: 'task-1', checklist: [] };
-        const state = (service as any).initializeExecutionState(task);
-
-        expect(state.current_step).toBe(0);
-        expect(state.checklist_progress).toEqual({});
-        expect(state.photos_uploaded.before).toBe(false);
-        expect(state.photos_uploaded.after).toBe(false);
-        expect(state.started_at).toBeDefined();
-      });
-
-      it('should initialize state with checklist items', () => {
-        const task = {
-          id: 'task-1',
-          checklist: [{ title: 'Step 1' }, { title: 'Step 2' }],
-        };
-        const state = (service as any).initializeExecutionState(task);
-
-        expect(Object.keys(state.checklist_progress)).toHaveLength(2);
-        expect(state.checklist_progress[0].completed).toBe(false);
-        expect(state.checklist_progress[1].completed).toBe(false);
-      });
-
-      it('should respect existing photo states', () => {
-        const task = {
-          id: 'task-1',
-          checklist: [],
-          has_photo_before: true,
-          has_photo_after: false,
-        };
-        const state = (service as any).initializeExecutionState(task);
-
-        expect(state.photos_uploaded.before).toBe(true);
-        expect(state.photos_uploaded.after).toBe(false);
-      });
-    });
-
+    // Note: initializeExecutionState tests moved to telegram-task-operations.service.spec.ts
     // Note: isSuperAdmin tests moved to telegram-admin-callback.service.spec.ts
 
     describe('updateUserLanguage', () => {
@@ -962,27 +938,7 @@ describe('TelegramBotService', () => {
     });
   });
 
-  describe('initializeExecutionState edge cases', () => {
-    beforeEach(async () => {
-      telegramSettingsRepository.findOne.mockResolvedValue(mockSettings as TelegramSettings);
-      await service.initializeBot();
-    });
-
-    it('should handle null checklist', () => {
-      const task = { id: 'task-1', checklist: null };
-      const state = (service as any).initializeExecutionState(task);
-
-      expect(state.current_step).toBe(0);
-      expect(state.checklist_progress).toEqual({});
-    });
-
-    it('should handle undefined checklist', () => {
-      const task = { id: 'task-1' };
-      const state = (service as any).initializeExecutionState(task);
-
-      expect(state.current_step).toBe(0);
-    });
-  });
+  // Note: initializeExecutionState edge cases moved to telegram-task-operations.service.spec.ts
 
   describe('formatTasksMessage edge cases', () => {
     beforeEach(async () => {
