@@ -4,7 +4,6 @@ import { Repository } from 'typeorm';
 import { TelegramBotService } from './telegram-bot.service';
 import { TelegramUser, TelegramLanguage } from '../../shared/entities/telegram-user.entity';
 import { TelegramSettings } from '../../shared/entities/telegram-settings.entity';
-import { TelegramMessageLog } from '../../shared/entities/telegram-message-log.entity';
 import { TelegramSessionService } from '../../infrastructure/services/telegram-session.service';
 import { TelegramCommandHandlerService } from './telegram-command-handler.service';
 import { TelegramCallbackHandlerService } from './telegram-callback-handler.service';
@@ -14,6 +13,7 @@ import { TelegramSprint3Service } from './telegram-sprint3.service';
 import { TelegramTaskOperationsService } from './telegram-task-operations.service';
 import { TelegramDataCommandsService } from './telegram-data-commands.service';
 import { TelegramUIService } from './telegram-ui.service';
+import { TelegramUtilitiesService } from './telegram-utilities.service';
 
 // Mock Telegraf
 jest.mock('telegraf', () => ({
@@ -42,8 +42,8 @@ describe('TelegramBotService', () => {
   let service: TelegramBotService;
   let telegramUserRepository: jest.Mocked<Repository<TelegramUser>>;
   let telegramSettingsRepository: jest.Mocked<Repository<TelegramSettings>>;
-  let telegramMessageLogRepository: jest.Mocked<Repository<TelegramMessageLog>>;
   let uiService: jest.Mocked<TelegramUIService>;
+  let utilitiesService: jest.Mocked<TelegramUtilitiesService>;
 
   const mockTelegramUser: Partial<TelegramUser> = {
     id: 'tg-user-1',
@@ -78,13 +78,6 @@ describe('TelegramBotService', () => {
           provide: getRepositoryToken(TelegramSettings),
           useValue: {
             findOne: jest.fn(),
-          },
-        },
-        {
-          provide: getRepositoryToken(TelegramMessageLog),
-          useValue: {
-            create: jest.fn(),
-            save: jest.fn(),
           },
         },
         {
@@ -211,14 +204,23 @@ describe('TelegramBotService', () => {
             formatStatsMessage: jest.fn(() => 'Stats message'),
           },
         },
+        {
+          provide: TelegramUtilitiesService,
+          useValue: {
+            updateUserLanguage: jest.fn(),
+            toggleNotification: jest.fn(),
+            logMessage: jest.fn(),
+            handleTextMessage: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
     service = module.get<TelegramBotService>(TelegramBotService);
     telegramUserRepository = module.get(getRepositoryToken(TelegramUser));
     telegramSettingsRepository = module.get(getRepositoryToken(TelegramSettings));
-    telegramMessageLogRepository = module.get(getRepositoryToken(TelegramMessageLog));
     uiService = module.get(TelegramUIService);
+    utilitiesService = module.get(TelegramUtilitiesService);
   });
 
   afterEach(() => {
@@ -357,115 +359,13 @@ describe('TelegramBotService', () => {
     });
   });
 
-  describe('private helper methods (accessed via public interface)', () => {
-    beforeEach(async () => {
-      telegramSettingsRepository.findOne.mockResolvedValue(mockSettings as TelegramSettings);
-      await service.initializeBot();
-    });
-
-    // Note: getTaskTypeEmoji, getTaskTypeLabel, getIncidentTypeLabel tests moved to telegram-sprint3.service.spec.ts
-    // Note: formatRole tests moved to telegram-admin-callback.service.spec.ts
-    // Note: t() translation tests moved to telegram-ui.service.spec.ts
-    // Note: initializeExecutionState tests moved to telegram-task-operations.service.spec.ts
-    // Note: isSuperAdmin tests moved to telegram-admin-callback.service.spec.ts
-
-    describe('updateUserLanguage', () => {
-      it('should update user language in repository', async () => {
-        const ctx = {
-          telegramUser: { ...mockTelegramUser, language: TelegramLanguage.RU },
-        };
-        telegramUserRepository.save.mockResolvedValue(ctx.telegramUser as TelegramUser);
-
-        await (service as any).updateUserLanguage(ctx, TelegramLanguage.EN);
-
-        expect(ctx.telegramUser.language).toBe(TelegramLanguage.EN);
-        expect(telegramUserRepository.save).toHaveBeenCalled();
-      });
-
-      it('should do nothing if telegramUser is not present', async () => {
-        const ctx = { telegramUser: undefined };
-
-        await (service as any).updateUserLanguage(ctx, TelegramLanguage.EN);
-
-        expect(telegramUserRepository.save).not.toHaveBeenCalled();
-      });
-    });
-
-    describe('toggleNotification', () => {
-      it('should toggle notification preference', async () => {
-        const ctx = {
-          telegramUser: {
-            ...mockTelegramUser,
-            notification_preferences: { machine_offline: false },
-          },
-          answerCbQuery: jest.fn(),
-          editMessageText: jest.fn(),
-        };
-        telegramUserRepository.save.mockResolvedValue(ctx.telegramUser as TelegramUser);
-
-        await (service as any).toggleNotification(ctx, 'machine_offline');
-
-        expect(ctx.telegramUser.notification_preferences.machine_offline).toBe(true);
-        expect(telegramUserRepository.save).toHaveBeenCalled();
-        expect(ctx.answerCbQuery).toHaveBeenCalled();
-      });
-
-      it('should do nothing if telegramUser is not present', async () => {
-        const ctx = { telegramUser: undefined };
-
-        await (service as any).toggleNotification(ctx, 'machine_offline');
-
-        expect(telegramUserRepository.save).not.toHaveBeenCalled();
-      });
-    });
-
-    describe('logMessage', () => {
-      it('should log message to repository', async () => {
-        const ctx = {
-          telegramUser: mockTelegramUser,
-          chat: { id: 123456789 },
-          message: { text: 'test message' },
-        };
-        telegramMessageLogRepository.create.mockReturnValue({ id: 'log-1' } as any);
-        telegramMessageLogRepository.save.mockResolvedValue({ id: 'log-1' } as any);
-
-        await (service as any).logMessage(ctx, 'command', '/start');
-
-        expect(telegramMessageLogRepository.create).toHaveBeenCalled();
-        expect(telegramMessageLogRepository.save).toHaveBeenCalled();
-      });
-
-      it('should handle missing message text', async () => {
-        const ctx = {
-          telegramUser: mockTelegramUser,
-          chat: { id: 123456789 },
-          message: null,
-        };
-        telegramMessageLogRepository.create.mockReturnValue({ id: 'log-1' } as any);
-        telegramMessageLogRepository.save.mockResolvedValue({ id: 'log-1' } as any);
-
-        await (service as any).logMessage(ctx, 'command', '/help');
-
-        expect(telegramMessageLogRepository.create).toHaveBeenCalled();
-      });
-
-      it('should handle log errors gracefully', async () => {
-        const ctx = {
-          telegramUser: mockTelegramUser,
-          chat: { id: 123456789 },
-          message: { text: 'test' },
-        };
-        telegramMessageLogRepository.create.mockImplementation(() => {
-          throw new Error('DB Error');
-        });
-
-        // Should not throw
-        await expect(
-          (service as any).logMessage(ctx, 'command', '/start'),
-        ).resolves.toBeUndefined();
-      });
-    });
-  });
+  // Note: All private helper methods tests moved to specialized services:
+  // - getTaskTypeEmoji, getTaskTypeLabel, getIncidentTypeLabel → telegram-sprint3.service.spec.ts
+  // - formatRole → telegram-admin-callback.service.spec.ts
+  // - t() translation → telegram-ui.service.spec.ts
+  // - initializeExecutionState → telegram-task-operations.service.spec.ts
+  // - isSuperAdmin → telegram-admin-callback.service.spec.ts
+  // - updateUserLanguage, toggleNotification, logMessage, handleTextMessage → telegram-utilities.service.spec.ts
 
   // Note: keyboard builders tests moved to telegram-ui.service.spec.ts
   // (getMainMenuKeyboard, getVerificationKeyboard, getSettingsKeyboard,
