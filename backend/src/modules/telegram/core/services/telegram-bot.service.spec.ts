@@ -22,6 +22,7 @@ import { TelegramTaskCallbackService } from './telegram-task-callback.service';
 import { TelegramAdminCallbackService } from './telegram-admin-callback.service';
 import { TelegramSprint3Service } from './telegram-sprint3.service';
 import { TelegramTaskOperationsService } from './telegram-task-operations.service';
+import { TelegramDataCommandsService } from './telegram-data-commands.service';
 import { TaskType, TaskStatus } from '../../../tasks/entities/task.entity';
 import { UserRole } from '../../../users/entities/user.entity';
 
@@ -202,6 +203,16 @@ describe('TelegramBotService', () => {
             handleVoiceMessage: jest.fn(),
             validatePhotoUpload: jest.fn(),
             initializeExecutionState: jest.fn(),
+          },
+        },
+        {
+          provide: TelegramDataCommandsService,
+          useValue: {
+            setHelpers: jest.fn(),
+            handleMachinesCommand: jest.fn(),
+            handleAlertsCommand: jest.fn(),
+            handleStatsCommand: jest.fn(),
+            handleTasksCommand: jest.fn(),
           },
         },
         {

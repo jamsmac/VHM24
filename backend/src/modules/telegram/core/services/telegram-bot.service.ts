@@ -12,6 +12,7 @@ import { TelegramTaskCallbackService } from './telegram-task-callback.service';
 import { TelegramAdminCallbackService } from './telegram-admin-callback.service';
 import { TelegramSprint3Service } from './telegram-sprint3.service';
 import { TelegramTaskOperationsService } from './telegram-task-operations.service';
+import { TelegramDataCommandsService } from './telegram-data-commands.service';
 import { TasksService } from '../../../tasks/tasks.service';
 import { UsersService } from '../../../users/users.service';
 import { UserRole } from '../../../users/entities/user.entity';
@@ -61,6 +62,7 @@ export class TelegramBotService implements OnModuleInit {
     private readonly adminCallbackService: TelegramAdminCallbackService,
     private readonly sprint3Service: TelegramSprint3Service,
     private readonly taskOperationsService: TelegramTaskOperationsService,
+    private readonly dataCommandsService: TelegramDataCommandsService,
     private readonly tasksService: TasksService,
     private readonly usersService: UsersService,
     private readonly machinesService: MachinesService,
@@ -151,10 +153,10 @@ export class TelegramBotService implements OnModuleInit {
         getMainMenuKeyboard: this.getMainMenuKeyboard.bind(this),
         getSettingsKeyboard: this.getSettingsKeyboard.bind(this),
         getNotificationSettingsKeyboard: this.getNotificationSettingsKeyboard.bind(this),
-        handleMachinesCommand: this.handleMachinesCommand.bind(this),
-        handleAlertsCommand: this.handleAlertsCommand.bind(this),
-        handleStatsCommand: this.handleStatsCommand.bind(this),
-        handleTasksCommand: this.handleTasksCommand.bind(this),
+        handleMachinesCommand: (ctx) => this.dataCommandsService.handleMachinesCommand(ctx),
+        handleAlertsCommand: (ctx) => this.dataCommandsService.handleAlertsCommand(ctx),
+        handleStatsCommand: (ctx) => this.dataCommandsService.handleStatsCommand(ctx),
+        handleTasksCommand: (ctx) => this.dataCommandsService.handleTasksCommand(ctx),
         toggleNotification: this.toggleNotification.bind(this),
       });
 
@@ -168,9 +170,22 @@ export class TelegramBotService implements OnModuleInit {
       this.taskOperationsService.setHelpers({
         t: this.t.bind(this),
         logMessage: this.logMessage.bind(this),
-        handleTasksCommand: this.handleTasksCommand.bind(this),
-        handleMachinesCommand: this.handleMachinesCommand.bind(this),
-        handleStatsCommand: this.handleStatsCommand.bind(this),
+        handleTasksCommand: (ctx) => this.dataCommandsService.handleTasksCommand(ctx),
+        handleMachinesCommand: (ctx) => this.dataCommandsService.handleMachinesCommand(ctx),
+        handleStatsCommand: (ctx) => this.dataCommandsService.handleStatsCommand(ctx),
+      });
+
+      // Initialize Data Commands service with helper methods
+      this.dataCommandsService.setHelpers({
+        t: this.t.bind(this),
+        logMessage: this.logMessage.bind(this),
+        formatMachinesMessage: this.formatMachinesMessage.bind(this),
+        formatAlertsMessage: this.formatAlertsMessage.bind(this),
+        formatStatsMessage: this.formatStatsMessage.bind(this),
+        formatTasksMessage: this.formatTasksMessage.bind(this),
+        getMachinesKeyboard: this.getMachinesKeyboard.bind(this),
+        getAlertsKeyboard: this.getAlertsKeyboard.bind(this),
+        getTasksKeyboard: this.getTasksKeyboard.bind(this),
       });
 
       this.setupCommands();
@@ -509,259 +524,8 @@ export class TelegramBotService implements OnModuleInit {
     });
   }
 
-  private async handleMachinesCommand(ctx: BotContext): Promise<void> {
-    await this.logMessage(ctx, TelegramMessageType.COMMAND, '/machines');
-
-    if (!ctx.telegramUser?.is_verified) {
-      const lang = ctx.telegramUser?.language || TelegramLanguage.RU;
-      await ctx.reply(this.t(lang, 'not_verified'));
-      return;
-    }
-
-    const lang = ctx.telegramUser.language;
-
-    // Show loading indicator
-    await ctx.replyWithChatAction('typing');
-
-    // Fetch actual machines from database
-    const machines = await this.machinesService.findAllSimple();
-    const formattedMachines = machines.map((machine, index) => ({
-      id: index + 1, // Use sequential ID for display
-      name: machine.machine_number,
-      status: machine.status === 'active' ? 'online' : machine.status,
-      location: machine.location?.name || machine.location?.address || 'Unknown',
-    }));
-
-    const message = this.formatMachinesMessage(formattedMachines, lang);
-    const keyboard = this.getMachinesKeyboard(formattedMachines, lang);
-
-    if (ctx.callbackQuery) {
-      await ctx.editMessageText(message, { ...keyboard, parse_mode: 'HTML' });
-    } else {
-      await ctx.reply(message, { ...keyboard, parse_mode: 'HTML' });
-    }
-  }
-
-  private async handleAlertsCommand(ctx: BotContext): Promise<void> {
-    await this.logMessage(ctx, TelegramMessageType.COMMAND, '/alerts');
-
-    if (!ctx.telegramUser?.is_verified) {
-      const lang = ctx.telegramUser?.language || TelegramLanguage.RU;
-      await ctx.reply(this.t(lang, 'not_verified'));
-      return;
-    }
-
-    const lang = ctx.telegramUser.language;
-
-    // Fetch actual alerts from database
-    const alerts: Array<{ id: number; type: string; machine: string; time: string }> = [];
-    let alertId = 1;
-
-    // Get active incidents
-    const incidents = await this.incidentsService.findAll(IncidentStatus.OPEN, undefined);
-    for (const incident of incidents.slice(0, 5)) {
-      const timeDiff = Date.now() - incident.reported_at.getTime();
-      const hours = Math.floor(timeDiff / (1000 * 60 * 60));
-      const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
-
-      alerts.push({
-        id: alertId++,
-        type: incident.incident_type || 'incident',
-        machine: incident.machine?.machine_number || 'Unknown',
-        time: hours > 0 ? `${hours}h ${minutes}m ago` : `${minutes}m ago`,
-      });
-    }
-
-    // Get low stock machines
-    const lowStockItems = await this.inventoryService.getMachinesLowStock();
-    const machineMap = new Map<string, { machine: string; count: number }>();
-
-    for (const item of lowStockItems.slice(0, 5)) {
-      const machineId = item.machine_id;
-      if (!machineMap.has(machineId)) {
-        const machine = await this.machinesService.findOne(machineId);
-        machineMap.set(machineId, {
-          machine: machine?.machine_number || 'Unknown',
-          count: 1,
-        });
-      } else {
-        machineMap.get(machineId)!.count++;
-      }
-    }
-
-    for (const value of machineMap.values()) {
-      alerts.push({
-        id: alertId++,
-        type: 'low_stock',
-        machine: value.machine,
-        time: `${value.count} item(s)`,
-      });
-    }
-
-    const message = this.formatAlertsMessage(alerts, lang);
-    const keyboard = this.getAlertsKeyboard(alerts, lang);
-
-    if (ctx.callbackQuery) {
-      await ctx.editMessageText(message, { ...keyboard, parse_mode: 'HTML' });
-    } else {
-      await ctx.reply(message, { ...keyboard, parse_mode: 'HTML' });
-    }
-  }
-
-  private async handleStatsCommand(ctx: BotContext): Promise<void> {
-    await this.logMessage(ctx, TelegramMessageType.COMMAND, '/stats');
-
-    if (!ctx.telegramUser?.is_verified) {
-      const lang = ctx.telegramUser?.language || TelegramLanguage.RU;
-      await ctx.reply(this.t(lang, 'not_verified'));
-      return;
-    }
-
-    const lang = ctx.telegramUser.language;
-
-    // Show loading indicator
-    await ctx.replyWithChatAction('typing');
-
-    // Fetch actual stats from database
-    const today = new Date();
-    const todayStart = startOfDay(today);
-    const todayEnd = endOfDay(today);
-
-    // Get all machines and count by status
-    const allMachines = await this.machinesService.findAllSimple();
-    const total_machines = allMachines.length;
-    const online = allMachines.filter((m) => m.status === MachineStatus.ACTIVE).length;
-    const offline = allMachines.filter(
-      (m) =>
-        m.status === MachineStatus.OFFLINE ||
-        m.status === MachineStatus.ERROR ||
-        m.status === MachineStatus.MAINTENANCE,
-    ).length;
-
-    // Get today's transactions
-    const todayTransactions = await this.transactionsService.findAll(
-      undefined,
-      undefined,
-      undefined,
-      todayStart.toISOString(),
-      todayEnd.toISOString(),
-    );
-    const today_sales = todayTransactions.length;
-    const today_revenue = todayTransactions.reduce((sum, t) => sum + Number(t.amount || 0), 0);
-
-    // Get pending tasks
-    const allTasks = await this.tasksService.findAll(undefined);
-    const pending_tasks = allTasks.filter(
-      (t) => t.status === TaskStatus.PENDING || t.status === TaskStatus.ASSIGNED,
-    ).length;
-
-    const stats = {
-      total_machines,
-      online,
-      offline,
-      today_sales,
-      today_revenue: Math.round(today_revenue),
-      pending_tasks,
-    };
-
-    const message = this.formatStatsMessage(stats, lang);
-    const keyboard = Markup.inlineKeyboard([
-      [Markup.button.callback(this.t(lang, 'refresh'), 'menu_stats')],
-      [Markup.button.callback(this.t(lang, 'back'), 'back_to_menu')],
-    ]);
-
-    if (ctx.callbackQuery) {
-      await ctx.editMessageText(message, { ...keyboard, parse_mode: 'HTML' });
-    } else {
-      await ctx.reply(message, { ...keyboard, parse_mode: 'HTML' });
-    }
-  }
-
-  // ============================================================================
-  // TASKS HANDLERS (Обработчики команд для задач)
-  // ============================================================================
-
-  /**
-   * Handler for /tasks command - shows list of operator's tasks
-   */
-  private async handleTasksCommand(ctx: BotContext): Promise<void> {
-    await this.logMessage(ctx, TelegramMessageType.COMMAND, '/tasks');
-
-    if (!ctx.telegramUser?.is_verified) {
-      const lang = ctx.telegramUser?.language || TelegramLanguage.RU;
-      await ctx.reply(this.t(lang, 'not_verified'));
-      return;
-    }
-
-    const lang = ctx.telegramUser.language;
-
-    // Show loading indicator
-    await ctx.replyWithChatAction('typing');
-
-    // Get user by telegram_id
-    try {
-      const user = await this.usersService.findByTelegramId(ctx.telegramUser.telegram_id);
-
-      if (!user) {
-        await ctx.reply(
-          lang === TelegramLanguage.RU
-            ? '❌ Пользователь не найден. Обратитесь к администратору.'
-            : '❌ User not found. Contact administrator.',
-        );
-        return;
-      }
-
-      // Fetch tasks assigned to this operator
-      const tasks = await this.tasksService.findAll(
-        undefined, // status
-        undefined, // type
-        undefined, // machine
-        user.id, // assigned_to_user_id
-      );
-
-      // Filter active tasks (pending, assigned, in_progress)
-      const activeTasks = tasks.filter(
-        (t) =>
-          t.status === TaskStatus.PENDING ||
-          t.status === TaskStatus.ASSIGNED ||
-          t.status === TaskStatus.IN_PROGRESS,
-      );
-
-      if (activeTasks.length === 0) {
-        await ctx.reply(
-          lang === TelegramLanguage.RU
-            ? '✅ У вас нет активных задач'
-            : '✅ You have no active tasks',
-        );
-        return;
-      }
-
-      // Format message
-      const message = this.formatTasksMessage(activeTasks, lang);
-      const keyboard = this.getTasksKeyboard(activeTasks, lang);
-
-      await ctx.reply(message, { ...keyboard, parse_mode: 'HTML' });
-    } catch (error) {
-      this.logger.error('Error fetching tasks:', error);
-
-      const errorMessage =
-        lang === TelegramLanguage.RU
-          ? `😕 Не удалось загрузить список задач\n\n` +
-            `<b>💡 Попробуйте:</b>\n` +
-            `1️⃣ Обновить список: /tasks\n` +
-            `2️⃣ Проверить интернет-соединение\n` +
-            `3️⃣ Подождать минуту и попробовать снова\n\n` +
-            `❓ Проблема не решается? Напишите администратору`
-          : `😕 Could not load task list\n\n` +
-            `<b>💡 Try this:</b>\n` +
-            `1️⃣ Refresh list: /tasks\n` +
-            `2️⃣ Check internet connection\n` +
-            `3️⃣ Wait a minute and try again\n\n` +
-            `❓ Still having issues? Contact administrator`;
-
-      await ctx.reply(errorMessage, { parse_mode: 'HTML' });
-    }
-  }
+  // Note: handleMachinesCommand, handleAlertsCommand, handleStatsCommand, handleTasksCommand
+  // moved to TelegramDataCommandsService
 
   /**
    * Handle text messages for rejection reasons and other inputs
