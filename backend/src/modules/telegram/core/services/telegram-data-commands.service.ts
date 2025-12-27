@@ -10,14 +10,13 @@ import { IncidentsService } from '../../../incidents/incidents.service';
 import { IncidentStatus } from '../../../incidents/entities/incident.entity';
 import { TransactionsService } from '../../../transactions/transactions.service';
 import { InventoryService } from '../../../inventory/inventory.service';
-import { TaskStatus, TaskType } from '../../../tasks/entities/task.entity';
+import { TaskStatus } from '../../../tasks/entities/task.entity';
 import { startOfDay, endOfDay } from 'date-fns';
 import {
   TelegramTaskInfo,
   TelegramMachineInfo,
   TelegramAlertInfo,
   TelegramStatsInfo,
-  TelegramKeyboardRow,
 } from '../../shared/types/telegram.types';
 
 interface BotContext extends Context {
