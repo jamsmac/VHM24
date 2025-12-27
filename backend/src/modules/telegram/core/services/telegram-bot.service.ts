@@ -7,6 +7,7 @@ import { TelegramSettings } from '../../shared/entities/telegram-settings.entity
 import { TelegramMessageLog, TelegramMessageType } from '../../shared/entities/telegram-message-log.entity';
 import { TelegramSessionService, UserSession, ConversationState } from '../../infrastructure/services/telegram-session.service';
 import { TelegramVoiceService } from '../../media/services/telegram-voice.service';
+import { TelegramCommandHandlerService } from './telegram-command-handler.service';
 import { TasksService } from '../../../tasks/tasks.service';
 import { FilesService } from '../../../files/files.service';
 import { UsersService } from '../../../users/users.service';
@@ -74,6 +75,7 @@ export class TelegramBotService implements OnModuleInit {
     private telegramMessageLogRepository: Repository<TelegramMessageLog>,
     private readonly sessionService: TelegramSessionService,
     private readonly voiceService: TelegramVoiceService,
+    private readonly commandHandlerService: TelegramCommandHandlerService,
     private readonly tasksService: TasksService,
     private readonly filesService: FilesService,
     private readonly usersService: UsersService,
@@ -143,6 +145,21 @@ export class TelegramBotService implements OnModuleInit {
         }
       });
 
+      // Initialize command handler with helper methods
+      this.commandHandlerService.setHelpers({
+        t: this.t.bind(this),
+        getMainMenuKeyboard: this.getMainMenuKeyboard.bind(this),
+        getVerificationKeyboard: this.getVerificationKeyboard.bind(this),
+        formatTasksMessage: this.formatTasksMessage.bind(this),
+        formatMachinesMessage: this.formatMachinesMessage.bind(this),
+        formatAlertsMessage: this.formatAlertsMessage.bind(this),
+        formatStatsMessage: this.formatStatsMessage.bind(this),
+        getTasksKeyboard: this.getTasksKeyboard.bind(this),
+        getMachinesKeyboard: this.getMachinesKeyboard.bind(this),
+        getAlertsKeyboard: this.getAlertsKeyboard.bind(this),
+        notifyAdminAboutNewUser: this.notifyAdminAboutNewUser.bind(this),
+      });
+
       this.setupCommands();
       this.setupCallbacks();
       await this.setupBotMenu();
@@ -206,124 +223,43 @@ export class TelegramBotService implements OnModuleInit {
   private setupCommands(): void {
     if (!this.bot) return;
 
-    // Start command with user-friendly welcome and access request creation
+    // ============================================================================
+    // DELEGATED COMMANDS (handled by TelegramCommandHandlerService)
+    // ============================================================================
+
+    // Start command - welcome and access request
     this.bot.command('start', async (ctx) => {
-      const lang = ctx.telegramUser?.language || TelegramLanguage.RU;
-
-      await this.logMessage(ctx, TelegramMessageType.COMMAND, '/start');
-
-      // Case 1: User is verified - show main menu
-      if (ctx.telegramUser?.is_verified) {
-        await ctx.reply(
-          this.t(lang, 'welcome_back', ctx.from?.first_name || 'User'),
-          this.getMainMenuKeyboard(lang),
-        );
-        return;
-      }
-
-      // Case 2: User exists but not verified - inform about pending request
-      if (ctx.telegramUser && !ctx.telegramUser.is_verified) {
-        await ctx.reply(this.t(lang, 'access_request_pending'), this.getVerificationKeyboard(lang));
-        return;
-      }
-
-      // Case 3: New user - create pending user and notify admin
-      if (!ctx.telegramUser && ctx.from) {
-        try {
-          // Create pending user directly (simplified flow)
-          const pendingUser = await this.usersService.createPendingFromTelegram({
-            telegram_id: ctx.from.id.toString(),
-            telegram_username: ctx.from.username,
-            telegram_first_name: ctx.from.first_name,
-            telegram_last_name: ctx.from.last_name,
-          });
-
-          this.logger.log(
-            `Pending user created for Telegram user ${ctx.from.id} (@${ctx.from.username})`,
-          );
-
-          // Send confirmation to user
-          await ctx.reply(
-            this.t(lang, 'access_request_created', ctx.from.first_name || 'User'),
-            this.getVerificationKeyboard(lang),
-          );
-
-          // Notify admin about new pending user
-          await this.notifyAdminAboutNewUser(pendingUser.id, ctx.from);
-        } catch (error) {
-          this.logger.error('Failed to create pending user', error);
-
-          // Check if it's a conflict (user already exists)
-          if (error.message?.includes('уже существует') || error.message?.includes('already exists')) {
-            await ctx.reply(
-              this.t(lang, 'access_request_pending'),
-              this.getVerificationKeyboard(lang),
-            );
-          } else {
-            await ctx.reply(
-              this.t(lang, 'access_request_error'),
-              this.getVerificationKeyboard(lang),
-            );
-          }
-        }
-        return;
-      }
-
-      // Fallback
-      await ctx.reply(
-        this.t(lang, 'welcome_new', ctx.from?.first_name || 'User'),
-        this.getVerificationKeyboard(lang),
-      );
+      await this.commandHandlerService.handleStartCommand(ctx);
     });
 
     // Main menu command
     this.bot.command('menu', async (ctx) => {
-      await this.logMessage(ctx, TelegramMessageType.COMMAND, '/menu');
-
-      if (!ctx.telegramUser?.is_verified) {
-        await ctx.reply(
-          this.t(ctx.telegramUser?.language || TelegramLanguage.RU, 'not_verified'),
-          this.getVerificationKeyboard(ctx.telegramUser?.language || TelegramLanguage.RU),
-        );
-        return;
-      }
-
-      const lang = ctx.telegramUser.language;
-      await ctx.reply(this.t(lang, 'main_menu'), this.getMainMenuKeyboard(lang));
+      await this.commandHandlerService.handleMenuCommand(ctx);
     });
 
     // Machines command
     this.bot.command('machines', async (ctx) => {
-      await this.handleMachinesCommand(ctx);
+      await this.commandHandlerService.handleMachinesCommand(ctx);
     });
 
     // Alerts command
     this.bot.command('alerts', async (ctx) => {
-      await this.handleAlertsCommand(ctx);
+      await this.commandHandlerService.handleAlertsCommand(ctx);
     });
 
     // Stats command
     this.bot.command('stats', async (ctx) => {
-      await this.handleStatsCommand(ctx);
+      await this.commandHandlerService.handleStatsCommand(ctx);
     });
 
     // Help command
     this.bot.command('help', async (ctx) => {
-      const lang = ctx.telegramUser?.language || TelegramLanguage.RU;
-      await ctx.reply(this.t(lang, 'help'), { parse_mode: 'HTML' });
+      await this.commandHandlerService.handleHelpCommand(ctx);
     });
 
     // Language command
     this.bot.command('language', async (ctx) => {
-      await ctx.reply(
-        'Choose your language / Выберите язык:',
-        Markup.inlineKeyboard([
-          [
-            Markup.button.callback('🇷🇺 Русский', 'lang_ru'),
-            Markup.button.callback('🇬🇧 English', 'lang_en'),
-          ],
-        ]),
-      );
+      await this.commandHandlerService.handleLanguageCommand(ctx);
     });
 
     // ============================================================================
@@ -341,7 +277,7 @@ export class TelegramBotService implements OnModuleInit {
 
     // Tasks list command
     this.bot.command('tasks', async (ctx) => {
-      await this.handleTasksCommand(ctx);
+      await this.commandHandlerService.handleTasksCommand(ctx);
     });
 
     // Start task command

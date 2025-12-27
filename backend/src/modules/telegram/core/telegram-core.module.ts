@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { BullModule } from '@nestjs/bull';
 
 import { TelegramBotService } from './services/telegram-bot.service';
+import { TelegramCommandHandlerService } from './services/telegram-command-handler.service';
 
 // Shared entities
 import { TelegramUser } from '../shared/entities/telegram-user.entity';
@@ -62,7 +63,7 @@ import { AccessRequestsModule } from '../../access-requests/access-requests.modu
     forwardRef(() => InventoryModule),
     AccessRequestsModule,
   ],
-  providers: [TelegramBotService],
-  exports: [TelegramBotService],
+  providers: [TelegramBotService, TelegramCommandHandlerService],
+  exports: [TelegramBotService, TelegramCommandHandlerService],
 })
 export class TelegramCoreModule {}

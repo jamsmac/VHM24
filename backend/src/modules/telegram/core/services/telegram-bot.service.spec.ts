@@ -16,6 +16,7 @@ import { TransactionsService } from '../../../transactions/transactions.service'
 import { InventoryService } from '../../../inventory/inventory.service';
 import { AccessRequestsService } from '../../../access-requests/access-requests.service';
 import { TelegramManagerToolsService } from '../../managers/services/telegram-manager-tools.service';
+import { TelegramCommandHandlerService } from './telegram-command-handler.service';
 import { TaskType, TaskStatus } from '../../../tasks/entities/task.entity';
 import { UserRole } from '../../../users/entities/user.entity';
 
@@ -107,6 +108,20 @@ describe('TelegramBotService', () => {
             transcribeVoice: jest.fn(),
             parseCommand: jest.fn(),
             getVoiceCommandResponse: jest.fn(),
+          },
+        },
+        {
+          provide: TelegramCommandHandlerService,
+          useValue: {
+            setHelpers: jest.fn(),
+            handleStartCommand: jest.fn(),
+            handleMenuCommand: jest.fn(),
+            handleMachinesCommand: jest.fn(),
+            handleAlertsCommand: jest.fn(),
+            handleStatsCommand: jest.fn(),
+            handleTasksCommand: jest.fn(),
+            handleHelpCommand: jest.fn(),
+            handleLanguageCommand: jest.fn(),
           },
         },
         {

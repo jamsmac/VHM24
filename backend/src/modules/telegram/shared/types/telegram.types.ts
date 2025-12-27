@@ -8,11 +8,44 @@
  * - Statistics structures
  * - User structures for pending approval
  * - Keyboard option types
+ * - Bot context for command and callback handlers
  */
 
 import { TaskStatus, TaskType } from '../../../tasks/entities/task.entity';
 import { MachineStatus } from '../../../machines/entities/machine.entity';
-import { Markup } from 'telegraf';
+import { Context, Markup } from 'telegraf';
+import { TelegramUser } from '../entities/telegram-user.entity';
+import { UserSession } from '../../infrastructure/services/telegram-session.service';
+
+/**
+ * Extended Telegraf context with VendHub-specific properties
+ */
+export interface BotContext extends Context {
+  telegramUser?: TelegramUser;
+  session?: UserSession;
+}
+
+/**
+ * Task execution state for step-by-step guidance
+ * Stored in task.metadata.telegram_execution_state
+ */
+export interface TaskExecutionState {
+  current_step: number;
+  checklist_progress: Record<
+    number,
+    {
+      completed: boolean;
+      completed_at?: string;
+      notes?: string;
+    }
+  >;
+  photos_uploaded: {
+    before: boolean;
+    after: boolean;
+  };
+  started_at: string;
+  last_interaction_at: string;
+}
 
 /**
  * Simplified task structure for Telegram bot display
