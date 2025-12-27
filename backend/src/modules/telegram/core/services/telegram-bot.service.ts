@@ -8,6 +8,7 @@ import { TelegramMessageLog, TelegramMessageType } from '../../shared/entities/t
 import { TelegramSessionService, UserSession, ConversationState } from '../../infrastructure/services/telegram-session.service';
 import { TelegramVoiceService } from '../../media/services/telegram-voice.service';
 import { TelegramCommandHandlerService } from './telegram-command-handler.service';
+import { TelegramCallbackHandlerService } from './telegram-callback-handler.service';
 import { TasksService } from '../../../tasks/tasks.service';
 import { FilesService } from '../../../files/files.service';
 import { UsersService } from '../../../users/users.service';
@@ -76,6 +77,7 @@ export class TelegramBotService implements OnModuleInit {
     private readonly sessionService: TelegramSessionService,
     private readonly voiceService: TelegramVoiceService,
     private readonly commandHandlerService: TelegramCommandHandlerService,
+    private readonly callbackHandlerService: TelegramCallbackHandlerService,
     private readonly tasksService: TasksService,
     private readonly filesService: FilesService,
     private readonly usersService: UsersService,
@@ -158,6 +160,19 @@ export class TelegramBotService implements OnModuleInit {
         getMachinesKeyboard: this.getMachinesKeyboard.bind(this),
         getAlertsKeyboard: this.getAlertsKeyboard.bind(this),
         notifyAdminAboutNewUser: this.notifyAdminAboutNewUser.bind(this),
+      });
+
+      // Initialize callback handler with helper methods
+      this.callbackHandlerService.setHelpers({
+        t: this.t.bind(this),
+        getMainMenuKeyboard: this.getMainMenuKeyboard.bind(this),
+        getSettingsKeyboard: this.getSettingsKeyboard.bind(this),
+        getNotificationSettingsKeyboard: this.getNotificationSettingsKeyboard.bind(this),
+        handleMachinesCommand: this.handleMachinesCommand.bind(this),
+        handleAlertsCommand: this.handleAlertsCommand.bind(this),
+        handleStatsCommand: this.handleStatsCommand.bind(this),
+        handleTasksCommand: this.handleTasksCommand.bind(this),
+        toggleNotification: this.toggleNotification.bind(this),
       });
 
       this.setupCommands();
@@ -328,75 +343,47 @@ export class TelegramBotService implements OnModuleInit {
   private setupCallbacks(): void {
     if (!this.bot) return;
 
+    // ============================================================================
+    // DELEGATED CALLBACKS (handled by TelegramCallbackHandlerService)
+    // ============================================================================
+
     // Language selection callbacks
     this.bot.action('lang_ru', async (ctx) => {
-      await this.updateUserLanguage(ctx, TelegramLanguage.RU);
-      await ctx.answerCbQuery('Язык изменен на русский ✓');
-      await ctx.editMessageText(
-        'Язык изменен на русский 🇷🇺',
-        this.getMainMenuKeyboard(TelegramLanguage.RU),
-      );
+      await this.callbackHandlerService.handleLanguageRu(ctx);
     });
 
     this.bot.action('lang_en', async (ctx) => {
-      await this.updateUserLanguage(ctx, TelegramLanguage.EN);
-      await ctx.answerCbQuery('Language changed to English ✓');
-      await ctx.editMessageText(
-        'Language changed to English 🇬🇧',
-        this.getMainMenuKeyboard(TelegramLanguage.EN),
-      );
+      await this.callbackHandlerService.handleLanguageEn(ctx);
     });
 
     // Main menu callbacks
     this.bot.action('menu_machines', async (ctx) => {
-      await ctx.answerCbQuery();
-      await this.handleMachinesCommand(ctx);
+      await this.callbackHandlerService.handleMenuMachines(ctx);
     });
 
     this.bot.action('menu_alerts', async (ctx) => {
-      await ctx.answerCbQuery();
-      await this.handleAlertsCommand(ctx);
+      await this.callbackHandlerService.handleMenuAlerts(ctx);
     });
 
     this.bot.action('menu_stats', async (ctx) => {
-      await ctx.answerCbQuery();
-      await this.handleStatsCommand(ctx);
+      await this.callbackHandlerService.handleMenuStats(ctx);
     });
 
     this.bot.action('menu_settings', async (ctx) => {
-      await ctx.answerCbQuery();
-      const lang = ctx.telegramUser?.language || TelegramLanguage.RU;
-      await ctx.editMessageText(this.t(lang, 'settings_menu'), this.getSettingsKeyboard(lang));
+      await this.callbackHandlerService.handleMenuSettings(ctx);
     });
 
     this.bot.action('back_to_menu', async (ctx) => {
-      await ctx.answerCbQuery();
-      const lang = ctx.telegramUser?.language || TelegramLanguage.RU;
-      await ctx.editMessageText(this.t(lang, 'main_menu'), this.getMainMenuKeyboard(lang));
+      await this.callbackHandlerService.handleBackToMenu(ctx);
     });
 
     // Settings callbacks
     this.bot.action('settings_notifications', async (ctx) => {
-      await ctx.answerCbQuery();
-      const lang = ctx.telegramUser?.language || TelegramLanguage.RU;
-      await ctx.editMessageText(
-        this.t(lang, 'notification_settings'),
-        this.getNotificationSettingsKeyboard(lang, ctx.telegramUser!),
-      );
+      await this.callbackHandlerService.handleSettingsNotifications(ctx);
     });
 
     this.bot.action('settings_language', async (ctx) => {
-      await ctx.answerCbQuery();
-      await ctx.editMessageText(
-        'Choose your language / Выберите язык:',
-        Markup.inlineKeyboard([
-          [
-            Markup.button.callback('🇷🇺 Русский', 'lang_ru'),
-            Markup.button.callback('🇬🇧 English', 'lang_en'),
-          ],
-          [Markup.button.callback('« Back / Назад', 'back_to_menu')],
-        ]),
-      );
+      await this.callbackHandlerService.handleSettingsLanguage(ctx);
     });
 
     // Notification toggle callbacks
@@ -411,15 +398,18 @@ export class TelegramBotService implements OnModuleInit {
 
     notificationTypes.forEach((type) => {
       this.bot!.action(`toggle_${type}`, async (ctx) => {
-        await this.toggleNotification(ctx, type);
+        await this.callbackHandlerService.handleNotificationToggle(ctx, type);
       });
     });
 
     // Task callbacks
     this.bot.action('refresh_tasks', async (ctx) => {
-      await ctx.answerCbQuery();
-      await this.handleTasksCommand(ctx);
+      await this.callbackHandlerService.handleRefreshTasks(ctx);
     });
+
+    // ============================================================================
+    // COMPLEX CALLBACKS (remain in TelegramBotService for now)
+    // ============================================================================
 
     // Task start callback (from inline button)
     this.bot.action(/task_start_(.+)/, async (ctx) => {

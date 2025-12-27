@@ -17,6 +17,7 @@ import { InventoryService } from '../../../inventory/inventory.service';
 import { AccessRequestsService } from '../../../access-requests/access-requests.service';
 import { TelegramManagerToolsService } from '../../managers/services/telegram-manager-tools.service';
 import { TelegramCommandHandlerService } from './telegram-command-handler.service';
+import { TelegramCallbackHandlerService } from './telegram-callback-handler.service';
 import { TaskType, TaskStatus } from '../../../tasks/entities/task.entity';
 import { UserRole } from '../../../users/entities/user.entity';
 
@@ -122,6 +123,23 @@ describe('TelegramBotService', () => {
             handleTasksCommand: jest.fn(),
             handleHelpCommand: jest.fn(),
             handleLanguageCommand: jest.fn(),
+          },
+        },
+        {
+          provide: TelegramCallbackHandlerService,
+          useValue: {
+            setHelpers: jest.fn(),
+            handleLanguageRu: jest.fn(),
+            handleLanguageEn: jest.fn(),
+            handleMenuMachines: jest.fn(),
+            handleMenuAlerts: jest.fn(),
+            handleMenuStats: jest.fn(),
+            handleMenuSettings: jest.fn(),
+            handleBackToMenu: jest.fn(),
+            handleSettingsNotifications: jest.fn(),
+            handleSettingsLanguage: jest.fn(),
+            handleNotificationToggle: jest.fn(),
+            handleRefreshTasks: jest.fn(),
           },
         },
         {
