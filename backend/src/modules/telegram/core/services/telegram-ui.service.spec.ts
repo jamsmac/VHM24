@@ -135,6 +135,56 @@ describe('TelegramUIService', () => {
       expect(result).toContain('Справка');
       expect(result).toContain('/menu');
     });
+
+    it('should translate welcome_new in Russian', () => {
+      const result = service.t(TelegramLanguage.RU, 'welcome_new', 'Алексей');
+      expect(result).toContain('Алексей');
+      expect(result).toContain('Добро пожаловать');
+      expect(result).toContain('VendHub');
+    });
+
+    it('should translate welcome_new in English', () => {
+      const result = service.t(TelegramLanguage.EN, 'welcome_new', 'Alex');
+      expect(result).toContain('Alex');
+      expect(result).toContain('Welcome');
+      expect(result).toContain('link your Telegram account');
+    });
+
+    it('should translate access_request_pending in Russian', () => {
+      const result = service.t(TelegramLanguage.RU, 'access_request_pending');
+      expect(result).toContain('ожидает одобрения');
+    });
+
+    it('should translate access_request_pending in English', () => {
+      const result = service.t(TelegramLanguage.EN, 'access_request_pending');
+      expect(result).toContain('pending administrator approval');
+    });
+
+    it('should translate access_request_error in Russian', () => {
+      const result = service.t(TelegramLanguage.RU, 'access_request_error');
+      expect(result).toContain('Произошла ошибка');
+    });
+
+    it('should translate access_request_error in English', () => {
+      const result = service.t(TelegramLanguage.EN, 'access_request_error');
+      expect(result).toContain('error occurred');
+    });
+
+    it('should translate access_request_created in English', () => {
+      const result = service.t(TelegramLanguage.EN, 'access_request_created', 'John');
+      expect(result).toContain('John');
+      expect(result).toContain('access request has been sent');
+    });
+
+    it('should translate notification settings keys', () => {
+      const keys = ['notif_machine_offline', 'notif_low_stock', 'notif_maintenance_due', 'notif_task_assigned'];
+      keys.forEach((key) => {
+        const ruResult = service.t(TelegramLanguage.RU, key);
+        const enResult = service.t(TelegramLanguage.EN, key);
+        expect(ruResult).not.toBe(key);
+        expect(enResult).not.toBe(key);
+      });
+    });
   });
 
   // ============================================================================
@@ -363,6 +413,78 @@ describe('TelegramUIService', () => {
         expect(taskButton?.text).toContain(icon);
       });
     });
+
+    it('should handle unknown task type with default icon', () => {
+      const unknownTask = { ...mockTask, type_code: 'unknown' as TaskType };
+      const keyboard = service.getTasksKeyboard([unknownTask], TelegramLanguage.RU);
+      const buttons = keyboard.reply_markup.inline_keyboard.flat();
+      const taskButton = buttons.find((b: any) =>
+        b.callback_data?.startsWith('task_start_'),
+      );
+      expect(taskButton?.text).toContain('📋'); // Default icon
+    });
+
+    it('should handle unknown task status with empty icon', () => {
+      const unknownStatusTask = { ...mockTask, status: 'unknown' as TaskStatus };
+      const keyboard = service.getTasksKeyboard([unknownStatusTask], TelegramLanguage.RU);
+      const buttons = keyboard.reply_markup.inline_keyboard.flat();
+      const taskButton = buttons.find((b: any) =>
+        b.callback_data?.startsWith('task_start_'),
+      );
+      expect(taskButton).toBeDefined();
+    });
+
+    it('should handle task without machine using index fallback', () => {
+      const taskNoMachine = { ...mockTask, machine: undefined };
+      const keyboard = service.getTasksKeyboard([taskNoMachine], TelegramLanguage.RU);
+      const buttons = keyboard.reply_markup.inline_keyboard.flat();
+      const taskButton = buttons.find((b: any) =>
+        b.callback_data?.startsWith('task_start_'),
+      );
+      expect(taskButton?.text).toContain('#1');
+    });
+
+    it('should show Continue button in English for in-progress tasks', () => {
+      const inProgressTask = { ...mockTask, status: TaskStatus.IN_PROGRESS };
+      const keyboard = service.getTasksKeyboard([inProgressTask], TelegramLanguage.EN);
+      const buttons = keyboard.reply_markup.inline_keyboard.flat();
+      const taskButton = buttons.find((b: any) =>
+        b.callback_data?.startsWith('task_start_'),
+      );
+      expect(taskButton?.text).toContain('Continue');
+    });
+
+    it('should show Start button in English for assigned tasks', () => {
+      const keyboard = service.getTasksKeyboard([mockTask], TelegramLanguage.EN);
+      const buttons = keyboard.reply_markup.inline_keyboard.flat();
+      const taskButton = buttons.find((b: any) =>
+        b.callback_data?.startsWith('task_start_'),
+      );
+      expect(taskButton?.text).toContain('Start');
+    });
+
+    it('should show All tasks button in English when more than 8', () => {
+      const tasks = Array.from({ length: 15 }, (_, i) => ({
+        ...mockTask,
+        id: `task-${i}`,
+      }));
+      const keyboard = service.getTasksKeyboard(tasks, TelegramLanguage.EN);
+      const buttons = keyboard.reply_markup.inline_keyboard.flat();
+      const allTasksButton = buttons.find((b: any) =>
+        b.callback_data === 'tasks_show_all',
+      );
+      expect(allTasksButton?.text).toContain('All tasks');
+    });
+
+    it('should handle pending status icon', () => {
+      const pendingTask = { ...mockTask, status: TaskStatus.PENDING };
+      const keyboard = service.getTasksKeyboard([pendingTask], TelegramLanguage.RU);
+      const buttons = keyboard.reply_markup.inline_keyboard.flat();
+      const taskButton = buttons.find((b: any) =>
+        b.callback_data?.startsWith('task_start_'),
+      );
+      expect(taskButton).toBeDefined();
+    });
   });
 
   // ============================================================================
@@ -405,6 +527,76 @@ describe('TelegramUIService', () => {
       const message = service.formatTasksMessage([mockTask], TelegramLanguage.RU);
       expect(message).toContain('💡');
     });
+
+    it('should include English footer hint', () => {
+      const message = service.formatTasksMessage([mockTask], TelegramLanguage.EN);
+      expect(message).toContain('Tap a button below');
+    });
+
+    it('should handle unknown task type with type_code as label', () => {
+      const unknownTask = { ...mockTask, type_code: 'custom_type' as TaskType };
+      const message = service.formatTasksMessage([unknownTask], TelegramLanguage.RU);
+      expect(message).toContain('custom_type');
+    });
+
+    it('should handle unknown status with default icon', () => {
+      const unknownStatusTask = { ...mockTask, status: 'custom_status' as TaskStatus };
+      const message = service.formatTasksMessage([unknownStatusTask], TelegramLanguage.RU);
+      expect(message).toContain('❓');
+    });
+
+    it('should handle machine without location', () => {
+      const taskNoLocation = {
+        ...mockTask,
+        machine: { id: 'machine-1', machine_number: 'M-002', location: undefined },
+      };
+      const message = service.formatTasksMessage([taskNoLocation], TelegramLanguage.RU);
+      expect(message).toContain('M-002 • N/A');
+    });
+
+    it('should format date in English locale', () => {
+      const message = service.formatTasksMessage([mockTask], TelegramLanguage.EN);
+      expect(message).toContain('Jan'); // English short month format
+    });
+
+    it('should format all task types correctly', () => {
+      const types = [
+        { type: TaskType.COLLECTION, label: 'Инкассация' },
+        { type: TaskType.INSPECTION, label: 'Проверка' },
+        { type: TaskType.REPAIR, label: 'Ремонт' },
+      ];
+
+      types.forEach(({ type, label }) => {
+        const task = { ...mockTask, type_code: type };
+        const message = service.formatTasksMessage([task], TelegramLanguage.RU);
+        expect(message).toContain(label);
+      });
+    });
+
+    it('should format all task types correctly in English', () => {
+      const types = [
+        { type: TaskType.COLLECTION, label: 'Collection' },
+        { type: TaskType.INSPECTION, label: 'Inspection' },
+        { type: TaskType.REPAIR, label: 'Repair' },
+      ];
+
+      types.forEach(({ type, label }) => {
+        const task = { ...mockTask, type_code: type };
+        const message = service.formatTasksMessage([task], TelegramLanguage.EN);
+        expect(message).toContain(label);
+      });
+    });
+
+    it('should show in-progress status icon', () => {
+      const inProgressTask = { ...mockTask, status: TaskStatus.IN_PROGRESS };
+      const message = service.formatTasksMessage([inProgressTask], TelegramLanguage.RU);
+      expect(message).toContain('🔄');
+    });
+
+    it('should show assigned status icon', () => {
+      const message = service.formatTasksMessage([mockTask], TelegramLanguage.RU);
+      expect(message).toContain('📌');
+    });
   });
 
   describe('formatMachinesMessage', () => {
@@ -445,6 +637,19 @@ describe('TelegramUIService', () => {
     it('should show "no alerts" in English', () => {
       const message = service.formatAlertsMessage([], TelegramLanguage.EN);
       expect(message).toContain('No active alerts');
+    });
+
+    it('should format low_stock alert type', () => {
+      const lowStockAlert = { ...mockAlert, type: 'low_stock' };
+      const message = service.formatAlertsMessage([lowStockAlert], TelegramLanguage.RU);
+      expect(message).toContain('⚠️');
+      expect(message).toContain('Низкий запас');
+    });
+
+    it('should format alerts in English', () => {
+      const message = service.formatAlertsMessage([mockAlert], TelegramLanguage.EN);
+      expect(message).toContain('Alerts');
+      expect(message).toContain('Machine offline');
     });
   });
 
