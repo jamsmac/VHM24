@@ -13,7 +13,7 @@
  * - InventoryReservationService: Reservation management
  */
 
-import { Injectable, Inject, forwardRef } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { WarehouseInventory } from './entities/warehouse-inventory.entity';
 import { OperatorInventory } from './entities/operator-inventory.entity';
 import { MachineInventory } from './entities/machine-inventory.entity';
@@ -45,17 +45,11 @@ import { InventoryReservationService } from './services/inventory-reservation.se
 @Injectable()
 export class InventoryService {
   constructor(
-    @Inject(forwardRef(() => WarehouseInventoryService))
     private readonly warehouseInventoryService: WarehouseInventoryService,
-    @Inject(forwardRef(() => OperatorInventoryService))
     private readonly operatorInventoryService: OperatorInventoryService,
-    @Inject(forwardRef(() => MachineInventoryService))
     private readonly machineInventoryService: MachineInventoryService,
-    @Inject(forwardRef(() => InventoryTransferService))
     private readonly inventoryTransferService: InventoryTransferService,
-    @Inject(forwardRef(() => InventoryMovementService))
     private readonly inventoryMovementService: InventoryMovementService,
-    @Inject(forwardRef(() => InventoryReservationService))
     private readonly inventoryReservationService: InventoryReservationService,
   ) {}
 

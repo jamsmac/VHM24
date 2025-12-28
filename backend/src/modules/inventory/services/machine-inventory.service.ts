@@ -9,7 +9,7 @@
  * - Low stock detection
  */
 
-import { Injectable, BadRequestException, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { MachineInventory } from '../entities/machine-inventory.entity';
@@ -42,7 +42,6 @@ export class MachineInventoryService {
   constructor(
     @InjectRepository(MachineInventory)
     private readonly machineInventoryRepository: Repository<MachineInventory>,
-    @Inject(forwardRef(() => InventoryMovementService))
     private readonly movementService: InventoryMovementService,
   ) {}
 

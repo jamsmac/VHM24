@@ -13,8 +13,6 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
-  Inject,
-  forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
@@ -38,7 +36,6 @@ export class WarehouseInventoryService {
     @InjectRepository(WarehouseInventory)
     private readonly warehouseInventoryRepository: Repository<WarehouseInventory>,
     private readonly dataSource: DataSource,
-    @Inject(forwardRef(() => InventoryMovementService))
     private readonly movementService: InventoryMovementService,
   ) {}
 
