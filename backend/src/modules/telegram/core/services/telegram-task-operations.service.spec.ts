@@ -273,6 +273,144 @@ describe('TelegramTaskOperationsService', () => {
         expect.any(Object),
       );
     });
+
+    it('should handle task start error in English', async () => {
+      const ctx = createMockContext({
+        message: { text: '/start_task abc123' },
+        telegramUser: {
+          is_verified: true,
+          language: TelegramLanguage.EN,
+          telegram_id: '123456789',
+        },
+      });
+
+      usersService.findByTelegramId.mockResolvedValue({ id: 'user-123' } as any);
+      tasksService.startTask.mockRejectedValue(new Error('Task already completed'));
+
+      await service.handleStartTaskCommand(ctx);
+
+      expect(ctx.reply).toHaveBeenCalledWith(
+        expect.stringContaining('Could not start task'),
+        expect.any(Object),
+      );
+    });
+
+    it('should start task with checklist in English', async () => {
+      const ctx = createMockContext({
+        message: { text: '/start_task abc123' },
+        telegramUser: {
+          is_verified: true,
+          language: TelegramLanguage.EN,
+          telegram_id: '123456789',
+        },
+      });
+
+      usersService.findByTelegramId.mockResolvedValue({ id: 'user-123' } as any);
+      tasksService.startTask.mockResolvedValue({
+        id: 'abc123',
+        type_code: TaskType.REFILL,
+        machine: { machine_number: 'M-001', location: { name: 'Office' } },
+        checklist: ['Step 1', 'Step 2'],
+      } as any);
+
+      await service.handleStartTaskCommand(ctx);
+
+      expect(ctx.reply).toHaveBeenCalledWith(
+        expect.stringContaining('Task started'),
+        expect.any(Object),
+      );
+    });
+
+    it('should show usage in English when no task ID', async () => {
+      const ctx = createMockContext({
+        message: { text: '/start_task' },
+        telegramUser: {
+          is_verified: true,
+          language: TelegramLanguage.EN,
+          telegram_id: '123456789',
+        },
+      });
+
+      await service.handleStartTaskCommand(ctx);
+
+      expect(ctx.reply).toHaveBeenCalledWith(
+        expect.stringContaining('Usage'),
+      );
+    });
+
+    it('should handle user not found in English', async () => {
+      const ctx = createMockContext({
+        message: { text: '/start_task abc123' },
+        telegramUser: {
+          is_verified: true,
+          language: TelegramLanguage.EN,
+          telegram_id: '123456789',
+        },
+      });
+
+      usersService.findByTelegramId.mockResolvedValue(null);
+
+      await service.handleStartTaskCommand(ctx);
+
+      expect(ctx.reply).toHaveBeenCalledWith('❌ User not found');
+    });
+
+    it('should default to Russian for unverified user without language', async () => {
+      const ctx = createMockContext({
+        telegramUser: { is_verified: false, language: undefined },
+      });
+
+      await service.handleStartTaskCommand(ctx);
+
+      expect(ctx.reply).toHaveBeenCalledWith('not_verified');
+    });
+
+    it('should start task without checklist and prompt for photo', async () => {
+      const ctx = createMockContext({
+        message: { text: '/start_task abc123' },
+      });
+
+      usersService.findByTelegramId.mockResolvedValue({ id: 'user-123' } as any);
+      tasksService.startTask.mockResolvedValue({
+        id: 'abc123',
+        type_code: TaskType.REFILL,
+        machine: { machine_number: 'M-001', location: { name: 'Office' } },
+        checklist: [],
+      } as any);
+
+      await service.handleStartTaskCommand(ctx);
+
+      expect(ctx.reply).toHaveBeenCalledWith(
+        expect.stringContaining('Загрузите фото ДО'),
+        expect.any(Object),
+      );
+    });
+
+    it('should start task without checklist in English', async () => {
+      const ctx = createMockContext({
+        message: { text: '/start_task abc123' },
+        telegramUser: {
+          is_verified: true,
+          language: TelegramLanguage.EN,
+          telegram_id: '123456789',
+        },
+      });
+
+      usersService.findByTelegramId.mockResolvedValue({ id: 'user-123' } as any);
+      tasksService.startTask.mockResolvedValue({
+        id: 'abc123',
+        type_code: TaskType.REFILL,
+        machine: { machine_number: 'M-001', location: { name: 'Office' } },
+        checklist: [],
+      } as any);
+
+      await service.handleStartTaskCommand(ctx);
+
+      expect(ctx.reply).toHaveBeenCalledWith(
+        expect.stringContaining('Upload BEFORE photo'),
+        expect.any(Object),
+      );
+    });
   });
 
   describe('handleCompleteTaskCommand', () => {
@@ -360,6 +498,83 @@ describe('TelegramTaskOperationsService', () => {
       expect(ctx.reply).toHaveBeenCalledWith(
         expect.stringContaining('Great job'),
         expect.any(Object),
+      );
+    });
+
+    it('should handle user not found in English', async () => {
+      const ctx = createMockContext({
+        message: { text: '/complete_task abc123' },
+        telegramUser: {
+          is_verified: true,
+          language: TelegramLanguage.EN,
+          telegram_id: '123456789',
+        },
+      });
+
+      usersService.findByTelegramId.mockResolvedValue(null);
+
+      await service.handleCompleteTaskCommand(ctx);
+
+      expect(ctx.reply).toHaveBeenCalledWith('❌ User not found');
+    });
+
+    it('should handle completion error in English', async () => {
+      const ctx = createMockContext({
+        message: { text: '/complete_task abc123' },
+        telegramUser: {
+          is_verified: true,
+          language: TelegramLanguage.EN,
+          telegram_id: '123456789',
+        },
+      });
+
+      usersService.findByTelegramId.mockResolvedValue({ id: 'user-123' } as any);
+      tasksService.completeTask.mockRejectedValue(new Error('Photos missing'));
+
+      await service.handleCompleteTaskCommand(ctx);
+
+      expect(ctx.reply).toHaveBeenCalledWith(
+        expect.stringContaining('Could not complete task'),
+        expect.any(Object),
+      );
+    });
+
+    it('should handle user not found', async () => {
+      const ctx = createMockContext({
+        message: { text: '/complete_task abc123' },
+      });
+
+      usersService.findByTelegramId.mockResolvedValue(null);
+
+      await service.handleCompleteTaskCommand(ctx);
+
+      expect(ctx.reply).toHaveBeenCalledWith('❌ Пользователь не найден');
+    });
+
+    it('should default to Russian for unverified user without language', async () => {
+      const ctx = createMockContext({
+        telegramUser: { is_verified: false, language: undefined },
+      });
+
+      await service.handleCompleteTaskCommand(ctx);
+
+      expect(ctx.reply).toHaveBeenCalledWith('not_verified');
+    });
+
+    it('should show usage in English when no task ID', async () => {
+      const ctx = createMockContext({
+        message: { text: '/complete_task' },
+        telegramUser: {
+          is_verified: true,
+          language: TelegramLanguage.EN,
+          telegram_id: '123456789',
+        },
+      });
+
+      await service.handleCompleteTaskCommand(ctx);
+
+      expect(ctx.reply).toHaveBeenCalledWith(
+        expect.stringContaining('Usage'),
       );
     });
   });
@@ -606,6 +821,197 @@ describe('TelegramTaskOperationsService', () => {
         expect.stringContaining('Фото не найдено'),
       );
     });
+
+    it('should return early if user not found', async () => {
+      const ctx = createMockContext({
+        session: {
+          state: ConversationState.AWAITING_PHOTO_BEFORE,
+          context: { activeTaskId: 'task-123' },
+        },
+      });
+
+      usersService.findByTelegramId.mockResolvedValue(null);
+
+      await service.handlePhotoUpload(ctx);
+
+      // Should return early without reply
+      expect(ctx.reply).not.toHaveBeenCalled();
+    });
+
+    it('should handle photo upload error in English', async () => {
+      global.fetch = jest.fn().mockRejectedValue(new Error('Download failed'));
+
+      const ctx = createMockContext({
+        session: {
+          state: ConversationState.AWAITING_PHOTO_BEFORE,
+          context: { activeTaskId: 'task-123' },
+        },
+        message: {
+          photo: [{ file_id: 'large', width: 500 }],
+        },
+        telegramUser: {
+          is_verified: true,
+          language: TelegramLanguage.EN,
+          telegram_id: '123456789',
+        },
+      });
+
+      usersService.findByTelegramId.mockResolvedValue({ id: 'user-123' } as any);
+
+      await service.handlePhotoUpload(ctx);
+
+      expect(ctx.reply).toHaveBeenCalledWith(
+        expect.stringContaining('Error uploading photo'),
+      );
+    });
+
+    it('should handle session not found in English', async () => {
+      const ctx = createMockContext({
+        session: null,
+        telegramUser: {
+          is_verified: true,
+          language: TelegramLanguage.EN,
+          telegram_id: '123456789',
+        },
+      });
+
+      usersService.findByTelegramId.mockResolvedValue({ id: 'user-123' } as any);
+
+      await service.handlePhotoUpload(ctx);
+
+      expect(ctx.reply).toHaveBeenCalledWith('❌ Session not found. Start task again.');
+    });
+
+    it('should handle not awaiting photo in English', async () => {
+      const ctx = createMockContext({
+        session: {
+          state: ConversationState.IDLE,
+          context: {},
+        },
+        telegramUser: {
+          is_verified: true,
+          language: TelegramLanguage.EN,
+          telegram_id: '123456789',
+        },
+      });
+
+      usersService.findByTelegramId.mockResolvedValue({ id: 'user-123' } as any);
+
+      await service.handlePhotoUpload(ctx);
+
+      expect(ctx.reply).toHaveBeenCalledWith(
+        expect.stringContaining('Not expecting a photo'),
+      );
+    });
+
+    it('should handle task not found in session in English', async () => {
+      const ctx = createMockContext({
+        session: {
+          state: ConversationState.AWAITING_PHOTO_BEFORE,
+          context: {},
+        },
+        telegramUser: {
+          is_verified: true,
+          language: TelegramLanguage.EN,
+          telegram_id: '123456789',
+        },
+      });
+
+      usersService.findByTelegramId.mockResolvedValue({ id: 'user-123' } as any);
+
+      await service.handlePhotoUpload(ctx);
+
+      expect(ctx.reply).toHaveBeenCalledWith('❌ Task not found in session. Start again.');
+    });
+
+    it('should handle no photo found in English', async () => {
+      const ctx = createMockContext({
+        session: {
+          state: ConversationState.AWAITING_PHOTO_BEFORE,
+          context: { activeTaskId: 'task-123' },
+        },
+        message: {},
+        telegramUser: {
+          is_verified: true,
+          language: TelegramLanguage.EN,
+          telegram_id: '123456789',
+        },
+      });
+
+      usersService.findByTelegramId.mockResolvedValue({ id: 'user-123' } as any);
+
+      await service.handlePhotoUpload(ctx);
+
+      expect(ctx.reply).toHaveBeenCalledWith('❌ Photo not found');
+    });
+
+    it('should handle BEFORE photo upload in English', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        arrayBuffer: () => Promise.resolve(new ArrayBuffer(100)),
+      });
+
+      const ctx = createMockContext({
+        session: {
+          state: ConversationState.AWAITING_PHOTO_BEFORE,
+          context: { activeTaskId: 'task-123' },
+        },
+        message: {
+          photo: [{ file_id: 'large', width: 500 }],
+        },
+        telegramUser: {
+          is_verified: true,
+          language: TelegramLanguage.EN,
+          telegram_id: '123456789',
+        },
+      });
+
+      usersService.findByTelegramId.mockResolvedValue({ id: 'user-123' } as any);
+      tasksService.findOne.mockResolvedValue({ id: 'task-123', metadata: {} } as any);
+      taskCallbackService.getExecutionState.mockReturnValue({
+        photos_uploaded: { before: false, after: false },
+      } as any);
+
+      await service.handlePhotoUpload(ctx);
+
+      expect(ctx.reply).toHaveBeenCalledWith(
+        expect.stringContaining('BEFORE photo uploaded successfully'),
+        expect.any(Object),
+      );
+    });
+
+    it('should handle AFTER photo upload in English', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        arrayBuffer: () => Promise.resolve(new ArrayBuffer(100)),
+      });
+
+      const ctx = createMockContext({
+        session: {
+          state: ConversationState.AWAITING_PHOTO_AFTER,
+          context: { activeTaskId: 'task-123' },
+        },
+        message: {
+          photo: [{ file_id: 'large', width: 500 }],
+        },
+        telegramUser: {
+          is_verified: true,
+          language: TelegramLanguage.EN,
+          telegram_id: '123456789',
+        },
+      });
+
+      usersService.findByTelegramId.mockResolvedValue({ id: 'user-123' } as any);
+      tasksService.findOne.mockResolvedValue({ id: 'task-123', metadata: {} } as any);
+      taskCallbackService.getExecutionState.mockReturnValue({
+        photos_uploaded: { before: true, after: false },
+      } as any);
+
+      await service.handlePhotoUpload(ctx);
+
+      expect(ctx.reply).toHaveBeenCalledWith(
+        expect.stringContaining('Both photos uploaded'),
+        expect.any(Object),
+      );
+    });
   });
 
   describe('handleVoiceMessage', () => {
@@ -719,7 +1125,31 @@ describe('TelegramTaskOperationsService', () => {
       expect(ctx.reply).toHaveBeenCalledWith('help', expect.any(Object));
     });
 
-    it('should handle start_task command', async () => {
+    it('should handle start_task command with task number', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        arrayBuffer: () => Promise.resolve(new ArrayBuffer(100)),
+      });
+
+      const ctx = createMockContext({
+        message: {
+          voice: { file_id: 'voice-123' },
+        },
+      });
+
+      voiceService.transcribeVoice.mockResolvedValue('start task 1');
+      voiceService.parseCommand.mockReturnValue({
+        intent: 'start_task',
+        confidence: 0.9,
+        originalText: 'start task 1',
+        parameters: { taskNumber: '1' },
+      });
+
+      await service.handleVoiceMessage(ctx);
+
+      expect(mockHelpers.handleTasksCommand).toHaveBeenCalledWith(ctx);
+    });
+
+    it('should handle start_task command without task number', async () => {
       global.fetch = jest.fn().mockResolvedValue({
         arrayBuffer: () => Promise.resolve(new ArrayBuffer(100)),
       });
@@ -735,7 +1165,7 @@ describe('TelegramTaskOperationsService', () => {
         intent: 'start_task',
         confidence: 0.9,
         originalText: 'start task',
-        parameters: { taskNumber: '1' },
+        parameters: {},
       });
 
       await service.handleVoiceMessage(ctx);
@@ -781,6 +1211,65 @@ describe('TelegramTaskOperationsService', () => {
         expect.stringContaining('Не удалось распознать'),
         expect.any(Object),
       );
+    });
+
+    it('should handle voice transcription error in English', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        arrayBuffer: () => Promise.resolve(new ArrayBuffer(100)),
+      });
+
+      const ctx = createMockContext({
+        message: {
+          voice: { file_id: 'voice-123' },
+        },
+        telegramUser: {
+          is_verified: true,
+          language: TelegramLanguage.EN,
+          telegram_id: '123456789',
+        },
+      });
+
+      voiceService.transcribeVoice.mockRejectedValue(new Error('Transcription failed'));
+
+      await service.handleVoiceMessage(ctx);
+
+      expect(ctx.reply).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to process voice message'),
+        expect.any(Object),
+      );
+    });
+
+    it('should handle voice service unavailable in English', async () => {
+      voiceService.isAvailable.mockReturnValue(false);
+
+      const ctx = createMockContext({
+        telegramUser: {
+          is_verified: true,
+          language: TelegramLanguage.EN,
+          telegram_id: '123456789',
+        },
+      });
+
+      await service.handleVoiceMessage(ctx);
+
+      expect(ctx.reply).toHaveBeenCalledWith(
+        expect.stringContaining('Voice commands temporarily unavailable'),
+      );
+    });
+
+    it('should handle missing voice message in English', async () => {
+      const ctx = createMockContext({
+        message: {},
+        telegramUser: {
+          is_verified: true,
+          language: TelegramLanguage.EN,
+          telegram_id: '123456789',
+        },
+      });
+
+      await service.handleVoiceMessage(ctx);
+
+      expect(ctx.reply).toHaveBeenCalledWith('❌ Voice message not found');
     });
 
     it('should handle English voice commands', async () => {
@@ -843,6 +1332,26 @@ describe('TelegramTaskOperationsService', () => {
       );
 
       expect(() => newService.setHelpers(mockHelpers)).not.toThrow();
+    });
+
+    it('should return key when helpers not set for t()', async () => {
+      const newService = new TelegramTaskOperationsService(
+        sessionService,
+        voiceService,
+        taskCallbackService,
+        tasksService,
+        filesService,
+        usersService,
+      );
+      // Don't call setHelpers
+
+      const ctx = createMockContext({
+        telegramUser: { is_verified: false, language: TelegramLanguage.RU },
+      });
+
+      await newService.handleStartTaskCommand(ctx);
+
+      expect(ctx.reply).toHaveBeenCalledWith('not_verified');
     });
   });
 
