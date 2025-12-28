@@ -6,7 +6,11 @@
   "transform": {
     "^.+\\.(t|j)s$": "ts-jest"
   },
+  "transformIgnorePatterns": [
+    "node_modules/(?!(uuid)/)"
+  ],
   "moduleNameMapper": {
+    "^uuid$": "<rootDir>/../node_modules/uuid/dist/index.js",
     "^@/(.*)$": "<rootDir>/../src/$1",
     "^@modules/(.*)$": "<rootDir>/../src/modules/$1",
     "^@common/(.*)$": "<rootDir>/../src/common/$1",

@@ -115,9 +115,9 @@ describe('REPLACE_* Tasks Component Workflow (E2E)', () => {
         if (operatorId) {
           await dataSource.query('DELETE FROM users WHERE id = $1', [operatorId]);
         }
-      } catch (_error) {
+      } catch (error) {
         // Ignore cleanup errors
-        console.warn('Cleanup error:', error.message);
+        console.warn('Cleanup error:', error instanceof Error ? error.message : 'Unknown error');
       }
     }
 

@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { TasksService } from './tasks.service';
 import { Task, TaskStatus, TaskType, TaskPriority } from './entities/task.entity';
 import { TaskItem } from './entities/task-item.entity';
@@ -27,21 +27,21 @@ import { TaskEscalationService } from './services/task-escalation.service';
 describe('TasksService', () => {
   let service: TasksService;
   let taskRepository: jest.Mocked<Repository<Task>>;
-  let taskItemRepository: jest.Mocked<Repository<TaskItem>>;
+  let _taskItemRepository: jest.Mocked<Repository<TaskItem>>;
   let taskCommentRepository: jest.Mocked<Repository<TaskComment>>;
   let _taskComponentRepository: jest.Mocked<Repository<TaskComponent>>;
-  let filesService: jest.Mocked<FilesService>;
-  let machinesService: jest.Mocked<MachinesService>;
+  let _filesService: jest.Mocked<FilesService>;
+  let _machinesService: jest.Mocked<MachinesService>;
   let inventoryService: jest.Mocked<InventoryService>;
   let notificationsService: jest.Mocked<NotificationsService>;
-  let transactionsService: jest.Mocked<TransactionsService>;
-  let incidentsService: jest.Mocked<IncidentsService>;
-  let auditLogService: jest.Mocked<AuditLogService>;
-  let usersService: jest.Mocked<UsersService>;
-  let washingSchedulesService: jest.Mocked<WashingSchedulesService>;
-  let componentMovementsService: jest.Mocked<ComponentMovementsService>;
+  let _transactionsService: jest.Mocked<TransactionsService>;
+  let _incidentsService: jest.Mocked<IncidentsService>;
+  let _auditLogService: jest.Mocked<AuditLogService>;
+  let _usersService: jest.Mocked<UsersService>;
+  let _washingSchedulesService: jest.Mocked<WashingSchedulesService>;
+  let _componentMovementsService: jest.Mocked<ComponentMovementsService>;
   let _componentsService: jest.Mocked<ComponentsService>;
-  let eventEmitter: jest.Mocked<EventEmitter2>;
+  let _eventEmitter: jest.Mocked<EventEmitter2>;
   let dataSource: jest.Mocked<DataSource>;
 
   // Mock data fixtures
@@ -61,7 +61,7 @@ describe('TasksService', () => {
     email: 'test@example.com',
   };
 
-  const mockAdminUser = {
+  const _mockAdminUser = {
     id: 'admin-uuid',
     username: 'admin',
     full_name: 'Admin User',
@@ -85,7 +85,7 @@ describe('TasksService', () => {
     components: [],
   };
 
-  const mockTaskItem: Partial<TaskItem> = {
+  const _mockTaskItem: Partial<TaskItem> = {
     id: 'item-uuid',
     task_id: 'task-uuid',
     nomenclature_id: 'nom-uuid',

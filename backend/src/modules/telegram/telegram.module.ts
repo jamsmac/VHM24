@@ -24,23 +24,7 @@ import { TelegramTasksModule } from './tasks/telegram-tasks.module';
 import { TelegramManagersModule } from './managers/telegram-managers.module';
 import { TelegramQuickActionsModule } from './quick-actions/telegram-quick-actions.module';
 
-// Services from submodules (re-exported for backward compatibility)
-import { TelegramBotService } from './core/services/telegram-bot.service';
-import { TelegramSessionService } from './infrastructure/services/telegram-session.service';
-import { TelegramResilientApiService } from './infrastructure/services/telegram-resilient-api.service';
-import { TelegramQueueProcessor } from './infrastructure/processors/telegram-queue.processor';
-import { TelegramUsersService } from './users/services/telegram-users.service';
-import { TelegramSettingsService } from './users/services/telegram-settings.service';
-import { TelegramKeyboardHandler } from './ui/handlers/telegram-keyboard.handler';
-import { TelegramMessageHandler } from './ui/handlers/telegram-message.handler';
-import { TelegramVoiceService } from './media/services/telegram-voice.service';
-import { TelegramQrService } from './media/services/telegram-qr.service';
-import { TelegramPhotoCompressionService } from './media/services/telegram-photo-compression.service';
-import { TelegramLocationService } from './location/services/telegram-location.service';
-import { TelegramI18nService } from './i18n/services/telegram-i18n.service';
-import { TelegramTaskHandler } from './tasks/handlers/telegram-task.handler';
-import { TelegramManagerToolsService } from './managers/services/telegram-manager-tools.service';
-import { TelegramQuickActionsService } from './quick-actions/services/telegram-quick-actions.service';
+// Service imports for providers (only services directly provided in this module)
 import { TelegramNotificationsService } from './notifications/services/telegram-notifications.service';
 
 // Commerce (uses forwardRef due to circular dependency)
@@ -135,31 +119,19 @@ import { RequestsModule } from '../requests/requests.module';
     CatalogHandler,
   ],
   exports: [
-    // Main services
-    TelegramBotService,
+    // Re-export submodules (makes their exported services available)
+    TelegramCoreModule,
+    TelegramInfrastructureModule,
+    TelegramUsersModule,
+    TelegramUiModule,
+    TelegramMediaModule,
+    TelegramLocationModule,
+    TelegramI18nModule,
+    TelegramTasksModule,
+    TelegramManagersModule,
+    TelegramQuickActionsModule,
+    // Direct exports from this module's providers
     TelegramNotificationsService,
-    TelegramQuickActionsService,
-    TelegramManagerToolsService,
-    TelegramTaskHandler,
-    // Re-export from infrastructure
-    TelegramSessionService,
-    TelegramResilientApiService,
-    TelegramQueueProcessor,
-    // Re-export from users
-    TelegramUsersService,
-    TelegramSettingsService,
-    // Re-export from ui
-    TelegramKeyboardHandler,
-    TelegramMessageHandler,
-    // Re-export from media
-    TelegramVoiceService,
-    TelegramQrService,
-    TelegramPhotoCompressionService,
-    // Re-export from location
-    TelegramLocationService,
-    // Re-export from i18n
-    TelegramI18nService,
-    // Re-export from commerce
     CartStorageService,
   ],
 })
