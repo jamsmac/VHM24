@@ -35,6 +35,7 @@ import {
 import { JwtAuthGuard } from '@modules/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '@modules/auth/guards/roles.guard';
 import { Roles } from '@modules/auth/decorators/roles.decorator';
+import { UserRole } from '@modules/users/entities/user.entity';
 
 /**
  * Inventory Thresholds Controller
@@ -53,7 +54,7 @@ export class InventoryThresholdsController {
    * Создать новый порог расхождений
    */
   @Post()
-  @Roles('ADMIN', 'MANAGER')
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   @ApiOperation({ summary: 'Create new inventory difference threshold' })
   @ApiResponse({
     status: 201,
@@ -235,7 +236,7 @@ export class InventoryThresholdsController {
    * Обновить порог
    */
   @Patch(':id')
-  @Roles('ADMIN', 'MANAGER')
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   @ApiOperation({ summary: 'Update threshold' })
   @ApiParam({ name: 'id', type: String, description: 'Threshold ID' })
   @ApiResponse({
@@ -255,7 +256,7 @@ export class InventoryThresholdsController {
    * Активировать порог
    */
   @Patch(':id/activate')
-  @Roles('ADMIN', 'MANAGER')
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   @ApiOperation({ summary: 'Activate threshold' })
   @ApiParam({ name: 'id', type: String, description: 'Threshold ID' })
   @ApiResponse({
@@ -271,7 +272,7 @@ export class InventoryThresholdsController {
    * Деактивировать порог
    */
   @Patch(':id/deactivate')
-  @Roles('ADMIN', 'MANAGER')
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   @ApiOperation({ summary: 'Deactivate threshold' })
   @ApiParam({ name: 'id', type: String, description: 'Threshold ID' })
   @ApiResponse({
@@ -287,7 +288,7 @@ export class InventoryThresholdsController {
    * Удалить порог
    */
   @Delete(':id')
-  @Roles('ADMIN')
+  @Roles(UserRole.OWNER, UserRole.ADMIN)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete threshold' })
   @ApiParam({ name: 'id', type: String, description: 'Threshold ID' })
@@ -301,7 +302,7 @@ export class InventoryThresholdsController {
    * Создать пороги по умолчанию
    */
   @Post('defaults')
-  @Roles('ADMIN')
+  @Roles(UserRole.OWNER, UserRole.ADMIN)
   @ApiOperation({ summary: 'Create default global thresholds' })
   @ApiResponse({
     status: 201,

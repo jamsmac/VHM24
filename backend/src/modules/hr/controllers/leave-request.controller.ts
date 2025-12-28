@@ -16,6 +16,7 @@ import { CreateLeaveRequestDto, ApproveLeaveDto, RejectLeaveDto } from '../dto/l
 import { JwtAuthGuard } from '@modules/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '@modules/auth/guards/roles.guard';
 import { Roles } from '@modules/auth/decorators/roles.decorator';
+import { UserRole } from '@modules/users/entities/user.entity';
 
 @ApiTags('leave-requests')
 @ApiBearerAuth('JWT-auth')
@@ -25,25 +26,25 @@ export class LeaveRequestController {
   constructor(private readonly leaveService: LeaveRequestService) {}
 
   @Post()
-  @Roles('ADMIN', 'MANAGER', 'Owner')
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   async create(@Body() dto: CreateLeaveRequestDto) {
     return this.leaveService.createLeaveRequest(dto);
   }
 
   @Put(':id/approve')
-  @Roles('ADMIN', 'MANAGER', 'Owner')
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   async approve(@Param('id', ParseUUIDPipe) id: string, @Body() dto: ApproveLeaveDto) {
     return this.leaveService.approveLeave(id, dto.approved_by_id);
   }
 
   @Put(':id/reject')
-  @Roles('ADMIN', 'MANAGER', 'Owner')
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   async reject(@Param('id', ParseUUIDPipe) id: string, @Body() dto: RejectLeaveDto) {
     return this.leaveService.rejectLeave(id, dto.approved_by_id, dto.rejection_reason);
   }
 
   @Delete(':id')
-  @Roles('ADMIN', 'MANAGER', 'Owner')
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   async cancel(@Param('id', ParseUUIDPipe) id: string) {
     return this.leaveService.cancelLeave(id);
   }

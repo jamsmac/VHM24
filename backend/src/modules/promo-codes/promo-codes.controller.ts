@@ -30,7 +30,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RbacRolesGuard } from '../auth/guards/rbac-roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { User } from '../users/entities/user.entity';
+import { User, UserRole } from '../users/entities/user.entity';
 
 @ApiTags('Promo Codes')
 @ApiBearerAuth()
@@ -40,7 +40,7 @@ export class PromoCodesController {
   constructor(private readonly promoCodesService: PromoCodesService) {}
 
   @Post()
-  @Roles('owner', 'admin', 'manager')
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   @ApiOperation({ summary: 'Create a new promo code' })
   @ApiResponse({ status: 201, description: 'Promo code created successfully' })
   @ApiResponse({ status: 400, description: 'Invalid input' })
@@ -53,7 +53,7 @@ export class PromoCodesController {
   }
 
   @Get()
-  @Roles('owner', 'admin', 'manager', 'operator')
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER, UserRole.OPERATOR)
   @ApiOperation({ summary: 'Get all promo codes with filters' })
   @ApiResponse({ status: 200, description: 'List of promo codes' })
   async findAll(
@@ -63,7 +63,7 @@ export class PromoCodesController {
   }
 
   @Get(':id')
-  @Roles('owner', 'admin', 'manager', 'operator')
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER, UserRole.OPERATOR)
   @ApiOperation({ summary: 'Get a promo code by ID' })
   @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
   @ApiResponse({ status: 200, description: 'Promo code details' })
@@ -73,7 +73,7 @@ export class PromoCodesController {
   }
 
   @Get(':id/stats')
-  @Roles('owner', 'admin', 'manager')
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   @ApiOperation({ summary: 'Get promo code usage statistics' })
   @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
   @ApiResponse({ status: 200, description: 'Promo code statistics' })
@@ -83,7 +83,7 @@ export class PromoCodesController {
   }
 
   @Patch(':id')
-  @Roles('owner', 'admin', 'manager')
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   @ApiOperation({ summary: 'Update a promo code' })
   @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
   @ApiResponse({ status: 200, description: 'Promo code updated successfully' })
@@ -96,7 +96,7 @@ export class PromoCodesController {
   }
 
   @Post(':id/activate')
-  @Roles('owner', 'admin', 'manager')
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Activate a promo code' })
   @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
@@ -107,7 +107,7 @@ export class PromoCodesController {
   }
 
   @Post(':id/pause')
-  @Roles('owner', 'admin', 'manager')
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Pause a promo code' })
   @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
@@ -118,7 +118,7 @@ export class PromoCodesController {
   }
 
   @Delete(':id')
-  @Roles('owner', 'admin')
+  @Roles(UserRole.OWNER, UserRole.ADMIN)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a promo code' })
   @ApiParam({ name: 'id', type: 'string', format: 'uuid' })

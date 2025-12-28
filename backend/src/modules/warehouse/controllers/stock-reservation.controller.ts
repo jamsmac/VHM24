@@ -15,6 +15,7 @@ import { CreateReservationDto, FulfillReservationDto } from '../dto/create-reser
 import { JwtAuthGuard } from '@modules/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '@modules/auth/guards/roles.guard';
 import { Roles } from '@modules/auth/decorators/roles.decorator';
+import { UserRole } from '@modules/users/entities/user.entity';
 
 @ApiTags('stock-reservations')
 @ApiBearerAuth('JWT-auth')
@@ -24,13 +25,13 @@ export class StockReservationController {
   constructor(private readonly reservationService: StockReservationService) {}
 
   @Post()
-  @Roles('ADMIN', 'MANAGER', 'Owner')
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   async createReservation(@Body() dto: CreateReservationDto) {
     return this.reservationService.createReservation(dto);
   }
 
   @Put(':id/fulfill')
-  @Roles('ADMIN', 'MANAGER', 'Owner')
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   async fulfillReservation(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: FulfillReservationDto,
@@ -39,7 +40,7 @@ export class StockReservationController {
   }
 
   @Delete(':id')
-  @Roles('ADMIN', 'MANAGER', 'Owner')
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   async cancelReservation(@Param('id', ParseUUIDPipe) id: string) {
     return this.reservationService.cancelReservation(id);
   }
@@ -50,7 +51,7 @@ export class StockReservationController {
   }
 
   @Post('expire-old')
-  @Roles('ADMIN', 'MANAGER', 'Owner')
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   async expireOldReservations() {
     const count = await this.reservationService.expireOldReservations();
     return { expired_count: count };

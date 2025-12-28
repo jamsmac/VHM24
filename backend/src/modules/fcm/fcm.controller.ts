@@ -17,7 +17,7 @@ import { JwtAuthGuard } from '@/modules/auth/guards/jwt-auth.guard';
 import { RbacRolesGuard } from '@/modules/auth/guards/rbac-roles.guard';
 import { Roles } from '@/modules/auth/decorators/roles.decorator';
 import { CurrentUser } from '@/modules/auth/decorators/current-user.decorator';
-import { User } from '@/modules/users/entities/user.entity';
+import { User, UserRole } from '@/modules/users/entities/user.entity';
 
 @ApiTags('FCM')
 @Controller('fcm')
@@ -92,7 +92,7 @@ export class FcmController {
   }
 
   @Post('send')
-  @Roles('owner', 'admin')
+  @Roles(UserRole.OWNER, UserRole.ADMIN)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Send FCM notification (Admin only)' })
   @ApiResponse({

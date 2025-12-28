@@ -16,6 +16,7 @@ import { CreateSupplierDto, UpdateSupplierDto } from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { UserRole } from '../users/entities/user.entity';
 
 @ApiTags('suppliers')
 @ApiBearerAuth('JWT-auth')
@@ -25,7 +26,7 @@ export class SuppliersController {
   constructor(private readonly suppliersService: SuppliersService) {}
 
   @Post()
-  @Roles('ADMIN', 'MANAGER')
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   @ApiOperation({ summary: 'Создать поставщика' })
   create(@Body() dto: CreateSupplierDto) {
     return this.suppliersService.create(dto);
@@ -56,7 +57,7 @@ export class SuppliersController {
   }
 
   @Patch(':id')
-  @Roles('ADMIN', 'MANAGER')
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   @ApiOperation({ summary: 'Обновить поставщика' })
   @ApiParam({ name: 'id', type: String })
   update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateSupplierDto) {
@@ -64,7 +65,7 @@ export class SuppliersController {
   }
 
   @Delete(':id')
-  @Roles('ADMIN')
+  @Roles(UserRole.OWNER, UserRole.ADMIN)
   @ApiOperation({ summary: 'Удалить поставщика' })
   @ApiParam({ name: 'id', type: String })
   remove(@Param('id', ParseUUIDPipe) id: string) {

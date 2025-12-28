@@ -27,6 +27,7 @@ import { RequestStatus, RequestPriority } from './entities/request.entity';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { UserRole } from '../users/entities/user.entity';
 
 @ApiTags('requests')
 @ApiBearerAuth('JWT-auth')
@@ -84,7 +85,7 @@ export class RequestsController {
   }
 
   @Get('statistics')
-  @Roles('ADMIN', 'MANAGER')
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   @ApiOperation({ summary: 'Получить статистику заявок' })
   @ApiQuery({ name: 'date_from', required: false, type: String })
   @ApiQuery({ name: 'date_to', required: false, type: String })
@@ -117,7 +118,7 @@ export class RequestsController {
   }
 
   @Post(':id/approve')
-  @Roles('ADMIN', 'MANAGER')
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   @ApiOperation({ summary: 'Одобрить заявку' })
   @ApiParam({ name: 'id', type: String })
   approve(
@@ -129,7 +130,7 @@ export class RequestsController {
   }
 
   @Post(':id/reject')
-  @Roles('ADMIN', 'MANAGER')
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   @ApiOperation({ summary: 'Отклонить заявку' })
   @ApiParam({ name: 'id', type: String })
   reject(
@@ -141,7 +142,7 @@ export class RequestsController {
   }
 
   @Post(':id/send')
-  @Roles('ADMIN', 'MANAGER', 'WAREHOUSE')
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   @ApiOperation({ summary: 'Отметить как отправленную поставщику' })
   @ApiParam({ name: 'id', type: String })
   markAsSent(@Param('id', ParseUUIDPipe) id: string, @Body() dto: SendToSupplierDto) {
@@ -149,7 +150,7 @@ export class RequestsController {
   }
 
   @Post(':id/complete')
-  @Roles('ADMIN', 'MANAGER', 'WAREHOUSE')
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   @ApiOperation({ summary: 'Завершить заявку' })
   @ApiParam({ name: 'id', type: String })
   complete(
@@ -171,7 +172,7 @@ export class RequestsController {
   }
 
   @Patch('items/:itemId/received')
-  @Roles('ADMIN', 'MANAGER', 'WAREHOUSE')
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   @ApiOperation({ summary: 'Обновить полученное количество позиции' })
   @ApiParam({ name: 'itemId', type: String })
   updateReceivedQuantity(

@@ -31,6 +31,7 @@ import { TransactionsService } from './transactions.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { UserRole } from '../users/entities/user.entity';
 import { Transaction, TransactionType } from './entities/transaction.entity';
 import {
   CreateTransactionDto,
@@ -47,7 +48,7 @@ export class TransactionsController {
   constructor(private readonly transactionsService: TransactionsService) {}
 
   @Post()
-  @Roles('ADMIN', 'MANAGER', 'Owner')
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   @ApiOperation({ summary: 'Создать транзакцию' })
   @ApiResponse({
     status: 201,
@@ -59,7 +60,7 @@ export class TransactionsController {
   }
 
   @Post('sale')
-  @Roles('ADMIN', 'MANAGER', 'Owner')
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   @ApiOperation({ summary: 'Зарегистрировать продажу' })
   @ApiResponse({
     status: 201,
@@ -71,7 +72,7 @@ export class TransactionsController {
   }
 
   @Post('collection')
-  @Roles('ADMIN', 'MANAGER', 'Owner')
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   @ApiOperation({ summary: 'Зарегистрировать инкассацию' })
   @ApiResponse({
     status: 201,
@@ -83,7 +84,7 @@ export class TransactionsController {
   }
 
   @Post('expense')
-  @Roles('ADMIN', 'MANAGER', 'Owner')
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   @ApiOperation({ summary: 'Зарегистрировать расход' })
   @ApiResponse({
     status: 201,
@@ -240,7 +241,7 @@ export class TransactionsController {
   }
 
   @Delete(':id')
-  @Roles('ADMIN', 'MANAGER', 'Owner')
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Удалить транзакцию (soft delete)' })
   @ApiParam({ name: 'id', description: 'UUID транзакции' })

@@ -17,6 +17,7 @@ import { MaterialCategory } from './entities/material.entity';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { UserRole } from '../users/entities/user.entity';
 
 @ApiTags('materials')
 @ApiBearerAuth('JWT-auth')
@@ -26,7 +27,7 @@ export class MaterialsController {
   constructor(private readonly materialsService: MaterialsService) {}
 
   @Post()
-  @Roles('ADMIN', 'MANAGER')
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   @ApiOperation({ summary: 'Создать материал' })
   create(@Body() dto: CreateMaterialDto) {
     return this.materialsService.create(dto);
@@ -66,7 +67,7 @@ export class MaterialsController {
   }
 
   @Patch(':id')
-  @Roles('ADMIN', 'MANAGER')
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   @ApiOperation({ summary: 'Обновить материал' })
   @ApiParam({ name: 'id', type: String })
   update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateMaterialDto) {
@@ -74,7 +75,7 @@ export class MaterialsController {
   }
 
   @Patch(':id/deactivate')
-  @Roles('ADMIN', 'MANAGER')
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   @ApiOperation({ summary: 'Деактивировать материал' })
   @ApiParam({ name: 'id', type: String })
   deactivate(@Param('id', ParseUUIDPipe) id: string) {
@@ -82,7 +83,7 @@ export class MaterialsController {
   }
 
   @Delete(':id')
-  @Roles('ADMIN')
+  @Roles(UserRole.OWNER, UserRole.ADMIN)
   @ApiOperation({ summary: 'Удалить материал' })
   @ApiParam({ name: 'id', type: String })
   remove(@Param('id', ParseUUIDPipe) id: string) {

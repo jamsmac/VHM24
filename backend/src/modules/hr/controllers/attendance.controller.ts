@@ -14,6 +14,7 @@ import { CheckInDto, CheckOutDto, MarkAbsentDto } from '../dto/attendance.dto';
 import { JwtAuthGuard } from '@modules/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '@modules/auth/guards/roles.guard';
 import { Roles } from '@modules/auth/decorators/roles.decorator';
+import { UserRole } from '@modules/users/entities/user.entity';
 
 @ApiTags('attendance')
 @ApiBearerAuth('JWT-auth')
@@ -23,19 +24,19 @@ export class AttendanceController {
   constructor(private readonly attendanceService: AttendanceService) {}
 
   @Post('check-in')
-  @Roles('ADMIN', 'MANAGER', 'Owner')
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   async checkIn(@Body() dto: CheckInDto) {
     return this.attendanceService.checkIn(dto);
   }
 
   @Post('check-out')
-  @Roles('ADMIN', 'MANAGER', 'Owner')
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   async checkOut(@Body() dto: CheckOutDto) {
     return this.attendanceService.checkOut(dto.employee_id, dto.date);
   }
 
   @Post('mark-absent')
-  @Roles('ADMIN', 'MANAGER', 'Owner')
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   async markAbsent(@Body() dto: MarkAbsentDto) {
     return this.attendanceService.markAbsent(dto.employee_id, dto.date, dto.notes);
   }

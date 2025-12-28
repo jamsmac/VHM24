@@ -19,11 +19,12 @@ import { MismatchType } from './entities/reconciliation-mismatch.entity';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { UserRole } from '../users/entities/user.entity';
 
 @ApiTags('reconciliation')
 @ApiBearerAuth('JWT-auth')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('ADMIN', 'MANAGER')
+@Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
 @Controller('reconciliation')
 export class ReconciliationController {
   constructor(private readonly reconciliationService: ReconciliationService) {}
@@ -108,7 +109,7 @@ export class ReconciliationController {
   }
 
   @Delete('runs/:id')
-  @Roles('ADMIN')
+  @Roles(UserRole.OWNER, UserRole.ADMIN)
   @ApiOperation({ summary: 'Удалить прогон сверки' })
   @ApiParam({ name: 'id', type: String })
   remove(@Param('id', ParseUUIDPipe) id: string) {

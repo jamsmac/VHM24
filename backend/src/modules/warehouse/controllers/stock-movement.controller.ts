@@ -15,6 +15,7 @@ import { MovementType } from '../entities/stock-movement.entity';
 import { JwtAuthGuard } from '@modules/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '@modules/auth/guards/roles.guard';
 import { Roles } from '@modules/auth/decorators/roles.decorator';
+import { UserRole } from '@modules/users/entities/user.entity';
 
 @ApiTags('stock-movements')
 @ApiBearerAuth('JWT-auth')
@@ -24,19 +25,19 @@ export class StockMovementController {
   constructor(private readonly movementService: StockMovementService) {}
 
   @Post('receipt')
-  @Roles('ADMIN', 'MANAGER', 'Owner')
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   async createReceipt(@Body() dto: CreateReceiptDto) {
     return this.movementService.createReceipt(dto);
   }
 
   @Post('shipment')
-  @Roles('ADMIN', 'MANAGER', 'Owner')
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   async createShipment(@Body() dto: CreateShipmentDto) {
     return this.movementService.createShipment(dto);
   }
 
   @Post('transfer')
-  @Roles('ADMIN', 'MANAGER', 'Owner')
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   async createTransfer(@Body() dto: CreateTransferDto) {
     return this.movementService.createTransfer(dto);
   }

@@ -23,6 +23,7 @@ import {
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { UserRole } from '../users/entities/user.entity';
 import { IncidentsService } from './incidents.service';
 import {
   Incident,
@@ -44,7 +45,7 @@ export class IncidentsController {
   constructor(private readonly incidentsService: IncidentsService) {}
 
   @Post()
-  @Roles('ADMIN', 'MANAGER', 'Owner')
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   @ApiOperation({ summary: 'Создать инцидент' })
   @ApiResponse({
     status: 201,
@@ -137,7 +138,7 @@ export class IncidentsController {
   }
 
   @Patch(':id')
-  @Roles('ADMIN', 'MANAGER', 'Owner')
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   @ApiOperation({ summary: 'Обновить инцидент' })
   @ApiParam({ name: 'id', description: 'UUID инцидента' })
   @ApiResponse({
@@ -153,7 +154,7 @@ export class IncidentsController {
   }
 
   @Post(':id/assign')
-  @Roles('ADMIN', 'MANAGER', 'Owner')
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   @ApiOperation({ summary: 'Назначить инцидент специалисту' })
   @ApiParam({ name: 'id', description: 'UUID инцидента' })
   @ApiResponse({
@@ -169,7 +170,7 @@ export class IncidentsController {
   }
 
   @Post(':id/resolve')
-  @Roles('ADMIN', 'MANAGER', 'Owner')
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   @ApiOperation({ summary: 'Решить инцидент' })
   @ApiParam({ name: 'id', description: 'UUID инцидента' })
   @ApiResponse({
@@ -185,7 +186,7 @@ export class IncidentsController {
   }
 
   @Post(':id/close')
-  @Roles('ADMIN', 'MANAGER', 'Owner')
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   @ApiOperation({ summary: 'Закрыть инцидент' })
   @ApiParam({ name: 'id', description: 'UUID инцидента' })
   @ApiResponse({
@@ -198,7 +199,7 @@ export class IncidentsController {
   }
 
   @Post(':id/reopen')
-  @Roles('ADMIN', 'MANAGER', 'Owner')
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   @ApiOperation({ summary: 'Переоткрыть инцидент' })
   @ApiParam({ name: 'id', description: 'UUID инцидента' })
   @ApiResponse({
@@ -214,7 +215,7 @@ export class IncidentsController {
   }
 
   @Delete(':id')
-  @Roles('ADMIN', 'MANAGER', 'Owner')
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Удалить инцидент (soft delete)' })
   @ApiParam({ name: 'id', description: 'UUID инцидента' })

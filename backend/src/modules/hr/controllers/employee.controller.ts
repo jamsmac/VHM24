@@ -6,6 +6,7 @@ import { EmploymentStatus } from '../entities/employee.entity';
 import { JwtAuthGuard } from '@modules/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '@modules/auth/guards/roles.guard';
 import { Roles } from '@modules/auth/decorators/roles.decorator';
+import { UserRole } from '@modules/users/entities/user.entity';
 
 @ApiTags('employees')
 @ApiBearerAuth('JWT-auth')
@@ -58,7 +59,7 @@ export class EmployeeController {
   }
 
   @Put(':id/status')
-  @Roles('ADMIN', 'MANAGER', 'Owner')
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   async updateStatus(
     @Param('id', ParseUUIDPipe) id: string,
     @Body('status') status: EmploymentStatus,

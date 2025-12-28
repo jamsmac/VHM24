@@ -4,6 +4,7 @@ import { InventoryBatchService } from '../services/inventory-batch.service';
 import { JwtAuthGuard } from '@modules/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '@modules/auth/guards/roles.guard';
 import { Roles } from '@modules/auth/decorators/roles.decorator';
+import { UserRole } from '@modules/users/entities/user.entity';
 
 @ApiTags('inventory-batches')
 @ApiBearerAuth('JWT-auth')
@@ -50,13 +51,13 @@ export class InventoryBatchController {
   }
 
   @Put(':id/quarantine')
-  @Roles('ADMIN', 'MANAGER', 'Owner')
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   async quarantineBatch(@Param('id', ParseUUIDPipe) id: string, @Body('reason') reason: string) {
     return this.batchService.quarantineBatch(id, reason);
   }
 
   @Put(':id/release')
-  @Roles('ADMIN', 'MANAGER', 'Owner')
+  @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.MANAGER)
   async releaseFromQuarantine(@Param('id', ParseUUIDPipe) id: string) {
     return this.batchService.releaseFromQuarantine(id);
   }
