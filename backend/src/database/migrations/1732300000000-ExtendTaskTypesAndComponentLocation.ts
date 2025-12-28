@@ -6,13 +6,47 @@ const logger = new Logger('ExtendTaskTypesAndComponentLocation1732300000000');
 export class ExtendTaskTypesAndComponentLocation1732300000000 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     // 1. Расширяем TaskType enum новыми типами задач
-    await queryRunner.query(`
-      ALTER TYPE task_type_enum ADD VALUE IF NOT EXISTS 'inspection';
-      ALTER TYPE task_type_enum ADD VALUE IF NOT EXISTS 'replace_hopper';
-      ALTER TYPE task_type_enum ADD VALUE IF NOT EXISTS 'replace_grinder';
-      ALTER TYPE task_type_enum ADD VALUE IF NOT EXISTS 'replace_brew_unit';
-      ALTER TYPE task_type_enum ADD VALUE IF NOT EXISTS 'replace_mixer';
+    // Check for TypeORM-generated enum name first
+    const enumExists = await queryRunner.query(`
+      SELECT EXISTS (
+        SELECT 1 FROM pg_type WHERE typname = 'tasks_type_enum'
+      );
     `);
+
+    const legacyEnumExists = await queryRunner.query(`
+      SELECT EXISTS (
+        SELECT 1 FROM pg_type WHERE typname = 'task_type_enum'
+      );
+    `);
+
+    const enumName = enumExists[0]?.exists
+      ? 'tasks_type_enum'
+      : legacyEnumExists[0]?.exists
+        ? 'task_type_enum'
+        : null;
+
+    if (enumName) {
+      await queryRunner.query(`
+        ALTER TYPE ${enumName} ADD VALUE IF NOT EXISTS 'inspection';
+      `);
+      await queryRunner.query(`
+        ALTER TYPE ${enumName} ADD VALUE IF NOT EXISTS 'replace_hopper';
+      `);
+      await queryRunner.query(`
+        ALTER TYPE ${enumName} ADD VALUE IF NOT EXISTS 'replace_grinder';
+      `);
+      await queryRunner.query(`
+        ALTER TYPE ${enumName} ADD VALUE IF NOT EXISTS 'replace_brew_unit';
+      `);
+      await queryRunner.query(`
+        ALTER TYPE ${enumName} ADD VALUE IF NOT EXISTS 'replace_mixer';
+      `);
+      logger.log(`Added new task types to ${enumName}`);
+    } else {
+      logger.log(
+        'Task type enum does not exist yet. Skipping - values are already in entity.',
+      );
+    }
 
     // 2. Создаём enum для типов местоположения компонентов
     await queryRunner.query(`

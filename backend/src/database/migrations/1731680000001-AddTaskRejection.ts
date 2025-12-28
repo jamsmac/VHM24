@@ -1,13 +1,43 @@
 import { MigrationInterface, QueryRunner, TableColumn } from 'typeorm';
+import { Logger } from '@nestjs/common';
+
+const logger = new Logger('AddTaskRejection1731680000001');
 
 export class AddTaskRejection1731680000001 implements MigrationInterface {
   name = 'AddTaskRejection1731680000001';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
-    // Add 'rejected' to task_status enum type
-    await queryRunner.query(`
-      ALTER TYPE task_status ADD VALUE IF NOT EXISTS 'rejected';
+    // Check for TypeORM-generated enum name first
+    const enumExists = await queryRunner.query(`
+      SELECT EXISTS (
+        SELECT 1 FROM pg_type WHERE typname = 'tasks_status_enum'
+      );
     `);
+
+    if (enumExists[0]?.exists) {
+      await queryRunner.query(`
+        ALTER TYPE tasks_status_enum ADD VALUE IF NOT EXISTS 'rejected';
+      `);
+      logger.log('Added rejected to tasks_status_enum');
+    } else {
+      // Check for legacy enum name
+      const legacyEnumExists = await queryRunner.query(`
+        SELECT EXISTS (
+          SELECT 1 FROM pg_type WHERE typname = 'task_status'
+        );
+      `);
+
+      if (legacyEnumExists[0]?.exists) {
+        await queryRunner.query(`
+          ALTER TYPE task_status ADD VALUE IF NOT EXISTS 'rejected';
+        `);
+        logger.log('Added rejected to legacy task_status enum');
+      } else {
+        logger.log(
+          'Task status enum does not exist yet. Skipping - rejected is already in entity.',
+        );
+      }
+    }
 
     // Add rejection tracking fields to tasks table
     await queryRunner.addColumn(
