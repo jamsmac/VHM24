@@ -1,13 +1,18 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { TelegramQuickActionsService, UserState } from './telegram-quick-actions.service';
 import { TelegramI18nService } from '../../i18n/services/telegram-i18n.service';
-import { TelegramBotAnalytics } from '../../shared/entities/telegram-bot-analytics.entity';
+import {
+  TelegramBotAnalytics,
+  TelegramAnalyticsEventType,
+} from '../../shared/entities/telegram-bot-analytics.entity';
 import { UserRole } from '@modules/users/entities/user.entity';
 
 describe('TelegramQuickActionsService', () => {
   let service: TelegramQuickActionsService;
   let i18nService: jest.Mocked<TelegramI18nService>;
+  let analyticsRepository: jest.Mocked<Repository<TelegramBotAnalytics>>;
 
   beforeEach(async () => {
     const mockI18nService = {
@@ -40,6 +45,7 @@ describe('TelegramQuickActionsService', () => {
 
     service = module.get<TelegramQuickActionsService>(TelegramQuickActionsService);
     i18nService = module.get(TelegramI18nService);
+    analyticsRepository = module.get(getRepositoryToken(TelegramBotAnalytics));
   });
 
   afterEach(() => {
@@ -325,10 +331,86 @@ describe('TelegramQuickActionsService', () => {
 
   describe('trackQuickActionUsage', () => {
     it('should track quick action usage', async () => {
-      // This method currently just logs, so we just verify it doesn't throw
       await expect(
         service.trackQuickActionUsage('user-123', 'start_refill'),
       ).resolves.not.toThrow();
+
+      expect(analyticsRepository.create).toHaveBeenCalledWith({
+        user_id: 'user-123',
+        telegram_user_id: null,
+        event_type: TelegramAnalyticsEventType.QUICK_ACTION,
+        action_name: 'start_refill',
+        action_category: 'task',
+        success: true,
+        metadata: {},
+      });
+      expect(analyticsRepository.save).toHaveBeenCalled();
+    });
+
+    it('should track with telegram user id', async () => {
+      await service.trackQuickActionUsage('user-123', 'stats', 'tg-user-456');
+
+      expect(analyticsRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          user_id: 'user-123',
+          telegram_user_id: 'tg-user-456',
+          action_name: 'stats',
+          action_category: 'info',
+        }),
+      );
+    });
+
+    it('should track with metadata', async () => {
+      const metadata = { machineId: 'machine-123', taskType: 'refill' };
+      await service.trackQuickActionUsage('user-123', 'incident', 'tg-user-456', metadata);
+
+      expect(analyticsRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action_name: 'incident',
+          action_category: 'emergency',
+          metadata,
+        }),
+      );
+    });
+
+    it('should handle unknown action category', async () => {
+      await service.trackQuickActionUsage('user-123', 'unknown_action');
+
+      expect(analyticsRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action_name: 'unknown_action',
+          action_category: 'other',
+        }),
+      );
+    });
+
+    it('should handle save error gracefully', async () => {
+      analyticsRepository.save.mockRejectedValueOnce(new Error('Database error'));
+
+      // Should not throw - analytics should not break the main flow
+      await expect(
+        service.trackQuickActionUsage('user-123', 'start_refill'),
+      ).resolves.not.toThrow();
+    });
+
+    it('should track photo actions correctly', async () => {
+      await service.trackQuickActionUsage('user-123', 'photo_before');
+
+      expect(analyticsRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action_category: 'photo',
+        }),
+      );
+    });
+
+    it('should track manager actions correctly', async () => {
+      await service.trackQuickActionUsage('user-123', 'team_status');
+
+      expect(analyticsRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action_category: 'manager',
+        }),
+      );
     });
   });
 
@@ -359,6 +441,222 @@ describe('TelegramQuickActionsService', () => {
       service.getQuickActionLabels('en');
 
       expect(i18nService.getFixedT).toHaveBeenCalledWith('en');
+    });
+  });
+
+  describe('getAnalyticsSummary', () => {
+    it('should return empty summary when no analytics', async () => {
+      analyticsRepository.find.mockResolvedValueOnce([]);
+
+      const result = await service.getAnalyticsSummary();
+
+      expect(result).toEqual({
+        totalActions: 0,
+        byAction: {},
+        byCategory: {},
+        topActions: [],
+      });
+    });
+
+    it('should aggregate analytics by action', async () => {
+      analyticsRepository.find.mockResolvedValueOnce([
+        { action_name: 'start_refill', action_category: 'task' },
+        { action_name: 'start_refill', action_category: 'task' },
+        { action_name: 'stats', action_category: 'info' },
+      ] as TelegramBotAnalytics[]);
+
+      const result = await service.getAnalyticsSummary();
+
+      expect(result.totalActions).toBe(3);
+      expect(result.byAction).toEqual({
+        start_refill: 2,
+        stats: 1,
+      });
+    });
+
+    it('should aggregate analytics by category', async () => {
+      analyticsRepository.find.mockResolvedValueOnce([
+        { action_name: 'start_refill', action_category: 'task' },
+        { action_name: 'complete', action_category: 'task' },
+        { action_name: 'stats', action_category: 'info' },
+        { action_name: 'incident', action_category: 'emergency' },
+      ] as TelegramBotAnalytics[]);
+
+      const result = await service.getAnalyticsSummary();
+
+      expect(result.byCategory).toEqual({
+        task: 2,
+        info: 1,
+        emergency: 1,
+      });
+    });
+
+    it('should return top actions sorted by count', async () => {
+      analyticsRepository.find.mockResolvedValueOnce([
+        { action_name: 'start_refill', action_category: 'task' },
+        { action_name: 'start_refill', action_category: 'task' },
+        { action_name: 'start_refill', action_category: 'task' },
+        { action_name: 'stats', action_category: 'info' },
+        { action_name: 'stats', action_category: 'info' },
+        { action_name: 'incident', action_category: 'emergency' },
+      ] as TelegramBotAnalytics[]);
+
+      const result = await service.getAnalyticsSummary();
+
+      expect(result.topActions).toEqual([
+        { action: 'start_refill', count: 3 },
+        { action: 'stats', count: 2 },
+        { action: 'incident', count: 1 },
+      ]);
+    });
+
+    it('should use custom days parameter', async () => {
+      analyticsRepository.find.mockResolvedValueOnce([]);
+
+      await service.getAnalyticsSummary(30);
+
+      expect(analyticsRepository.find).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            event_type: TelegramAnalyticsEventType.QUICK_ACTION,
+          }),
+        }),
+      );
+    });
+
+    it('should handle records without action_category', async () => {
+      analyticsRepository.find.mockResolvedValueOnce([
+        { action_name: 'custom_action', action_category: null },
+        { action_name: 'another_action', action_category: undefined },
+        { action_name: 'start_refill', action_category: 'task' },
+      ] as TelegramBotAnalytics[]);
+
+      const result = await service.getAnalyticsSummary();
+
+      expect(result.totalActions).toBe(3);
+      expect(result.byAction).toEqual({
+        custom_action: 1,
+        another_action: 1,
+        start_refill: 1,
+      });
+      // Only category that exists should be counted
+      expect(result.byCategory).toEqual({
+        task: 1,
+      });
+    });
+
+    it('should limit top actions to 10', async () => {
+      const manyActions = Array.from({ length: 15 }, (_, i) => ({
+        action_name: `action_${i}`,
+        action_category: 'task',
+      })) as TelegramBotAnalytics[];
+
+      analyticsRepository.find.mockResolvedValueOnce(manyActions);
+
+      const result = await service.getAnalyticsSummary();
+
+      expect(result.topActions.length).toBe(10);
+    });
+  });
+
+  describe('trackEvent', () => {
+    it('should track event with all parameters', async () => {
+      const metadata = { key: 'value' };
+
+      await service.trackEvent(
+        TelegramAnalyticsEventType.COMMAND,
+        'start_command',
+        'user-123',
+        'tg-user-456',
+        metadata,
+      );
+
+      expect(analyticsRepository.create).toHaveBeenCalledWith({
+        user_id: 'user-123',
+        telegram_user_id: 'tg-user-456',
+        event_type: TelegramAnalyticsEventType.COMMAND,
+        action_name: 'start_command',
+        action_category: 'other',
+        success: true,
+        metadata,
+      });
+      expect(analyticsRepository.save).toHaveBeenCalled();
+    });
+
+    it('should track event without userId', async () => {
+      await service.trackEvent(
+        TelegramAnalyticsEventType.CALLBACK,
+        'menu_select',
+        undefined,
+        'tg-user-456',
+      );
+
+      expect(analyticsRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          user_id: null,
+          telegram_user_id: 'tg-user-456',
+        }),
+      );
+    });
+
+    it('should track event without telegramUserId', async () => {
+      await service.trackEvent(
+        TelegramAnalyticsEventType.VOICE_COMMAND,
+        'text_message',
+        'user-123',
+        undefined,
+      );
+
+      expect(analyticsRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          user_id: 'user-123',
+          telegram_user_id: null,
+        }),
+      );
+    });
+
+    it('should track event without metadata', async () => {
+      await service.trackEvent(
+        TelegramAnalyticsEventType.QUICK_ACTION,
+        'stats',
+        'user-123',
+        'tg-user-456',
+      );
+
+      expect(analyticsRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action_category: 'info',
+          metadata: {},
+        }),
+      );
+    });
+
+    it('should handle save error gracefully', async () => {
+      analyticsRepository.save.mockRejectedValueOnce(new Error('Database error'));
+
+      // Should not throw
+      await expect(
+        service.trackEvent(
+          TelegramAnalyticsEventType.QR_SCAN,
+          'error_event',
+          'user-123',
+        ),
+      ).resolves.not.toThrow();
+    });
+
+    it('should track with known action category', async () => {
+      await service.trackEvent(
+        TelegramAnalyticsEventType.QUICK_ACTION,
+        'start_refill',
+        'user-123',
+      );
+
+      expect(analyticsRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action_name: 'start_refill',
+          action_category: 'task',
+        }),
+      );
     });
   });
 });
