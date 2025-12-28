@@ -1,0 +1,19 @@
+# Nixpacks configuration for VendHub Frontend
+# This file is in repo root because Railway doesn't recognize configs in subdirectories
+# when Root Directory is not set
+
+[phases.setup]
+nixPkgs = ["nodejs_20"]
+
+[phases.install]
+cmds = ["cd frontend && npm ci --legacy-peer-deps"]
+
+[phases.build]
+cmds = [
+  "cd frontend && npm run build",
+  "cd frontend && cp -r .next/static .next/standalone/.next/static",
+  "cd frontend && cp -r public .next/standalone/public"
+]
+
+[start]
+cmd = "cd frontend && HOSTNAME=0.0.0.0 node .next/standalone/server.js"

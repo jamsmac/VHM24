@@ -7,8 +7,12 @@ FROM node:20-alpine AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-# Copy frontend package files (from repo root context)
-COPY frontend/package.json frontend/package-lock.json* ./
+# Cache buster - change this value to invalidate Docker cache
+ARG CACHE_BUST=2025-12-22-v2
+
+# Copy frontend package files (skip package-lock.json to avoid "Invalid Version" error)
+# Note: Using --legacy-peer-deps to resolve @storybook/addon-vitest peer dependency conflict
+COPY frontend/package.json ./
 RUN npm install --legacy-peer-deps
 
 FROM node:20-alpine AS builder

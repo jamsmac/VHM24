@@ -1,15 +1,14 @@
 # ============================================================================
-# VendHub Manager Frontend - Root Dockerfile for Railway
+# VendHub Manager Frontend - Production Dockerfile (Root)
 # ============================================================================
-# Railway uses repository root as build context
-# This file builds the frontend with standalone output
+# This Dockerfile is in repo root for Railway compatibility
 
 FROM node:20-alpine AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-# Copy package files from frontend directory
-COPY frontend/package.json frontend/package-lock.json* ./
+# Copy frontend package files (skip package-lock.json to avoid "Invalid Version" error)
+COPY frontend/package.json ./
 RUN npm install --legacy-peer-deps
 
 FROM node:20-alpine AS builder
@@ -19,7 +18,21 @@ COPY --from=deps /app/node_modules ./node_modules
 # Copy frontend source
 COPY frontend/ .
 
-# Build with standalone output
+# Optional build-time args
+ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_WS_URL
+ARG NEXT_PUBLIC_APP_NAME
+
+RUN if [ -n "$NEXT_PUBLIC_API_URL" ]; then \
+      echo "NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL" >> .env.production; \
+    fi && \
+    if [ -n "$NEXT_PUBLIC_WS_URL" ]; then \
+      echo "NEXT_PUBLIC_WS_URL=$NEXT_PUBLIC_WS_URL" >> .env.production; \
+    fi && \
+    if [ -n "$NEXT_PUBLIC_APP_NAME" ]; then \
+      echo "NEXT_PUBLIC_APP_NAME=$NEXT_PUBLIC_APP_NAME" >> .env.production; \
+    fi
+
 RUN npm run build
 
 FROM node:20-alpine AS runner
