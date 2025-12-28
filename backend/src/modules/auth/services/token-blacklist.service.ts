@@ -204,6 +204,10 @@ export class TokenBlacklistService implements OnModuleInit, OnModuleDestroy {
 
     const results = await pipeline.exec();
 
+    if (process.env.NODE_ENV === 'test') {
+      console.log('[Blacklist] Redis results:', JSON.stringify(results));
+    }
+
     const tokenBlacklisted = results?.[0]?.[1] === 1;
     const userBlacklisted = results?.[1]?.[1] === 1;
 

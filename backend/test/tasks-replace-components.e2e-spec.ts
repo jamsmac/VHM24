@@ -1,6 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
+import * as cookieParser from 'cookie-parser';
+import { useContainer } from 'class-validator';
 import { AppModule } from '../src/app.module';
 import { DataSource } from 'typeorm';
 import { TaskStatus, TaskType, TaskPriority } from '../src/modules/tasks/entities/task.entity';
@@ -40,6 +42,9 @@ describe('REPLACE_* Tasks Component Workflow (E2E)', () => {
 
     app = moduleFixture.createNestApplication();
 
+    // Apply cookie parser (required for JWT extraction from cookies)
+    app.use(cookieParser());
+
     // Apply global validation pipe (same as main.ts)
     app.useGlobalPipes(
       new ValidationPipe({
@@ -51,6 +56,9 @@ describe('REPLACE_* Tasks Component Workflow (E2E)', () => {
 
     await app.init();
 
+    // Connect class-validator to NestJS DI for custom validators (IsDictionaryCode, etc.)
+    useContainer(app.select(AppModule), { fallbackOnErrors: true });
+
     dataSource = app.get(DataSource);
 
     // Login as admin
@@ -61,6 +69,14 @@ describe('REPLACE_* Tasks Component Workflow (E2E)', () => {
 
     if (adminLoginResponse.status === 200) {
       adminAccessToken = adminLoginResponse.body.access_token;
+      console.log('✅ [tasks-replace] Admin logged in successfully');
+      console.log('Login response keys:', Object.keys(adminLoginResponse.body));
+      console.log('requires_2fa:', adminLoginResponse.body.requires_2fa);
+      console.log('requires_password_change:', adminLoginResponse.body.requires_password_change);
+      console.log('JWT_SECRET exists:', !!process.env.JWT_SECRET);
+      console.log('JWT_SECRET length:', process.env.JWT_SECRET?.length);
+    } else {
+      console.error('❌ [tasks-replace] Admin login failed:', adminLoginResponse.status, adminLoginResponse.body);
     }
 
     // Create test operator
@@ -135,23 +151,35 @@ describe('REPLACE_* Tasks Component Workflow (E2E)', () => {
         return;
       }
 
+      console.log('Token exists:', !!adminAccessToken, 'Token length:', adminAccessToken?.length);
+
       // Get first location
       const locationsResponse = await request(app.getHttpServer())
         .get('/locations')
         .set('Authorization', `Bearer ${adminAccessToken}`);
 
+      console.log('Locations response:', locationsResponse.status, locationsResponse.body?.length || 'no body');
+
       const locationId = locationsResponse.body[0]?.id || 'default-location-id';
 
+      const machineNumber = `TEST-M-${Date.now()}`;
       const response = await request(app.getHttpServer())
         .post('/machines')
         .set('Authorization', `Bearer ${adminAccessToken}`)
         .send({
-          machine_number: `TEST-M-${Date.now()}`,
+          machine_number: machineNumber,
           name: 'Test Vending Machine for Component Replacement',
           location_id: locationId,
           status: 'active',
-        })
-        .expect(201);
+          type_code: 'coffee_machine',
+          qr_code: `QR-${machineNumber}`,
+        });
+
+      // Log response for debugging
+      if (response.status !== 201) {
+        console.log('Machine creation failed:', response.status, JSON.stringify(response.body, null, 2));
+      }
+      expect(response.status).toBe(201);
 
       expect(response.body).toHaveProperty('id');
       machineId = response.body.id;
@@ -159,7 +187,7 @@ describe('REPLACE_* Tasks Component Workflow (E2E)', () => {
 
     it('should create old component (currently installed in machine)', async () => {
       if (!adminAccessToken || !machineId) {
-        console.warn('Skipping test: Prerequisites not met');
+        console.warn('Skipping test: Prerequisites not met - adminAccessToken:', !!adminAccessToken, 'machineId:', machineId);
         return;
       }
 
@@ -176,8 +204,13 @@ describe('REPLACE_* Tasks Component Workflow (E2E)', () => {
           status: ComponentStatus.ACTIVE,
           current_location_type: ComponentLocationType.MACHINE,
           installation_date: new Date('2023-01-01').toISOString(),
-        })
-        .expect(201);
+        });
+
+      // Log response for debugging
+      if (response.status !== 201) {
+        console.log('Component creation failed:', response.status, JSON.stringify(response.body, null, 2));
+      }
+      expect(response.status).toBe(201);
 
       expect(response.body).toHaveProperty('id');
       expect(response.body.current_location_type).toBe(ComponentLocationType.MACHINE);

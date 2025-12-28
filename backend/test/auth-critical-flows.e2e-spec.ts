@@ -1,6 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
+import * as cookieParser from 'cookie-parser';
+import { useContainer } from 'class-validator';
 import { AppModule } from '../src/app.module';
 import { DataSource } from 'typeorm';
 import { User, UserRole } from '../src/modules/users/entities/user.entity';
@@ -27,6 +29,9 @@ describe('Authentication Critical Flows (E2E)', () => {
 
     app = moduleFixture.createNestApplication();
 
+    // Apply cookie parser (required for JWT extraction from cookies)
+    app.use(cookieParser());
+
     // Apply global validation pipe (same as main.ts)
     app.useGlobalPipes(
       new ValidationPipe({
@@ -38,6 +43,9 @@ describe('Authentication Critical Flows (E2E)', () => {
 
     await app.init();
 
+    // Connect class-validator to NestJS DI for custom validators (IsDictionaryCode, IsStrongPassword, etc.)
+    useContainer(app.select(AppModule), { fallbackOnErrors: true });
+
     dataSource = app.get(DataSource);
 
     // Login as admin for setup
@@ -48,6 +56,9 @@ describe('Authentication Critical Flows (E2E)', () => {
 
     if (adminLoginResponse.status === 200) {
       adminAccessToken = adminLoginResponse.body.access_token;
+      console.log('✅ Admin logged in successfully');
+    } else {
+      console.error('❌ Admin login failed:', adminLoginResponse.status, adminLoginResponse.body);
     }
   });
 

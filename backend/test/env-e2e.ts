@@ -18,14 +18,15 @@ process.env.DATABASE_NAME = process.env.DATABASE_NAME || 'vendhub_test';
 // Enable schema synchronization for tests (auto-creates tables from entities)
 process.env.DATABASE_SYNCHRONIZE = 'true';
 
-// Auth secrets
-process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-jwt-secret-key-for-e2e-tests';
-process.env.JWT_REFRESH_SECRET =
-  process.env.JWT_REFRESH_SECRET || 'test-jwt-refresh-secret-key-for-e2e';
+// Auth secrets - FORCE override to ensure consistency in E2E tests
+process.env.JWT_SECRET = 'test-jwt-secret-key-for-e2e-tests';
+process.env.JWT_REFRESH_SECRET = 'test-jwt-refresh-secret-key-for-e2e';
 
-// Redis - uses docker-compose.test.yml (port 26379)
-process.env.REDIS_HOST = process.env.REDIS_HOST || 'localhost';
-process.env.REDIS_PORT = process.env.REDIS_PORT || '26379';
+// Redis - FORCE override to use docker-compose.test.yml (port 26379)
+process.env.REDIS_HOST = 'localhost';
+process.env.REDIS_PORT = '26379';
+// Clear REDIS_URL to ensure individual settings are used
+delete process.env.REDIS_URL;
 
 // Required for TwoFactorAuthService (64 hex chars = 32 bytes for AES-256)
 process.env.ENCRYPTION_KEY =
