@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Request, Response } from 'express';
-import { ThrottlerGuard } from '@nestjs/throttler';
+import { ThrottlerTestAwareGuard } from '@/common/guards/throttler-test-aware.guard';
 import { AuthController } from './auth.controller';
 import { AuthService, AuthResponse, AuthTokens } from './auth.service';
 import { TwoFactorAuthService } from './services/two-factor-auth.service';
@@ -107,7 +107,7 @@ describe('AuthController', () => {
         { provide: ConfigService, useValue: mockConfigService },
       ],
     })
-      .overrideGuard(ThrottlerGuard)
+      .overrideGuard(ThrottlerTestAwareGuard)
       .useValue({ canActivate: () => true })
       .overrideGuard(LocalAuthGuard)
       .useValue({ canActivate: () => true })

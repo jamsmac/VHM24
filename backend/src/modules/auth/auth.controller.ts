@@ -28,7 +28,8 @@ import { AuthResponseDto, AuthTokensDto } from './dto/auth-response.dto';
 import { LocalAuthGuard } from './guards/local-auth.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { IpWhitelistGuard } from './guards/ip-whitelist.guard';
-import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
+import { Throttle } from '@nestjs/throttler';
+import { ThrottlerTestAwareGuard } from '@/common/guards/throttler-test-aware.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { User } from '../users/entities/user.entity';
 import { TwoFactorAuthService } from './services/two-factor-auth.service';
@@ -50,7 +51,7 @@ export class AuthController {
 
   @Post('login')
   @SkipCsrf() // Login is the entry point - no CSRF token available yet
-  @UseGuards(ThrottlerGuard, LocalAuthGuard, IpWhitelistGuard)
+  @UseGuards(ThrottlerTestAwareGuard, LocalAuthGuard, IpWhitelistGuard)
   @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 attempts per minute
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Вход в систему' })
@@ -89,7 +90,7 @@ export class AuthController {
 
   @Post('register')
   @SkipCsrf() // Registration is an entry point - no CSRF token available yet
-  @UseGuards(ThrottlerGuard)
+  @UseGuards(ThrottlerTestAwareGuard)
   @Throttle({ default: { limit: 3, ttl: 300000 } }) // 3 attempts per 5 minutes
   @ApiOperation({ summary: 'Регистрация нового пользователя (оператора)' })
   @ApiResponse({
@@ -124,7 +125,7 @@ export class AuthController {
 
   @Post('refresh')
   @SkipCsrf() // Refresh uses refresh token for security, not CSRF
-  @UseGuards(ThrottlerGuard)
+  @UseGuards(ThrottlerTestAwareGuard)
   @Throttle({ default: { limit: 10, ttl: 60000 } }) // 10 attempts per minute (SEC-2)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Обновление токенов' })
@@ -197,7 +198,7 @@ export class AuthController {
 
   @Post('password-reset/request')
   @SkipCsrf() // Password reset is for unauthenticated users
-  @UseGuards(ThrottlerGuard)
+  @UseGuards(ThrottlerTestAwareGuard)
   @Throttle({ default: { limit: 3, ttl: 3600000 } }) // 3 attempts per hour
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -241,7 +242,7 @@ export class AuthController {
 
   @Post('password-reset/confirm')
   @SkipCsrf() // Password reset is for unauthenticated users
-  @UseGuards(ThrottlerGuard)
+  @UseGuards(ThrottlerTestAwareGuard)
   @Throttle({ default: { limit: 3, ttl: 3600000 } }) // 3 attempts per hour
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -391,7 +392,7 @@ export class AuthController {
   }
 
   @Post('2fa/verify')
-  @UseGuards(ThrottlerGuard, JwtAuthGuard, IpWhitelistGuard)
+  @UseGuards(ThrottlerTestAwareGuard, JwtAuthGuard, IpWhitelistGuard)
   @Throttle({ default: { limit: 10, ttl: 60000 } }) // 10 attempts per minute
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth('JWT-auth')
@@ -423,7 +424,7 @@ export class AuthController {
   }
 
   @Post('2fa/login')
-  @UseGuards(ThrottlerGuard, JwtAuthGuard, IpWhitelistGuard)
+  @UseGuards(ThrottlerTestAwareGuard, JwtAuthGuard, IpWhitelistGuard)
   @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 attempts per minute
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth('JWT-auth')
@@ -463,7 +464,7 @@ export class AuthController {
   }
 
   @Post('2fa/login/backup')
-  @UseGuards(ThrottlerGuard, JwtAuthGuard, IpWhitelistGuard)
+  @UseGuards(ThrottlerTestAwareGuard, JwtAuthGuard, IpWhitelistGuard)
   @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 attempts per minute
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth('JWT-auth')

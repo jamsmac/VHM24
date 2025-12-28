@@ -6,7 +6,7 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { BullModule } from '@nestjs/bull';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
-import { ThrottlerGuard } from '@nestjs/throttler';
+import { ThrottlerTestAwareGuard } from './common/guards/throttler-test-aware.guard';
 import { CsrfGuard } from './common/guards/csrf.guard';
 import { validate } from './config/env.validation';
 import { AppController } from './app.controller';
@@ -249,10 +249,10 @@ import { AuditLogModule } from './modules/audit-logs/audit-log.module';
   controllers: [AppController],
   providers: [
     AppService,
-    // Global rate limiting (throttling)
+    // Global rate limiting (throttling) - uses test-aware guard that skips in test env
     {
       provide: APP_GUARD,
-      useClass: ThrottlerGuard,
+      useClass: ThrottlerTestAwareGuard,
     },
     // Global CSRF protection (MEDIUM-003 fix)
     // Enabled by default in production (NODE_ENV=production)

@@ -545,6 +545,10 @@ describe('Authentication Critical Flows (E2E)', () => {
       expect(response.body).toHaveProperty('access_token');
       expect(response.body).toHaveProperty('refresh_token');
       expect(response.body.access_token).not.toBe(sessionTestToken); // New token
+
+      // Update tokens for subsequent tests (refresh invalidates old tokens)
+      sessionTestToken = response.body.access_token;
+      sessionTestRefreshToken = response.body.refresh_token;
     });
 
     it('should logout and invalidate session', async () => {
@@ -556,7 +560,7 @@ describe('Authentication Critical Flows (E2E)', () => {
       await request(app.getHttpServer())
         .post('/auth/logout')
         .set('Authorization', `Bearer ${sessionTestToken}`)
-        .expect(200);
+        .expect(204); // NO_CONTENT is correct for logout
     });
   });
 });
