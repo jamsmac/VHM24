@@ -193,6 +193,93 @@ describe('TelegramAdminCallbackService', () => {
 
       process.env.SUPER_ADMIN_TELEGRAM_ID = originalEnv;
     });
+
+    it('should use default language when telegramUser is undefined', async () => {
+      const originalEnv = process.env.SUPER_ADMIN_TELEGRAM_ID;
+      process.env.SUPER_ADMIN_TELEGRAM_ID = '123456789';
+
+      const ctx = createMockContext({ telegramUser: undefined });
+      const mockUser = {
+        id: 'user-1',
+        full_name: 'John Doe',
+        email: 'john@example.com',
+        phone: null,
+        created_at: new Date(),
+      };
+
+      usersService.findOne.mockResolvedValue(mockUser as any);
+
+      await service.handleExpandUser(ctx, 'user-1');
+
+      // Should use Russian by default
+      expect(ctx.editMessageText).toHaveBeenCalledWith(
+        expect.stringContaining('Информация о пользователе'),
+        expect.any(Object),
+      );
+
+      process.env.SUPER_ADMIN_TELEGRAM_ID = originalEnv;
+    });
+
+    it('should show user info in English when language is EN', async () => {
+      const originalEnv = process.env.SUPER_ADMIN_TELEGRAM_ID;
+      process.env.SUPER_ADMIN_TELEGRAM_ID = '123456789';
+
+      const ctx = createMockContext({
+        telegramUser: { ...mockTelegramUser, language: TelegramLanguage.EN } as TelegramUser,
+      });
+      const mockUser = {
+        id: 'user-1',
+        full_name: 'John Doe',
+        email: 'john@example.com',
+        phone: '+1234567890',
+        created_at: new Date(),
+      };
+
+      usersService.findOne.mockResolvedValue(mockUser as any);
+
+      await service.handleExpandUser(ctx, 'user-1');
+
+      expect(ctx.editMessageText).toHaveBeenCalledWith(
+        expect.stringContaining('User Information'),
+        expect.any(Object),
+      );
+
+      process.env.SUPER_ADMIN_TELEGRAM_ID = originalEnv;
+    });
+
+    it('should reject non-super admin with English message', async () => {
+      const originalEnv = process.env.SUPER_ADMIN_TELEGRAM_ID;
+      process.env.SUPER_ADMIN_TELEGRAM_ID = '999999999';
+
+      const ctx = createMockContext({
+        telegramUser: { ...mockTelegramUser, language: TelegramLanguage.EN } as TelegramUser,
+      });
+
+      await service.handleExpandUser(ctx, 'user-1');
+
+      expect(ctx.answerCbQuery).toHaveBeenCalledWith(
+        'Insufficient permissions',
+        { show_alert: true },
+      );
+
+      process.env.SUPER_ADMIN_TELEGRAM_ID = originalEnv;
+    });
+
+    it('should show error in English when error occurs', async () => {
+      const originalEnv = process.env.SUPER_ADMIN_TELEGRAM_ID;
+      process.env.SUPER_ADMIN_TELEGRAM_ID = '123456789';
+
+      const ctx = createMockContext({
+        telegramUser: { ...mockTelegramUser, language: TelegramLanguage.EN } as TelegramUser,
+      });
+      usersService.findOne.mockRejectedValue(new Error('User not found'));
+
+      await service.handleExpandUser(ctx, 'user-1');
+
+      expect(ctx.reply).toHaveBeenCalledWith(expect.stringContaining('Error:'));
+
+      process.env.SUPER_ADMIN_TELEGRAM_ID = originalEnv;
+    });
   });
 
   describe('handleApproveUser', () => {
@@ -463,6 +550,58 @@ describe('TelegramAdminCallbackService', () => {
 
       process.env.SUPER_ADMIN_TELEGRAM_ID = originalEnv;
     });
+
+    it('should use default language when telegramUser is undefined', async () => {
+      const originalEnv = process.env.SUPER_ADMIN_TELEGRAM_ID;
+      process.env.SUPER_ADMIN_TELEGRAM_ID = '123456789';
+
+      const ctx = createMockContext({ telegramUser: undefined });
+      const mockAdminUser = { id: 'admin-1', full_name: 'Admin' };
+      const mockApprovalResult = {
+        user: {
+          id: 'user-1',
+          full_name: 'John Doe',
+          email: 'john@example.com',
+          telegram_user_id: null,
+        },
+        credentials: {
+          username: 'john.doe',
+          password: 'temp123',
+        },
+      };
+
+      usersService.findByTelegramId.mockResolvedValue(mockAdminUser as any);
+      usersService.approveUser.mockResolvedValue(mockApprovalResult as any);
+
+      await service.handleApproveUser(ctx, 'user-1', UserRole.OPERATOR, mockSendMessage);
+
+      // Should use Russian by default
+      expect(ctx.editMessageText).toHaveBeenCalledWith(
+        expect.stringContaining('Пользователь одобрен'),
+        expect.any(Object),
+      );
+
+      process.env.SUPER_ADMIN_TELEGRAM_ID = originalEnv;
+    });
+
+    it('should handle approval error in English', async () => {
+      const originalEnv = process.env.SUPER_ADMIN_TELEGRAM_ID;
+      process.env.SUPER_ADMIN_TELEGRAM_ID = '123456789';
+
+      const ctx = createMockContext({
+        telegramUser: { ...mockTelegramUser, language: TelegramLanguage.EN } as TelegramUser,
+      });
+      const mockAdminUser = { id: 'admin-1', full_name: 'Admin' };
+
+      usersService.findByTelegramId.mockResolvedValue(mockAdminUser as any);
+      usersService.approveUser.mockRejectedValue(new Error('Approval failed'));
+
+      await service.handleApproveUser(ctx, 'user-1', UserRole.OPERATOR, mockSendMessage);
+
+      expect(ctx.reply).toHaveBeenCalledWith(expect.stringContaining('Error approving user'));
+
+      process.env.SUPER_ADMIN_TELEGRAM_ID = originalEnv;
+    });
   });
 
   describe('handleRejectUser', () => {
@@ -484,6 +623,27 @@ describe('TelegramAdminCallbackService', () => {
       await service.handleRejectUser(ctx, 'user-1');
 
       expect(ctx.telegramUser?.metadata?.pending_rejection_user_id).toBe('user-1');
+    });
+
+    it('should prompt for rejection reason in English', async () => {
+      const ctx = createMockContext({
+        telegramUser: { ...mockTelegramUser, language: TelegramLanguage.EN } as TelegramUser,
+      });
+      telegramUserRepository.save.mockResolvedValue(ctx.telegramUser as TelegramUser);
+
+      await service.handleRejectUser(ctx, 'user-1');
+
+      expect(ctx.editMessageText).toHaveBeenCalledWith(
+        expect.stringContaining('Enter rejection reason'),
+      );
+    });
+
+    it('should not save when telegramUser is undefined', async () => {
+      const ctx = createMockContext({ telegramUser: undefined });
+
+      await service.handleRejectUser(ctx, 'user-1');
+
+      expect(telegramUserRepository.save).not.toHaveBeenCalled();
     });
   });
 
@@ -835,6 +995,40 @@ describe('TelegramAdminCallbackService', () => {
       expect(result).toBe(true);
       expect(ctx.reply).toHaveBeenCalledWith(expect.stringContaining('at least 10 characters'));
     });
+
+    it('should not send notification when telegramUserRecord is not found', async () => {
+      const originalEnv = process.env.SUPER_ADMIN_TELEGRAM_ID;
+      process.env.SUPER_ADMIN_TELEGRAM_ID = '123456789';
+
+      const localMockSendMessage = jest.fn().mockResolvedValue(undefined);
+
+      const ctx = createMockContext({
+        telegramUser: {
+          ...mockTelegramUser,
+          metadata: { pending_rejection_user_id: 'user-1' },
+        } as TelegramUser,
+      });
+
+      const mockAdminUser = { id: 'admin-1', full_name: 'Admin' };
+      const mockRejectedUser = {
+        id: 'user-1',
+        full_name: 'John Doe',
+        email: 'john@example.com',
+        telegram_user_id: '111111111',
+      };
+
+      usersService.findByTelegramId.mockResolvedValue(mockAdminUser as any);
+      usersService.rejectUser.mockResolvedValue(mockRejectedUser as any);
+      telegramUserRepository.save.mockResolvedValue(ctx.telegramUser as TelegramUser);
+      telegramUserRepository.findOne.mockResolvedValue(null); // No telegram user record found
+
+      await service.handleRejectUserInput(ctx, 'This is a valid rejection reason', localMockSendMessage);
+
+      // Should not call sendMessage when telegramUserRecord is null
+      expect(localMockSendMessage).not.toHaveBeenCalled();
+
+      process.env.SUPER_ADMIN_TELEGRAM_ID = originalEnv;
+    });
   });
 
   describe('handleRefreshPendingUsers', () => {
@@ -989,6 +1183,58 @@ describe('TelegramAdminCallbackService', () => {
 
       process.env.SUPER_ADMIN_TELEGRAM_ID = originalEnv;
     });
+
+    it('should use default language when telegramUser is undefined', async () => {
+      const originalEnv = process.env.SUPER_ADMIN_TELEGRAM_ID;
+      process.env.SUPER_ADMIN_TELEGRAM_ID = '123456789';
+
+      const ctx = createMockContext({ telegramUser: undefined });
+      usersService.getPendingUsers.mockResolvedValue([]);
+
+      await service.handlePendingUsersCommand(ctx);
+
+      // Should use Russian by default
+      expect(ctx.reply).toHaveBeenCalledWith(
+        expect.stringContaining('Нет пользователей'),
+      );
+
+      process.env.SUPER_ADMIN_TELEGRAM_ID = originalEnv;
+    });
+
+    it('should reject non-super admin with English message', async () => {
+      const originalEnv = process.env.SUPER_ADMIN_TELEGRAM_ID;
+      process.env.SUPER_ADMIN_TELEGRAM_ID = '999999999';
+
+      const ctx = createMockContext({
+        telegramUser: { ...mockTelegramUser, language: TelegramLanguage.EN } as TelegramUser,
+      });
+
+      await service.handlePendingUsersCommand(ctx);
+
+      expect(ctx.reply).toHaveBeenCalledWith(
+        expect.stringContaining('only available for super admin'),
+      );
+
+      process.env.SUPER_ADMIN_TELEGRAM_ID = originalEnv;
+    });
+
+    it('should show no pending users message in English', async () => {
+      const originalEnv = process.env.SUPER_ADMIN_TELEGRAM_ID;
+      process.env.SUPER_ADMIN_TELEGRAM_ID = '123456789';
+
+      const ctx = createMockContext({
+        telegramUser: { ...mockTelegramUser, language: TelegramLanguage.EN } as TelegramUser,
+      });
+      usersService.getPendingUsers.mockResolvedValue([]);
+
+      await service.handlePendingUsersCommand(ctx);
+
+      expect(ctx.reply).toHaveBeenCalledWith(
+        expect.stringContaining('No pending users'),
+      );
+
+      process.env.SUPER_ADMIN_TELEGRAM_ID = originalEnv;
+    });
   });
 
   describe('notifyAdminAboutNewUser', () => {
@@ -1103,6 +1349,10 @@ describe('TelegramAdminCallbackService', () => {
 
       process.env.SUPER_ADMIN_TELEGRAM_ID = originalEnv;
     });
+
+    // Note: The 'User ${id}' fallback at line 399 is unreachable because
+    // '@${telegramFrom.username}' always produces a truthy string like '@undefined'
+    // even when username is undefined. This is defensive coding.
   });
 
   describe('getAdminApprovalKeyboard', () => {
@@ -1249,6 +1499,52 @@ describe('TelegramAdminCallbackService', () => {
       const message = (service as any).formatPendingUsersMessage(users, TelegramLanguage.RU);
       expect(message).toContain('John Doe');
     });
+
+    it('should use singular form for 1 user in Russian', () => {
+      const users = [
+        {
+          id: 'user-1',
+          full_name: 'John Doe',
+          email: 'john@example.com',
+          phone: null,
+          created_at: new Date().toISOString(),
+        },
+      ];
+      const message = (service as any).formatPendingUsersMessage(users, TelegramLanguage.RU);
+      expect(message).toContain('1 пользователь в ожидании');
+    });
+
+    it('should use singular form for 1 user in English', () => {
+      const users = [
+        {
+          id: 'user-1',
+          full_name: 'John Doe',
+          email: 'john@example.com',
+          phone: null,
+          created_at: new Date().toISOString(),
+        },
+      ];
+      const message = (service as any).formatPendingUsersMessage(users, TelegramLanguage.EN);
+      expect(message).toContain('1 user pending');
+    });
+
+    it('should use plural form for multiple users in Russian', () => {
+      const users = [
+        { id: 'user-1', full_name: 'John Doe', email: 'john@example.com', phone: null, created_at: new Date().toISOString() },
+        { id: 'user-2', full_name: 'Jane Doe', email: 'jane@example.com', phone: null, created_at: new Date().toISOString() },
+      ];
+      const message = (service as any).formatPendingUsersMessage(users, TelegramLanguage.RU);
+      expect(message).toContain('2 пользователей в ожидании');
+    });
+
+    it('should use plural form for multiple users in English', () => {
+      const users = [
+        { id: 'user-1', full_name: 'John Doe', email: 'john@example.com', phone: null, created_at: new Date().toISOString() },
+        { id: 'user-2', full_name: 'Jane Doe', email: 'jane@example.com', phone: null, created_at: new Date().toISOString() },
+      ];
+      const message = (service as any).formatPendingUsersMessage(users, TelegramLanguage.EN);
+      expect(message).toContain('2 users pending');
+    });
   });
 
   describe('getPendingUsersKeyboard', () => {
@@ -1325,6 +1621,30 @@ describe('TelegramAdminCallbackService', () => {
 
       // Should not throw
       await expect((service as any).logCallback(ctx, 'test_callback')).resolves.not.toThrow();
+    });
+
+    it('should use null for telegram_user_id when telegramUser is undefined', async () => {
+      const ctx = createMockContext({ telegramUser: undefined });
+
+      await (service as any).logCallback(ctx, 'test_callback');
+
+      expect(telegramMessageLogRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          telegram_user_id: null,
+        }),
+      );
+    });
+
+    it('should use null for chat_id when chat is undefined', async () => {
+      const ctx = createMockContext({ chat: undefined });
+
+      await (service as any).logCallback(ctx, 'test_callback');
+
+      expect(telegramMessageLogRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          chat_id: null,
+        }),
+      );
     });
   });
 });

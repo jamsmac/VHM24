@@ -287,6 +287,40 @@ describe('TelegramManagerToolsService', () => {
       expect(result[0].name).toBe('Alpha'); // Alphabetically first
       expect(result[1].name).toBe('Zeta');
     });
+
+    it('should use first_name when user.full_name is undefined', async () => {
+      userRepository.findOne.mockResolvedValue(mockManager as User);
+      const operatorNoFullName = {
+        ...mockTelegramUser,
+        first_name: 'FirstName',
+        user: { ...mockOperator, full_name: undefined },
+      };
+      telegramUserRepository.find.mockResolvedValue([operatorNoFullName as unknown as TelegramUser]);
+      taskRepository.count.mockResolvedValue(0);
+
+      const result = await service.getAvailableOperators('manager-id');
+
+      expect(result[0].name).toBe('FirstName');
+    });
+
+    it('should use Unknown when both full_name and first_name are undefined', async () => {
+      userRepository.findOne.mockResolvedValue(mockManager as User);
+      const operatorNoName = {
+        ...mockTelegramUser,
+        first_name: undefined,
+        user: { ...mockOperator, full_name: undefined },
+      };
+      telegramUserRepository.find.mockResolvedValue([operatorNoName as unknown as TelegramUser]);
+      taskRepository.count.mockResolvedValue(0);
+
+      const result = await service.getAvailableOperators('manager-id');
+
+      expect(result[0].name).toBe('Unknown');
+    });
+
+    // Note: The 'unknown' status fallback at line 142 is unreachable because
+    // the filter at line 125 ensures only ACTIVE users pass through.
+    // This is defensive coding that provides safety but won't execute in practice.
   });
 
   describe('getUnassignedTasks', () => {
@@ -314,6 +348,53 @@ describe('TelegramManagerToolsService', () => {
       await expect(service.getUnassignedTasks('operator-id')).rejects.toThrow(
         ForbiddenException,
       );
+    });
+
+    it('should use fallback values when machine data is missing', async () => {
+      userRepository.findOne.mockResolvedValue(mockManager as User);
+      const taskNoMachine = {
+        ...mockTask,
+        machine: null,
+      };
+      taskRepository.find.mockResolvedValue([taskNoMachine as unknown as Task]);
+
+      const result = await service.getUnassignedTasks('manager-id');
+
+      expect(result[0].machineNumber).toBe('N/A');
+      expect(result[0].machineName).toBe('Unknown');
+      expect(result[0].location).toBe('Unknown');
+    });
+
+    it('should use location address when location name is missing', async () => {
+      userRepository.findOne.mockResolvedValue(mockManager as User);
+      const taskNoLocationName = {
+        ...mockTask,
+        machine: {
+          ...mockTask.machine,
+          location: { id: 'loc-1', name: null, address: '123 Test St' },
+        },
+      };
+      taskRepository.find.mockResolvedValue([taskNoLocationName as unknown as Task]);
+
+      const result = await service.getUnassignedTasks('manager-id');
+
+      expect(result[0].location).toBe('123 Test St');
+    });
+
+    it('should use Unknown when both location name and address are missing', async () => {
+      userRepository.findOne.mockResolvedValue(mockManager as User);
+      const taskNoLocation = {
+        ...mockTask,
+        machine: {
+          ...mockTask.machine,
+          location: null,
+        },
+      };
+      taskRepository.find.mockResolvedValue([taskNoLocation as unknown as Task]);
+
+      const result = await service.getUnassignedTasks('manager-id');
+
+      expect(result[0].location).toBe('Unknown');
     });
   });
 
@@ -377,6 +458,74 @@ describe('TelegramManagerToolsService', () => {
       expect(result.success).toBe(false);
       expect(result.notificationSent).toBe(false);
       expect(result.error).toBe('Task not found');
+    });
+
+    it('should use fallback values in notification when machine data is missing', async () => {
+      userRepository.findOne.mockResolvedValue(mockManager as User);
+      const taskNoMachine = {
+        ...mockTask,
+        machine: null,
+        description: null,
+      };
+      tasksService.findOne.mockResolvedValue(taskNoMachine as unknown as Task);
+      tasksService.assignTask.mockResolvedValue(taskNoMachine as unknown as Task);
+      telegramUserRepository.findOne.mockResolvedValue(mockTelegramUser as TelegramUser);
+
+      const result = await service.assignTask('manager-id', 'task-id', 'operator-id');
+
+      expect(result.success).toBe(true);
+      expect(result.notificationSent).toBe(true);
+      // Verify i18n was called with 'N/A' as the fallback machine number
+      expect(_i18nService.t).toHaveBeenCalledWith(
+        TelegramLanguage.RU,
+        'manager.task_assigned',
+        expect.objectContaining({ machineNumber: 'N/A' }),
+      );
+      // Verify the message contains fallback values for location and description
+      expect(resilientApi.sendText).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.stringContaining('Unknown location'),
+        expect.any(Object),
+        expect.any(Object),
+      );
+    });
+
+    it('should use location address when location name is missing in notification', async () => {
+      userRepository.findOne.mockResolvedValue(mockManager as User);
+      const taskNoLocationName = {
+        ...mockTask,
+        machine: {
+          ...mockTask.machine,
+          location: { id: 'loc-1', name: null, address: '456 Fallback St' },
+        },
+      };
+      tasksService.findOne.mockResolvedValue(taskNoLocationName as unknown as Task);
+      tasksService.assignTask.mockResolvedValue(taskNoLocationName as unknown as Task);
+      telegramUserRepository.findOne.mockResolvedValue(mockTelegramUser as TelegramUser);
+
+      const result = await service.assignTask('manager-id', 'task-id', 'operator-id');
+
+      expect(result.success).toBe(true);
+      expect(resilientApi.sendText).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.stringContaining('456 Fallback St'),
+        expect.any(Object),
+        expect.any(Object),
+      );
+    });
+
+    it('should succeed but not notify when operator has no chat_id', async () => {
+      userRepository.findOne.mockResolvedValue(mockManager as User);
+      tasksService.findOne.mockResolvedValue(mockTask as Task);
+      tasksService.assignTask.mockResolvedValue(mockTask as Task);
+      const operatorNoChatId = { ...mockTelegramUser, chat_id: null };
+      telegramUserRepository.findOne.mockResolvedValue(operatorNoChatId as unknown as TelegramUser);
+
+      const result = await service.assignTask('manager-id', 'task-id', 'operator-id');
+
+      expect(result.success).toBe(true);
+      expect(result.notificationSent).toBe(false);
+      expect(result.error).toBe('Operator does not have Telegram linked');
     });
   });
 
@@ -476,6 +625,21 @@ describe('TelegramManagerToolsService', () => {
       userRepository.findOne.mockRejectedValue(new Error('Database error'));
 
       await expect(service.broadcastMessage('manager-id', 'Test')).rejects.toThrow('Database error');
+    });
+
+    it('should use Manager as fallback when manager.full_name is undefined', async () => {
+      const managerNoName = { ...mockManager, full_name: undefined };
+      userRepository.findOne.mockResolvedValue(managerNoName as unknown as User);
+      telegramUserRepository.find.mockResolvedValue([mockTelegramUser as TelegramUser]);
+
+      await service.broadcastMessage('manager-id', 'Test message');
+
+      // Verify i18n was called with 'Manager' as the fallback name
+      expect(_i18nService.t).toHaveBeenCalledWith(
+        TelegramLanguage.RU,
+        'manager.broadcast_from',
+        { name: 'Manager' },
+      );
     });
   });
 
@@ -634,6 +798,18 @@ describe('TelegramManagerToolsService', () => {
       expect(result.topPerformers[0].name).toBe('High Performer'); // 2 tasks
       expect(result.topPerformers[1].name).toBe('Low Performer');  // 1 task
     });
+
+    it('should use default period (today) when not specified', async () => {
+      userRepository.findOne.mockResolvedValue(mockManager as User);
+      taskRepository.find.mockResolvedValue([]);
+      taskRepository.count.mockResolvedValue(0);
+      telegramUserRepository.count.mockResolvedValue(0);
+
+      const result = await service.getTeamAnalytics('manager-id');
+
+      expect(result).toBeDefined();
+      expect(result.tasksCompleted).toBe(0);
+    });
   });
 
   describe('getActiveOperatorsStatus', () => {
@@ -674,6 +850,87 @@ describe('TelegramManagerToolsService', () => {
       telegramUserRepository.find.mockResolvedValue([
         { ...mockTelegramUser, last_interaction_at: oldInteraction } as TelegramUser,
       ]);
+      taskRepository.findOne.mockResolvedValue(null);
+      taskRepository.count.mockResolvedValue(0);
+
+      const result = await service.getActiveOperatorsStatus('manager-id');
+
+      expect(result[0].status).toBe('offline');
+    });
+
+    it('should use first_name when user.full_name is undefined', async () => {
+      userRepository.findOne.mockResolvedValue(mockManager as User);
+      const operatorNoFullName = {
+        ...mockTelegramUser,
+        first_name: 'FirstName',
+        user: { ...mockOperator, full_name: undefined },
+      };
+      telegramUserRepository.find.mockResolvedValue([operatorNoFullName as unknown as TelegramUser]);
+      taskRepository.findOne.mockResolvedValue(null);
+      taskRepository.count.mockResolvedValue(0);
+
+      const result = await service.getActiveOperatorsStatus('manager-id');
+
+      expect(result[0].name).toBe('FirstName');
+    });
+
+    it('should use Unknown when both full_name and first_name are undefined', async () => {
+      userRepository.findOne.mockResolvedValue(mockManager as User);
+      const operatorNoName = {
+        ...mockTelegramUser,
+        first_name: undefined,
+        user: { ...mockOperator, full_name: undefined },
+      };
+      telegramUserRepository.find.mockResolvedValue([operatorNoName as unknown as TelegramUser]);
+      taskRepository.findOne.mockResolvedValue(null);
+      taskRepository.count.mockResolvedValue(0);
+
+      const result = await service.getActiveOperatorsStatus('manager-id');
+
+      expect(result[0].name).toBe('Unknown');
+    });
+
+    it('should use fallback for machine_number when machine is missing in current task', async () => {
+      userRepository.findOne.mockResolvedValue(mockManager as User);
+      telegramUserRepository.find.mockResolvedValue([mockTelegramUser as TelegramUser]);
+      taskRepository.findOne.mockResolvedValue({
+        ...mockTask,
+        status: TaskStatus.IN_PROGRESS,
+        started_at: new Date(),
+        machine: null,
+      } as unknown as Task);
+      taskRepository.count.mockResolvedValue(0);
+
+      const result = await service.getActiveOperatorsStatus('manager-id');
+
+      expect(result[0].status).toBe('working');
+      expect(result[0].currentTask!.machineNumber).toBe('N/A');
+    });
+
+    it('should use created_at as lastSeen when last_interaction_at is null', async () => {
+      userRepository.findOne.mockResolvedValue(mockManager as User);
+      const createdDate = new Date('2024-01-01');
+      const operatorNoInteraction = {
+        ...mockTelegramUser,
+        last_interaction_at: null,
+        created_at: createdDate,
+      };
+      telegramUserRepository.find.mockResolvedValue([operatorNoInteraction as unknown as TelegramUser]);
+      taskRepository.findOne.mockResolvedValue(null);
+      taskRepository.count.mockResolvedValue(0);
+
+      const result = await service.getActiveOperatorsStatus('manager-id');
+
+      expect(result[0].lastSeen).toEqual(createdDate);
+    });
+
+    it('should mark operator as offline when last_interaction_at is null', async () => {
+      userRepository.findOne.mockResolvedValue(mockManager as User);
+      const operatorNoInteraction = {
+        ...mockTelegramUser,
+        last_interaction_at: null,
+      };
+      telegramUserRepository.find.mockResolvedValue([operatorNoInteraction as unknown as TelegramUser]);
       taskRepository.findOne.mockResolvedValue(null);
       taskRepository.count.mockResolvedValue(0);
 
@@ -771,6 +1028,66 @@ describe('TelegramManagerToolsService', () => {
       expect(result).toHaveLength(2);
       expect(result[0].taskId).toBe('task-newer'); // Most recent first
       expect(result[1].taskId).toBe('task-older');
+    });
+
+    it('should use fallback values when assigned_to or machine is missing', async () => {
+      userRepository.findOne.mockResolvedValue(mockManager as User);
+      taskRepository.find.mockResolvedValue([
+        {
+          ...mockTask,
+          status: TaskStatus.COMPLETED,
+          completed_at: new Date(),
+          pending_photos: true,
+          assigned_to: null,
+          machine: null,
+        } as unknown as Task,
+      ]);
+      filesService.findByEntity.mockResolvedValue([]);
+
+      const result = await service.getPendingApprovals('manager-id');
+
+      expect(result[0].operatorName).toBe('Unknown');
+      expect(result[0].machineNumber).toBe('N/A');
+    });
+
+    it('should mark requiresReview true when has_photo_before is false', async () => {
+      userRepository.findOne.mockResolvedValue(mockManager as User);
+      taskRepository.find.mockResolvedValue([
+        {
+          ...mockTask,
+          status: TaskStatus.COMPLETED,
+          completed_at: new Date(),
+          pending_photos: false,
+          has_photo_before: false,
+          has_photo_after: true,
+          assigned_to: mockOperator,
+        } as Task,
+      ]);
+      filesService.findByEntity.mockResolvedValue([]);
+
+      const result = await service.getPendingApprovals('manager-id');
+
+      expect(result[0].requiresReview).toBe(true);
+    });
+
+    it('should mark requiresReview true when has_photo_after is false', async () => {
+      userRepository.findOne.mockResolvedValue(mockManager as User);
+      taskRepository.find.mockResolvedValue([
+        {
+          ...mockTask,
+          status: TaskStatus.COMPLETED,
+          completed_at: new Date(),
+          pending_photos: false,
+          has_photo_before: true,
+          has_photo_after: false,
+          assigned_to: mockOperator,
+        } as Task,
+      ]);
+      filesService.findByEntity.mockResolvedValue([]);
+
+      const result = await service.getPendingApprovals('manager-id');
+
+      expect(result[0].requiresReview).toBe(true);
     });
   });
 
@@ -876,6 +1193,81 @@ describe('TelegramManagerToolsService', () => {
       expect(result.success).toBe(false);
       expect(result.notifiedOperator).toBe(false);
     });
+
+    it('should not notify when task has no assigned_to_user_id', async () => {
+      userRepository.findOne.mockResolvedValue(mockManager as User);
+      tasksService.findOne.mockResolvedValue({
+        ...mockTask,
+        status: TaskStatus.COMPLETED,
+        assigned_to_user_id: null,
+      } as Task);
+      taskRepository.update.mockResolvedValue({ affected: 1 } as any);
+
+      const result = await service.approveTask('manager-id', 'task-id', true);
+
+      expect(result.success).toBe(true);
+      expect(result.notifiedOperator).toBe(false);
+      expect(telegramUserRepository.findOne).not.toHaveBeenCalled();
+    });
+
+    it('should not notify when operator has no chat_id', async () => {
+      userRepository.findOne.mockResolvedValue(mockManager as User);
+      tasksService.findOne.mockResolvedValue({
+        ...mockTask,
+        status: TaskStatus.COMPLETED,
+        assigned_to_user_id: 'operator-id',
+      } as Task);
+      const operatorNoChatId = { ...mockTelegramUser, chat_id: null };
+      telegramUserRepository.findOne.mockResolvedValue(operatorNoChatId as unknown as TelegramUser);
+      taskRepository.update.mockResolvedValue({ affected: 1 } as any);
+
+      const result = await service.approveTask('manager-id', 'task-id', true);
+
+      expect(result.success).toBe(true);
+      expect(result.notifiedOperator).toBe(false);
+    });
+
+    it('should use fallback for machine_number in approval notification', async () => {
+      userRepository.findOne.mockResolvedValue(mockManager as User);
+      tasksService.findOne.mockResolvedValue({
+        ...mockTask,
+        status: TaskStatus.COMPLETED,
+        assigned_to_user_id: 'operator-id',
+        machine: null,
+      } as unknown as Task);
+      telegramUserRepository.findOne.mockResolvedValue(mockTelegramUser as TelegramUser);
+      taskRepository.update.mockResolvedValue({ affected: 1 } as any);
+
+      const result = await service.approveTask('manager-id', 'task-id', true);
+
+      expect(result.success).toBe(true);
+      expect(resilientApi.sendText).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.stringContaining('N/A'),
+        expect.any(Object),
+        expect.any(Object),
+      );
+    });
+
+    it('should approve task without comment', async () => {
+      userRepository.findOne.mockResolvedValue(mockManager as User);
+      tasksService.findOne.mockResolvedValue({
+        ...mockTask,
+        status: TaskStatus.COMPLETED,
+        assigned_to_user_id: 'operator-id',
+      } as Task);
+      telegramUserRepository.findOne.mockResolvedValue(mockTelegramUser as TelegramUser);
+      taskRepository.update.mockResolvedValue({ affected: 1 } as any);
+
+      const result = await service.approveTask('manager-id', 'task-id', true);
+
+      expect(result.success).toBe(true);
+      expect(taskRepository.update).toHaveBeenCalledWith('task-id', expect.objectContaining({
+        metadata: expect.not.objectContaining({
+          review_comment: expect.anything(),
+        }),
+      }));
+    });
   });
 
   describe('formatAnalyticsMessage', () => {
@@ -903,6 +1295,101 @@ describe('TelegramManagerToolsService', () => {
       expect(message).toContain('8/10');
       expect(message).toContain('🥇');
       expect(message).toContain('John');
+    });
+
+    it('should use default language when not specified', () => {
+      const analytics = {
+        tasksCompleted: 0,
+        tasksInProgress: 0,
+        activeOperators: 0,
+        totalOperators: 0,
+        avgCompletionTimeMinutes: 0,
+        topPerformers: [],
+        tasksByType: {},
+      };
+
+      const message = service.formatAnalyticsMessage(analytics);
+
+      expect(message).toContain('📊');
+    });
+
+    it('should skip top performers section when array is empty', () => {
+      const analytics = {
+        tasksCompleted: 5,
+        tasksInProgress: 0,
+        activeOperators: 0,
+        totalOperators: 0,
+        avgCompletionTimeMinutes: 0,
+        topPerformers: [],
+        tasksByType: {},
+      };
+
+      const message = service.formatAnalyticsMessage(analytics, 'ru');
+
+      expect(message).not.toContain('🥇');
+      expect(message).not.toContain('🥈');
+      expect(message).not.toContain('🥉');
+    });
+
+    it('should skip tasks by type section when object is empty', () => {
+      const analytics = {
+        tasksCompleted: 5,
+        tasksInProgress: 0,
+        activeOperators: 0,
+        totalOperators: 0,
+        avgCompletionTimeMinutes: 0,
+        topPerformers: [],
+        tasksByType: {},
+      };
+
+      const message = service.formatAnalyticsMessage(analytics, 'ru');
+
+      expect(message).not.toContain('📦'); // REFILL emoji
+      expect(message).not.toContain('💰'); // COLLECTION emoji
+    });
+
+    it('should use default emoji for unknown task type', () => {
+      const analytics = {
+        tasksCompleted: 5,
+        tasksInProgress: 0,
+        activeOperators: 0,
+        totalOperators: 0,
+        avgCompletionTimeMinutes: 0,
+        topPerformers: [],
+        tasksByType: {
+          unknown_type: 3,
+        },
+      };
+
+      const message = service.formatAnalyticsMessage(analytics, 'ru');
+
+      expect(message).toContain('📌'); // Default emoji
+    });
+
+    it('should limit top performers to 3', () => {
+      const analytics = {
+        tasksCompleted: 20,
+        tasksInProgress: 0,
+        activeOperators: 0,
+        totalOperators: 0,
+        avgCompletionTimeMinutes: 0,
+        topPerformers: [
+          { name: 'First', tasksCompleted: 10 },
+          { name: 'Second', tasksCompleted: 8 },
+          { name: 'Third', tasksCompleted: 6 },
+          { name: 'Fourth', tasksCompleted: 4 },
+          { name: 'Fifth', tasksCompleted: 2 },
+        ],
+        tasksByType: {},
+      };
+
+      const message = service.formatAnalyticsMessage(analytics, 'ru');
+
+      expect(message).toContain('First');
+      expect(message).toContain('Second');
+      expect(message).toContain('Third');
+      expect(message).not.toContain('Fourth');
+      expect(message).not.toContain('Fifth');
     });
   });
 
@@ -935,6 +1422,36 @@ describe('TelegramManagerToolsService', () => {
       expect(message).toContain('⚫');
       expect(message).toContain('Operator 1');
       expect(message).toContain('M-001');
+    });
+
+    it('should use default language when not specified', () => {
+      const operators = [
+        {
+          name: 'Operator 1',
+          status: 'idle' as const,
+          tasksCompletedToday: 0,
+        },
+      ];
+
+      const message = service.formatOperatorsStatusMessage(operators);
+
+      expect(message).toContain('👥');
+      expect(message).toContain('Operator 1');
+    });
+
+    it('should use default emoji for unknown task type in working status', () => {
+      const operators = [
+        {
+          name: 'Operator 1',
+          status: 'working' as const,
+          currentTask: { type: 'unknown_type', machineNumber: 'M-001' },
+          tasksCompletedToday: 1,
+        },
+      ];
+
+      const message = service.formatOperatorsStatusMessage(operators, 'ru');
+
+      expect(message).toContain('📌'); // Default emoji for unknown type
     });
   });
 

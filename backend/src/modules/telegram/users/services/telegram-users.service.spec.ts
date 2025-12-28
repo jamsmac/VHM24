@@ -459,6 +459,42 @@ describe('TelegramUsersService', () => {
 
       expect(result).toBeDefined();
     });
+
+    it('should allow code generation when max attempts but last_verification_attempt_at is null', async () => {
+      // This tests the branch where verification_attempts >= max but lastAttemptTime is null
+      const existingWithMaxAttemptsNoTime = {
+        ...mockTelegramUser,
+        is_verified: false,
+        verification_code_expires_at: new Date(Date.now() + 10 * 60 * 1000),
+        verification_attempts: 5, // At max
+        last_verification_attempt_at: null, // But no timestamp
+      };
+      repository.findOne.mockResolvedValue(existingWithMaxAttemptsNoTime as TelegramUser);
+      repository.save.mockImplementation((entity) => Promise.resolve(entity as TelegramUser));
+
+      const result = await service.generateVerificationCode('user-uuid');
+
+      expect(result).toBeDefined();
+      expect(result).toHaveLength(12);
+    });
+
+    it('should allow code generation when verification_code_expires_at set but attempts under max', async () => {
+      // This tests the false branch of line 106: verification_attempts < CODE_GENERATION_MAX_PER_HOUR
+      const existingWithExpiryButLowAttempts = {
+        ...mockTelegramUser,
+        is_verified: false,
+        verification_code_expires_at: new Date(Date.now() + 10 * 60 * 1000),
+        verification_attempts: 2, // Under max (3)
+        last_verification_attempt_at: new Date(), // Recent
+      };
+      repository.findOne.mockResolvedValue(existingWithExpiryButLowAttempts as TelegramUser);
+      repository.save.mockImplementation((entity) => Promise.resolve(entity as TelegramUser));
+
+      const result = await service.generateVerificationCode('user-uuid');
+
+      expect(result).toBeDefined();
+      expect(result).toHaveLength(12);
+    });
   });
 
   describe('linkTelegramAccount edge cases', () => {
@@ -683,6 +719,82 @@ describe('TelegramUsersService', () => {
 
       expect(result.language).toBe(mockTelegramUser.language);
       expect(result.status).toBe(mockTelegramUser.status);
+    });
+  });
+
+  // Tests for private methods (dead code but covered for completeness)
+  // Note: isCodeExpired and checkAndIncrementAttempts are defined but never called
+  // The rate limiting logic is implemented inline in generateVerificationCode and trackFailedVerificationAttempt
+  describe('isCodeExpired (private method - dead code)', () => {
+    it('should return true when codeGeneratedAt is null', () => {
+      const result = (service as any).isCodeExpired(null);
+      expect(result).toBe(true);
+    });
+
+    it('should return true when code has expired', () => {
+      // Code generated 20 minutes ago (expired - limit is 15 minutes)
+      const codeGeneratedAt = new Date(Date.now() - 20 * 60 * 1000);
+      const result = (service as any).isCodeExpired(codeGeneratedAt);
+      expect(result).toBe(true);
+    });
+
+    it('should return false when code is still valid', () => {
+      // Code generated 5 minutes ago (still valid - limit is 15 minutes)
+      const codeGeneratedAt = new Date(Date.now() - 5 * 60 * 1000);
+      const result = (service as any).isCodeExpired(codeGeneratedAt);
+      expect(result).toBe(false);
+    });
+  });
+
+  describe('checkAndIncrementAttempts (private method - dead code)', () => {
+    it('should reset attempts when last_verification_attempt_at is null', () => {
+      const telegramUser = {
+        ...mockTelegramUser,
+        verification_attempts: 3,
+        last_verification_attempt_at: null,
+      } as TelegramUser;
+
+      (service as any).checkAndIncrementAttempts(telegramUser);
+
+      expect(telegramUser.verification_attempts).toBe(1); // Reset to 0, then incremented to 1
+      expect(telegramUser.last_verification_attempt_at).toBeInstanceOf(Date);
+    });
+
+    it('should reset attempts when window has passed', () => {
+      const telegramUser = {
+        ...mockTelegramUser,
+        verification_attempts: 3,
+        last_verification_attempt_at: new Date(Date.now() - 20 * 60 * 1000), // 20 min ago (beyond 15 min window)
+      } as TelegramUser;
+
+      (service as any).checkAndIncrementAttempts(telegramUser);
+
+      expect(telegramUser.verification_attempts).toBe(1); // Reset to 0, then incremented to 1
+    });
+
+    it('should throw BadRequestException when max attempts exceeded', () => {
+      const telegramUser = {
+        ...mockTelegramUser,
+        verification_attempts: 5, // At max (VERIFICATION_ATTEMPT_MAX is 5)
+        last_verification_attempt_at: new Date(Date.now() - 5 * 60 * 1000), // 5 min ago (within window)
+      } as TelegramUser;
+
+      expect(() => (service as any).checkAndIncrementAttempts(telegramUser)).toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('should increment attempts when under max and within window', () => {
+      const telegramUser = {
+        ...mockTelegramUser,
+        verification_attempts: 2,
+        last_verification_attempt_at: new Date(Date.now() - 5 * 60 * 1000), // 5 min ago (within window)
+      } as TelegramUser;
+
+      (service as any).checkAndIncrementAttempts(telegramUser);
+
+      expect(telegramUser.verification_attempts).toBe(3);
+      expect(telegramUser.last_verification_attempt_at).toBeInstanceOf(Date);
     });
   });
 });
