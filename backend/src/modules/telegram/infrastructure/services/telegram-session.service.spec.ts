@@ -60,6 +60,49 @@ describe('TelegramSessionService', () => {
       expect(mockRedisClient.on).toHaveBeenCalledWith('connect', expect.any(Function));
       expect(mockRedisClient.connect).toHaveBeenCalled();
     });
+
+    it('should handle Redis error event', async () => {
+      // Get the error handler that was registered
+      const errorHandler = mockRedisClient.on.mock.calls.find(
+        (call) => call[0] === 'error',
+      )?.[1];
+
+      expect(errorHandler).toBeDefined();
+      // Call the error handler - should not throw
+      expect(() => errorHandler(new Error('Redis connection error'))).not.toThrow();
+    });
+
+    it('should handle Redis connect event', async () => {
+      // Get the connect handler that was registered
+      const connectHandler = mockRedisClient.on.mock.calls.find(
+        (call) => call[0] === 'connect',
+      )?.[1];
+
+      expect(connectHandler).toBeDefined();
+      // Call the connect handler - should not throw
+      expect(() => connectHandler()).not.toThrow();
+    });
+
+    it('should handle Redis connection failure gracefully', async () => {
+      // Create a new service instance with failing connect
+      const failingRedisClient = {
+        ...mockRedisClient,
+        connect: jest.fn().mockRejectedValue(new Error('Connection refused')),
+      };
+
+      jest.resetModules();
+      jest.doMock('redis', () => ({
+        createClient: jest.fn(() => failingRedisClient),
+      }));
+
+      const { TelegramSessionService: FreshService } = await import(
+        './telegram-session.service'
+      );
+      const freshService = new FreshService();
+
+      // Should not throw, just log warning
+      await expect(freshService.onModuleInit()).resolves.not.toThrow();
+    });
   });
 
   describe('getSession', () => {
@@ -151,6 +194,18 @@ describe('TelegramSessionService', () => {
       });
 
       expect(mockRedisClient.setEx).not.toHaveBeenCalled();
+    });
+
+    it('should handle save error gracefully', async () => {
+      mockRedisClient.get.mockResolvedValue(JSON.stringify(mockSession));
+      mockRedisClient.setEx.mockRejectedValueOnce(new Error('Redis write error'));
+
+      // Should not throw
+      await expect(
+        service.saveSession('user-uuid', {
+          state: ConversationState.AWAITING_PHOTO_BEFORE,
+        }),
+      ).resolves.not.toThrow();
     });
   });
 
@@ -260,6 +315,13 @@ describe('TelegramSessionService', () => {
 
       expect(mockRedisClient.del).not.toHaveBeenCalled();
     });
+
+    it('should handle delete error gracefully', async () => {
+      mockRedisClient.del.mockRejectedValueOnce(new Error('Redis delete error'));
+
+      // Should not throw
+      await expect(service.deleteSession('user-uuid')).resolves.not.toThrow();
+    });
   });
 
   describe('isInState', () => {
@@ -318,6 +380,82 @@ describe('TelegramSessionService', () => {
     });
   });
 
+  describe('getSessionData', () => {
+    it('should return tempData from session context', async () => {
+      const sessionWithTempData = {
+        ...mockSession,
+        context: {
+          tempData: { machineId: 'machine-123', step: 2 },
+        },
+      };
+      mockRedisClient.get.mockResolvedValue(JSON.stringify(sessionWithTempData));
+
+      const result = await service.getSessionData('user-uuid');
+
+      expect(result).toEqual({ machineId: 'machine-123', step: 2 });
+    });
+
+    it('should return null when session not found', async () => {
+      mockRedisClient.get.mockResolvedValue(null);
+
+      const result = await service.getSessionData('user-uuid');
+
+      expect(result).toBeNull();
+    });
+
+    it('should return null when tempData not present', async () => {
+      mockRedisClient.get.mockResolvedValue(JSON.stringify(mockSession));
+
+      const result = await service.getSessionData('user-uuid');
+
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('setSessionData', () => {
+    it('should set tempData in existing session', async () => {
+      mockRedisClient.get.mockResolvedValue(JSON.stringify(mockSession));
+
+      await service.setSessionData('user-uuid', { cartItems: [1, 2, 3] });
+
+      expect(mockRedisClient.setEx).toHaveBeenCalled();
+      const savedData = JSON.parse(mockRedisClient.setEx.mock.calls[0][2]);
+      expect(savedData.context.tempData).toEqual({ cartItems: [1, 2, 3] });
+    });
+
+    it('should create new session with tempData when session not found', async () => {
+      mockRedisClient.get.mockResolvedValue(null);
+
+      await service.setSessionData('user-uuid', { newData: 'value' });
+
+      expect(mockRedisClient.setEx).toHaveBeenCalled();
+      const savedData = JSON.parse(mockRedisClient.setEx.mock.calls[0][2]);
+      expect(savedData.state).toBe(ConversationState.IDLE);
+      expect(savedData.chatId).toBe('user-uuid');
+      expect(savedData.telegramId).toBe('user-uuid');
+      expect(savedData.context.tempData).toEqual({ newData: 'value' });
+    });
+
+    it('should preserve existing context when adding tempData', async () => {
+      const sessionWithContext = {
+        ...mockSession,
+        context: {
+          activeTaskId: 'task-123',
+          awaitingPhotoType: 'before' as const,
+        },
+      };
+      mockRedisClient.get.mockResolvedValue(JSON.stringify(sessionWithContext));
+
+      await service.setSessionData('user-uuid', { key: 'value' });
+
+      expect(mockRedisClient.setEx).toHaveBeenCalled();
+      const savedData = JSON.parse(mockRedisClient.setEx.mock.calls[0][2]);
+      expect(savedData.context.activeTaskId).toBe('task-123');
+      expect(savedData.context.awaitingPhotoType).toBe('before');
+      expect(savedData.context.tempData).toEqual({ key: 'value' });
+    });
+  });
+
   describe('cleanupExpiredSessions', () => {
     it('should delete expired sessions', async () => {
       const expiredSession = {
@@ -349,6 +487,56 @@ describe('TelegramSessionService', () => {
       await service.cleanupExpiredSessions();
 
       expect(mockRedisClient.scanIterator).not.toHaveBeenCalled();
+    });
+
+    it('should handle scanIterator returning arrays', async () => {
+      const expiredSession = {
+        ...mockSession,
+        expiresAt: new Date(Date.now() - 1000).toISOString(),
+      };
+
+      // Mock scanIterator returning arrays (as per Redis SCAN behavior)
+      mockRedisClient.scanIterator = jest.fn().mockReturnValue(
+        (async function* () {
+          yield ['telegram:session:user1', 'telegram:session:user2'];
+          yield ['telegram:session:user3'];
+        })(),
+      );
+
+      mockRedisClient.get
+        .mockResolvedValueOnce(JSON.stringify(expiredSession)) // user1 - expired
+        .mockResolvedValueOnce(JSON.stringify(mockSession)) // user2 - not expired
+        .mockResolvedValueOnce(JSON.stringify(expiredSession)); // user3 - expired
+
+      await service.cleanupExpiredSessions();
+
+      expect(mockRedisClient.del).toHaveBeenCalledWith('telegram:session:user1');
+      expect(mockRedisClient.del).toHaveBeenCalledWith('telegram:session:user3');
+      expect(mockRedisClient.del).not.toHaveBeenCalledWith('telegram:session:user2');
+    });
+
+    it('should handle cleanup error gracefully', async () => {
+      mockRedisClient.scanIterator = jest.fn().mockImplementation(() => {
+        throw new Error('Scan error');
+      });
+
+      // Should not throw
+      await expect(service.cleanupExpiredSessions()).resolves.not.toThrow();
+    });
+
+    it('should handle null data for session keys', async () => {
+      mockRedisClient.scanIterator = jest.fn().mockReturnValue(
+        (async function* () {
+          yield 'telegram:session:user1';
+        })(),
+      );
+
+      mockRedisClient.get.mockResolvedValueOnce(null); // Session data is null
+
+      await service.cleanupExpiredSessions();
+
+      // Should not call del since there's no data
+      expect(mockRedisClient.del).not.toHaveBeenCalled();
     });
   });
 });
