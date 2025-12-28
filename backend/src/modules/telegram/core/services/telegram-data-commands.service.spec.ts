@@ -383,6 +383,16 @@ describe('TelegramDataCommandsService', () => {
       expect(incidentsService.findAll).not.toHaveBeenCalled();
     });
 
+    it('should default to Russian for unverified users without language', async () => {
+      const ctx = createMockCtx({
+        ...mockUnverifiedTelegramUser,
+        language: undefined,
+      });
+      await service.handleAlertsCommand(ctx as any);
+
+      expect(mockHelpers.t).toHaveBeenCalledWith(TelegramLanguage.RU, 'not_verified');
+    });
+
     it('should display alerts for verified users', async () => {
       const ctx = createMockCtx();
       incidentsService.findAll.mockResolvedValue([mockIncident as any]);
@@ -633,6 +643,16 @@ describe('TelegramDataCommandsService', () => {
       expect(machinesService.findAllSimple).not.toHaveBeenCalled();
     });
 
+    it('should default to Russian for unverified users without language', async () => {
+      const ctx = createMockCtx({
+        ...mockUnverifiedTelegramUser,
+        language: undefined,
+      });
+      await service.handleStatsCommand(ctx as any);
+
+      expect(mockHelpers.t).toHaveBeenCalledWith(TelegramLanguage.RU, 'not_verified');
+    });
+
     it('should display stats for verified users', async () => {
       const ctx = createMockCtx();
 
@@ -810,6 +830,16 @@ describe('TelegramDataCommandsService', () => {
 
       expect(ctx.reply).toHaveBeenCalledWith('not_verified');
       expect(usersService.findByTelegramId).not.toHaveBeenCalled();
+    });
+
+    it('should default to Russian for unverified users without language', async () => {
+      const ctx = createMockCtx({
+        ...mockUnverifiedTelegramUser,
+        language: undefined,
+      });
+      await service.handleTasksCommand(ctx as any);
+
+      expect(mockHelpers.t).toHaveBeenCalledWith(TelegramLanguage.RU, 'not_verified');
     });
 
     it('should display tasks for verified users', async () => {
