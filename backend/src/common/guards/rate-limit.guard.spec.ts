@@ -7,6 +7,16 @@ describe('RateLimitGuard', () => {
   let guard: RateLimitGuard;
   let rateLimiter: jest.Mocked<RateLimiterService>;
   let reflector: jest.Mocked<Reflector>;
+  const originalNodeEnv = process.env.NODE_ENV;
+
+  // Override NODE_ENV for these tests since guard skips in test environment
+  beforeAll(() => {
+    process.env.NODE_ENV = 'development';
+  });
+
+  afterAll(() => {
+    process.env.NODE_ENV = originalNodeEnv;
+  });
 
   beforeEach(() => {
     rateLimiter = {
