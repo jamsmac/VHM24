@@ -11,7 +11,7 @@ import { IncidentsService } from '../../../incidents/incidents.service';
 import { TransactionsService } from '../../../transactions/transactions.service';
 import { InventoryService } from '../../../inventory/inventory.service';
 import { TaskStatus } from '../../../tasks/entities/task.entity';
-import { IncidentStatus } from '../../../incidents/entities/incident.entity';
+// IncidentStatus removed - not used in tests
 import { BotContext } from '../../shared/types/telegram.types';
 
 // Mock Telegraf Markup

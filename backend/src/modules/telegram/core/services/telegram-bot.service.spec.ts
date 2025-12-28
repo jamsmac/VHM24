@@ -81,8 +81,8 @@ describe('TelegramBotService', () => {
   let sprint3Service: jest.Mocked<TelegramSprint3Service>;
   let taskOperationsService: jest.Mocked<TelegramTaskOperationsService>;
   let dataCommandsService: jest.Mocked<TelegramDataCommandsService>;
-  let uiService: jest.Mocked<TelegramUIService>;
-  let utilitiesService: jest.Mocked<TelegramUtilitiesService>;
+  let _uiService: jest.Mocked<TelegramUIService>;
+  let _utilitiesService: jest.Mocked<TelegramUtilitiesService>;
 
   const mockTelegramUser: Partial<TelegramUser> = {
     id: 'tg-user-1',
@@ -266,8 +266,8 @@ describe('TelegramBotService', () => {
     sprint3Service = module.get(TelegramSprint3Service);
     taskOperationsService = module.get(TelegramTaskOperationsService);
     dataCommandsService = module.get(TelegramDataCommandsService);
-    uiService = module.get(TelegramUIService);
-    utilitiesService = module.get(TelegramUtilitiesService);
+    _uiService = module.get(TelegramUIService);
+    _utilitiesService = module.get(TelegramUtilitiesService);
 
     // Reset captured handlers before each test
     resetCapturedHandlers();

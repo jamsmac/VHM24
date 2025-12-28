@@ -5,7 +5,7 @@ import { CookieService } from './cookie.service';
 
 describe('CookieService', () => {
   let service: CookieService;
-  let configService: jest.Mocked<ConfigService>;
+  let _configService: jest.Mocked<ConfigService>;
   let mockResponse: jest.Mocked<Response>;
 
   // Store original env
@@ -47,7 +47,7 @@ describe('CookieService', () => {
     } as unknown as jest.Mocked<Response>;
 
     service = await createService();
-    configService = {
+    _configService = {
       get: jest.fn(),
     } as unknown as jest.Mocked<ConfigService>;
   });

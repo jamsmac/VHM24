@@ -5,9 +5,22 @@ import { Repository } from 'typeorm';
 import { FcmToken } from './entities/fcm-token.entity';
 import { RegisterFcmTokenDto, SendFcmNotificationDto } from './dto/register-token.dto';
 
-// Dynamic import for firebase-admin (optional dependency)
- 
-let firebaseAdmin: any = null;
+// Type for dynamically imported firebase-admin (optional dependency)
+interface FirebaseAdminType {
+  apps: unknown[];
+  credential: { cert: (serviceAccount: unknown) => unknown };
+  initializeApp: (options: unknown) => void;
+  messaging: () => FirebaseMessaging;
+}
+
+interface FirebaseMessaging {
+  send: (message: unknown) => Promise<string>;
+  sendEachForMulticast: (message: unknown) => Promise<{ successCount: number; failureCount: number; responses: unknown[] }>;
+  subscribeToTopic: (tokens: string[], topic: string) => Promise<unknown>;
+  unsubscribeFromTopic: (tokens: string[], topic: string) => Promise<unknown>;
+}
+
+let firebaseAdmin: FirebaseAdminType | null = null;
 
 /**
  * Firebase Cloud Messaging Service
@@ -20,8 +33,7 @@ let firebaseAdmin: any = null;
 export class FcmService implements OnModuleInit {
   private readonly logger = new Logger(FcmService.name);
   private isInitialized = false;
-   
-  private messaging: any = null;
+  private messaging: FirebaseMessaging | null = null;
 
   constructor(
     @InjectRepository(FcmToken)
@@ -50,7 +62,7 @@ export class FcmService implements OnModuleInit {
     try {
       // Dynamic import of firebase-admin (using require to avoid TypeScript module resolution)
       // eslint-disable-next-line @typescript-eslint/no-require-imports
-      firebaseAdmin = require('firebase-admin');
+      firebaseAdmin = require('firebase-admin') as FirebaseAdminType;
 
       // Initialize Firebase if not already initialized
       if (firebaseAdmin.apps.length === 0) {
@@ -70,8 +82,9 @@ export class FcmService implements OnModuleInit {
       this.messaging = firebaseAdmin.messaging();
       this.isInitialized = true;
       this.logger.log('Firebase Admin SDK initialized successfully');
-    } catch (error) {
-      this.logger.warn(`Failed to initialize Firebase: ${error.message}`);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.warn(`Failed to initialize Firebase: ${errorMessage}`);
       this.logger.warn(
         'FCM notifications disabled. Install firebase-admin package if needed: npm install firebase-admin',
       );

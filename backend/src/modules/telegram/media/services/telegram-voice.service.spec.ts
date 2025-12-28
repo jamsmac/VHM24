@@ -23,7 +23,7 @@ jest.mock('openai', () => {
 
 // Get reference to the mocked class after jest.mock is processed
 const getMockOpenAI = () => {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
+   
   return require('openai').default;
 };
 

@@ -21,7 +21,7 @@ describe('TelegramPaymentsService', () => {
   let orderRepository: jest.Mocked<Repository<ClientOrder>>;
   let paymentRepository: jest.Mocked<Repository<ClientPayment>>;
   let loyaltyService: jest.Mocked<ClientLoyaltyService>;
-  let configService: jest.Mocked<ConfigService>;
+  let _configService: jest.Mocked<ConfigService>;
 
   const mockOrder: Partial<ClientOrder> = {
     id: 'order-123',
@@ -88,7 +88,7 @@ describe('TelegramPaymentsService', () => {
     orderRepository = module.get(getRepositoryToken(ClientOrder));
     paymentRepository = module.get(getRepositoryToken(ClientPayment));
     loyaltyService = module.get(ClientLoyaltyService);
-    configService = module.get(ConfigService);
+    _configService = module.get(ConfigService);
   });
 
   afterEach(() => {

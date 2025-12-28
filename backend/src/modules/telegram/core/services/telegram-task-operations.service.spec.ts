@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { TelegramTaskOperationsService, TaskExecutionState } from './telegram-task-operations.service';
+import { TelegramTaskOperationsService } from './telegram-task-operations.service';
 import { TelegramSessionService, ConversationState } from '../../infrastructure/services/telegram-session.service';
 import { TelegramVoiceService } from '../../media/services/telegram-voice.service';
 import { TelegramTaskCallbackService } from './telegram-task-callback.service';
@@ -7,7 +7,6 @@ import { TasksService } from '../../../tasks/tasks.service';
 import { FilesService } from '../../../files/files.service';
 import { UsersService } from '../../../users/users.service';
 import { TelegramLanguage } from '../../shared/entities/telegram-user.entity';
-import { TelegramMessageType } from '../../shared/entities/telegram-message-log.entity';
 import { TaskStatus, TaskType } from '../../../tasks/entities/task.entity';
 
 describe('TelegramTaskOperationsService', () => {

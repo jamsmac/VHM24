@@ -92,12 +92,13 @@ export class TelegramTaskCallbackService {
               `<i>(no caption needed, I remember you're in this task)</i>`,
         { parse_mode: 'HTML' },
       );
-    } catch (error: any) {
+    } catch (error: unknown) {
       this.logger.error('Error starting task:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       await ctx.reply(
         lang === TelegramLanguage.RU
-          ? `❌ Ошибка: ${error.message}`
-          : `❌ Error: ${error.message}`,
+          ? `❌ Ошибка: ${errorMessage}`
+          : `❌ Error: ${errorMessage}`,
       );
     }
   }
@@ -157,7 +158,7 @@ export class TelegramTaskCallbackService {
           lang === TelegramLanguage.RU ? 'Уже на первом шаге' : 'Already at first step',
         );
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       this.logger.error('Error going back:', error);
       await ctx.answerCbQuery('❌ Error');
     }
@@ -373,10 +374,11 @@ export class TelegramTaskCallbackService {
       // Show next step
       const updatedTask = await this.tasksService.findOne(taskId);
       await this.showCurrentStep(ctx, updatedTask, state, lang);
-    } catch (error: any) {
+    } catch (error: unknown) {
       this.logger.error('Error handling step completion:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       await ctx.reply(
-        lang === TelegramLanguage.RU ? `❌ Ошибка: ${error.message}` : `❌ Error: ${error.message}`,
+        lang === TelegramLanguage.RU ? `❌ Ошибка: ${errorMessage}` : `❌ Error: ${errorMessage}`,
       );
     }
   }

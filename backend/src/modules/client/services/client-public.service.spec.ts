@@ -43,7 +43,7 @@ describe('ClientPublicService', () => {
     location: mockLocation as Location,
   };
 
-  const mockNomenclature = {
+  const _mockNomenclature = {
     id: 'nom-1',
     name: 'Coffee',
     description: 'Hot coffee',

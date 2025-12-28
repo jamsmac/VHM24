@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Context, Markup } from 'telegraf';
+import { Context } from 'telegraf';
 import { TelegramUser, TelegramLanguage } from '../../shared/entities/telegram-user.entity';
 import { TelegramMessageType } from '../../shared/entities/telegram-message-log.entity';
 import { TelegramSessionService, UserSession, ConversationState } from '../../infrastructure/services/telegram-session.service';
@@ -523,16 +523,18 @@ export class TelegramTaskOperationsService {
 
           await this.taskCallbackService.updateExecutionState(taskId, state);
         }
-      } catch (error: any) {
-        this.logger.warn(`Failed to update execution state after photo upload: ${error.message}`);
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        this.logger.warn(`Failed to update execution state after photo upload: ${errorMessage}`);
         // Don't fail the photo upload if state update fails
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       this.logger.error('Error uploading photo:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       await ctx.reply(
         lang === TelegramLanguage.RU
-          ? `❌ Ошибка при загрузке фото: ${error.message}`
-          : `❌ Error uploading photo: ${error.message}`,
+          ? `❌ Ошибка при загрузке фото: ${errorMessage}`
+          : `❌ Error uploading photo: ${errorMessage}`,
       );
     }
   }
@@ -657,8 +659,9 @@ export class TelegramTaskOperationsService {
           // Already responded with help text via getVoiceCommandResponse
           break;
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       this.logger.error('Error processing voice message:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 
       await ctx.reply(
         lang === TelegramLanguage.RU
@@ -671,7 +674,7 @@ export class TelegramTaskOperationsService {
               '1️⃣ Записать в тихом месте\n' +
               '2️⃣ Говорить четко и громко\n' +
               '3️⃣ Использовать текстовые команды: /help\n\n' +
-              `<i>Ошибка: ${error.message}</i>`
+              `<i>Ошибка: ${errorMessage}</i>`
           : '😕 Failed to process voice message\n\n' +
               '<b>What could go wrong:</b>\n' +
               '• Poor recording quality\n' +
@@ -681,7 +684,7 @@ export class TelegramTaskOperationsService {
               '1️⃣ Record in quiet place\n' +
               '2️⃣ Speak clearly and loudly\n' +
               '3️⃣ Use text commands: /help\n\n' +
-              `<i>Error: ${error.message}</i>`,
+              `<i>Error: ${errorMessage}</i>`,
         { parse_mode: 'HTML' },
       );
     }

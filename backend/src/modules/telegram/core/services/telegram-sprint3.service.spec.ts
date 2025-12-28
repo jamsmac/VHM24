@@ -1,9 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { TelegramSprint3Service } from './telegram-sprint3.service';
 import { TelegramUser, TelegramLanguage } from '../../shared/entities/telegram-user.entity';
-import { TelegramMessageLog, TelegramMessageType } from '../../shared/entities/telegram-message-log.entity';
+import { TelegramMessageLog } from '../../shared/entities/telegram-message-log.entity';
 import { TelegramSessionService, ConversationState } from '../../infrastructure/services/telegram-session.service';
 import { TelegramManagerToolsService } from '../../managers/services/telegram-manager-tools.service';
 import { UsersService } from '../../../users/users.service';

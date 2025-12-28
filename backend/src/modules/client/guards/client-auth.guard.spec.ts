@@ -13,7 +13,7 @@ import {
 describe('ClientAuthGuard', () => {
   let guard: ClientAuthGuard;
   let jwtService: jest.Mocked<JwtService>;
-  let configService: jest.Mocked<ConfigService>;
+  let _configService: jest.Mocked<ConfigService>;
   let reflector: Reflector;
 
   const mockJwtService = {
@@ -42,7 +42,7 @@ describe('ClientAuthGuard', () => {
 
     guard = module.get<ClientAuthGuard>(ClientAuthGuard);
     jwtService = module.get(JwtService);
-    configService = module.get(ConfigService);
+    _configService = module.get(ConfigService);
     reflector = module.get<Reflector>(Reflector);
   });
 

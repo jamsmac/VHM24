@@ -121,11 +121,12 @@ export class TelegramUtilitiesService {
       }
 
       // Other text message handling can be added here
-    } catch (error: any) {
+    } catch (error: unknown) {
       this.logger.error('Error handling text message:', error);
       const lang = ctx.telegramUser.language;
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       await ctx.reply(
-        lang === TelegramLanguage.RU ? `❌ Ошибка: ${error.message}` : `❌ Error: ${error.message}`,
+        lang === TelegramLanguage.RU ? `❌ Ошибка: ${errorMessage}` : `❌ Error: ${errorMessage}`,
       );
     }
   }

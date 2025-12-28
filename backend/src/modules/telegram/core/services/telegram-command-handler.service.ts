@@ -155,10 +155,10 @@ export class TelegramCommandHandlerService {
         );
 
         await this.helpers.notifyAdminAboutNewUser(pendingUser.id, ctx.from);
-      } catch (error: any) {
+      } catch (error: unknown) {
         this.logger.error('Failed to create pending user', error);
-
-        if (error.message?.includes('уже существует') || error.message?.includes('already exists')) {
+        const errorMessage = error instanceof Error ? error.message : '';
+        if (errorMessage.includes('уже существует') || errorMessage.includes('already exists')) {
           await ctx.reply(
             this.t(lang, 'access_request_pending'),
             this.helpers.getVerificationKeyboard(lang),

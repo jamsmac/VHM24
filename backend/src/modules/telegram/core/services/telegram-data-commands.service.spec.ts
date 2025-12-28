@@ -95,12 +95,12 @@ describe('TelegramDataCommandsService', () => {
   });
 
   const mockHelpers = {
-    t: jest.fn((lang, key, ...args) => key),
+    t: jest.fn((lang, key, ..._args) => key),
     logMessage: jest.fn().mockResolvedValue(undefined),
-    formatMachinesMessage: jest.fn((machines, lang) => `Machines: ${machines.length}`),
-    formatAlertsMessage: jest.fn((alerts, lang) => `Alerts: ${alerts.length}`),
-    formatStatsMessage: jest.fn((stats, lang) => `Stats: ${JSON.stringify(stats)}`),
-    formatTasksMessage: jest.fn((tasks, lang) => `Tasks: ${tasks.length}`),
+    formatMachinesMessage: jest.fn((machines, _lang) => `Machines: ${machines.length}`),
+    formatAlertsMessage: jest.fn((alerts, _lang) => `Alerts: ${alerts.length}`),
+    formatStatsMessage: jest.fn((stats, _lang) => `Stats: ${JSON.stringify(stats)}`),
+    formatTasksMessage: jest.fn((tasks, _lang) => `Tasks: ${tasks.length}`),
     getMachinesKeyboard: jest.fn(() => ({ reply_markup: {} })),
     getAlertsKeyboard: jest.fn(() => ({ reply_markup: {} })),
     getTasksKeyboard: jest.fn(() => ({ reply_markup: {} })),

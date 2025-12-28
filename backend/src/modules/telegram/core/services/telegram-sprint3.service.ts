@@ -100,12 +100,13 @@ export class TelegramSprint3Service {
 
     try {
       await this.sendMachineStockInfo(ctx, machineId, lang);
-    } catch (error: any) {
+    } catch (error: unknown) {
       this.logger.error('Error in stock_machine callback:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       await ctx.reply(
         lang === TelegramLanguage.RU
-          ? `❌ Ошибка: ${error.message}`
-          : `❌ Error: ${error.message}`,
+          ? `❌ Ошибка: ${errorMessage}`
+          : `❌ Error: ${errorMessage}`,
       );
     }
   }
@@ -133,12 +134,13 @@ export class TelegramSprint3Service {
       const message = this.managerToolsService.formatAnalyticsMessage(analytics, lang);
 
       await ctx.reply(message, { parse_mode: 'HTML' });
-    } catch (error: any) {
+    } catch (error: unknown) {
       this.logger.error('Error in staff_analytics callback:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       await ctx.reply(
         lang === TelegramLanguage.RU
-          ? `❌ Ошибка: ${error.message}`
-          : `❌ Error: ${error.message}`,
+          ? `❌ Ошибка: ${errorMessage}`
+          : `❌ Error: ${errorMessage}`,
       );
     }
   }
@@ -191,7 +193,7 @@ export class TelegramSprint3Service {
           parse_mode: 'HTML',
         },
       );
-    } catch (error: any) {
+    } catch (error: unknown) {
       this.logger.error('Error in incident_type callback:', error);
     }
   }
@@ -231,7 +233,7 @@ export class TelegramSprint3Service {
             `📝 Describe the problem (send a text message):`,
         { parse_mode: 'HTML' },
       );
-    } catch (error: any) {
+    } catch (error: unknown) {
       this.logger.error('Error in incident_machine callback:', error);
     }
   }
@@ -335,12 +337,13 @@ export class TelegramSprint3Service {
           tempData: { userId: user.id },
         };
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       this.logger.error('Error in incident command:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       await ctx.reply(
         lang === TelegramLanguage.RU
-          ? `❌ Ошибка: ${error.message}`
-          : `❌ Error: ${error.message}`,
+          ? `❌ Ошибка: ${errorMessage}`
+          : `❌ Error: ${errorMessage}`,
       );
     }
   }
@@ -419,12 +422,13 @@ export class TelegramSprint3Service {
 
       // Get inventory for this machine
       await this.sendMachineStockInfo(ctx, machine.id, lang);
-    } catch (error: any) {
+    } catch (error: unknown) {
       this.logger.error('Error in stock command:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       await ctx.reply(
         lang === TelegramLanguage.RU
-          ? `❌ Ошибка: ${error.message}`
-          : `❌ Error: ${error.message}`,
+          ? `❌ Ошибка: ${errorMessage}`
+          : `❌ Error: ${errorMessage}`,
       );
     }
   }
@@ -582,12 +586,13 @@ export class TelegramSprint3Service {
       ]);
 
       await ctx.reply(message, { ...keyboard, parse_mode: 'HTML' });
-    } catch (error: any) {
+    } catch (error: unknown) {
       this.logger.error('Error in staff command:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       await ctx.reply(
         lang === TelegramLanguage.RU
-          ? `❌ Ошибка: ${error.message}`
-          : `❌ Error: ${error.message}`,
+          ? `❌ Ошибка: ${errorMessage}`
+          : `❌ Error: ${errorMessage}`,
       );
     }
   }
@@ -711,12 +716,13 @@ export class TelegramSprint3Service {
           ],
         ]),
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       this.logger.error('Error in report command:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       await ctx.reply(
         lang === TelegramLanguage.RU
-          ? `❌ Ошибка: ${error.message}`
-          : `❌ Error: ${error.message}`,
+          ? `❌ Ошибка: ${errorMessage}`
+          : `❌ Error: ${errorMessage}`,
       );
     }
   }

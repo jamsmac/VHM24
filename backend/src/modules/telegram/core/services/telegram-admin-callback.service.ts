@@ -77,12 +77,13 @@ export class TelegramAdminCallbackService {
       const keyboard = this.getRoleSelectionKeyboard(userId, lang);
 
       await ctx.editMessageText(message, { ...keyboard, parse_mode: 'HTML' });
-    } catch (error: any) {
+    } catch (error: unknown) {
       this.logger.error('Error expanding user:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       await ctx.reply(
         lang === TelegramLanguage.RU
-          ? `❌ Ошибка: ${error.message}`
-          : `❌ Error: ${error.message}`,
+          ? `❌ Ошибка: ${errorMessage}`
+          : `❌ Error: ${errorMessage}`,
       );
     }
   }
@@ -189,12 +190,13 @@ export class TelegramAdminCallbackService {
           // Don't fail the approval if telegram notification fails
         }
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       this.logger.error('Error approving user:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       await ctx.reply(
         lang === TelegramLanguage.RU
-          ? `❌ Ошибка при одобрении: ${error.message}`
-          : `❌ Error approving user: ${error.message}`,
+          ? `❌ Ошибка при одобрении: ${errorMessage}`
+          : `❌ Error approving user: ${errorMessage}`,
       );
     }
   }
@@ -337,12 +339,13 @@ export class TelegramAdminCallbackService {
       }
 
       return true;
-    } catch (error: any) {
+    } catch (error: unknown) {
       this.logger.error('Error rejecting user:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       await ctx.reply(
         lang === TelegramLanguage.RU
-          ? `❌ Ошибка: ${error.message}`
-          : `❌ Error: ${error.message}`,
+          ? `❌ Ошибка: ${errorMessage}`
+          : `❌ Error: ${errorMessage}`,
       );
       return true;
     }
@@ -465,12 +468,13 @@ export class TelegramAdminCallbackService {
       } else {
         await ctx.reply(message, { ...keyboard, parse_mode: 'HTML' });
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       this.logger.error('Error fetching pending users:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       await ctx.reply(
         lang === TelegramLanguage.RU
-          ? `❌ Ошибка при загрузке пользователей: ${error.message}`
-          : `❌ Error loading users: ${error.message}`,
+          ? `❌ Ошибка при загрузке пользователей: ${errorMessage}`
+          : `❌ Error loading users: ${errorMessage}`,
       );
     }
   }

@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { DataSource, QueryRunner } from 'typeorm';
+import { DataSource } from 'typeorm';
 import { MachineAccessImportService } from './machine-access-import.service';
 import { MachineAccessService } from './machine-access.service';
 import { MachineAccess, MachineAccessRole } from './entities/machine-access.entity';
@@ -19,7 +19,7 @@ jest.mock('exceljs', () => {
 describe('MachineAccessImportService', () => {
   let service: MachineAccessImportService;
   let machineAccessService: jest.Mocked<MachineAccessService>;
-  let dataSource: jest.Mocked<DataSource>;
+  let _dataSource: jest.Mocked<DataSource>;
   let queryRunner: any;
   let mockManagerFindOne: jest.Mock;
   let mockManagerCreate: jest.Mock;
@@ -76,7 +76,7 @@ describe('MachineAccessImportService', () => {
 
     service = module.get<MachineAccessImportService>(MachineAccessImportService);
     machineAccessService = module.get(MachineAccessService);
-    dataSource = module.get(DataSource);
+    _dataSource = module.get(DataSource);
   });
 
   afterEach(() => {
