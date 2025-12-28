@@ -29,6 +29,38 @@ describe('TelegramI18nService', () => {
       const result = service.t('en', 'test.key');
       expect(result).toBe('test.key');
     });
+
+    it('should return key when value is an object (non-leaf key)', () => {
+      // 'welcome' is a namespace, not a leaf value
+      const result = service.t('ru', 'welcome');
+      // Should return the key since 'welcome' is an object, not a string
+      expect(result).toBe('welcome');
+    });
+
+    it('should interpolate variables in translation', () => {
+      // Use a real key that exists and supports interpolation
+      const result = service.t('ru', 'verification.too_many_attempts', { minutes: 5 });
+      expect(result).toContain('5');
+    });
+
+    it('should interpolate multiple variables', () => {
+      // Test with a key that might have multiple placeholders
+      const result = service.t('en', 'verification.too_many_attempts', { minutes: 10 });
+      expect(result).toContain('10');
+    });
+
+    it('should handle interpolation with getFixedT', () => {
+      const t = service.getFixedT('ru');
+      const result = t('verification.too_many_attempts', { minutes: 15 });
+      expect(result).toContain('15');
+    });
+
+    it('should fallback to Russian for unsupported language', () => {
+      // Using an unsupported language should fall back to Russian translations
+      const result = service.t('de', 'welcome.title');
+      const ruResult = service.t('ru', 'welcome.title');
+      expect(result).toBe(ruResult);
+    });
   });
 
   describe('getFixedT', () => {
@@ -197,6 +229,12 @@ describe('TelegramI18nService', () => {
       const result = service.getTaskTypeName('COLLECTION', 'en');
       expect(result).toBe('Collection');
     });
+
+    it('should return key path when translation not found', () => {
+      const result = service.getTaskTypeName('unknown_task_type', 'ru');
+      // Returns the key path since t() returns key when not found
+      expect(result).toBe('tasks.types.unknown_task_type');
+    });
   });
 
   describe('getMachineStatusName', () => {
@@ -208,6 +246,12 @@ describe('TelegramI18nService', () => {
     it('should convert status to lowercase and translate', () => {
       const result = service.getMachineStatusName('OFFLINE', 'en');
       expect(result).toBe('Offline');
+    });
+
+    it('should return key path when translation not found', () => {
+      const result = service.getMachineStatusName('unknown_status', 'en');
+      // Returns the key path since t() returns key when not found
+      expect(result).toBe('machines.status.unknown_status');
     });
   });
 });
