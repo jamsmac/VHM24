@@ -335,21 +335,21 @@ describe('TasksService', () => {
 
     service = module.get<TasksService>(TasksService);
     taskRepository = module.get(getRepositoryToken(Task));
-    taskItemRepository = module.get(getRepositoryToken(TaskItem));
+    _taskItemRepository = module.get(getRepositoryToken(TaskItem));
     taskCommentRepository = module.get(getRepositoryToken(TaskComment));
     _taskComponentRepository = module.get(getRepositoryToken(TaskComponent));
-    filesService = module.get(FilesService);
-    machinesService = module.get(MachinesService);
+    _filesService = module.get(FilesService);
+    _machinesService = module.get(MachinesService);
     inventoryService = module.get(InventoryService);
     notificationsService = module.get(NotificationsService);
-    transactionsService = module.get(TransactionsService);
-    incidentsService = module.get(IncidentsService);
-    auditLogService = module.get(AuditLogService);
-    usersService = module.get(UsersService);
-    washingSchedulesService = module.get(WashingSchedulesService);
-    componentMovementsService = module.get(ComponentMovementsService);
+    _transactionsService = module.get(TransactionsService);
+    _incidentsService = module.get(IncidentsService);
+    _auditLogService = module.get(AuditLogService);
+    _usersService = module.get(UsersService);
+    _washingSchedulesService = module.get(WashingSchedulesService);
+    _componentMovementsService = module.get(ComponentMovementsService);
     _componentsService = module.get(ComponentsService);
-    eventEmitter = module.get(EventEmitter2);
+    _eventEmitter = module.get(EventEmitter2);
     dataSource = module.get(DataSource);
 
     jest.clearAllMocks();
