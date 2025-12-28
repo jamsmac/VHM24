@@ -560,6 +560,118 @@ describe('TelegramUsersService', () => {
 
       expect(repository.save).toHaveBeenCalled(); // Failed attempt tracked
     });
+
+    it('should reset verification attempts when rate limit window expired', async () => {
+      const userWithOldAttempt = {
+        ...mockTelegramUser,
+        is_verified: false,
+        verification_code: 'OTHER123',
+        verification_attempts: 3,
+        last_verification_attempt_at: new Date(Date.now() - 20 * 60 * 1000), // 20 min ago (beyond 15 min window)
+      };
+      repository.findOne
+        .mockResolvedValueOnce(userWithOldAttempt as TelegramUser) // First findOne for code lookup
+        .mockResolvedValueOnce(null); // findByVerificationCode returns null (invalid code)
+      repository.save.mockImplementation((entity) => Promise.resolve(entity as TelegramUser));
+
+      await expect(
+        service.linkTelegramAccount('987654321', '987654321', 'user', 'First', 'Last', {
+          verification_code: 'WRONG',
+        }),
+      ).rejects.toThrow(NotFoundException);
+
+      // Verify that attempts were reset (save was called with reset attempts)
+      expect(repository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          verification_attempts: 1, // Reset to 0, then incremented to 1
+        }),
+      );
+    });
+
+    it('should block user when max verification attempts exceeded', async () => {
+      const userNearMaxAttempts = {
+        ...mockTelegramUser,
+        is_verified: false,
+        verification_code: 'OTHER123',
+        verification_attempts: 4, // One more attempt will hit max (5)
+        last_verification_attempt_at: new Date(Date.now() - 5 * 60 * 1000), // 5 min ago (within window)
+      };
+      repository.findOne
+        .mockResolvedValueOnce(userNearMaxAttempts as TelegramUser) // First findOne for code lookup
+        .mockResolvedValueOnce(null); // findByVerificationCode returns null (invalid code)
+      repository.save.mockImplementation((entity) => Promise.resolve(entity as TelegramUser));
+
+      await expect(
+        service.linkTelegramAccount('987654321', '987654321', 'user', 'First', 'Last', {
+          verification_code: 'WRONG',
+        }),
+      ).rejects.toThrow(NotFoundException);
+
+      // Verify that user was blocked (save was called with blocked_until set)
+      expect(repository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          verification_attempts: 5,
+          blocked_until: expect.any(Date),
+        }),
+      );
+    });
+
+    it('should increment attempts without blocking when under max attempts', async () => {
+      const userWithSomeAttempts = {
+        ...mockTelegramUser,
+        is_verified: false,
+        verification_code: 'OTHER123',
+        verification_attempts: 2,
+        last_verification_attempt_at: new Date(Date.now() - 5 * 60 * 1000), // Within window
+      };
+      repository.findOne
+        .mockResolvedValueOnce(userWithSomeAttempts as TelegramUser)
+        .mockResolvedValueOnce(null);
+      repository.save.mockImplementation((entity) => Promise.resolve(entity as TelegramUser));
+
+      await expect(
+        service.linkTelegramAccount('987654321', '987654321', 'user', 'First', 'Last', {
+          verification_code: 'WRONG',
+        }),
+      ).rejects.toThrow(NotFoundException);
+
+      // Attempts should be incremented but not blocked
+      expect(repository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          verification_attempts: 3,
+        }),
+      );
+      // Verify blocked_until was not set (remains null/undefined)
+      const savedEntity = repository.save.mock.calls[0][0];
+      expect(savedEntity.blocked_until).toBeFalsy();
+    });
+
+    it('should track attempt when last_verification_attempt_at is null', async () => {
+      const userWithNoAttemptHistory = {
+        ...mockTelegramUser,
+        is_verified: false,
+        verification_code: 'OTHER123',
+        verification_attempts: 0,
+        last_verification_attempt_at: null,
+      };
+      repository.findOne
+        .mockResolvedValueOnce(userWithNoAttemptHistory as TelegramUser)
+        .mockResolvedValueOnce(null);
+      repository.save.mockImplementation((entity) => Promise.resolve(entity as TelegramUser));
+
+      await expect(
+        service.linkTelegramAccount('987654321', '987654321', 'user', 'First', 'Last', {
+          verification_code: 'WRONG',
+        }),
+      ).rejects.toThrow(NotFoundException);
+
+      expect(repository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          verification_attempts: 1,
+          last_verification_attempt_at: expect.any(Date),
+        }),
+      );
+    });
   });
 
   describe('update edge cases', () => {
