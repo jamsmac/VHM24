@@ -1224,6 +1224,108 @@ describe('TelegramBotService', () => {
         }),
       );
     });
+
+    describe('helper wrapper functions', () => {
+      beforeEach(async () => {
+        telegramSettingsRepository.findOne.mockResolvedValue(mockSettings as TelegramSettings);
+        await service.initializeBot();
+      });
+
+      it('should invoke notifyAdminAboutNewUser wrapper in commandHandlerService helpers', async () => {
+        // Get the helpers passed to commandHandlerService.setHelpers
+        const helpers = commandHandlerService.setHelpers.mock.calls[0][0];
+
+        const userId = 'user-123';
+        const telegramFrom = {
+          id: 12345,
+          is_bot: false,
+          first_name: 'John',
+          last_name: 'Doe',
+          username: 'johndoe',
+        } as any;
+
+        // Invoke the wrapper function (covers line 119)
+        await helpers.notifyAdminAboutNewUser(userId, telegramFrom);
+
+        expect(adminCallbackService.notifyAdminAboutNewUser).toHaveBeenCalledWith(
+          userId,
+          telegramFrom,
+          expect.any(Function),
+        );
+      });
+
+      it('should invoke handleMachinesCommand wrapper in callbackHandlerService helpers', async () => {
+        // Get the helpers passed to callbackHandlerService.setHelpers
+        const helpers = callbackHandlerService.setHelpers.mock.calls[0][0];
+        const ctx = { telegramUser: mockTelegramUser } as any;
+
+        // Invoke the wrapper function (covers line 128)
+        await helpers.handleMachinesCommand(ctx);
+
+        expect(dataCommandsService.handleMachinesCommand).toHaveBeenCalledWith(ctx);
+      });
+
+      it('should invoke handleAlertsCommand wrapper in callbackHandlerService helpers', async () => {
+        const helpers = callbackHandlerService.setHelpers.mock.calls[0][0];
+        const ctx = { telegramUser: mockTelegramUser } as any;
+
+        // Invoke the wrapper function (covers line 129)
+        await helpers.handleAlertsCommand(ctx);
+
+        expect(dataCommandsService.handleAlertsCommand).toHaveBeenCalledWith(ctx);
+      });
+
+      it('should invoke handleStatsCommand wrapper in callbackHandlerService helpers', async () => {
+        const helpers = callbackHandlerService.setHelpers.mock.calls[0][0];
+        const ctx = { telegramUser: mockTelegramUser } as any;
+
+        // Invoke the wrapper function (covers line 130)
+        await helpers.handleStatsCommand(ctx);
+
+        expect(dataCommandsService.handleStatsCommand).toHaveBeenCalledWith(ctx);
+      });
+
+      it('should invoke handleTasksCommand wrapper in callbackHandlerService helpers', async () => {
+        const helpers = callbackHandlerService.setHelpers.mock.calls[0][0];
+        const ctx = { telegramUser: mockTelegramUser } as any;
+
+        // Invoke the wrapper function (covers line 131)
+        await helpers.handleTasksCommand(ctx);
+
+        expect(dataCommandsService.handleTasksCommand).toHaveBeenCalledWith(ctx);
+      });
+
+      it('should invoke handleTasksCommand wrapper in taskOperationsService helpers', async () => {
+        // Get the helpers passed to taskOperationsService.setHelpers
+        const helpers = taskOperationsService.setHelpers.mock.calls[0][0];
+        const ctx = { telegramUser: mockTelegramUser } as any;
+
+        // Invoke the wrapper function (covers line 145)
+        await helpers.handleTasksCommand(ctx);
+
+        expect(dataCommandsService.handleTasksCommand).toHaveBeenCalledWith(ctx);
+      });
+
+      it('should invoke handleMachinesCommand wrapper in taskOperationsService helpers', async () => {
+        const helpers = taskOperationsService.setHelpers.mock.calls[0][0];
+        const ctx = { telegramUser: mockTelegramUser } as any;
+
+        // Invoke the wrapper function (covers line 146)
+        await helpers.handleMachinesCommand(ctx);
+
+        expect(dataCommandsService.handleMachinesCommand).toHaveBeenCalledWith(ctx);
+      });
+
+      it('should invoke handleStatsCommand wrapper in taskOperationsService helpers', async () => {
+        const helpers = taskOperationsService.setHelpers.mock.calls[0][0];
+        const ctx = { telegramUser: mockTelegramUser } as any;
+
+        // Invoke the wrapper function (covers line 147)
+        await helpers.handleStatsCommand(ctx);
+
+        expect(dataCommandsService.handleStatsCommand).toHaveBeenCalledWith(ctx);
+      });
+    });
   });
 
   // Note: additional translation edge cases moved to telegram-ui.service.spec.ts
