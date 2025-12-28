@@ -16,5 +16,7 @@
     "^@common/(.*)$": "<rootDir>/../src/common/$1",
     "^@config/(.*)$": "<rootDir>/../src/config/$1"
   },
+  "globalSetup": "<rootDir>/global-setup-e2e.ts",
+  "globalTeardown": "<rootDir>/global-teardown-e2e.ts",
   "setupFilesAfterEnv": ["<rootDir>/setup-e2e.ts"]
 }
