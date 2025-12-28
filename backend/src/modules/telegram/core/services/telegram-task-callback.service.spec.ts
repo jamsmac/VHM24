@@ -161,6 +161,78 @@ describe('TelegramTaskCallbackService', () => {
       );
     });
 
+    it('should show N/A for missing machine data in English', async () => {
+      const ctx = createMockContext({
+        telegramUser: { ...mockTelegramUser, language: TelegramLanguage.EN } as any,
+      });
+      usersService.findByTelegramId.mockResolvedValue(mockUser as any);
+      const taskWithoutMachine = {
+        ...mockTask,
+        machine: null,
+      };
+      tasksService.startTask.mockResolvedValue(taskWithoutMachine as any);
+
+      await service.handleTaskStart(ctx, 'task-1');
+
+      expect(ctx.reply).toHaveBeenCalledWith(
+        expect.stringContaining('N/A'),
+        expect.objectContaining({ parse_mode: 'HTML' }),
+      );
+    });
+
+    it('should show N/A for missing location in English', async () => {
+      const ctx = createMockContext({
+        telegramUser: { ...mockTelegramUser, language: TelegramLanguage.EN } as any,
+      });
+      usersService.findByTelegramId.mockResolvedValue(mockUser as any);
+      const taskWithoutLocation = {
+        ...mockTask,
+        machine: { ...mockTask.machine, location: null },
+      };
+      tasksService.startTask.mockResolvedValue(taskWithoutLocation as any);
+
+      await service.handleTaskStart(ctx, 'task-1');
+
+      expect(ctx.reply).toHaveBeenCalledWith(
+        expect.stringContaining('N/A'),
+        expect.objectContaining({ parse_mode: 'HTML' }),
+      );
+    });
+
+    it('should show N/A for missing machine data in Russian', async () => {
+      const ctx = createMockContext();
+      usersService.findByTelegramId.mockResolvedValue(mockUser as any);
+      const taskWithoutMachine = {
+        ...mockTask,
+        machine: null,
+      };
+      tasksService.startTask.mockResolvedValue(taskWithoutMachine as any);
+
+      await service.handleTaskStart(ctx, 'task-1');
+
+      expect(ctx.reply).toHaveBeenCalledWith(
+        expect.stringContaining('N/A'),
+        expect.objectContaining({ parse_mode: 'HTML' }),
+      );
+    });
+
+    it('should show N/A for missing location in Russian', async () => {
+      const ctx = createMockContext();
+      usersService.findByTelegramId.mockResolvedValue(mockUser as any);
+      const taskWithoutLocation = {
+        ...mockTask,
+        machine: { ...mockTask.machine, location: null },
+      };
+      tasksService.startTask.mockResolvedValue(taskWithoutLocation as any);
+
+      await service.handleTaskStart(ctx, 'task-1');
+
+      expect(ctx.reply).toHaveBeenCalledWith(
+        expect.stringContaining('N/A'),
+        expect.objectContaining({ parse_mode: 'HTML' }),
+      );
+    });
+
     it('should show error if user not found', async () => {
       const ctx = createMockContext();
       usersService.findByTelegramId.mockResolvedValue(null);
@@ -393,6 +465,67 @@ describe('TelegramTaskCallbackService', () => {
           ]),
         }),
       );
+    });
+
+    it('should handle step skip when checklist is null', async () => {
+      const ctx = createMockContext();
+      const taskWithNullChecklist = {
+        ...mockTask,
+        checklist: null,
+        metadata: { telegram_execution_state: { ...mockExecutionState } },
+      };
+      tasksService.findOne.mockResolvedValue(taskWithNullChecklist as any);
+      tasksService.update.mockResolvedValue(taskWithNullChecklist as any);
+
+      // Should not throw, step is out of bounds for null checklist
+      await service.handleStepSkip(ctx, 'task-1', 0);
+
+      expect(ctx.reply).toHaveBeenCalledWith('❌ Некорректный номер шага');
+    });
+
+    it('should handle step completion when checklist item does not exist', async () => {
+      const ctx = createMockContext();
+      const taskWithEmptyChecklist = {
+        ...mockTask,
+        checklist: undefined,
+        metadata: { telegram_execution_state: { ...mockExecutionState } },
+      };
+      tasksService.findOne.mockResolvedValue(taskWithEmptyChecklist as any);
+      tasksService.update.mockResolvedValue(taskWithEmptyChecklist as any);
+
+      // Step index 0 should be out of bounds for undefined checklist
+      await service.handleStepDone(ctx, 'task-1', 0);
+
+      expect(ctx.reply).toHaveBeenCalledWith('❌ Некорректный номер шага');
+    });
+
+    it('should handle step done when checklist item at index is falsy', async () => {
+      const ctx = createMockContext();
+      // Checklist with a hole (sparse array scenario simulated)
+      const taskWithSparseChecklist = {
+        ...mockTask,
+        checklist: [{ item: 'Step 1', completed: false }],
+        metadata: {
+          telegram_execution_state: {
+            ...mockExecutionState,
+            current_step: 0,
+          },
+        },
+      };
+      // First call returns task with checklist, then second call (after update)
+      // returns task where the checklist item was set to undefined
+      tasksService.findOne
+        .mockResolvedValueOnce(taskWithSparseChecklist as any)
+        .mockResolvedValueOnce({
+          ...taskWithSparseChecklist,
+          checklist: [undefined as any], // Simulate sparse array
+        } as any);
+      tasksService.update.mockResolvedValue(taskWithSparseChecklist as any);
+
+      await service.handleStepDone(ctx, 'task-1', 0);
+
+      // Should complete successfully even if second findOne returns sparse checklist
+      expect(tasksService.update).toHaveBeenCalled();
     });
   });
 
@@ -738,6 +871,72 @@ describe('TelegramTaskCallbackService', () => {
       );
     });
 
+    it('should prompt for after photo in English when before is uploaded', async () => {
+      const ctx = createMockContext();
+      const task = {
+        id: 'task-1',
+        checklist: [{ item: 'Step 1' }],
+      } as TelegramTaskInfo;
+      const state: TaskExecutionState = {
+        current_step: 1,
+        checklist_progress: { 0: { completed: true } },
+        photos_uploaded: { before: true, after: false },
+        started_at: new Date().toISOString(),
+        last_interaction_at: new Date().toISOString(),
+      };
+
+      await service.showCurrentStep(ctx, task, state, TelegramLanguage.EN);
+
+      expect(ctx.reply).toHaveBeenCalledWith(
+        expect.stringContaining('AFTER photo'),
+        expect.any(Object),
+      );
+    });
+
+    it('should prompt for before photo in English when after is uploaded', async () => {
+      const ctx = createMockContext();
+      const task = {
+        id: 'task-1',
+        checklist: [{ item: 'Step 1' }],
+      } as TelegramTaskInfo;
+      const state: TaskExecutionState = {
+        current_step: 1,
+        checklist_progress: { 0: { completed: true } },
+        photos_uploaded: { before: false, after: true },
+        started_at: new Date().toISOString(),
+        last_interaction_at: new Date().toISOString(),
+      };
+
+      await service.showCurrentStep(ctx, task, state, TelegramLanguage.EN);
+
+      expect(ctx.reply).toHaveBeenCalledWith(
+        expect.stringContaining('BEFORE photo'),
+        expect.any(Object),
+      );
+    });
+
+    it('should prompt for after photo in Russian when before is uploaded', async () => {
+      const ctx = createMockContext();
+      const task = {
+        id: 'task-1',
+        checklist: [{ item: 'Step 1' }],
+      } as TelegramTaskInfo;
+      const state: TaskExecutionState = {
+        current_step: 1,
+        checklist_progress: { 0: { completed: true } },
+        photos_uploaded: { before: true, after: false },
+        started_at: new Date().toISOString(),
+        last_interaction_at: new Date().toISOString(),
+      };
+
+      await service.showCurrentStep(ctx, task, state, TelegramLanguage.RU);
+
+      expect(ctx.reply).toHaveBeenCalledWith(
+        expect.stringContaining('фото ПОСЛЕ'),
+        expect.any(Object),
+      );
+    });
+
     it('should show current step with progress bar in Russian', async () => {
       const ctx = createMockContext();
       const task = {
@@ -804,6 +1003,26 @@ describe('TelegramTaskCallbackService', () => {
 
       const { Markup } = require('telegraf');
       expect(Markup.button.callback).toHaveBeenCalledWith('◀️ Назад', 'step_back_task-1');
+    });
+
+    it('should include back button in English when not on first step', async () => {
+      const ctx = createMockContext();
+      const task = {
+        id: 'task-1',
+        checklist: [{ item: 'Step 1' }, { item: 'Step 2' }],
+      } as TelegramTaskInfo;
+      const state: TaskExecutionState = {
+        current_step: 1,
+        checklist_progress: { 0: { completed: true }, 1: { completed: false } },
+        photos_uploaded: { before: false, after: false },
+        started_at: new Date().toISOString(),
+        last_interaction_at: new Date().toISOString(),
+      };
+
+      await service.showCurrentStep(ctx, task, state, TelegramLanguage.EN);
+
+      const { Markup } = require('telegraf');
+      expect(Markup.button.callback).toHaveBeenCalledWith('◀️ Back', 'step_back_task-1');
     });
 
     it('should not include back button on first step', async () => {
