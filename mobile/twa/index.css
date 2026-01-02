@@ -1,0 +1,408 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* 
+ * VendHub TWA - "Warm Brew" Design System
+ * Scandinavian Minimalism + Coffee Culture
+ * 
+ * Color Philosophy:
+ * - Background: Creamy milk foam (#FDF8F3)
+ * - Primary: Rich espresso (#5D4037)
+ * - Accent: Caramel (#D4A574)
+ * - Success: Mint (#7CB69D)
+ * - Text: Dark chocolate (#2C1810)
+ */
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  
+  /* Custom coffee colors */
+  --color-espresso: oklch(0.35 0.05 50);
+  --color-caramel: oklch(0.75 0.1 70);
+  --color-cream: oklch(0.98 0.01 90);
+  --color-mint: oklch(0.7 0.1 160);
+  --color-chocolate: oklch(0.2 0.04 50);
+  
+  /* Font families */
+  --font-display: 'Playfair Display', Georgia, serif;
+  --font-sans: 'DM Sans', system-ui, sans-serif;
+}
+
+:root {
+  /* Warm Brew Theme - Light (default for Telegram) */
+  --radius: 1rem;
+  
+  /* Creamy background like milk foam */
+  --background: oklch(0.98 0.008 85);
+  --foreground: oklch(0.2 0.04 50);
+  
+  /* Card surfaces */
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.2 0.04 50);
+  
+  /* Popover */
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.2 0.04 50);
+  
+  /* Primary - Rich Espresso */
+  --primary: oklch(0.35 0.06 50);
+  --primary-foreground: oklch(0.98 0.008 85);
+  
+  /* Secondary - Light cream */
+  --secondary: oklch(0.95 0.01 80);
+  --secondary-foreground: oklch(0.35 0.06 50);
+  
+  /* Muted */
+  --muted: oklch(0.92 0.01 80);
+  --muted-foreground: oklch(0.5 0.03 50);
+  
+  /* Accent - Caramel */
+  --accent: oklch(0.75 0.12 70);
+  --accent-foreground: oklch(0.2 0.04 50);
+  
+  /* Destructive */
+  --destructive: oklch(0.55 0.2 25);
+  --destructive-foreground: oklch(0.98 0 0);
+  
+  /* Borders */
+  --border: oklch(0.88 0.02 80);
+  --input: oklch(0.92 0.01 80);
+  --ring: oklch(0.75 0.12 70);
+  
+  /* Charts - Coffee gradient */
+  --chart-1: oklch(0.35 0.06 50);
+  --chart-2: oklch(0.45 0.08 55);
+  --chart-3: oklch(0.55 0.1 60);
+  --chart-4: oklch(0.65 0.11 65);
+  --chart-5: oklch(0.75 0.12 70);
+  
+  /* Sidebar (not used in TWA but keeping for consistency) */
+  --sidebar: oklch(0.96 0.01 85);
+  --sidebar-foreground: oklch(0.2 0.04 50);
+  --sidebar-primary: oklch(0.35 0.06 50);
+  --sidebar-primary-foreground: oklch(0.98 0.008 85);
+  --sidebar-accent: oklch(0.92 0.02 80);
+  --sidebar-accent-foreground: oklch(0.2 0.04 50);
+  --sidebar-border: oklch(0.88 0.02 80);
+  --sidebar-ring: oklch(0.75 0.12 70);
+}
+
+.dark {
+  /* Dark mode - Evening coffee shop */
+  --background: oklch(0.18 0.015 45);
+  --foreground: oklch(0.95 0.01 85);
+  
+  --card: oklch(0.22 0.02 45);
+  --card-foreground: oklch(0.95 0.01 85);
+  
+  --popover: oklch(0.22 0.02 45);
+  --popover-foreground: oklch(0.95 0.01 85);
+  
+  --primary: oklch(0.75 0.12 70);
+  --primary-foreground: oklch(0.18 0.015 45);
+  
+  --secondary: oklch(0.28 0.02 45);
+  --secondary-foreground: oklch(0.9 0.01 85);
+  
+  --muted: oklch(0.28 0.02 45);
+  --muted-foreground: oklch(0.7 0.02 80);
+  
+  --accent: oklch(0.7 0.1 70);
+  --accent-foreground: oklch(0.18 0.015 45);
+  
+  --destructive: oklch(0.6 0.2 25);
+  --destructive-foreground: oklch(0.98 0 0);
+  
+  --border: oklch(0.35 0.02 45);
+  --input: oklch(0.28 0.02 45);
+  --ring: oklch(0.7 0.1 70);
+  
+  --chart-1: oklch(0.75 0.12 70);
+  --chart-2: oklch(0.65 0.1 65);
+  --chart-3: oklch(0.55 0.08 60);
+  --chart-4: oklch(0.45 0.06 55);
+  --chart-5: oklch(0.35 0.04 50);
+  
+  --sidebar: oklch(0.2 0.015 45);
+  --sidebar-foreground: oklch(0.95 0.01 85);
+  --sidebar-primary: oklch(0.75 0.12 70);
+  --sidebar-primary-foreground: oklch(0.18 0.015 45);
+  --sidebar-accent: oklch(0.28 0.02 45);
+  --sidebar-accent-foreground: oklch(0.95 0.01 85);
+  --sidebar-border: oklch(0.35 0.02 45);
+  --sidebar-ring: oklch(0.7 0.1 70);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'DM Sans', system-ui, sans-serif;
+  }
+  
+  /* Smooth theme transition animation - optimized for mobile */
+  html.theme-transition,
+  html.theme-transition *,
+  html.theme-transition *::before,
+  html.theme-transition *::after {
+    -webkit-transition: background-color 0.35s ease-out, 
+                        color 0.25s ease-out, 
+                        border-color 0.25s ease-out,
+                        box-shadow 0.25s ease-out,
+                        fill 0.25s ease-out,
+                        stroke 0.25s ease-out !important;
+    transition: background-color 0.35s ease-out, 
+                color 0.25s ease-out, 
+                border-color 0.25s ease-out,
+                box-shadow 0.25s ease-out,
+                fill 0.25s ease-out,
+                stroke 0.25s ease-out !important;
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+  }
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  [type="button"]:not(:disabled),
+  [type="submit"]:not(:disabled),
+  [type="reset"]:not(:disabled),
+  a[href],
+  select:not(:disabled),
+  input[type="checkbox"]:not(:disabled),
+  input[type="radio"]:not(:disabled) {
+    @apply cursor-pointer;
+  }
+  
+  /* Display font for headings */
+  h1, h2, h3, .font-display {
+    font-family: 'Playfair Display', Georgia, serif;
+  }
+}
+
+@layer components {
+  .container {
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .flex {
+    min-height: 0;
+    min-width: 0;
+  }
+
+  @media (min-width: 640px) {
+    .container {
+      padding-left: 1.5rem;
+      padding-right: 1.5rem;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .container {
+      padding-left: 2rem;
+      padding-right: 2rem;
+      max-width: 480px; /* Mobile-first for TWA */
+    }
+  }
+  
+  /* Coffee-themed card with soft shadow */
+  .coffee-card {
+    @apply bg-card rounded-2xl p-4;
+    box-shadow: 0 4px 20px -4px oklch(0.35 0.06 50 / 0.08),
+                0 2px 8px -2px oklch(0.35 0.06 50 / 0.04);
+  }
+  
+  /* Caramel gradient button */
+  .btn-caramel {
+    @apply relative overflow-hidden rounded-xl px-6 py-3 font-semibold text-white;
+    background: linear-gradient(135deg, oklch(0.65 0.1 65) 0%, oklch(0.55 0.12 55) 100%);
+    box-shadow: 0 4px 14px -2px oklch(0.55 0.12 55 / 0.4);
+    transition: all 0.2s ease;
+  }
+  
+  .btn-caramel:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px -2px oklch(0.55 0.12 55 / 0.5);
+  }
+  
+  .btn-caramel:active {
+    transform: translateY(0) scale(0.98);
+  }
+  
+  /* Espresso button */
+  .btn-espresso {
+    @apply relative overflow-hidden rounded-xl px-6 py-3 font-semibold;
+    background: linear-gradient(135deg, oklch(0.4 0.06 50) 0%, oklch(0.3 0.05 45) 100%);
+    color: oklch(0.98 0.008 85);
+    box-shadow: 0 4px 14px -2px oklch(0.3 0.05 45 / 0.4);
+    transition: all 0.2s ease;
+  }
+  
+  .btn-espresso:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px -2px oklch(0.3 0.05 45 / 0.5);
+  }
+  
+  .btn-espresso:active {
+    transform: translateY(0) scale(0.98);
+  }
+  
+  /* Category pill */
+  .category-pill {
+    @apply px-4 py-2 rounded-full text-sm font-medium transition-all duration-200;
+    background: oklch(0.95 0.01 80);
+    color: oklch(0.4 0.04 50);
+  }
+  
+  .category-pill.active {
+    background: linear-gradient(135deg, oklch(0.4 0.06 50) 0%, oklch(0.3 0.05 45) 100%);
+    color: oklch(0.98 0.008 85);
+    box-shadow: 0 2px 8px -2px oklch(0.3 0.05 45 / 0.3);
+  }
+  
+  /* Floating cart button */
+  .floating-cart {
+    @apply fixed bottom-6 right-4 z-50 flex items-center gap-2 rounded-full px-5 py-3;
+    background: linear-gradient(135deg, oklch(0.4 0.06 50) 0%, oklch(0.3 0.05 45) 100%);
+    color: oklch(0.98 0.008 85);
+    box-shadow: 0 8px 32px -4px oklch(0.3 0.05 45 / 0.4),
+                0 4px 12px -2px oklch(0.3 0.05 45 / 0.2);
+  }
+  
+  /* Price tag */
+  .price-tag {
+    @apply font-semibold tabular-nums;
+    color: oklch(0.35 0.06 50);
+  }
+  
+  /* Dark mode price tag */
+  .dark .price-tag {
+    color: oklch(0.75 0.12 70);
+  }
+  
+  /* Dark mode category pill */
+  .dark .category-pill {
+    background: oklch(0.28 0.02 45);
+    color: oklch(0.85 0.01 85);
+  }
+  
+  .dark .category-pill.active {
+    background: linear-gradient(135deg, oklch(0.65 0.1 70) 0%, oklch(0.55 0.08 65) 100%);
+    color: oklch(0.15 0.02 45);
+  }
+  
+  /* Dark mode coffee card */
+  .dark .coffee-card {
+    box-shadow: 0 4px 20px -4px oklch(0 0 0 / 0.3),
+                0 2px 8px -2px oklch(0 0 0 / 0.2);
+  }
+  
+  /* Subtle coffee bean pattern background */
+  .coffee-pattern {
+    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%235D4037' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  }
+}
+
+/* Telegram WebApp specific styles */
+@supports (padding-top: env(safe-area-inset-top)) {
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .pt-safe-top {
+    padding-top: max(1rem, env(safe-area-inset-top));
+  }
+  .pb-safe {
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+  }
+}
+
+/* Hide scrollbar but keep functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Smooth animations */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes bounce-subtle {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+.animate-fade-up {
+  animation: fadeUp 0.4s ease-out forwards;
+}
+
+.animate-bounce-subtle {
+  animation: bounce-subtle 0.3s ease-out;
+}
+
+/* Staggered animation delays */
+.stagger-1 { animation-delay: 0.05s; }
+.stagger-2 { animation-delay: 0.1s; }
+.stagger-3 { animation-delay: 0.15s; }
+.stagger-4 { animation-delay: 0.2s; }
+.stagger-5 { animation-delay: 0.25s; }
