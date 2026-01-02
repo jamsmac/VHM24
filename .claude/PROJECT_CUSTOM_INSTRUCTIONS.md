@@ -1,713 +1,363 @@
 # VHM24 Claude Project Custom Instructions
 
-> **For**: Claude Code, GitHub Copilot, and AI Assistants
-> **Version**: 1.0.0
-> **Created**: 2026-01-02
-> **Purpose**: Safe enhancement of VHM24 with features from related projects
+> **Version**: 2.0.0
+> **Updated**: 2026-01-02
+> **Target**: Claude Code, AI Assistants
 
 ---
 
 ## Quick Reference Card
 
 ```
-┌────────────────────────────────────────────────────────────────────────┐
-│                     VHM24 INTEGRATION QUICK GUIDE                      │
-├────────────────────────────────────────────────────────────────────────┤
-│                                                                        │
-│  GOLDEN RULE: NEVER BREAK, ALWAYS ADD                                  │
-│                                                                        │
-│  Source Projects to Integrate:                                         │
-│  ├── data-parse-desk  → AI Import, ML Mapping, Formula Engine          │
-│  ├── VH24             → Raw Materials, Recipe Consumption, Bunkers     │
-│  ├── vendify-menu-maps→ Public Menus, Maps, QR Codes                   │
-│  ├── AIAssistant      → Multi-model AI, Workflows, Caching             │
-│  └── vhm24v2          → Code patterns, Testing patterns                │
-│                                                                        │
-│  Priority Commands:                                                    │
-│  • npm run test       → Run before AND after every change              │
-│  • npm run lint       → Must pass with zero errors                     │
-│  • npm run build      → Must succeed before commit                     │
-│                                                                        │
-│  Key Files:                                                            │
-│  • CLAUDE.md          → Main project guide                             │
-│  • INTEGRATION_INSTRUCTIONS.md → Detailed integration guide            │
-│  • .claude/agents/    → Specialized agent instructions                 │
-│                                                                        │
-└────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         VHM24 QUICK REFERENCE                               │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  GOLDEN RULE: НИКОГДА НЕ ЛОМАЙ, ТОЛЬКО ДОБАВЛЯЙ                            │
+│                                                                             │
+│  🚨 EXISTING MODULES (НЕ СОЗДАВАТЬ НОВЫЕ!):                                 │
+│  ├── recipes        → ENHANCE with new services                             │
+│  ├── nomenclature   → ENHANCE with new services                             │
+│  ├── telegram       → 13 submodules, ENHANCE only                           │
+│  ├── inventory      → 3-level system, ENHANCE                               │
+│  ├── machines       → ENHANCE with new services                             │
+│  └── tasks          → Photo validation, ENHANCE                             │
+│                                                                             │
+│  ✅ NEW MODULES (SAFE TO CREATE):                                           │
+│  ├── containers     → Bunker management (from VH24)                         │
+│  ├── ingredient-batches → Batch tracking                                    │
+│  ├── ai-engine      → Multi-model AI                                        │
+│  └── workflows      → Workflow automation                                   │
+│                                                                             │
+│  ⚠️ INCOMPATIBLE (НЕ КОПИРОВАТЬ):                                          │
+│  ├── Drizzle ORM    → VHM24 uses TypeORM                                    │
+│  ├── Grammy         → VHM24 uses Telegraf                                   │
+│  ├── tRPC           → VHM24 uses REST API                                   │
+│  └── Supabase Auth  → VHM24 uses JWT                                        │
+│                                                                             │
+│  KEY FILES:                                                                 │
+│  • CLAUDE.md                      → Main project guide                      │
+│  • INTEGRATION_INSTRUCTIONS.md    → Detailed integration rules              │
+│  • .claude/agents/                → Specialized agents                      │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 1. Project Context
+## 1. Critical Warnings
 
-### What is VHM24?
+### ⛔ STOP! Before ANY Integration
 
-VendHub Manager (VHM24) is a production-grade ERP/CRM/CMMS for vending machine operations:
+```
+╔══════════════════════════════════════════════════════════════════════════╗
+║  🛑 CHECK BEFORE CREATING ANY TABLE OR MODULE                            ║
+╠══════════════════════════════════════════════════════════════════════════╣
+║                                                                          ║
+║  RUN THIS FIRST:                                                         ║
+║  $ ls backend/src/modules/[module-name]/                                 ║
+║  $ psql -d vendhub -c "\d [table_name]"                                  ║
+║                                                                          ║
+║  IF MODULE EXISTS → Use ADD COLUMN, ADD SERVICE                          ║
+║  IF MODULE NOT EXISTS → Safe to CREATE TABLE                             ║
+║                                                                          ║
+╚══════════════════════════════════════════════════════════════════════════╝
+```
 
-- **50+ NestJS backend modules**
-- **645+ REST API endpoints**
-- **114 database entities**
-- **82 TypeORM migrations**
-- **Next.js 16 frontend**
-- **Expo 54 mobile app**
-- **Telegram bot integration**
+### Technology Stack Constraints
 
-### Core Architecture Principles
-
-1. **Manual Operations** - NO direct machine connectivity
-2. **Photo Validation** - Mandatory for all task completion
-3. **3-Level Inventory** - Warehouse → Operator → Machine
-4. **Dual Platform** - Staff (internal) + Client (public)
-5. **Non-Destructive** - All changes must be additive
+| Component | VHM24 Uses | DON'T Use |
+|-----------|------------|-----------|
+| ORM | **TypeORM 0.3.x** | Drizzle, Prisma |
+| Telegram | **Telegraf 4.x** | Grammy, node-telegram-bot-api |
+| API | **NestJS REST** | tRPC, GraphQL |
+| Auth | **JWT + RBAC** | Supabase Auth, Firebase Auth |
+| DB | **PostgreSQL 14+** | MySQL, MongoDB |
+| Queue | **BullMQ** | Agenda, Bull (old) |
 
 ---
 
-## 2. Integration Source Projects
+## 2. Source Projects for Integration
 
-### 2.1 data-parse-desk (AI + Excel + ML)
+### Priority Matrix
 
-**Repository**: https://github.com/jamsmac/data-parse-desk
+| Source | Key Features | Priority | Complexity |
+|--------|--------------|----------|------------|
+| **VH24** | Containers, Recipe Consumption, Batch Tracking | HIGH | Medium |
+| **data-parse-desk** | AI Column Mapping, Formula Engine | HIGH | Medium |
+| **vendify-menu-maps** | Map Components, shadcn/ui | MEDIUM | Low |
+| **AIAssistant** | Multi-model AI, Workflows, Caching | MEDIUM | High |
+| **vhm24v2** | Code patterns, Testing patterns | LOW | Low |
 
-**Features to Integrate**:
+### What to Take from Each
 
-| Feature | Description | Target Module |
-|---------|-------------|---------------|
-| AI Column Mapping | ML-based automatic column detection | intelligent-import |
-| Formula Engine | Math, string, logical, date operations | NEW: formula-engine |
-| OCR Processing | Extract text from images | files module |
-| NL Query Bot | Natural language queries via Telegram | telegram module |
-| Rollup Calculator | Aggregations (sum, avg, min, max, etc.) | data-parser |
+**VH24** (tRPC + Drizzle + Grammy):
+- ✅ Business logic for containers (bunkers)
+- ✅ Recipe consumption calculation algorithms
+- ✅ Batch tracking logic
+- ❌ tRPC routers (convert to REST)
+- ❌ Drizzle schemas (convert to TypeORM)
+- ❌ Grammy bot handlers (convert to Telegraf)
 
-**Technologies to Adopt**:
-- ExcelJS 4.4 patterns
-- Papa Parse 5.5 patterns
-- Gemini 2.5 / GPT-5 integration
+**data-parse-desk** (React + Supabase + AI):
+- ✅ AI column mapping algorithms
+- ✅ Formula engine logic
+- ✅ ExcelJS/Papa Parse patterns
+- ❌ Supabase edge functions (convert to NestJS)
 
-### 2.2 VH24 (tRPC + Raw Materials)
+**vendify-menu-maps** (React + Supabase):
+- ✅ Map components (Leaflet integration)
+- ✅ shadcn/ui components
+- ✅ Public menu patterns
+- ❌ Supabase auth (use JWT)
 
-**Repository**: https://github.com/jamsmac/VH24
-
-**Features to Integrate**:
-
-| Feature | Description | Target Module |
-|---------|-------------|---------------|
-| Raw Material Tracking | Automatic consumption calculation | NEW: raw-material |
-| Recipe Consumption | Deduction based on formulations | recipes (enhance) |
-| Bunker Management | Container/hopper level tracking | equipment (enhance) |
-| Task Checklists | Step-by-step task completion | tasks (enhance) |
-| Manager Approvals | Approval workflows | tasks (enhance) |
-
-**Technologies to Evaluate**:
-- Grammy (alternative to Telegraf) - evaluate only
-- tRPC patterns - optional addition
-
-### 2.3 vendify-menu-maps (Menus + Maps)
-
-**Repository**: https://github.com/jamsmac/vendify-menu-maps
-
-**Features to Integrate**:
-
-| Feature | Description | Target Module |
-|---------|-------------|---------------|
-| Public Menu Display | Customer-facing product menu | client module |
-| Machine Map View | Leaflet map with machine locations | frontend |
-| QR Menu Scan | QR code to menu redirect | machines module |
-| Admin Manual | Help documentation system | help module |
-
-### 2.4 AIAssistant (Multi-model + Workflows)
-
-**Repository**: https://github.com/jamsmac/AIAssistant
-
-**Features to Integrate**:
-
-| Feature | Description | Target Module |
-|---------|-------------|---------------|
-| Multi-model AI | Gemini, GPT, Claude routing | NEW: ai-engine |
-| Context Memory | Conversation history (10 messages) | ai-engine |
-| Smart Caching | Response caching (920x speedup) | common/cache |
-| Workflow Engine | Multi-step automated processes | NEW: workflows |
-| Cost Tracking | Token usage and cost monitoring | ai-engine |
-
-### 2.5 vhm24v2 (Patterns + Testing)
-
-**Repository**: https://github.com/jamsmac/vhm24v2
-
-**Patterns to Adopt**:
-- Shared code architecture (client/server/shared)
-- Vitest testing patterns
-- TypeScript strict mode patterns
+**AIAssistant** (FastAPI + Multi-model):
+- ✅ Multi-model routing logic
+- ✅ Caching strategies
+- ✅ Workflow automation patterns
+- ❌ FastAPI code (convert to NestJS)
 
 ---
 
-## 3. Critical Rules for AI Assistants
+## 3. Safe Integration Rules
 
-### ABSOLUTE PROHIBITIONS
-
-```
-❌ NEVER modify existing API response structures
-❌ NEVER drop or rename database columns
-❌ NEVER remove enum values
-❌ NEVER change method signatures of public APIs
-❌ NEVER skip photo validation for tasks
-❌ NEVER bypass inventory flow
-❌ NEVER add machine connectivity features
-❌ NEVER commit without running tests
-❌ NEVER force push to main branches
-❌ NEVER mix staff and client authentication
-```
-
-### REQUIRED PRACTICES
-
-```
-✅ ALWAYS run tests before and after changes
-✅ ALWAYS use feature flags for new integrations
-✅ ALWAYS create migrations with up() AND down()
-✅ ALWAYS extend BaseEntity for new entities
-✅ ALWAYS validate inputs with DTOs
-✅ ALWAYS write tests for new code (80% min)
-✅ ALWAYS use snake_case for database columns
-✅ ALWAYS add @ApiProperty for Swagger docs
-✅ ALWAYS check .claude/INTEGRATION_INSTRUCTIONS.md
-✅ ALWAYS preserve backward compatibility
-```
-
----
-
-## 4. Integration Workflow
-
-### Before Starting Any Integration
-
-```bash
-# 1. Ensure clean working state
-git status
-
-# 2. Create feature branch
-git checkout -b feature/integrate-{feature-name}
-
-# 3. Capture test baseline
-npm run test > tests/baseline-$(date +%Y%m%d).txt
-
-# 4. Check current build
-npm run build
-```
-
-### During Integration
+### Rule 1: New Module Pattern
 
 ```typescript
-// Pattern: Extension Service (DON'T modify originals)
-@Injectable()
-export class TasksEnhancedService {
-  constructor(
-    private readonly tasksService: TasksService,  // Existing
-    private readonly newFeatureService: NewFeatureService,  // New
-  ) {}
-
-  // New method that composes existing + new
-  async completeWithNewFeature(taskId: string) {
-    const result = await this.tasksService.complete(taskId);
-    await this.newFeatureService.process(result);
-    return result;
-  }
-}
-```
-
-### After Integration
-
-```bash
-# 1. Run all tests
-npm run test
-
-# 2. Check types
-npm run type-check
-
-# 3. Lint code
-npm run lint
-
-# 4. Build
-npm run build
-
-# 5. Compare with baseline
-diff tests/baseline-*.txt <(npm run test 2>&1)
-# Must show NO new failures
-```
-
----
-
-## 5. Module Creation Templates
-
-### New Backend Module
-
-```
-src/modules/{module-name}/
-├── dto/
-│   ├── create-{entity}.dto.ts
-│   └── update-{entity}.dto.ts
-├── entities/
-│   └── {entity}.entity.ts
-├── {module-name}.controller.ts
-├── {module-name}.service.ts
-├── {module-name}.service.spec.ts
-└── {module-name}.module.ts
-```
-
-### New Entity Template
-
-```typescript
-import { Entity, Column, Index, ManyToOne, JoinColumn } from 'typeorm';
-import { BaseEntity } from '@/common/entities/base.entity';
-import { ApiProperty } from '@nestjs/swagger';
-
-@Entity('{table_name}')
-@Index(['{indexed_field}'])
-export class {EntityName} extends BaseEntity {
-  @ApiProperty({ description: 'Description' })
-  @Column({ type: 'varchar', length: 255 })
-  field_name: string;
-
-  @ApiProperty({ description: 'Foreign key' })
-  @Column({ type: 'uuid' })
-  related_id: string;
-
-  @ManyToOne(() => RelatedEntity, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'related_id' })
-  related: RelatedEntity;
-}
-```
-
-### New Service Template
-
-```typescript
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-
-@Injectable()
-export class {ServiceName}Service {
-  constructor(
-    @InjectRepository({Entity})
-    private readonly repository: Repository<{Entity}>,
-  ) {}
-
-  async create(dto: CreateDto): Promise<{Entity}> {
-    const entity = this.repository.create(dto);
-    return await this.repository.save(entity);
-  }
-
-  async findOne(id: string): Promise<{Entity}> {
-    const entity = await this.repository.findOne({ where: { id } });
-    if (!entity) {
-      throw new NotFoundException(`{Entity} with ID ${id} not found`);
-    }
-    return entity;
-  }
-}
-```
-
----
-
-## 6. Feature Integration Examples
-
-### Example 1: Adding AI Column Mapping
-
-```typescript
-// 1. Create new service (don't modify existing)
-// src/modules/intelligent-import/services/ai-column-mapper.service.ts
-
-@Injectable()
-export class AIColumnMapperService {
-  constructor(
-    private readonly configService: ConfigService,
-    private readonly httpService: HttpService,
-  ) {}
-
-  async mapColumns(
-    headers: string[],
-    targetSchema: ColumnSchema[],
-  ): Promise<ColumnMapping[]> {
-    // Check feature flag
-    if (!this.configService.get('FEATURE_AI_COLUMN_MAPPING')) {
-      return this.fallbackMapping(headers, targetSchema);
-    }
-
-    // AI-powered mapping
-    const prompt = this.buildPrompt(headers, targetSchema);
-    const response = await this.callAI(prompt);
-    return this.parseResponse(response);
-  }
-
-  private fallbackMapping(headers: string[], schema: ColumnSchema[]): ColumnMapping[] {
-    // Existing logic preserved as fallback
-    return headers.map((h, i) => ({
-      source: h,
-      target: schema[i]?.name || null,
-      confidence: 0.5,
-    }));
-  }
-}
-
-// 2. Register in module
-@Module({
-  providers: [
-    IntelligentImportService,     // Existing
-    AIColumnMapperService,        // New
-  ],
-})
-export class IntelligentImportModule {}
-```
-
-### Example 2: Adding Raw Material Tracking
-
-```typescript
-// 1. Create new module
-// src/modules/raw-material/raw-material.module.ts
-
+// ✅ SAFE: Create isolated new module
+// backend/src/modules/containers/containers.module.ts
 @Module({
   imports: [
-    TypeOrmModule.forFeature([RawMaterial, RawMaterialMovement, Bunker]),
-    forwardRef(() => InventoryModule),
-    forwardRef(() => RecipesModule),
-    forwardRef(() => TasksModule),
+    TypeOrmModule.forFeature([Container]),
+    forwardRef(() => MachinesModule), // Only if needed
   ],
-  controllers: [RawMaterialController],
-  providers: [
-    RawMaterialService,
-    BunkerService,
-    ConsumptionCalculatorService,
-  ],
-  exports: [RawMaterialService, BunkerService],
+  controllers: [ContainersController],
+  providers: [ContainersService],
+  exports: [ContainersService],
 })
-export class RawMaterialModule {}
-
-// 2. Create entity
-// src/modules/raw-material/entities/raw-material.entity.ts
-
-@Entity('raw_materials')
-export class RawMaterial extends BaseEntity {
-  @Column({ type: 'varchar', length: 100 })
-  name: string;
-
-  @Column({ type: 'enum', enum: RawMaterialType })
-  type: RawMaterialType;
-
-  @Column({ type: 'decimal', precision: 10, scale: 3, default: 0 })
-  current_quantity: number;
-
-  @Column({ type: 'varchar', length: 20 })
-  unit: string;
-
-  @Column({ type: 'decimal', precision: 10, scale: 3, nullable: true })
-  min_threshold: number;
-
-  @Column({ type: 'date', nullable: true })
-  expiration_date: Date;
-}
-
-// 3. Create migration
-// npm run migration:generate -- -n AddRawMaterialModule
+export class ContainersModule {}
 ```
 
-### Example 3: Adding Workflow Engine
+### Rule 2: Extending Existing Module
 
 ```typescript
-// 1. Create new module
-// src/modules/workflows/workflows.module.ts
+// ✅ SAFE: Add NEW service to existing module
+// backend/src/modules/recipes/services/recipe-consumption.service.ts
+// (Create NEW file, don't modify recipes.service.ts!)
 
-@Module({
-  imports: [
-    BullModule.registerQueue({ name: 'workflows' }),
-    TypeOrmModule.forFeature([Workflow, WorkflowExecution, WorkflowStep]),
-    TasksModule,
-    NotificationsModule,
-  ],
-  controllers: [WorkflowsController],
-  providers: [
-    WorkflowEngineService,
-    WorkflowExecutorProcessor,
-    WorkflowTriggerService,
-  ],
-  exports: [WorkflowEngineService],
-})
-export class WorkflowsModule {}
-
-// 2. Create workflow definition entity
-@Entity('workflows')
-export class Workflow extends BaseEntity {
-  @Column({ type: 'varchar', length: 100 })
-  name: string;
-
-  @Column({ type: 'jsonb' })
-  trigger: WorkflowTrigger;
-
-  @Column({ type: 'jsonb' })
-  steps: WorkflowStep[];
-
-  @Column({ type: 'boolean', default: true })
-  is_active: boolean;
+@Injectable()
+export class RecipeConsumptionService {
+  // New functionality here
 }
+
+// Register in recipes.module.ts (ADD to providers, don't replace)
 ```
 
----
-
-## 7. Database Migration Rules
-
-### Safe Migration Pattern
+### Rule 3: Migration Safety
 
 ```typescript
-import { MigrationInterface, QueryRunner, TableColumn } from 'typeorm';
+// ✅ SAFE: CREATE TABLE for new modules
+await queryRunner.createTable(new Table({
+  name: 'containers',
+  columns: [/* ... */],
+}), true);
 
-export class AddRawMaterialFields1704153600000 implements MigrationInterface {
-  name = 'AddRawMaterialFields1704153600000';
-
-  public async up(queryRunner: QueryRunner): Promise<void> {
-    // 1. Add new table
-    await queryRunner.createTable(
-      new Table({
-        name: 'raw_materials',
-        columns: [
-          // ... columns
-        ],
-      }),
-      true, // ifNotExists
-    );
-
-    // 2. Add new column to existing table (ALWAYS nullable first)
-    await queryRunner.addColumn(
-      'machines',
-      new TableColumn({
-        name: 'raw_material_tracking_enabled',
-        type: 'boolean',
-        default: false,
-        isNullable: true, // IMPORTANT: Always nullable for new columns
-      }),
-    );
-  }
-
-  public async down(queryRunner: QueryRunner): Promise<void> {
-    // MUST have rollback
-    await queryRunner.dropColumn('machines', 'raw_material_tracking_enabled');
-    await queryRunner.dropTable('raw_materials');
-  }
-}
-```
-
-### Forbidden Migration Actions
-
-```typescript
-// ❌ NEVER do these in migrations
-await queryRunner.dropColumn('existing_table', 'existing_column');
-await queryRunner.renameColumn('table', 'old_name', 'new_name');
-await queryRunner.dropTable('existing_table');
-await queryRunner.query(`ALTER TABLE ... DROP ...`);
-
-// ❌ NEVER add non-nullable columns without defaults
-await queryRunner.addColumn('table', new TableColumn({
-  name: 'new_column',
+// ✅ SAFE: ADD COLUMN (nullable or with default)
+await queryRunner.addColumn('machines', new TableColumn({
+  name: 'new_field',
   type: 'varchar',
-  isNullable: false, // WRONG without default!
+  isNullable: true, // ALWAYS nullable!
 }));
+
+// ❌ FORBIDDEN:
+// - DROP TABLE, DROP COLUMN
+// - ALTER COLUMN (type change)
+// - RENAME COLUMN
+```
+
+### Rule 4: API Backward Compatibility
+
+```typescript
+// ✅ SAFE: Add new endpoint
+@Get(':id/extended')
+async getExtended(@Param('id') id: string) {
+  // New endpoint - OK
+}
+
+// ❌ FORBIDDEN: Change existing endpoint response
+@Get(':id')
+async getOne(@Param('id') id: string) {
+  // DON'T change what this returns!
+}
 ```
 
 ---
 
-## 8. Testing Requirements
-
-### Minimum Coverage
-
-| Type | Coverage | Requirement |
-|------|----------|-------------|
-| Unit Tests | 80%+ | All new services |
-| Integration | 100% | All new endpoints |
-| E2E | Critical | Main user flows |
-| Regression | 100% | All existing tests must pass |
-
-### Test Commands
-
-```bash
-# Run all tests
-npm run test
-
-# Run with coverage
-npm run test:cov
-
-# Run specific module
-npm run test -- --testPathPattern=raw-material
-
-# Run e2e
-npm run test:e2e
-```
-
----
-
-## 9. Feature Flags
-
-### Configuration
+## 4. Feature Flags
 
 ```bash
 # .env
-FEATURE_AI_COLUMN_MAPPING=true
-FEATURE_RAW_MATERIAL_TRACKING=true
-FEATURE_WORKFLOW_ENGINE=true
-FEATURE_MULTI_MODEL_AI=true
-FEATURE_OCR_IMPORT=true
+FEATURE_CONTAINERS=true
+FEATURE_RECIPE_CONSUMPTION=true
+FEATURE_BATCH_TRACKING=false
+FEATURE_AI_ENGINE=false
+FEATURE_WORKFLOWS=false
 ```
 
-### Usage Pattern
-
 ```typescript
-@Injectable()
-export class FeatureFlagService {
-  constructor(private configService: ConfigService) {}
-
-  isEnabled(feature: string): boolean {
-    return this.configService.get(`FEATURE_${feature}`, 'false') === 'true';
-  }
-}
-
-// In services
-async processImport(data: ImportData) {
-  if (this.featureFlags.isEnabled('AI_COLUMN_MAPPING')) {
-    return this.aiColumnMapper.map(data);
-  }
-  return this.manualMapper.map(data);
-}
+// Usage in controller
+@Controller('containers')
+@UseGuards(FeatureFlagGuard)
+@FeatureFlag('CONTAINERS_ENABLED')
+export class ContainersController {}
 ```
 
 ---
 
-## 10. Commit Message Format
+## 5. Testing Requirements
+
+| Type | Coverage | Required |
+|------|----------|----------|
+| Unit Tests | 80%+ | All new services |
+| Integration | 100% | All new endpoints |
+| Regression | 100% | ALL existing tests must pass |
+
+```bash
+# Run before and after EVERY change
+npm run test
+npm run lint
+npm run build
+```
+
+---
+
+## 6. Commit Format
 
 ```
 <type>(<scope>): <subject>
 
-<body>
-
-<footer>
+Types: feat, enhance, fix, docs, refactor, test, chore
 ```
 
-### Types
-
-- `feat`: New feature from integration
-- `enhance`: Enhancement to existing feature
-- `fix`: Bug fix
-- `docs`: Documentation
-- `refactor`: Code refactoring
-- `test`: Tests
-- `chore`: Maintenance
-
-### Examples
-
+Examples:
 ```bash
-# New feature integration
-feat(raw-material): add raw material tracking module
-
-Integrated raw material tracking from VH24 project.
-Includes bunker management and consumption calculation.
-
-Refs: VH24, INTEGRATION_INSTRUCTIONS.md
-
-# Enhancement
-enhance(intelligent-import): add AI column mapping
-
-Added ML-based column mapping from data-parse-desk.
-Feature flag: FEATURE_AI_COLUMN_MAPPING
-
-Refs: data-parse-desk
+feat(containers): add container management module
+enhance(recipes): add consumption calculation service
+fix(inventory): resolve batch tracking issue
 ```
 
 ---
 
-## 11. Specialized Agents
+## 7. Checklists
 
-Use these specialized agents for domain-specific tasks:
+### Before Integration
+
+- [ ] Read CLAUDE.md
+- [ ] Read INTEGRATION_INSTRUCTIONS.md
+- [ ] Check if module exists: `ls backend/src/modules/[name]/`
+- [ ] Create feature branch
+- [ ] Run baseline tests: `npm run test > baseline.txt`
+
+### After Integration
+
+- [ ] All tests pass: `npm run test`
+- [ ] Build succeeds: `npm run build`
+- [ ] Lint passes: `npm run lint`
+- [ ] Swagger docs updated
+- [ ] Feature flag documented
+
+---
+
+## 8. Forbidden Actions
+
+```
+⛔ КАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО:
+
+• DROP TABLE, DROP COLUMN
+• ALTER COLUMN (type changes)
+• Remove existing endpoints
+• Change existing API responses
+• Modify existing services directly
+• Commit to main branch directly
+• Deploy without testing
+• CREATE TABLE for existing tables
+• Use Drizzle, Grammy, tRPC, Supabase Auth
+```
+
+---
+
+## 9. Decision Matrix
+
+```
+Что делать?                          Решение
+───────────────────────────────────────────────────
+Добавить функцию в модуль          → Модуль существует?
+  ├── ДА                           → Добавить НОВЫЙ сервис
+  └── НЕТ                          → Создать новый модуль
+
+Добавить поле в таблицу            → ADD COLUMN (nullable!)
+
+Изменить существующее поле         → СТОП! Нужен план миграции
+
+Удалить функционал                 → СТОП! Только deprecation
+```
+
+---
+
+## 10. Quick Commands
+
+```bash
+# Development
+npm run start:dev         # Backend
+cd frontend && npm run dev # Frontend
+
+# Testing
+npm run test              # Unit tests
+npm run test:cov          # Coverage
+npm run test:e2e          # E2E tests
+
+# Database
+npm run migration:generate -- -n Name
+npm run migration:run
+npm run migration:revert
+
+# Build
+npm run build
+npm run lint
+```
+
+---
+
+## 11. Key Files Reference
+
+| File | Purpose |
+|------|---------|
+| `CLAUDE.md` | Main project documentation |
+| `.claude/INTEGRATION_INSTRUCTIONS.md` | Detailed integration rules |
+| `.claude/agents/` | 10 specialized agents |
+| `backend/src/modules/` | All NestJS modules |
+| `backend/src/database/migrations/` | TypeORM migrations |
+
+---
+
+## 12. Specialized Agents
 
 | Agent | Use For |
 |-------|---------|
-| `vendhub-dev-architect` | Architecture, feature planning |
+| `vendhub-dev-architect` | Architecture, Sprint planning |
 | `vendhub-api-developer` | REST endpoints, DTOs |
 | `vendhub-database-expert` | Migrations, queries |
 | `vendhub-frontend-specialist` | React, Next.js |
 | `vendhub-telegram-bot` | Telegram integration |
 | `vendhub-auth-security` | JWT, RBAC, 2FA |
-| `vendhub-tester` | Unit, integration tests |
+| `vendhub-tester` | Tests |
 | `vendhub-mobile` | Expo, React Native |
 | `vendhub-devops` | Docker, CI/CD |
 | `vendhub-qa-lead` | Quality, releases |
 
 ---
 
-## 12. Quick Reference Commands
-
-```bash
-# Development
-npm run start:dev          # Start backend
-cd frontend && npm run dev # Start frontend
-
-# Testing
-npm run test               # Unit tests
-npm run test:cov           # With coverage
-npm run test:e2e           # E2E tests
-
-# Code Quality
-npm run lint               # Lint
-npm run type-check         # TypeScript check
-npm run format             # Prettier format
-
-# Database
-npm run migration:generate -- -n MigrationName
-npm run migration:run
-npm run migration:revert
-
-# Build
-npm run build              # Production build
-```
-
----
-
-## 13. Emergency Rollback
-
-### If Something Breaks
-
-```bash
-# 1. Revert last migration
-npm run migration:revert
-
-# 2. Disable feature flag
-echo "FEATURE_X=false" >> .env
-
-# 3. Restart application
-pm2 restart all
-
-# 4. If needed, revert commit
-git revert HEAD
-```
-
----
-
-## Summary Checklist
-
-Before every integration:
-- [ ] Read INTEGRATION_INSTRUCTIONS.md
-- [ ] Create feature branch
-- [ ] Run baseline tests
-- [ ] Check for breaking changes (must be 0)
-
-During integration:
-- [ ] Use extension pattern (don't modify existing)
-- [ ] Add feature flags
-- [ ] Write tests
-- [ ] Create reversible migrations
-
-After integration:
-- [ ] All tests pass
-- [ ] Build succeeds
-- [ ] Lint passes
-- [ ] Documentation updated
-
----
-
-**Remember**: When in doubt, ADD rather than MODIFY.
-
----
+**Remember: When in doubt — ADD, don't MODIFY**
 
 **Last Updated**: 2026-01-02
-**Maintained By**: VendHub Development Team
+**Version**: 2.0.0
