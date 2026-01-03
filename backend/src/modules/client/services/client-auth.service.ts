@@ -222,15 +222,8 @@ export class ClientAuthService {
         .update(dataCheckString)
         .digest('hex');
 
-      // SECURITY: In development, allow bypassing hash validation
-      // This should NEVER be used in production!
-      const isDev = this.configService.get('NODE_ENV') === 'development';
-      if (isDev && hash !== expectedHash) {
-        this.logger.warn(
-          '⚠️ SECURITY WARNING: Telegram hash validation BYPASSED in development mode! ' +
-            'Ensure NODE_ENV is set to "production" in production environment.',
-        );
-      } else if (!isDev && hash !== expectedHash) {
+      // SECURITY: Always validate hash - no bypasses allowed
+      if (hash !== expectedHash) {
         this.logger.warn('Invalid Telegram hash - authentication rejected');
         return null;
       }
@@ -239,11 +232,7 @@ export class ClientAuthService {
       const authDate = parseInt(params.get('auth_date') || '0');
       const now = Math.floor(Date.now() / 1000);
       const isExpired = now - authDate > 86400;
-      if (isDev && isExpired) {
-        this.logger.warn(
-          '⚠️ SECURITY WARNING: Telegram auth_date validation BYPASSED in development mode!',
-        );
-      } else if (!isDev && isExpired) {
+      if (isExpired) {
         this.logger.warn('Telegram auth data expired - authentication rejected');
         return null;
       }

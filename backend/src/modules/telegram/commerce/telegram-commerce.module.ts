@@ -1,4 +1,4 @@
-import { Module, forwardRef } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { CartStorageService } from './services/cart-storage.service';
@@ -7,7 +7,7 @@ import { CartHandler } from './handlers/cart.handler';
 
 import { Material } from '../../requests/entities/material.entity';
 import { TelegramInfrastructureModule } from '../infrastructure/telegram-infrastructure.module';
-import { TelegramModule } from '../telegram.module';
+import { TelegramNotificationsModule } from '../notifications/telegram-notifications.module';
 import { UsersModule } from '../../users/users.module';
 import { RequestsModule } from '../../requests/requests.module';
 
@@ -25,7 +25,7 @@ import { RequestsModule } from '../../requests/requests.module';
   imports: [
     TypeOrmModule.forFeature([Material]),
     TelegramInfrastructureModule,
-    forwardRef(() => TelegramModule), // For TelegramNotificationsService
+    TelegramNotificationsModule,
     UsersModule,
     RequestsModule,
   ],

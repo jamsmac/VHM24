@@ -1,5 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { createClient, RedisClientType } from 'redis';
+import {
+  TELEGRAM_SESSION_TTL,
+  TELEGRAM_SESSION_PREFIX,
+} from '../../shared/constants/telegram.constants';
 
 /**
  * Conversation states for step-by-step dialogs
@@ -46,8 +50,8 @@ export interface UserSession {
 export class TelegramSessionService {
   private readonly logger = new Logger(TelegramSessionService.name);
   private redisClient: RedisClientType;
-  private readonly SESSION_TTL = 3600; // 1 hour in seconds
-  private readonly SESSION_PREFIX = 'telegram:session:';
+  private readonly SESSION_TTL = TELEGRAM_SESSION_TTL; // Use constant (24 hours)
+  private readonly SESSION_PREFIX = TELEGRAM_SESSION_PREFIX;
 
   async onModuleInit() {
     try {

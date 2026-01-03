@@ -6,6 +6,7 @@ import { TelegramUser, TelegramLanguage } from '../../shared/entities/telegram-u
 import { TelegramMessageLog, TelegramMessageType } from '../../shared/entities/telegram-message-log.entity';
 import { UsersService } from '../../../users/users.service';
 import { UserRole } from '../../../users/entities/user.entity';
+import { AuditLogService } from '../../../audit-logs/audit-log.service';
 import {
   BotContext,
   TelegramPendingUserInfo,
@@ -31,6 +32,7 @@ export class TelegramAdminCallbackService {
     @InjectRepository(TelegramMessageLog)
     private telegramMessageLogRepository: Repository<TelegramMessageLog>,
     private readonly usersService: UsersService,
+    private readonly auditLogService: AuditLogService,
   ) {}
 
   // ============================================================================
@@ -126,6 +128,17 @@ export class TelegramAdminCallbackService {
 
       // Approve user using the service (which handles credential generation)
       const result = await this.usersService.approveUser(userId, { role }, superAdmin.id);
+
+      // Log the approval action for audit trail
+      await this.auditLogService.logAccessRequestApproved(
+        superAdmin.id,
+        userId,
+        {
+          ipAddress: 'telegram',
+          userAgent: `TelegramBot/${ctx.from?.id}`,
+        },
+      );
+      this.logger.log(`Access request approved: user ${userId} as ${role} by admin ${superAdmin.id}`);
 
       // Send approval confirmation to super admin
       await ctx.editMessageText(
@@ -284,6 +297,18 @@ export class TelegramAdminCallbackService {
 
       // Reject user
       const rejectedUser = await this.usersService.rejectUser(userId, messageText, superAdmin.id);
+
+      // Log the rejection action for audit trail
+      await this.auditLogService.logAccessRequestRejected(
+        superAdmin.id,
+        userId,
+        messageText,
+        {
+          ipAddress: 'telegram',
+          userAgent: `TelegramBot/${ctx.from?.id}`,
+        },
+      );
+      this.logger.log(`Access request rejected: user ${userId} by admin ${superAdmin.id}, reason: ${messageText}`);
 
       // Clear the pending rejection flag
       ctx.telegramUser.metadata.pending_rejection_user_id = null;
