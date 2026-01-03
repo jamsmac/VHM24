@@ -347,4 +347,83 @@ export class TelegramSessionService {
       this.logger.error('Error cleaning up expired sessions', error);
     }
   }
+
+  // ========================================
+  // Health Check Methods
+  // ========================================
+
+  /**
+   * Check Redis connection health
+   *
+   * @returns Health status object with connection state and latency
+   */
+  async healthCheck(): Promise<{
+    status: 'healthy' | 'unhealthy' | 'degraded';
+    connected: boolean;
+    latencyMs?: number;
+    error?: string;
+    sessionCount?: number;
+  }> {
+    if (!this.redisClient) {
+      return {
+        status: 'unhealthy',
+        connected: false,
+        error: 'Redis client not initialized',
+      };
+    }
+
+    if (!this.redisClient.isOpen) {
+      return {
+        status: 'unhealthy',
+        connected: false,
+        error: 'Redis connection closed',
+      };
+    }
+
+    try {
+      // Measure ping latency
+      const startTime = Date.now();
+      await this.redisClient.ping();
+      const latencyMs = Date.now() - startTime;
+
+      // Count active sessions
+      let sessionCount = 0;
+      try {
+        const pattern = `${this.SESSION_PREFIX}*`;
+        for await (const _ of this.redisClient.scanIterator({ MATCH: pattern, COUNT: 100 })) {
+          sessionCount++;
+        }
+      } catch {
+        // Session count is optional, don't fail health check
+      }
+
+      // Check latency threshold (>100ms is degraded)
+      const status = latencyMs > 100 ? 'degraded' : 'healthy';
+
+      return {
+        status,
+        connected: true,
+        latencyMs,
+        sessionCount,
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error('Redis health check failed', error);
+
+      return {
+        status: 'unhealthy',
+        connected: false,
+        error: errorMessage,
+      };
+    }
+  }
+
+  /**
+   * Check if Redis is available for session operations
+   *
+   * @returns True if Redis is connected and operational
+   */
+  isHealthy(): boolean {
+    return this.redisClient?.isOpen ?? false;
+  }
 }
