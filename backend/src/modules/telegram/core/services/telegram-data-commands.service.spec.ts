@@ -155,6 +155,9 @@ describe('TelegramDataCommandsService', () => {
             get: jest.fn().mockResolvedValue(null),
             set: jest.fn().mockResolvedValue(undefined),
             invalidate: jest.fn().mockResolvedValue(undefined),
+            getOrSet: jest.fn().mockImplementation(async (_key: string, factory: () => Promise<any>) => {
+              return await factory();
+            }),
           },
         },
       ],

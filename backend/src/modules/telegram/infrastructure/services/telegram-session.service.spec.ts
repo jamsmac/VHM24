@@ -167,7 +167,7 @@ describe('TelegramSessionService', () => {
 
       expect(mockRedisClient.setEx).toHaveBeenCalledWith(
         'telegram:session:user-uuid',
-        3600,
+        86400,
         expect.any(String),
       );
     });
@@ -618,7 +618,7 @@ describe('TelegramSessionService', () => {
 
       expect(result.status).toBe('healthy');
       expect(result.connected).toBe(true);
-      expect(result.sessionCount).toBeUndefined();
+      expect(result.sessionCount).toBe(0); // Returns 0 when scan fails
     });
   });
 

@@ -14,6 +14,9 @@ import { TelegramTaskOperationsService } from './telegram-task-operations.servic
 import { TelegramDataCommandsService } from './telegram-data-commands.service';
 import { TelegramUIService } from './telegram-ui.service';
 import { TelegramUtilitiesService } from './telegram-utilities.service';
+import { TelegramNlpService } from './telegram-nlp.service';
+import { TelegramLocationService } from '../../media/services/telegram-location.service';
+import { TelegramSalesService } from '../../commerce/services/telegram-sales.service';
 
 // Capture handlers for testing
 const capturedHandlers: {
@@ -227,6 +230,14 @@ describe('TelegramBotService', () => {
           },
         },
         {
+          provide: TelegramNlpService,
+          useValue: {
+            setHelpers: jest.fn(),
+            handleAskCommand: jest.fn(),
+            processNaturalLanguageQuery: jest.fn(),
+          },
+        },
+        {
           provide: TelegramUIService,
           useValue: {
             t: jest.fn((lang, key) => key),
@@ -250,6 +261,23 @@ describe('TelegramBotService', () => {
             toggleNotification: jest.fn(),
             logMessage: jest.fn(),
             handleTextMessage: jest.fn(),
+          },
+        },
+        {
+          provide: TelegramLocationService,
+          useValue: {
+            setHelpers: jest.fn(),
+            handleNearbyCommand: jest.fn(),
+            handleRouteCommand: jest.fn(),
+            findNearbyTasks: jest.fn(),
+          },
+        },
+        {
+          provide: TelegramSalesService,
+          useValue: {
+            setHelpers: jest.fn(),
+            handleSalesCommand: jest.fn(),
+            registerSale: jest.fn(),
           },
         },
       ],
