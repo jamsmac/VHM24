@@ -241,6 +241,31 @@
       "viewer": "Viewer"
     }
   },
+  "ask": {
+    "title": "❓ What You Can Ask",
+    "usage": "💡 Usage: <code>/ask your question</code>",
+    "another": "❓ Ask another",
+    "unknown": "🤔 Didn't understand the question. Try rephrasing.",
+    "error": "❌ Could not process query.",
+    "categories": {
+      "tasks": "📋 Tasks",
+      "machines": "🖥 Machines",
+      "finance": "💰 Finance",
+      "other": "📊 Other"
+    },
+    "examples": {
+      "tasks_today": "How many tasks today?",
+      "tasks_pending": "What tasks are pending?",
+      "refills_today": "How many refills today?",
+      "machine_status": "Machine status?",
+      "machines_problems": "Which machines have problems?",
+      "machines_refill": "Which machines need refill?",
+      "revenue_today": "Today's revenue?",
+      "revenue_week": "Weekly revenue?",
+      "incidents": "Open incidents?",
+      "my_stats": "My performance?"
+    }
+  },
   "sales": {
     "title": "💰 Sales Entry",
     "step_machine": "Step 1/4: Select machine",

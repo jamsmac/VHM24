@@ -10,6 +10,7 @@ import { TelegramAdminCallbackService } from './services/telegram-admin-callback
 import { TelegramSprint3Service } from './services/telegram-sprint3.service';
 import { TelegramTaskOperationsService } from './services/telegram-task-operations.service';
 import { TelegramDataCommandsService } from './services/telegram-data-commands.service';
+import { TelegramNlpService } from './services/telegram-nlp.service';
 import { TelegramUIService } from './services/telegram-ui.service';
 import { TelegramUtilitiesService } from './services/telegram-utilities.service';
 
@@ -84,6 +85,7 @@ import { AuditLogsModule } from '../../audit-logs/audit-logs.module';
     TelegramSprint3Service,
     TelegramTaskOperationsService,
     TelegramDataCommandsService,
+    TelegramNlpService,
     TelegramUIService,
     TelegramUtilitiesService,
   ],
@@ -96,6 +98,7 @@ import { AuditLogsModule } from '../../audit-logs/audit-logs.module';
     TelegramSprint3Service,
     TelegramTaskOperationsService,
     TelegramDataCommandsService,
+    TelegramNlpService,
     TelegramUIService,
     TelegramUtilitiesService,
   ],
