@@ -7,10 +7,10 @@ import { TelegramMessageLog, TelegramMessageType } from '../../shared/entities/t
 import { UsersService } from '../../../users/users.service';
 import { UserRole } from '../../../users/entities/user.entity';
 import { AuditLogService } from '../../../audit-logs/audit-log.service';
+import { TelegramKeyboardHandler } from '../../ui/handlers/telegram-keyboard.handler';
 import {
   BotContext,
   TelegramPendingUserInfo,
-  TelegramKeyboardRow,
   TelegramMessageOptions,
 } from '../../shared/types/telegram.types';
 
@@ -33,6 +33,7 @@ export class TelegramAdminCallbackService {
     private telegramMessageLogRepository: Repository<TelegramMessageLog>,
     private readonly usersService: UsersService,
     private readonly auditLogService: AuditLogService,
+    private readonly keyboardHandler: TelegramKeyboardHandler,
   ) {}
 
   // ============================================================================
@@ -76,7 +77,7 @@ export class TelegramAdminCallbackService {
             `Registered: ${new Date(user.created_at).toLocaleDateString('en-US')}\n\n` +
             `<b>Select role for the user:</b>`;
 
-      const keyboard = this.getRoleSelectionKeyboard(userId, lang);
+      const keyboard = this.keyboardHandler.getRoleSelectionKeyboard(userId, lang);
 
       await ctx.editMessageText(message, { ...keyboard, parse_mode: 'HTML' });
     } catch (error: unknown) {
@@ -486,7 +487,7 @@ export class TelegramAdminCallbackService {
       const message = this.formatPendingUsersMessage(pendingUsers, lang);
 
       // Create keyboard with user options
-      const keyboard = this.getPendingUsersKeyboard(pendingUsers, lang);
+      const keyboard = this.keyboardHandler.getPendingUsersKeyboard(pendingUsers, lang);
 
       if (ctx.callbackQuery) {
         await ctx.editMessageText(message, { ...keyboard, parse_mode: 'HTML' });
@@ -586,70 +587,6 @@ export class TelegramAdminCallbackService {
         : `\n\n<i>${users.length} ${users.length === 1 ? 'user' : 'users'} pending approval</i>`;
 
     return header + usersList + footer;
-  }
-
-  /**
-   * Create keyboard for pending users approval actions
-   */
-  private getPendingUsersKeyboard(users: TelegramPendingUserInfo[], lang: TelegramLanguage) {
-    const buttons: TelegramKeyboardRow[] = [];
-
-    // Add buttons for first 5 users
-    users.slice(0, 5).forEach((user) => {
-      buttons.push([
-        Markup.button.callback(
-          `👤 ${user.full_name.substring(0, 20)}${user.full_name.length > 20 ? '...' : ''}`,
-          `expand_user_${user.id}`,
-        ),
-      ]);
-    });
-
-    buttons.push([
-      Markup.button.callback(
-        lang === TelegramLanguage.RU ? '🔄 Обновить' : '🔄 Refresh',
-        'refresh_pending_users',
-      ),
-    ]);
-
-    return Markup.inlineKeyboard(buttons);
-  }
-
-  /**
-   * Get role selection keyboard for user approval
-   */
-  private getRoleSelectionKeyboard(userId: string, lang: TelegramLanguage) {
-    const roles = [
-      {
-        value: UserRole.OPERATOR,
-        label: lang === TelegramLanguage.RU ? '👨‍💼 Оператор' : '👨‍💼 Operator',
-      },
-      {
-        value: UserRole.COLLECTOR,
-        label: lang === TelegramLanguage.RU ? '💰 Инкассатор' : '💰 Collector',
-      },
-      {
-        value: UserRole.TECHNICIAN,
-        label: lang === TelegramLanguage.RU ? '🔧 Техник' : '🔧 Technician',
-      },
-      {
-        value: UserRole.MANAGER,
-        label: lang === TelegramLanguage.RU ? '📊 Менеджер' : '📊 Manager',
-      },
-      { value: UserRole.VIEWER, label: lang === TelegramLanguage.RU ? '👁️ Просмотр' : '👁️ Viewer' },
-    ];
-
-    const buttons = roles.map((role) => [
-      Markup.button.callback(role.label, `approve_user_${userId}_role_${role.value}`),
-    ]);
-
-    buttons.push([
-      Markup.button.callback(
-        lang === TelegramLanguage.RU ? '❌ Отклонить' : '❌ Reject',
-        `reject_user_${userId}`,
-      ),
-    ]);
-
-    return Markup.inlineKeyboard(buttons);
   }
 
   /**

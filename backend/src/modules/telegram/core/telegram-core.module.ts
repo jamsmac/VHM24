@@ -22,6 +22,7 @@ import { TelegramMessageLog } from '../shared/entities/telegram-message-log.enti
 import { TelegramInfrastructureModule } from '../infrastructure/telegram-infrastructure.module';
 import { TelegramMediaModule } from '../media/telegram-media.module';
 import { TelegramManagersModule } from '../managers/telegram-managers.module';
+import { TelegramUiModule } from '../ui/telegram-ui.module';
 
 // External modules
 import { TasksModule } from '../../tasks/tasks.module';
@@ -62,6 +63,7 @@ import { AuditLogsModule } from '../../audit-logs/audit-logs.module';
     TelegramInfrastructureModule,
     TelegramMediaModule,
     TelegramManagersModule,
+    TelegramUiModule,
     // External modules with forwardRef for circular dependencies
     forwardRef(() => TasksModule),
     FilesModule,
