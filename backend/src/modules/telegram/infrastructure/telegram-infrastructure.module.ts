@@ -6,6 +6,7 @@ import { ConfigModule } from '@nestjs/config';
 import { TelegramSessionService } from './services/telegram-session.service';
 import { TelegramResilientApiService } from './services/telegram-resilient-api.service';
 import { TelegramCacheService } from './services/telegram-cache.service';
+import { TelegramFormulaService } from './services/telegram-formula.service';
 import { TelegramQueueProcessor } from './processors/telegram-queue.processor';
 
 import { TelegramSettings } from '../shared/entities/telegram-settings.entity';
@@ -34,12 +35,14 @@ import { TelegramMessageLog } from '../shared/entities/telegram-message-log.enti
     TelegramSessionService,
     TelegramResilientApiService,
     TelegramCacheService,
+    TelegramFormulaService,
     TelegramQueueProcessor,
   ],
   exports: [
     TelegramSessionService,
     TelegramResilientApiService,
     TelegramCacheService,
+    TelegramFormulaService,
     TelegramQueueProcessor,
   ],
 })
