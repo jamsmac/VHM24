@@ -6,6 +6,7 @@ import { UsersService } from '../../../users/users.service';
 import { MachinesService } from '../../../machines/machines.service';
 import { TaskStatus, TaskType } from '../../../tasks/entities/task.entity';
 import { MachineStatus } from '../../../machines/entities/machine.entity';
+import { UserRole } from '../../../users/entities/user.entity';
 
 describe('TelegramWorkflowService', () => {
   let service: TelegramWorkflowService;
@@ -16,13 +17,13 @@ describe('TelegramWorkflowService', () => {
 
   const mockUser = {
     id: 'user-1',
-    telegram_id: '123456789',
+    telegram_user_id: '123456789',
     full_name: 'Test User',
   };
 
   const mockManager = {
     id: 'manager-1',
-    telegram_id: '987654321',
+    telegram_user_id: '987654321',
     full_name: 'Manager User',
   };
 
@@ -179,7 +180,7 @@ describe('TelegramWorkflowService', () => {
       expect(notificationsService.sendNotification).not.toHaveBeenCalled();
     });
 
-    it('should skip users without telegram_id', async () => {
+    it('should skip users without telegram_user_id', async () => {
       const overdueDate = new Date(Date.now() - 3 * 60 * 60 * 1000);
 
       tasksService.findAll.mockResolvedValue([
@@ -191,7 +192,7 @@ describe('TelegramWorkflowService', () => {
         },
       ] as any);
 
-      usersService.findOne.mockResolvedValue({ id: 'user-1', telegram_id: null } as any);
+      usersService.findOne.mockResolvedValue({ id: 'user-1', telegram_user_id: null } as any);
 
       await service.checkOverdueTasks();
 
@@ -286,7 +287,7 @@ describe('TelegramWorkflowService', () => {
       usersService.findOne.mockImplementation((id) => {
         if (id === 'user-1') return Promise.resolve(mockUser as any);
         if (id === 'user-2')
-          return Promise.resolve({ ...mockUser, id: 'user-2', telegram_id: '111' } as any);
+          return Promise.resolve({ ...mockUser, id: 'user-2', telegram_user_id: '111' } as any);
         return Promise.resolve(null);
       });
 
@@ -330,7 +331,7 @@ describe('TelegramWorkflowService', () => {
       await service.checkMachineStatus();
 
       expect(machinesService.findAllSimple).toHaveBeenCalled();
-      expect(usersService.findByRole).toHaveBeenCalledWith('MANAGER');
+      expect(usersService.findByRole).toHaveBeenCalledWith(UserRole.MANAGER);
       expect(notificationsService.sendNotification).toHaveBeenCalled();
     });
 
@@ -444,7 +445,7 @@ describe('TelegramWorkflowService', () => {
       usersService.findOne.mockImplementation((id) => {
         if (id === 'user-1') return Promise.resolve(mockUser as any);
         if (id === 'user-2')
-          return Promise.resolve({ ...mockUser, id: 'user-2', telegram_id: '222' } as any);
+          return Promise.resolve({ ...mockUser, id: 'user-2', telegram_user_id: '222' } as any);
         return Promise.resolve(null);
       });
 

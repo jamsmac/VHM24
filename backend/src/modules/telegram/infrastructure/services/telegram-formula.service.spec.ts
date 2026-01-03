@@ -76,10 +76,10 @@ describe('TelegramFormulaService', () => {
         expect(result.value).toBe(6);
       });
 
-      it('should treat undefined variables as 0', () => {
+      it('should fail on undefined variables', () => {
         const result = service.evaluate('x + 5', {});
-        expect(result.success).toBe(true);
-        expect(result.value).toBe(5);
+        expect(result.success).toBe(false);
+        expect(result.error).toBeDefined();
       });
 
       it('should handle boolean variables', () => {
@@ -131,13 +131,13 @@ describe('TelegramFormulaService', () => {
       it('should evaluate AND', () => {
         const result = service.evaluate('1 AND 1');
         expect(result.success).toBe(true);
-        expect(result.value).toBe(true);
+        expect(result.value).toBe(1);
       });
 
       it('should evaluate OR', () => {
         const result = service.evaluate('0 OR 1');
         expect(result.success).toBe(true);
-        expect(result.value).toBe(true);
+        expect(result.value).toBe(1);
       });
 
       it('should evaluate NOT', () => {
