@@ -12,7 +12,7 @@ describe('RequestsService', () => {
 
   const mockRequest: Partial<Request> = {
     id: 'req-1',
-    request_number: 'REQ-2025-000001',
+    request_number: 'REQ-2026-000001',
     status: RequestStatus.NEW,
     priority: RequestPriority.NORMAL,
     total_amount: 1000,
@@ -148,7 +148,7 @@ describe('RequestsService', () => {
     });
 
     it('should increment request number from last request', async () => {
-      mockQB.getOne.mockResolvedValueOnce({ request_number: 'REQ-2025-000005' });
+      mockQB.getOne.mockResolvedValueOnce({ request_number: 'REQ-2026-000005' });
       mockRequestRepo.findOne.mockResolvedValue({ ...mockRequest, items: [mockItem] });
 
       await service.create('user-1', createDto);
@@ -156,7 +156,7 @@ describe('RequestsService', () => {
       expect(mockManager.create).toHaveBeenCalledWith(
         Request,
         expect.objectContaining({
-          request_number: 'REQ-2025-000006',
+          request_number: 'REQ-2026-000006',
         }),
       );
     });
@@ -415,10 +415,10 @@ describe('RequestsService', () => {
 
   describe('findByNumber', () => {
     it('should return request by number', async () => {
-      const result = await service.findByNumber('REQ-2025-000001');
+      const result = await service.findByNumber('REQ-2026-000001');
       expect(result).toBeDefined();
       expect(mockRequestRepo.findOne).toHaveBeenCalledWith({
-        where: { request_number: 'REQ-2025-000001' },
+        where: { request_number: 'REQ-2026-000001' },
         relations: expect.arrayContaining(['items']),
       });
     });
