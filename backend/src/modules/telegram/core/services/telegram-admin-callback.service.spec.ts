@@ -5,6 +5,8 @@ import { TelegramAdminCallbackService } from './telegram-admin-callback.service'
 import { TelegramUser, TelegramLanguage } from '../../shared/entities/telegram-user.entity';
 import { TelegramMessageLog, TelegramMessageType } from '../../shared/entities/telegram-message-log.entity';
 import { UsersService } from '../../../users/users.service';
+import { AuditLogService } from '../../../audit-logs/audit-log.service';
+import { TelegramKeyboardHandler } from '../../ui/handlers/telegram-keyboard.handler';
 import { UserRole } from '../../../users/entities/user.entity';
 import { BotContext } from '../../shared/types/telegram.types';
 
@@ -80,6 +82,23 @@ describe('TelegramAdminCallbackService', () => {
             getPendingUsers: jest.fn(),
             approveUser: jest.fn(),
             rejectUser: jest.fn(),
+          },
+        },
+        {
+          provide: AuditLogService,
+          useValue: {
+            log: jest.fn().mockResolvedValue(undefined),
+            create: jest.fn().mockResolvedValue(undefined),
+            logAccessRequestApproved: jest.fn().mockResolvedValue(undefined),
+            logAccessRequestRejected: jest.fn().mockResolvedValue(undefined),
+          },
+        },
+        {
+          provide: TelegramKeyboardHandler,
+          useValue: {
+            getRoleSelectionKeyboard: jest.fn().mockReturnValue({ reply_markup: { inline_keyboard: [] } }),
+            getBackKeyboard: jest.fn().mockReturnValue({ reply_markup: { inline_keyboard: [] } }),
+            getPendingUsersKeyboard: jest.fn().mockReturnValue({ reply_markup: { inline_keyboard: [] } }),
           },
         },
       ],
@@ -1547,56 +1566,8 @@ describe('TelegramAdminCallbackService', () => {
     });
   });
 
-  describe('getPendingUsersKeyboard', () => {
-    it('should return keyboard with users in Russian', () => {
-      const users = [
-        { id: 'user-1', full_name: 'John Doe', email: 'john@example.com', phone: null, created_at: new Date().toISOString() },
-        { id: 'user-2', full_name: 'Jane Smith', email: 'jane@example.com', phone: null, created_at: new Date().toISOString() },
-      ];
-      const keyboard = (service as any).getPendingUsersKeyboard(users, TelegramLanguage.RU);
-      expect(keyboard).toBeDefined();
-    });
-
-    it('should return keyboard with users in English', () => {
-      const users = [
-        { id: 'user-1', full_name: 'Alice Brown', email: 'alice@example.com', phone: null, created_at: new Date().toISOString() },
-      ];
-      const keyboard = (service as any).getPendingUsersKeyboard(users, TelegramLanguage.EN);
-      expect(keyboard).toBeDefined();
-    });
-
-    it('should limit to 5 users', () => {
-      const users = Array.from({ length: 10 }, (_, i) => ({
-        id: `user-${i}`,
-        full_name: `User ${i}`,
-        email: `user${i}@example.com`,
-        phone: null,
-        created_at: new Date().toISOString(),
-      }));
-      const keyboard = (service as any).getPendingUsersKeyboard(users, TelegramLanguage.RU);
-      expect(keyboard).toBeDefined();
-    });
-
-    it('should truncate long names', () => {
-      const users = [
-        { id: 'user-1', full_name: 'This is a very long name that exceeds twenty characters', email: 'long@example.com', phone: null, created_at: new Date().toISOString() },
-      ];
-      const keyboard = (service as any).getPendingUsersKeyboard(users, TelegramLanguage.RU);
-      expect(keyboard).toBeDefined();
-    });
-  });
-
-  describe('getRoleSelectionKeyboard', () => {
-    it('should return keyboard with all role options in Russian', () => {
-      const keyboard = (service as any).getRoleSelectionKeyboard('user-123', TelegramLanguage.RU);
-      expect(keyboard).toBeDefined();
-    });
-
-    it('should return keyboard with all role options in English', () => {
-      const keyboard = (service as any).getRoleSelectionKeyboard('user-456', TelegramLanguage.EN);
-      expect(keyboard).toBeDefined();
-    });
-  });
+  // Note: getPendingUsersKeyboard and getRoleSelectionKeyboard tests removed
+  // as these methods were moved to TelegramKeyboardHandler
 
   describe('logCallback', () => {
     it('should log callback to database', async () => {
