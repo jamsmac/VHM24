@@ -34,7 +34,7 @@ import { IncidentsModule } from '../../incidents/incidents.module';
 import { TransactionsModule } from '../../transactions/transactions.module';
 import { InventoryModule } from '../../inventory/inventory.module';
 import { AccessRequestsModule } from '../../access-requests/access-requests.module';
-import { AuditLogsModule } from '../../audit-logs/audit-logs.module';
+import { AuditLogModule } from '../../audit-logs/audit-log.module';
 
 /**
  * Telegram Core Module
@@ -74,7 +74,7 @@ import { AuditLogsModule } from '../../audit-logs/audit-logs.module';
     forwardRef(() => TransactionsModule),
     forwardRef(() => InventoryModule),
     AccessRequestsModule,
-    AuditLogsModule,
+    AuditLogModule,
   ],
   providers: [
     TelegramBotService,

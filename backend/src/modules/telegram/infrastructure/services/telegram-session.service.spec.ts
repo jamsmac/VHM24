@@ -577,8 +577,8 @@ describe('TelegramSessionService', () => {
     it('should return unhealthy when Redis client is not initialized', async () => {
       // Create a fresh service without initialization
       const freshService = Object.create(TelegramSessionService.prototype);
-      // @ts-expect-error - accessing private property for testing
-      freshService.redisClient = null;
+      // Access private property for testing
+      (freshService as any).redisClient = null;
 
       const result = await freshService.healthCheck();
 
@@ -642,8 +642,8 @@ describe('TelegramSessionService', () => {
     it('should return false when Redis client is null', () => {
       // Create a fresh service without initialization
       const freshService = Object.create(TelegramSessionService.prototype);
-      // @ts-expect-error - accessing private property for testing
-      freshService.redisClient = null;
+      // Access private property for testing
+      (freshService as any).redisClient = null;
 
       const result = freshService.isHealthy();
 

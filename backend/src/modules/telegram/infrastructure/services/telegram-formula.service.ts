@@ -25,26 +25,9 @@ type AggregateFunction = (values: number[]) => number;
  * TelegramFormulaService
  *
  * Simple expression engine for dynamic content in Telegram messages.
- * Supports:
- * - Mathematical expressions (+-*/%)
- * - Comparison operators (< > <= >= == !=)
- * - Logical operators (AND OR NOT)
- * - Aggregate functions (SUM, AVG, MIN, MAX, COUNT)
- * - Conditional expressions (IF condition THEN value1 ELSE value2)
- * - Variable substitution from context
- *
- * Example usage:
- * ```typescript
- * const context = { tasks_completed: 5, tasks_total: 10, bonus_rate: 1.5 };
- * const result = formula.evaluate('tasks_completed * bonus_rate', context);
- * // result.value = 7.5
- *
- * const message = formula.interpolate(
- *   'You completed {{tasks_completed}} of {{tasks_total}} tasks ({{= tasks_completed / tasks_total * 100 }}%)',
- *   context
- * );
- * // message = 'You completed 5 of 10 tasks (50%)'
- * ```
+ * Supports mathematical expressions, comparison operators, logical operators,
+ * aggregate functions (SUM, AVG, MIN, MAX, COUNT), conditional expressions,
+ * and variable substitution from context.
  *
  * @module TelegramInfrastructureModule
  */

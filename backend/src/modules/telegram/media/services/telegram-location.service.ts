@@ -116,7 +116,7 @@ export class TelegramLocationService {
    * Handle location message from user
    */
   async handleLocationMessage(ctx: BotContext): Promise<void> {
-    await this.logMessage(ctx, TelegramMessageType.LOCATION);
+    await this.logMessage(ctx, TelegramMessageType.MESSAGE, 'location');
 
     if (!ctx.telegramUser?.is_verified) {
       const lang = ctx.telegramUser?.language || TelegramLanguage.RU;
@@ -283,13 +283,13 @@ export class TelegramLocationService {
         await ctx.reply(
           lang === TelegramLanguage.RU
             ? `🗺️ <b>Навигация к задаче</b>\n\n` +
-              `📋 ${this.getTaskTypeLabel(task.task_type, lang)}\n` +
+              `📋 ${this.getTaskTypeLabel(task.type_code, lang)}\n` +
               `🖥 ${task.machine.machine_number}\n` +
               `📍 ${task.machine.location.name || task.machine.location.address || 'N/A'}\n\n` +
               `<a href="${mapsUrl}">🗺️ Открыть в Google Maps</a>\n\n` +
               `💡 Когда прибудете, нажмите кнопку "Начать"`
             : `🗺️ <b>Navigate to Task</b>\n\n` +
-              `📋 ${this.getTaskTypeLabel(task.task_type, lang)}\n` +
+              `📋 ${this.getTaskTypeLabel(task.type_code, lang)}\n` +
               `🖥 ${task.machine.machine_number}\n` +
               `📍 ${task.machine.location.name || task.machine.location.address || 'N/A'}\n\n` +
               `<a href="${mapsUrl}">🗺️ Open in Google Maps</a>\n\n` +
@@ -382,7 +382,7 @@ export class TelegramLocationService {
       if (distance <= radiusMeters) {
         nearbyTasks.push({
           taskId: task.id,
-          taskType: task.task_type,
+          taskType: task.type_code,
           machineNumber: task.machine.machine_number,
           machineName: task.machine.name || task.machine.machine_number,
           location: location.name || location.address || 'Unknown',

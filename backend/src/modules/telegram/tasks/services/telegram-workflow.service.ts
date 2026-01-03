@@ -8,6 +8,7 @@ import { UsersService } from '../../../users/users.service';
 import { MachinesService } from '../../../machines/machines.service';
 import { TaskStatus, TaskType } from '../../../tasks/entities/task.entity';
 import { MachineStatus } from '../../../machines/entities/machine.entity';
+import { UserRole } from '../../../users/entities/user.entity';
 
 /**
  * Workflow rule definition
@@ -192,7 +193,7 @@ export class TelegramWorkflowService {
       if (!task.assigned_to_user_id) continue;
 
       const user = await this.usersService.findOne(task.assigned_to_user_id);
-      if (!user?.telegram_id) continue;
+      if (!user?.telegram_user_id) continue;
 
       const hoursOver = Math.floor(
         (Date.now() - new Date(task.scheduled_date!).getTime()) / (1000 * 60 * 60),
@@ -201,8 +202,8 @@ export class TelegramWorkflowService {
       reminders.push({
         taskId: task.id,
         userId: user.id,
-        telegramId: user.telegram_id,
-        taskType: task.task_type,
+        telegramId: user.telegram_user_id,
+        taskType: task.type_code,
         machineNumber: task.machine?.machine_number || 'Unknown',
         hoursOverdue: hoursOver,
       });
@@ -280,12 +281,12 @@ export class TelegramWorkflowService {
       if (!task.assigned_to_user_id) continue;
 
       const user = await this.usersService.findOne(task.assigned_to_user_id);
-      if (!user?.telegram_id) continue;
+      if (!user?.telegram_user_id) continue;
 
       if (!operators.has(user.id)) {
         operators.set(user.id, {
           userId: user.id,
-          telegramId: user.telegram_id,
+          telegramId: user.telegram_user_id,
           pendingCount: 0,
           tasks: [],
         });
@@ -294,7 +295,7 @@ export class TelegramWorkflowService {
       const op = operators.get(user.id)!;
       op.pendingCount++;
       op.tasks.push({
-        type: task.task_type,
+        type: task.type_code,
         machineNumber: task.machine?.machine_number || 'Unknown',
       });
     }
@@ -391,7 +392,7 @@ export class TelegramWorkflowService {
     }>,
   ): Promise<void> {
     // Get managers (users with manager role)
-    const managers = await this.usersService.findByRole('MANAGER');
+    const managers = await this.usersService.findByRole(UserRole.MANAGER);
 
     const statusEmoji: Record<MachineStatus, string> = {
       [MachineStatus.ACTIVE]: '✅',
@@ -413,7 +414,7 @@ export class TelegramWorkflowService {
       `Всего: ${machines.length} аппаратов`;
 
     for (const manager of managers) {
-      if (!manager.telegram_id) continue;
+      if (!manager.telegram_user_id) continue;
 
       try {
         await this.notificationsService.sendNotification({
@@ -450,14 +451,19 @@ export class TelegramWorkflowService {
    * Get task type label
    */
   private getTaskTypeLabel(type: TaskType, lang: TelegramLanguage): string {
-    const labels: Record<TaskType, Record<TelegramLanguage, string>> = {
+    const labels: Partial<Record<TaskType, Record<TelegramLanguage, string>>> = {
       [TaskType.REFILL]: { ru: '🔄 Пополнение', en: '🔄 Refill', uz: '🔄 To\'ldirish' },
       [TaskType.COLLECTION]: { ru: '💰 Инкассация', en: '💰 Collection', uz: '💰 Yig\'ish' },
-      [TaskType.MAINTENANCE]: { ru: '🔧 Обслуживание', en: '🔧 Maintenance', uz: '🔧 Xizmat' },
       [TaskType.INSPECTION]: { ru: '🔍 Проверка', en: '🔍 Inspection', uz: '🔍 Tekshirish' },
       [TaskType.REPAIR]: { ru: '🛠 Ремонт', en: '🛠 Repair', uz: '🛠 Ta\'mirlash' },
       [TaskType.CLEANING]: { ru: '🧹 Уборка', en: '🧹 Cleaning', uz: '🧹 Tozalash' },
-      [TaskType.INSTALLATION]: { ru: '📦 Установка', en: '📦 Installation', uz: '📦 O\'rnatish' },
+      [TaskType.INSTALL]: { ru: '📦 Установка', en: '📦 Installation', uz: '📦 O\'rnatish' },
+      [TaskType.REMOVAL]: { ru: '📤 Снятие', en: '📤 Removal', uz: '📤 Olib tashlash' },
+      [TaskType.AUDIT]: { ru: '📋 Ревизия', en: '📋 Audit', uz: '📋 Tekshirish' },
+      [TaskType.REPLACE_HOPPER]: { ru: '🔄 Замена бункера', en: '🔄 Replace Hopper', uz: '🔄 Bunker almashtirish' },
+      [TaskType.REPLACE_GRINDER]: { ru: '⚙️ Замена гриндера', en: '⚙️ Replace Grinder', uz: '⚙️ Grinder almashtirish' },
+      [TaskType.REPLACE_BREW_UNIT]: { ru: '☕ Замена варочного блока', en: '☕ Replace Brew Unit', uz: '☕ Pishirish bloki' },
+      [TaskType.REPLACE_MIXER]: { ru: '🔧 Замена миксера', en: '🔧 Replace Mixer', uz: '🔧 Mikser almashtirish' },
     };
 
     return labels[type]?.[lang] || type;

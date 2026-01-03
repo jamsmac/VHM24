@@ -35,9 +35,17 @@ interface SalesEntryData {
  *
  * @module TelegramCommerceModule
  */
+/**
+ * Helper methods interface for bot integration
+ */
+interface SalesServiceHelpers {
+  t: (lang: TelegramLanguage, key: string, ...args: string[]) => string;
+}
+
 @Injectable()
 export class TelegramSalesService {
   private readonly logger = new Logger(TelegramSalesService.name);
+  private helpers: SalesServiceHelpers | null = null;
 
   constructor(
     private readonly sessionService: TelegramSessionService,
@@ -47,10 +55,20 @@ export class TelegramSalesService {
   ) {}
 
   /**
+   * Set helper methods from bot service
+   */
+  setHelpers(helpers: SalesServiceHelpers): void {
+    this.helpers = helpers;
+  }
+
+  /**
    * Translation helper
    */
-  private t(lang: TelegramLanguage, key: string, ...args: string[]): string {
-    return this.i18nService.t(lang, key, ...args);
+  private t(lang: TelegramLanguage, key: string): string {
+    if (this.helpers?.t) {
+      return this.helpers.t(lang, key);
+    }
+    return this.i18nService.t(lang, key);
   }
 
   // ============================================================================

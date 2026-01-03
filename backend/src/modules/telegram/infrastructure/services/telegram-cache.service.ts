@@ -210,7 +210,11 @@ export class TelegramCacheService implements OnModuleInit, OnModuleDestroy {
           MATCH: fullPattern,
           COUNT: 100,
         })) {
-          keys.push(key);
+          if (Array.isArray(key)) {
+            keys.push(...key);
+          } else {
+            keys.push(key);
+          }
         }
 
         if (keys.length > 0) {

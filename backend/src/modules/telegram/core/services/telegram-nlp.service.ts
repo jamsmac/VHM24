@@ -359,14 +359,16 @@ export class TelegramNlpService {
       if (/пополнен|refill/i.test(lowerQuery)) return TaskType.REFILL;
       if (/инкассац|collect/i.test(lowerQuery)) return TaskType.COLLECTION;
       if (/ремонт|repair/i.test(lowerQuery)) return TaskType.REPAIR;
-      if (/обслужив|mainten/i.test(lowerQuery)) return TaskType.MAINTENANCE;
-      if (/чист|clean/i.test(lowerQuery)) return TaskType.CLEANING;
+      if (/обслужив|осмотр|inspect/i.test(lowerQuery)) return TaskType.INSPECTION;
+      if (/чист|clean|мойк/i.test(lowerQuery)) return TaskType.CLEANING;
+      if (/установ|install/i.test(lowerQuery)) return TaskType.INSTALL;
     } else {
       if (/refill/i.test(lowerQuery)) return TaskType.REFILL;
       if (/collection/i.test(lowerQuery)) return TaskType.COLLECTION;
       if (/repair/i.test(lowerQuery)) return TaskType.REPAIR;
-      if (/maintenance/i.test(lowerQuery)) return TaskType.MAINTENANCE;
+      if (/inspect|maintenance/i.test(lowerQuery)) return TaskType.INSPECTION;
       if (/clean/i.test(lowerQuery)) return TaskType.CLEANING;
+      if (/install/i.test(lowerQuery)) return TaskType.INSTALL;
     }
 
     return undefined;
@@ -458,7 +460,7 @@ export class TelegramNlpService {
     // Group by type
     const byType: Record<string, number> = {};
     for (const task of todayTasks) {
-      byType[task.task_type] = (byType[task.task_type] || 0) + 1;
+      byType[task.type_code] = (byType[task.type_code] || 0) + 1;
     }
 
     let message = lang === TelegramLanguage.RU
@@ -510,9 +512,9 @@ export class TelegramNlpService {
 
     // Show first 5 tasks
     for (const task of pendingTasks.slice(0, 5)) {
-      const emoji = this.getTaskTypeEmoji(task.task_type);
+      const emoji = this.getTaskTypeEmoji(task.type_code);
       const machineNum = task.machine?.machine_number || 'N/A';
-      message += `${emoji} ${machineNum} - ${this.getTaskTypeLabel(task.task_type, lang)}\n`;
+      message += `${emoji} ${machineNum} - ${this.getTaskTypeLabel(task.type_code, lang)}\n`;
     }
 
     if (pendingTasks.length > 5) {
