@@ -18,6 +18,11 @@ export enum ConversationState {
   INCIDENT_TYPE_SELECTION = 'incident_type_selection',
   INCIDENT_MACHINE_SELECTION = 'incident_machine_selection',
   INCIDENT_DESCRIPTION_INPUT = 'incident_description_input',
+  // Sprint 3: Sales entry states
+  SALES_MACHINE_SELECTION = 'sales_machine_selection',
+  SALES_AMOUNT_INPUT = 'sales_amount_input',
+  SALES_PAYMENT_METHOD = 'sales_payment_method',
+  SALES_CONFIRMATION = 'sales_confirmation',
 }
 
 /**

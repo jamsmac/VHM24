@@ -240,5 +240,36 @@
       "technician": "Technician",
       "viewer": "Viewer"
     }
+  },
+  "sales": {
+    "title": "💰 Sales Entry",
+    "step_machine": "Step 1/4: Select machine",
+    "step_amount": "Step 2/4: Enter sale amount",
+    "step_payment": "Step 3/4: Select payment method",
+    "step_confirm": "Step 4/4: Confirmation",
+    "machine_label": "Machine",
+    "amount_label": "Amount",
+    "payment_label": "Payment method",
+    "location_label": "Location",
+    "enter_machine_hint": "Or send machine number as text",
+    "enter_amount_hint": "Example: 150 or 75.50",
+    "machine_not_found": "Machine not found",
+    "invalid_amount": "Invalid amount format. Enter a number, e.g.: 150",
+    "confirm_title": "Confirm Sale",
+    "confirm_prompt": "All correct? Click \"Confirm\" to save.",
+    "confirm_button": "✅ Confirm",
+    "success_title": "✅ Sale recorded!",
+    "transaction_id": "Transaction ID",
+    "new_sale_hint": "For new sale: /sales",
+    "error_title": "❌ Error",
+    "error_save": "Failed to save sale.",
+    "error_incomplete": "Incomplete data",
+    "cancelled": "❌ Sales entry cancelled.",
+    "payment_methods": {
+      "cash": "💵 Cash",
+      "card": "💳 Card",
+      "qr": "📱 QR/SBP",
+      "mobile": "📲 Mobile"
+    }
   }
 }
