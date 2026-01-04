@@ -32,6 +32,9 @@ import {
   ChevronRight,
   Coffee,
   ExternalLink,
+  Bot,
+  Terminal,
+  Sparkles,
   type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -131,6 +134,16 @@ const NAVIGATION_GROUPS: NavGroup[] = [
       { name: 'Аудит', href: '/dashboard/audit', icon: ScrollText },
       { name: 'Безопасность', href: '/dashboard/security', icon: Shield },
       { name: 'Настройки', href: '/dashboard/settings', icon: Settings },
+    ]
+  },
+  {
+    id: 'ai-tools',
+    label: 'AI Инструменты',
+    icon: Sparkles,
+    items: [
+      { name: 'AI Ассистент', href: '/dashboard/ai-assistant', icon: Bot },
+      { name: 'Агенты', href: '/dashboard/agents', icon: Terminal },
+      { name: 'AI Провайдеры', href: '/dashboard/settings/ai-providers', icon: Sparkles },
     ]
   },
 ]

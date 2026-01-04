@@ -47,59 +47,70 @@ export function exportToCSV<T extends object>(
 }
 
 /**
- * Export data to Excel-like format (actually CSV with .xlsx extension for compatibility)
- * For true Excel format, install xlsx package
+ * Export data to Excel format using ExcelJS
  */
-export function exportToExcel<T extends object>(
+export async function exportToExcel<T extends object>(
   data: T[],
   columns: ExportColumn<T>[],
   options: ExportOptions
-): void {
-  // Try to use xlsx if available, otherwise fallback to CSV
+): Promise<void> {
   try {
-    // Dynamic import for xlsx (if installed)
-    // @ts-expect-error xlsx is an optional dependency
-    import('xlsx').then((XLSX: typeof import('xlsx')) => {
-      const { filename, sheetName = 'Sheet1' } = options
+    // Dynamic import for exceljs
+    const ExcelJS = await import('exceljs')
+    const { filename, sheetName = 'Sheet1' } = options
 
-      // Prepare data with headers
-      const exportData = data.map(row => {
-        const exportRow: Record<string, string> = {}
-        columns.forEach(col => {
-          const value = row[col.key]
-          exportRow[col.header] = col.format ? col.format(value) : String(value ?? '')
-        })
-        return exportRow
+    // Create workbook and worksheet
+    const workbook = new ExcelJS.Workbook()
+    const worksheet = workbook.addWorksheet(sheetName)
+
+    // Add headers
+    worksheet.columns = columns.map(col => ({
+      header: col.header,
+      key: String(col.key),
+      width: Math.max(col.header.length + 2, 15)
+    }))
+
+    // Style header row
+    const headerRow = worksheet.getRow(1)
+    headerRow.font = { bold: true }
+    headerRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFE0E0E0' }
+    }
+
+    // Add data rows
+    data.forEach(row => {
+      const rowData: Record<string, string> = {}
+      columns.forEach(col => {
+        const value = row[col.key]
+        rowData[String(col.key)] = col.format ? col.format(value) : String(value ?? '')
       })
-
-      // Create workbook
-      const wb = XLSX.utils.book_new()
-      const ws = XLSX.utils.json_to_sheet(exportData)
-
-      // Auto-size columns
-      const colWidths = columns.map(col => ({
-        wch: Math.max(
-          col.header.length,
-          ...exportData.map(row => String(row[col.header] || '').length)
-        ) + 2
-      }))
-      ws['!cols'] = colWidths
-
-      XLSX.utils.book_append_sheet(wb, ws, sheetName)
-
-      // Save file
-      const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
-      const blob = new Blob([excelBuffer], {
-        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-      })
-      downloadBlob(blob, `${filename}.xlsx`)
-    }).catch(() => {
-      // xlsx not available, use CSV with .xlsx extension (opens in Excel)
-      console.warn('xlsx package not available, using CSV format')
-      exportToCSV(data, columns, { ...options, filename: options.filename })
+      worksheet.addRow(rowData)
     })
-  } catch {
-    // Fallback to CSV
+
+    // Auto-fit column widths based on content
+    worksheet.columns.forEach(column => {
+      if (column.values) {
+        let maxLength = column.header ? String(column.header).length : 10
+        column.values.forEach(value => {
+          if (value) {
+            const length = String(value).length
+            if (length > maxLength) maxLength = length
+          }
+        })
+        column.width = Math.min(maxLength + 2, 50)
+      }
+    })
+
+    // Generate buffer and download
+    const buffer = await workbook.xlsx.writeBuffer()
+    const blob = new Blob([buffer], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    })
+    downloadBlob(blob, `${filename}.xlsx`)
+  } catch (error) {
+    console.warn('ExcelJS export failed, falling back to CSV:', error)
     exportToCSV(data, columns, options)
   }
 }
