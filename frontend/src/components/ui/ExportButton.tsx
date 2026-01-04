@@ -32,7 +32,7 @@ export function ExportButton<T extends object>({
       await new Promise(resolve => setTimeout(resolve, 100))
 
       if (format === 'xlsx') {
-        exportToExcel(data, columns, { filename })
+        await exportToExcel(data, columns, { filename })
       } else {
         exportToCSV(data, columns, { filename })
       }
