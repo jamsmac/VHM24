@@ -65,6 +65,7 @@ import { SmsModule } from './modules/sms/sms.module';
 import { MonitoringModule } from './modules/monitoring/monitoring.module';
 import { DataParserModule } from './modules/data-parser/data-parser.module';
 import { AuditLogModule } from './modules/audit-logs/audit-log.module';
+import { ContainersModule } from './modules/containers/containers.module';
 
 @Module({
   imports: [
@@ -245,6 +246,7 @@ import { AuditLogModule } from './modules/audit-logs/audit-log.module';
     SmsModule, // SMS messaging via Twilio
     MonitoringModule, // Prometheus metrics and performance monitoring
     DataParserModule, // Data parsing for imports (Excel, CSV, JSON)
+    ContainersModule, // Container/hopper management (VH24 Integration Phase 4.1.1)
   ],
   controllers: [AppController],
   providers: [
