@@ -1,11 +1,11 @@
 import type { Metadata, Viewport } from 'next'
-import { Inter } from 'next/font/google'
 import './globals.css'
 import { ThemeProvider } from '@/providers/ThemeProvider'
 import { I18nProvider } from '@/providers/I18nProvider'
 import { PWAInstaller } from '@/components/PWAInstaller'
 
-const inter = Inter({ subsets: ['latin', 'cyrillic'] })
+// System font stack with Inter-like sans-serif fonts
+const fontClassName = 'font-sans'
 
 export const metadata: Metadata = {
   title: 'VendHub Manager',
@@ -46,7 +46,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ru" suppressHydrationWarning>
-      <body className={inter.className}>
+      <body className={fontClassName}>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

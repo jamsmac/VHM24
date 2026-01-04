@@ -216,12 +216,12 @@ export function formatUserAgent(userAgent: string | null): string {
 
 export function getRoleLabel(role: string): string {
   const roles: Record<string, string> = {
-    super_admin: 'Супер-администратор',
+    owner: 'Владелец',
     admin: 'Администратор',
     manager: 'Менеджер',
     operator: 'Оператор',
+    collector: 'Инкассатор',
     technician: 'Техник',
-    accountant: 'Бухгалтер',
     viewer: 'Наблюдатель',
   }
   return roles[role.toLowerCase()] || role

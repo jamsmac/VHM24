@@ -57,8 +57,7 @@ export function exportToExcel<T extends object>(
 ): void {
   // Try to use xlsx if available, otherwise fallback to CSV
   try {
-    // Dynamic import for xlsx (if installed)
-    // @ts-expect-error xlsx is an optional dependency
+    // Dynamic import for xlsx
     import('xlsx').then((XLSX: typeof import('xlsx')) => {
       const { filename, sheetName = 'Sheet1' } = options
 
