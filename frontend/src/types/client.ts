@@ -25,6 +25,8 @@ export interface MenuItem {
   category?: string
   image_url?: string
   is_available: boolean
+  is_new?: boolean
+  is_popular?: boolean
   stock?: number
   points_earned?: number
 }

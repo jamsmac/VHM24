@@ -2,12 +2,12 @@
  * VendHub Mobile - Client Navigator
  *
  * Navigation for client (consumer) app with bottom tabs
+ * Updated with "Warm Brew" design system
  */
 
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Ionicons } from '@expo/vector-icons';
 
 // Client Screens
 import QrScanScreen from '../screens/Client/QrScanScreen';
@@ -16,6 +16,12 @@ import OrdersScreen from '../screens/Client/OrdersScreen';
 import LoyaltyScreen from '../screens/Client/LoyaltyScreen';
 import ClientProfileScreen from '../screens/Client/ClientProfileScreen';
 import ClientMenuScreen from '../screens/Client/ClientMenuScreen';
+
+// Custom Components
+import { ClientBottomTabBar } from '../components/client';
+
+// Theme
+import { ClientColors } from '../theme';
 
 export type ClientStackParamList = {
   ClientTabs: undefined;
@@ -40,42 +46,22 @@ const Tab = createBottomTabNavigator<ClientTabParamList>();
 function ClientTabs() {
   return (
     <Tab.Navigator
-      screenOptions={({ route }) => ({
-        tabBarIcon: ({ focused, color, size }) => {
-          let iconName: keyof typeof Ionicons.glyphMap;
-
-          switch (route.name) {
-            case 'QrScan':
-              iconName = focused ? 'qr-code' : 'qr-code-outline';
-              break;
-            case 'Locations':
-              iconName = focused ? 'location' : 'location-outline';
-              break;
-            case 'Orders':
-              iconName = focused ? 'receipt' : 'receipt-outline';
-              break;
-            case 'Loyalty':
-              iconName = focused ? 'star' : 'star-outline';
-              break;
-            case 'ClientProfile':
-              iconName = focused ? 'person' : 'person-outline';
-              break;
-            default:
-              iconName = 'ellipse-outline';
-          }
-
-          return <Ionicons name={iconName} size={size} color={color} />;
-        },
-        tabBarActiveTintColor: '#3b82f6',
-        tabBarInactiveTintColor: 'gray',
+      tabBar={(props) => <ClientBottomTabBar {...props} />}
+      screenOptions={{
         headerShown: true,
         headerStyle: {
-          backgroundColor: '#fff',
+          backgroundColor: ClientColors.background.cream,
+          elevation: 0,
+          shadowOpacity: 0,
+          borderBottomWidth: 1,
+          borderBottomColor: ClientColors.background.latte,
         },
+        headerTintColor: ClientColors.text.primary,
         headerTitleStyle: {
           fontWeight: '600',
+          color: ClientColors.text.primary,
         },
-      })}
+      }}
     >
       <Tab.Screen
         name="QrScan"
@@ -123,7 +109,23 @@ function ClientTabs() {
 
 export default function ClientNavigator() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: true }}>
+    <Stack.Navigator
+      screenOptions={{
+        headerShown: true,
+        headerStyle: {
+          backgroundColor: ClientColors.background.cream,
+        },
+        headerTintColor: ClientColors.primary.espresso,
+        headerTitleStyle: {
+          fontWeight: '600',
+          color: ClientColors.text.primary,
+        },
+        headerShadowVisible: false,
+        contentStyle: {
+          backgroundColor: ClientColors.background.cream,
+        },
+      }}
+    >
       <Stack.Screen
         name="ClientTabs"
         component={ClientTabs}
@@ -133,8 +135,9 @@ export default function ClientNavigator() {
         name="ClientMenu"
         component={ClientMenuScreen}
         options={({ route }) => ({
-          title: `${route.params.machineNumber} - ${route.params.machineName}`,
+          title: route.params.machineName,
           headerBackTitle: 'Назад',
+          headerRight: () => null,
         })}
       />
     </Stack.Navigator>
