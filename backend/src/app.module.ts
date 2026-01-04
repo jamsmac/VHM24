@@ -67,6 +67,7 @@ import { DataParserModule } from './modules/data-parser/data-parser.module';
 import { AuditLogModule } from './modules/audit-logs/audit-log.module';
 import { ContainersModule } from './modules/containers/containers.module';
 import { IngredientBatchesModule } from './modules/ingredient-batches/ingredient-batches.module';
+import { AiAssistantModule } from './modules/ai-assistant/ai-assistant.module';
 
 @Module({
   imports: [
@@ -249,6 +250,7 @@ import { IngredientBatchesModule } from './modules/ingredient-batches/ingredient
     DataParserModule, // Data parsing for imports (Excel, CSV, JSON)
     ContainersModule, // Container/hopper management (VH24 Integration Phase 4.1.1)
     IngredientBatchesModule, // Ingredient batch tracking with FIFO (VH24 Integration Phase 4.1.3)
+    AiAssistantModule, // AI-powered integration and documentation assistant
   ],
   controllers: [AppController],
   providers: [
