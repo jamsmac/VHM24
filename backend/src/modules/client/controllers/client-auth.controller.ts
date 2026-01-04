@@ -9,6 +9,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { ClientAuthService } from '../services/client-auth.service';
 import {
   TelegramAuthDto,
@@ -32,19 +33,23 @@ export class ClientAuthController {
   constructor(private readonly clientAuthService: ClientAuthService) {}
 
   @Post('telegram')
+  @Throttle({ short: { ttl: 1000, limit: 3 } })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Authenticate via Telegram Web App' })
   @ApiResponse({ status: 200, description: 'Authentication successful' })
   @ApiResponse({ status: 401, description: 'Invalid authentication data' })
+  @ApiResponse({ status: 429, description: 'Too many requests' })
   async authenticateTelegram(@Body() dto: TelegramAuthDto): Promise<ClientAuthResponseDto> {
     return this.clientAuthService.authenticateTelegram(dto);
   }
 
   @Post('refresh')
+  @Throttle({ medium: { ttl: 10000, limit: 5 } })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Refresh access token' })
   @ApiResponse({ status: 200, description: 'Token refreshed' })
   @ApiResponse({ status: 401, description: 'Invalid refresh token' })
+  @ApiResponse({ status: 429, description: 'Too many requests' })
   async refreshToken(
     @Body() body: { refresh_token: string },
   ): Promise<ClientAuthResponseDto> {

@@ -45,6 +45,13 @@ jest.mock('util', () => ({
     // The actual mocks are configured in the tests
     return jest.fn();
   },
+  inspect: (obj: any) => {
+    // Simple inspect mock for logger compatibility
+    if (obj instanceof Error) {
+      return `Error: ${obj.message}`;
+    }
+    return String(obj);
+  },
 }));
 
 describe('TelegramVoiceService', () => {

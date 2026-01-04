@@ -10,6 +10,7 @@ import { TelegramAdminCallbackService } from './services/telegram-admin-callback
 import { TelegramSprint3Service } from './services/telegram-sprint3.service';
 import { TelegramTaskOperationsService } from './services/telegram-task-operations.service';
 import { TelegramDataCommandsService } from './services/telegram-data-commands.service';
+import { TelegramNlpService } from './services/telegram-nlp.service';
 import { TelegramUIService } from './services/telegram-ui.service';
 import { TelegramUtilitiesService } from './services/telegram-utilities.service';
 
@@ -22,6 +23,7 @@ import { TelegramMessageLog } from '../shared/entities/telegram-message-log.enti
 import { TelegramInfrastructureModule } from '../infrastructure/telegram-infrastructure.module';
 import { TelegramMediaModule } from '../media/telegram-media.module';
 import { TelegramManagersModule } from '../managers/telegram-managers.module';
+import { TelegramUiModule } from '../ui/telegram-ui.module';
 
 // External modules
 import { TasksModule } from '../../tasks/tasks.module';
@@ -32,6 +34,7 @@ import { IncidentsModule } from '../../incidents/incidents.module';
 import { TransactionsModule } from '../../transactions/transactions.module';
 import { InventoryModule } from '../../inventory/inventory.module';
 import { AccessRequestsModule } from '../../access-requests/access-requests.module';
+import { AuditLogModule } from '../../audit-logs/audit-log.module';
 
 /**
  * Telegram Core Module
@@ -61,6 +64,7 @@ import { AccessRequestsModule } from '../../access-requests/access-requests.modu
     TelegramInfrastructureModule,
     TelegramMediaModule,
     TelegramManagersModule,
+    TelegramUiModule,
     // External modules with forwardRef for circular dependencies
     forwardRef(() => TasksModule),
     FilesModule,
@@ -70,6 +74,7 @@ import { AccessRequestsModule } from '../../access-requests/access-requests.modu
     forwardRef(() => TransactionsModule),
     forwardRef(() => InventoryModule),
     AccessRequestsModule,
+    AuditLogModule,
   ],
   providers: [
     TelegramBotService,
@@ -80,6 +85,7 @@ import { AccessRequestsModule } from '../../access-requests/access-requests.modu
     TelegramSprint3Service,
     TelegramTaskOperationsService,
     TelegramDataCommandsService,
+    TelegramNlpService,
     TelegramUIService,
     TelegramUtilitiesService,
   ],
@@ -92,6 +98,7 @@ import { AccessRequestsModule } from '../../access-requests/access-requests.modu
     TelegramSprint3Service,
     TelegramTaskOperationsService,
     TelegramDataCommandsService,
+    TelegramNlpService,
     TelegramUIService,
     TelegramUtilitiesService,
   ],

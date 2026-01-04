@@ -11,6 +11,7 @@ import { IncidentStatus } from '../../../incidents/entities/incident.entity';
 import { TransactionsService } from '../../../transactions/transactions.service';
 import { InventoryService } from '../../../inventory/inventory.service';
 import { TaskStatus } from '../../../tasks/entities/task.entity';
+import { TelegramCacheService } from '../../infrastructure/services/telegram-cache.service';
 import { startOfDay, endOfDay } from 'date-fns';
 import {
   TelegramTaskInfo,
@@ -63,6 +64,7 @@ export class TelegramDataCommandsService {
     private readonly incidentsService: IncidentsService,
     private readonly transactionsService: TransactionsService,
     private readonly inventoryService: InventoryService,
+    private readonly cacheService: TelegramCacheService,
   ) {}
 
   /**
@@ -93,6 +95,8 @@ export class TelegramDataCommandsService {
 
   /**
    * Handler for /machines command - shows list of machines
+   *
+   * Uses caching to improve response time (5 min TTL)
    */
   async handleMachinesCommand(ctx: BotContext): Promise<void> {
     await this.logMessage(ctx, TelegramMessageType.COMMAND, '/machines');
@@ -108,14 +112,20 @@ export class TelegramDataCommandsService {
     // Show loading indicator
     await ctx.replyWithChatAction('typing');
 
-    // Fetch actual machines from database
-    const machines = await this.machinesService.findAllSimple();
-    const formattedMachines = machines.map((machine, index) => ({
-      id: index + 1, // Use sequential ID for display
-      name: machine.machine_number,
-      status: machine.status === 'active' ? 'online' : machine.status,
-      location: machine.location?.name || machine.location?.address || 'Unknown',
-    }));
+    // Fetch machines with caching
+    const formattedMachines = await this.cacheService.getOrSet<TelegramMachineInfo[]>(
+      'machines:list',
+      async () => {
+        const machines = await this.machinesService.findAllSimple();
+        return machines.map((machine, index) => ({
+          id: index + 1,
+          name: machine.machine_number,
+          status: machine.status === 'active' ? 'online' : machine.status,
+          location: machine.location?.name || machine.location?.address || 'Unknown',
+        }));
+      },
+      TelegramCacheService.TTL.MACHINES,
+    );
 
     if (!this.helpers) {
       await ctx.reply('Service not initialized');
@@ -208,6 +218,8 @@ export class TelegramDataCommandsService {
 
   /**
    * Handler for /stats command - shows statistics
+   *
+   * Uses caching to improve response time (2 min TTL)
    */
   async handleStatsCommand(ctx: BotContext): Promise<void> {
     await this.logMessage(ctx, TelegramMessageType.COMMAND, '/stats');
@@ -223,47 +235,53 @@ export class TelegramDataCommandsService {
     // Show loading indicator
     await ctx.replyWithChatAction('typing');
 
-    // Fetch actual stats from database
-    const today = new Date();
-    const todayStart = startOfDay(today);
-    const todayEnd = endOfDay(today);
+    // Fetch stats with caching (2 min TTL for fresh data balance)
+    const stats = await this.cacheService.getOrSet<TelegramStatsInfo>(
+      'stats:global',
+      async () => {
+        const today = new Date();
+        const todayStart = startOfDay(today);
+        const todayEnd = endOfDay(today);
 
-    // Get all machines and count by status
-    const allMachines = await this.machinesService.findAllSimple();
-    const total_machines = allMachines.length;
-    const online = allMachines.filter((m) => m.status === MachineStatus.ACTIVE).length;
-    const offline = allMachines.filter(
-      (m) =>
-        m.status === MachineStatus.OFFLINE ||
-        m.status === MachineStatus.ERROR ||
-        m.status === MachineStatus.MAINTENANCE,
-    ).length;
+        // Get all machines and count by status
+        const allMachines = await this.machinesService.findAllSimple();
+        const total_machines = allMachines.length;
+        const online = allMachines.filter((m) => m.status === MachineStatus.ACTIVE).length;
+        const offline = allMachines.filter(
+          (m) =>
+            m.status === MachineStatus.OFFLINE ||
+            m.status === MachineStatus.ERROR ||
+            m.status === MachineStatus.MAINTENANCE,
+        ).length;
 
-    // Get today's transactions
-    const todayTransactions = await this.transactionsService.findAll(
-      undefined,
-      undefined,
-      undefined,
-      todayStart.toISOString(),
-      todayEnd.toISOString(),
+        // Get today's transactions
+        const todayTransactions = await this.transactionsService.findAll(
+          undefined,
+          undefined,
+          undefined,
+          todayStart.toISOString(),
+          todayEnd.toISOString(),
+        );
+        const today_sales = todayTransactions.length;
+        const today_revenue = todayTransactions.reduce((sum, t) => sum + Number(t.amount || 0), 0);
+
+        // Get pending tasks
+        const allTasks = await this.tasksService.findAll(undefined);
+        const pending_tasks = allTasks.filter(
+          (t) => t.status === TaskStatus.PENDING || t.status === TaskStatus.ASSIGNED,
+        ).length;
+
+        return {
+          total_machines,
+          online,
+          offline,
+          today_sales,
+          today_revenue: Math.round(today_revenue),
+          pending_tasks,
+        };
+      },
+      TelegramCacheService.TTL.STATS,
     );
-    const today_sales = todayTransactions.length;
-    const today_revenue = todayTransactions.reduce((sum, t) => sum + Number(t.amount || 0), 0);
-
-    // Get pending tasks
-    const allTasks = await this.tasksService.findAll(undefined);
-    const pending_tasks = allTasks.filter(
-      (t) => t.status === TaskStatus.PENDING || t.status === TaskStatus.ASSIGNED,
-    ).length;
-
-    const stats = {
-      total_machines,
-      online,
-      offline,
-      today_sales,
-      today_revenue: Math.round(today_revenue),
-      pending_tasks,
-    };
 
     if (!this.helpers) {
       await ctx.reply('Service not initialized');

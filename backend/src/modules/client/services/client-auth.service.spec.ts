@@ -3,10 +3,41 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { UnauthorizedException, BadRequestException } from '@nestjs/common';
+import * as crypto from 'crypto';
 import { ClientAuthService } from './client-auth.service';
 import { ClientUser } from '../entities/client-user.entity';
 import { ClientLoyaltyAccount } from '../entities/client-loyalty-account.entity';
 import { ClientLanguage } from '../dto/client-auth.dto';
+
+// Helper to generate valid Telegram initData
+function generateValidInitData(botToken: string, userId: number = 123456): string {
+  const userData = JSON.stringify({ id: userId, first_name: 'Test' });
+  const authDate = Math.floor(Date.now() / 1000).toString();
+
+  const params = new URLSearchParams();
+  params.set('user', userData);
+  params.set('auth_date', authDate);
+
+  // Sort params alphabetically and create data check string
+  const dataCheckString = Array.from(params.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([key, value]) => `${key}=${value}`)
+    .join('\n');
+
+  // Calculate proper hash
+  const secretKey = crypto
+    .createHmac('sha256', 'WebAppData')
+    .update(botToken)
+    .digest();
+
+  const hash = crypto
+    .createHmac('sha256', secretKey)
+    .update(dataCheckString)
+    .digest('hex');
+
+  params.set('hash', hash);
+  return params.toString();
+}
 
 describe('ClientAuthService', () => {
   let service: ClientAuthService;
@@ -52,9 +83,8 @@ describe('ClientAuthService', () => {
   it('should be defined', () => expect(service).toBeDefined());
 
   describe('authenticateTelegram', () => {
-    const validInitData = 'user=%7B%22id%22%3A123456%2C%22first_name%22%3A%22Test%22%7D&auth_date=' + Math.floor(Date.now() / 1000) + '&hash=test';
-
     it('should authenticate existing user', async () => {
+      const validInitData = generateValidInitData('test-bot-token', 123456);
       const result = await service.authenticateTelegram({ initData: validInitData });
       expect(result.access_token).toBeDefined();
       expect(result.user).toBeDefined();
@@ -62,6 +92,7 @@ describe('ClientAuthService', () => {
 
     it('should create new user if not exists', async () => {
       mockUserRepo.findOne.mockResolvedValueOnce(null);
+      const validInitData = generateValidInitData('test-bot-token', 123456);
       const result = await service.authenticateTelegram({ initData: validInitData });
       expect(mockUserRepo.create).toHaveBeenCalled();
       expect(result.access_token).toBeDefined();
@@ -69,6 +100,11 @@ describe('ClientAuthService', () => {
 
     it('should throw UnauthorizedException for invalid initData', async () => {
       await expect(service.authenticateTelegram({ initData: '' })).rejects.toThrow(UnauthorizedException);
+    });
+
+    it('should throw UnauthorizedException for invalid hash', async () => {
+      const invalidInitData = 'user=%7B%22id%22%3A123456%7D&auth_date=' + Math.floor(Date.now() / 1000) + '&hash=invalid';
+      await expect(service.authenticateTelegram({ initData: invalidInitData })).rejects.toThrow(UnauthorizedException);
     });
   });
 

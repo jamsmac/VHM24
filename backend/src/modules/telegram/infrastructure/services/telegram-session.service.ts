@@ -1,5 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { createClient, RedisClientType } from 'redis';
+import {
+  TELEGRAM_SESSION_TTL,
+  TELEGRAM_SESSION_PREFIX,
+} from '../../shared/constants/telegram.constants';
 
 /**
  * Conversation states for step-by-step dialogs
@@ -14,6 +18,11 @@ export enum ConversationState {
   INCIDENT_TYPE_SELECTION = 'incident_type_selection',
   INCIDENT_MACHINE_SELECTION = 'incident_machine_selection',
   INCIDENT_DESCRIPTION_INPUT = 'incident_description_input',
+  // Sprint 3: Sales entry states
+  SALES_MACHINE_SELECTION = 'sales_machine_selection',
+  SALES_AMOUNT_INPUT = 'sales_amount_input',
+  SALES_PAYMENT_METHOD = 'sales_payment_method',
+  SALES_CONFIRMATION = 'sales_confirmation',
 }
 
 /**
@@ -46,8 +55,8 @@ export interface UserSession {
 export class TelegramSessionService {
   private readonly logger = new Logger(TelegramSessionService.name);
   private redisClient: RedisClientType;
-  private readonly SESSION_TTL = 3600; // 1 hour in seconds
-  private readonly SESSION_PREFIX = 'telegram:session:';
+  private readonly SESSION_TTL = TELEGRAM_SESSION_TTL; // Use constant (24 hours)
+  private readonly SESSION_PREFIX = TELEGRAM_SESSION_PREFIX;
 
   async onModuleInit() {
     try {
@@ -342,5 +351,84 @@ export class TelegramSessionService {
     } catch (error) {
       this.logger.error('Error cleaning up expired sessions', error);
     }
+  }
+
+  // ========================================
+  // Health Check Methods
+  // ========================================
+
+  /**
+   * Check Redis connection health
+   *
+   * @returns Health status object with connection state and latency
+   */
+  async healthCheck(): Promise<{
+    status: 'healthy' | 'unhealthy' | 'degraded';
+    connected: boolean;
+    latencyMs?: number;
+    error?: string;
+    sessionCount?: number;
+  }> {
+    if (!this.redisClient) {
+      return {
+        status: 'unhealthy',
+        connected: false,
+        error: 'Redis client not initialized',
+      };
+    }
+
+    if (!this.redisClient.isOpen) {
+      return {
+        status: 'unhealthy',
+        connected: false,
+        error: 'Redis connection closed',
+      };
+    }
+
+    try {
+      // Measure ping latency
+      const startTime = Date.now();
+      await this.redisClient.ping();
+      const latencyMs = Date.now() - startTime;
+
+      // Count active sessions
+      let sessionCount = 0;
+      try {
+        const pattern = `${this.SESSION_PREFIX}*`;
+        for await (const _ of this.redisClient.scanIterator({ MATCH: pattern, COUNT: 100 })) {
+          sessionCount++;
+        }
+      } catch {
+        // Session count is optional, don't fail health check
+      }
+
+      // Check latency threshold (>100ms is degraded)
+      const status = latencyMs > 100 ? 'degraded' : 'healthy';
+
+      return {
+        status,
+        connected: true,
+        latencyMs,
+        sessionCount,
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error('Redis health check failed', error);
+
+      return {
+        status: 'unhealthy',
+        connected: false,
+        error: errorMessage,
+      };
+    }
+  }
+
+  /**
+   * Check if Redis is available for session operations
+   *
+   * @returns True if Redis is connected and operational
+   */
+  isHealthy(): boolean {
+    return this.redisClient?.isOpen ?? false;
   }
 }

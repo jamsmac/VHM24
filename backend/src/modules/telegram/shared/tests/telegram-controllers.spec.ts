@@ -55,6 +55,32 @@ describe('Telegram Controllers', () => {
           message: 'Test message',
         });
       });
+
+      it('should propagate service errors', async () => {
+        const dto = { user_id: 'user-123', message: 'Test message' };
+        telegramNotificationsService.sendNotification.mockRejectedValue(
+          new Error('User not linked to Telegram'),
+        );
+
+        await expect(controller.sendNotification(dto as any)).rejects.toThrow(
+          'User not linked to Telegram',
+        );
+      });
+
+      it('should handle empty message', async () => {
+        const dto = { user_id: 'user-123', message: '' };
+        telegramNotificationsService.sendNotification.mockResolvedValue(undefined);
+
+        const result = await controller.sendNotification(dto as any);
+
+        expect(result).toEqual({ message: 'Notification sent successfully' });
+        expect(telegramNotificationsService.sendNotification).toHaveBeenCalledWith({
+          userId: 'user-123',
+          type: 'custom',
+          title: 'Test Notification',
+          message: '',
+        });
+      });
     });
 
     describe('sendTestNotification', () => {
@@ -77,6 +103,15 @@ describe('Telegram Controllers', () => {
             }),
           ]),
         });
+      });
+
+      it('should propagate service errors for test notification', async () => {
+        const dto = { user_id: 'nonexistent-user' };
+        telegramNotificationsService.sendNotification.mockRejectedValue(
+          new Error('User not found'),
+        );
+
+        await expect(controller.sendTestNotification(dto)).rejects.toThrow('User not found');
       });
     });
   });
@@ -189,6 +224,38 @@ describe('Telegram Controllers', () => {
         const result = await controller.updateSettings(dto as any);
 
         expect(result.bot_token).toBeNull();
+      });
+
+      it('should propagate update errors', async () => {
+        const dto = { bot_token: 'invalid-token' };
+        telegramSettingsService.updateSettings.mockRejectedValue(
+          new Error('Invalid bot token format'),
+        );
+
+        await expect(controller.updateSettings(dto as any)).rejects.toThrow(
+          'Invalid bot token format',
+        );
+      });
+    });
+
+    describe('getSettings - edge cases', () => {
+      it('should handle short bot token', async () => {
+        const mockSettings = {
+          id: 'settings-123',
+          bot_token: '12345',
+          bot_username: '@testbot',
+        };
+        telegramSettingsService.getSettings.mockResolvedValue(mockSettings as any);
+
+        const result = await controller.getSettings();
+
+        expect(result.bot_token).toBe('12345...');
+      });
+
+      it('should propagate service errors', async () => {
+        telegramSettingsService.getSettings.mockRejectedValue(new Error('Database error'));
+
+        await expect(controller.getSettings()).rejects.toThrow('Database error');
       });
     });
   });
@@ -350,6 +417,72 @@ describe('Telegram Controllers', () => {
 
         expect(result).toEqual({ message: 'Telegram user deleted successfully' });
         expect(telegramUsersService.delete).toHaveBeenCalledWith('tg-user-123');
+      });
+
+      it('should propagate delete errors', async () => {
+        telegramUsersService.delete.mockRejectedValue(new Error('User not found'));
+
+        await expect(controller.delete('nonexistent-id')).rejects.toThrow('User not found');
+      });
+    });
+
+    describe('error handling', () => {
+      it('should propagate findAll errors', async () => {
+        telegramUsersService.findAll.mockRejectedValue(new Error('Database connection failed'));
+
+        await expect(controller.findAll()).rejects.toThrow('Database connection failed');
+      });
+
+      it('should propagate findOne errors', async () => {
+        telegramUsersService.findOne.mockRejectedValue(new Error('User not found'));
+
+        await expect(controller.findOne('nonexistent-id')).rejects.toThrow('User not found');
+      });
+
+      it('should propagate update errors', async () => {
+        const dto = { first_name: 'Updated' };
+        telegramUsersService.update.mockRejectedValue(new Error('Update failed'));
+
+        await expect(controller.update('tg-user-123', dto as any)).rejects.toThrow('Update failed');
+      });
+
+      it('should propagate generateVerificationCode errors', async () => {
+        telegramUsersService.generateVerificationCode.mockRejectedValue(
+          new Error('Already has active code'),
+        );
+
+        await expect(controller.generateVerificationCode(mockRequest)).rejects.toThrow(
+          'Already has active code',
+        );
+      });
+
+      it('should propagate unlinkAccount errors', async () => {
+        telegramUsersService.unlinkAccount.mockRejectedValue(new Error('No account to unlink'));
+
+        await expect(controller.unlinkMyAccount(mockRequest)).rejects.toThrow(
+          'No account to unlink',
+        );
+      });
+
+      it('should propagate getStatistics errors', async () => {
+        telegramUsersService.getStatistics.mockRejectedValue(new Error('Stats unavailable'));
+
+        await expect(controller.getStatistics()).rejects.toThrow('Stats unavailable');
+      });
+    });
+
+    describe('getMyTelegramAccount - edge cases', () => {
+      it('should return unverified account status', async () => {
+        const unverifiedUser = { ...mockTelegramUser, is_verified: false };
+        telegramUsersService.findByUserId.mockResolvedValue(unverifiedUser as TelegramUser);
+
+        const result = await controller.getMyTelegramAccount(mockRequest);
+
+        expect(result).toEqual({
+          linked: true,
+          verified: false,
+          telegram_user: unverifiedUser,
+        });
       });
     });
   });

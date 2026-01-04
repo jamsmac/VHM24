@@ -12,8 +12,11 @@ import { TelegramAdminCallbackService } from './telegram-admin-callback.service'
 import { TelegramSprint3Service } from './telegram-sprint3.service';
 import { TelegramTaskOperationsService } from './telegram-task-operations.service';
 import { TelegramDataCommandsService } from './telegram-data-commands.service';
+import { TelegramNlpService } from './telegram-nlp.service';
 import { TelegramUIService } from './telegram-ui.service';
 import { TelegramUtilitiesService } from './telegram-utilities.service';
+import { TelegramLocationService } from '../../media/services/telegram-location.service';
+import { TelegramSalesService } from '../../commerce/services/telegram-sales.service';
 import { UserRole } from '../../../users/entities/user.entity';
 import { TelegramMessageOptions } from '../../shared/types/telegram.types';
 
@@ -41,8 +44,11 @@ export class TelegramBotService implements OnModuleInit {
     private readonly sprint3Service: TelegramSprint3Service,
     private readonly taskOperationsService: TelegramTaskOperationsService,
     private readonly dataCommandsService: TelegramDataCommandsService,
+    private readonly nlpService: TelegramNlpService,
     private readonly uiService: TelegramUIService,
     private readonly utilitiesService: TelegramUtilitiesService,
+    private readonly locationService: TelegramLocationService,
+    private readonly salesService: TelegramSalesService,
   ) {}
 
   async onModuleInit() {
@@ -160,6 +166,23 @@ export class TelegramBotService implements OnModuleInit {
         getTasksKeyboard: this.uiService.getTasksKeyboard.bind(this.uiService),
       });
 
+      // Initialize NLP service with helper methods
+      this.nlpService.setHelpers({
+        t: this.uiService.t.bind(this.uiService),
+        logMessage: this.utilitiesService.logMessage.bind(this.utilitiesService),
+      });
+
+      // Initialize Location service with helper methods
+      this.locationService.setHelpers({
+        t: this.uiService.t.bind(this.uiService),
+        logMessage: this.utilitiesService.logMessage.bind(this.utilitiesService),
+      });
+
+      // Initialize Sales service with helper methods
+      this.salesService.setHelpers({
+        t: this.uiService.t.bind(this.uiService),
+      });
+
       this.setupCommands();
       this.setupCallbacks();
       await this.setupBotMenu();
@@ -186,10 +209,12 @@ export class TelegramBotService implements OnModuleInit {
           { command: 'start', description: '🏠 Главное меню' },
           { command: 'tasks', description: '📋 Мои задачи' },
           { command: 'machines', description: '🖥 Аппараты' },
+          { command: 'nearby', description: '📍 Ближайшие задачи' },
+          { command: 'ask', description: '❓ Задать вопрос' },
+          { command: 'sales', description: '💰 Регистрация продажи' },
           { command: 'stock', description: '📦 Остатки на машине' },
           { command: 'incident', description: '⚠️ Создать инцидент' },
           { command: 'stats', description: '📊 Статистика' },
-          { command: 'alerts', description: '🔔 Уведомления' },
           { command: 'staff', description: '👥 Статус сотрудников' },
           { command: 'language', description: '🌐 Сменить язык' },
           { command: 'help', description: '❓ Справка' },
@@ -203,10 +228,12 @@ export class TelegramBotService implements OnModuleInit {
           { command: 'start', description: '🏠 Main menu' },
           { command: 'tasks', description: '📋 My tasks' },
           { command: 'machines', description: '🖥 Machines' },
+          { command: 'nearby', description: '📍 Nearby tasks' },
+          { command: 'ask', description: '❓ Ask a question' },
+          { command: 'sales', description: '💰 Register sale' },
           { command: 'stock', description: '📦 Machine inventory' },
           { command: 'incident', description: '⚠️ Report incident' },
           { command: 'stats', description: '📊 Statistics' },
-          { command: 'alerts', description: '🔔 Alerts' },
           { command: 'staff', description: '👥 Staff status' },
           { command: 'language', description: '🌐 Change language' },
           { command: 'help', description: '❓ Help' },
@@ -325,6 +352,35 @@ export class TelegramBotService implements OnModuleInit {
     // Report command - daily photo report
     this.bot.command('report', async (ctx) => {
       await this.sprint3Service.handleReportCommand(ctx);
+    });
+
+    // ============================================================================
+    // SPRINT 3+: NLP AND LOCATION COMMANDS
+    // ============================================================================
+
+    // Ask command - natural language queries
+    this.bot.command('ask', async (ctx) => {
+      await this.nlpService.handleAskCommand(ctx);
+    });
+
+    // Nearby command - find nearby tasks
+    this.bot.command('nearby', async (ctx) => {
+      await this.locationService.handleNearbyCommand(ctx);
+    });
+
+    // Route command - show route to tasks
+    this.bot.command('route', async (ctx) => {
+      await this.locationService.handleRouteCommand(ctx);
+    });
+
+    // Sales command - register sales
+    this.bot.command('sales', async (ctx) => {
+      await this.salesService.handleSalesCommand(ctx);
+    });
+
+    // Location handler
+    this.bot.on('location', async (ctx) => {
+      await this.locationService.handleLocationMessage(ctx);
     });
   }
 
@@ -493,6 +549,65 @@ export class TelegramBotService implements OnModuleInit {
     // Cancel incident creation
     this.bot.action('incident_cancel', async (ctx) => {
       await this.sprint3Service.handleIncidentCancelCallback(ctx);
+    });
+
+    // ============================================================================
+    // SPRINT 3+: NLP AND LOCATION CALLBACKS
+    // ============================================================================
+
+    // Ask help callback
+    this.bot.action('ask_help', async (ctx) => {
+      await this.nlpService.handleAskHelpCallback(ctx);
+    });
+
+    // Start nearest task callback
+    this.bot.action(/^start_nearest_(.+)$/, async (ctx) => {
+      const taskId = ctx.match[1];
+      await this.locationService.handleStartNearestCallback(ctx, taskId);
+    });
+
+    // Show route callback
+    this.bot.action('show_route', async (ctx) => {
+      await this.locationService.handleShowRouteCallback(ctx);
+    });
+
+    // ============================================================================
+    // SALES CALLBACKS
+    // ============================================================================
+
+    // Sales machine selection
+    this.bot.action(/^sales_machine_(.+)$/, async (ctx) => {
+      const machineId = ctx.match[1];
+      await this.salesService.handleMachineSelection(ctx, machineId);
+    });
+
+    // Sales payment method selection
+    this.bot.action(/^sales_payment_(.+)$/, async (ctx) => {
+      const method = ctx.match[1];
+      await this.salesService.handlePaymentMethodSelection(ctx, method);
+    });
+
+    // Sales confirmation
+    this.bot.action('sales_confirm', async (ctx) => {
+      await this.salesService.handleSaleConfirmation(ctx);
+    });
+
+    // Sales cancel
+    this.bot.action('sales_cancel', async (ctx) => {
+      await this.salesService.handleCancel(ctx);
+    });
+
+    // Sales back navigation
+    this.bot.action('sales_back_machine', async (ctx) => {
+      await this.salesService.handleBack(ctx, 'machine');
+    });
+
+    this.bot.action('sales_back_amount', async (ctx) => {
+      await this.salesService.handleBack(ctx, 'amount');
+    });
+
+    this.bot.action('sales_back_payment', async (ctx) => {
+      await this.salesService.handleBack(ctx, 'payment');
     });
   }
 

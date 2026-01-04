@@ -8,6 +8,7 @@ import { MachinesService } from '../../../machines/machines.service';
 import { IncidentsService } from '../../../incidents/incidents.service';
 import { TransactionsService } from '../../../transactions/transactions.service';
 import { InventoryService } from '../../../inventory/inventory.service';
+import { TelegramCacheService } from '../../infrastructure/services/telegram-cache.service';
 import { MachineStatus } from '../../../machines/entities/machine.entity';
 import { IncidentStatus } from '../../../incidents/entities/incident.entity';
 import { TaskStatus, TaskType } from '../../../tasks/entities/task.entity';
@@ -21,6 +22,7 @@ describe('TelegramDataCommandsService', () => {
   let incidentsService: jest.Mocked<IncidentsService>;
   let transactionsService: jest.Mocked<TransactionsService>;
   let inventoryService: jest.Mocked<InventoryService>;
+  let cacheService: jest.Mocked<TelegramCacheService>;
 
   const mockTelegramUser: Partial<TelegramUser> = {
     id: 'tg-user-1',
@@ -147,6 +149,17 @@ describe('TelegramDataCommandsService', () => {
             getMachinesLowStock: jest.fn(),
           },
         },
+        {
+          provide: TelegramCacheService,
+          useValue: {
+            get: jest.fn().mockResolvedValue(null),
+            set: jest.fn().mockResolvedValue(undefined),
+            invalidate: jest.fn().mockResolvedValue(undefined),
+            getOrSet: jest.fn().mockImplementation(async (_key: string, factory: () => Promise<any>) => {
+              return await factory();
+            }),
+          },
+        },
       ],
     }).compile();
 
@@ -157,6 +170,7 @@ describe('TelegramDataCommandsService', () => {
     incidentsService = module.get(IncidentsService);
     transactionsService = module.get(TransactionsService);
     inventoryService = module.get(InventoryService);
+    cacheService = module.get(TelegramCacheService);
 
     // Initialize helpers
     service.setHelpers(mockHelpers);
@@ -183,6 +197,7 @@ describe('TelegramDataCommandsService', () => {
         incidentsService,
         transactionsService,
         inventoryService,
+        cacheService,
       );
       expect(() => newService.setHelpers(mockHelpers)).not.toThrow();
     });
@@ -248,6 +263,7 @@ describe('TelegramDataCommandsService', () => {
         incidentsService,
         transactionsService,
         inventoryService,
+        cacheService,
       );
       const ctx = createMockCtx();
       machinesService.findAllSimple.mockResolvedValue([mockMachine as any]);
@@ -476,6 +492,7 @@ describe('TelegramDataCommandsService', () => {
         incidentsService,
         transactionsService,
         inventoryService,
+        cacheService,
       );
       const ctx = createMockCtx();
       incidentsService.findAll.mockResolvedValue([]);
@@ -743,6 +760,7 @@ describe('TelegramDataCommandsService', () => {
         incidentsService,
         transactionsService,
         inventoryService,
+        cacheService,
       );
       const ctx = createMockCtx();
 
@@ -947,6 +965,7 @@ describe('TelegramDataCommandsService', () => {
         incidentsService,
         transactionsService,
         inventoryService,
+        cacheService,
       );
       const ctx = createMockCtx();
       usersService.findByTelegramId.mockResolvedValue(mockUser as any);
@@ -1012,6 +1031,7 @@ describe('TelegramDataCommandsService', () => {
         incidentsService,
         transactionsService,
         inventoryService,
+        cacheService,
       );
       const ctx = createMockCtx(mockUnverifiedTelegramUser);
 
@@ -1034,6 +1054,7 @@ describe('TelegramDataCommandsService', () => {
         incidentsService,
         transactionsService,
         inventoryService,
+        cacheService,
       );
       const ctx = createMockCtx(mockUnverifiedTelegramUser);
 

@@ -1,15 +1,19 @@
-import { Module, forwardRef } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { CartStorageService } from './services/cart-storage.service';
+import { TelegramSalesService } from './services/telegram-sales.service';
 import { CatalogHandler } from './handlers/catalog.handler';
 import { CartHandler } from './handlers/cart.handler';
 
 import { Material } from '../../requests/entities/material.entity';
 import { TelegramInfrastructureModule } from '../infrastructure/telegram-infrastructure.module';
-import { TelegramModule } from '../telegram.module';
+import { TelegramNotificationsModule } from '../notifications/telegram-notifications.module';
+import { TelegramI18nModule } from '../i18n/telegram-i18n.module';
 import { UsersModule } from '../../users/users.module';
 import { RequestsModule } from '../../requests/requests.module';
+import { MachinesModule } from '../../machines/machines.module';
+import { TransactionsModule } from '../../transactions/transactions.module';
 
 /**
  * Telegram Commerce Module
@@ -18,6 +22,7 @@ import { RequestsModule } from '../../requests/requests.module';
  * - Material catalog browsing
  * - Cart management (Redis-backed, 24h TTL)
  * - Request checkout flow
+ * - Sales entry via Telegram (/sales command)
  *
  * @module TelegramCommerceModule
  */
@@ -25,11 +30,14 @@ import { RequestsModule } from '../../requests/requests.module';
   imports: [
     TypeOrmModule.forFeature([Material]),
     TelegramInfrastructureModule,
-    forwardRef(() => TelegramModule), // For TelegramNotificationsService
+    TelegramNotificationsModule,
+    TelegramI18nModule,
     UsersModule,
     RequestsModule,
+    MachinesModule,
+    TransactionsModule,
   ],
-  providers: [CartStorageService, CatalogHandler, CartHandler],
-  exports: [CartStorageService, CatalogHandler, CartHandler],
+  providers: [CartStorageService, TelegramSalesService, CatalogHandler, CartHandler],
+  exports: [CartStorageService, TelegramSalesService, CatalogHandler, CartHandler],
 })
 export class TelegramCommerceModule {}

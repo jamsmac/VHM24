@@ -11,6 +11,7 @@ const mockRedisClient = {
   setEx: jest.fn().mockResolvedValue(undefined),
   del: jest.fn().mockResolvedValue(undefined),
   scanIterator: jest.fn(),
+  ping: jest.fn().mockResolvedValue('PONG'),
 };
 
 jest.mock('redis', () => ({
@@ -166,7 +167,7 @@ describe('TelegramSessionService', () => {
 
       expect(mockRedisClient.setEx).toHaveBeenCalledWith(
         'telegram:session:user-uuid',
-        3600,
+        86400,
         expect.any(String),
       );
     });
@@ -537,6 +538,116 @@ describe('TelegramSessionService', () => {
 
       // Should not call del since there's no data
       expect(mockRedisClient.del).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('healthCheck', () => {
+    it('should return healthy status when Redis is connected with low latency', async () => {
+      mockRedisClient.ping.mockResolvedValue('PONG');
+      mockRedisClient.scanIterator = jest.fn().mockReturnValue(
+        (async function* () {
+          yield 'telegram:session:user1';
+          yield 'telegram:session:user2';
+        })(),
+      );
+
+      const result = await service.healthCheck();
+
+      expect(result.status).toBe('healthy');
+      expect(result.connected).toBe(true);
+      expect(result.latencyMs).toBeDefined();
+      expect(result.latencyMs).toBeLessThan(100);
+      expect(result.sessionCount).toBe(2);
+    });
+
+    it('should return degraded status when latency is high', async () => {
+      // Mock high latency by delaying ping
+      mockRedisClient.ping.mockImplementation(
+        () => new Promise((resolve) => setTimeout(() => resolve('PONG'), 150)),
+      );
+      mockRedisClient.scanIterator = jest.fn().mockReturnValue((async function* () {})());
+
+      const result = await service.healthCheck();
+
+      expect(result.status).toBe('degraded');
+      expect(result.connected).toBe(true);
+      expect(result.latencyMs).toBeGreaterThan(100);
+    });
+
+    it('should return unhealthy when Redis client is not initialized', async () => {
+      // Create a fresh service without initialization
+      const freshService = Object.create(TelegramSessionService.prototype);
+      // Access private property for testing
+      (freshService as any).redisClient = null;
+
+      const result = await freshService.healthCheck();
+
+      expect(result.status).toBe('unhealthy');
+      expect(result.connected).toBe(false);
+      expect(result.error).toBe('Redis client not initialized');
+    });
+
+    it('should return unhealthy when Redis connection is closed', async () => {
+      mockRedisClient.isOpen = false;
+
+      const result = await service.healthCheck();
+
+      expect(result.status).toBe('unhealthy');
+      expect(result.connected).toBe(false);
+      expect(result.error).toBe('Redis connection closed');
+    });
+
+    it('should return unhealthy when ping fails', async () => {
+      mockRedisClient.isOpen = true;
+      mockRedisClient.ping.mockRejectedValue(new Error('Connection refused'));
+
+      const result = await service.healthCheck();
+
+      expect(result.status).toBe('unhealthy');
+      expect(result.connected).toBe(false);
+      expect(result.error).toBe('Connection refused');
+    });
+
+    it('should continue health check even if session count fails', async () => {
+      mockRedisClient.ping.mockResolvedValue('PONG');
+      mockRedisClient.scanIterator = jest.fn().mockImplementation(() => {
+        throw new Error('Scan failed');
+      });
+
+      const result = await service.healthCheck();
+
+      expect(result.status).toBe('healthy');
+      expect(result.connected).toBe(true);
+      expect(result.sessionCount).toBe(0); // Returns 0 when scan fails
+    });
+  });
+
+  describe('isHealthy', () => {
+    it('should return true when Redis is connected', () => {
+      mockRedisClient.isOpen = true;
+
+      const result = service.isHealthy();
+
+      expect(result).toBe(true);
+    });
+
+    it('should return false when Redis is not connected', () => {
+      mockRedisClient.isOpen = false;
+
+      const result = service.isHealthy();
+
+      expect(result).toBe(false);
+    });
+
+    it('should return false when Redis client is null', () => {
+      // Create a fresh service without initialization
+      const freshService = Object.create(TelegramSessionService.prototype);
+      // Access private property for testing
+      (freshService as any).redisClient = null;
+
+      const result = freshService.isHealthy();
+
+      expect(result).toBe(false);
     });
   });
 });
