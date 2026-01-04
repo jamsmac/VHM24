@@ -1,0 +1,93 @@
+# Agent-Deck Configuration for VendHub Manager (VHM24)
+#
+# Copy this to ~/.agent-deck/config.toml or merge with existing config
+#
+# Usage:
+#   agent-deck add /path/to/VHM24 -c claude -n "VHM24 Development"
+#   agent-deck mcp attach <session-id> vendhub
+#
+
+# ============================================================================
+# VendHub MCP Server
+# ============================================================================
+
+[mcps.vendhub]
+command = "node"
+args = ["agent-deck/mcp-server/dist/index.js"]
+env = {
+  VHM_PROJECT_ROOT = ".",
+  VHM_API_URL = "http://localhost:3000/api",
+  # VHM_API_TOKEN = "your-jwt-token-here"
+}
+description = "VendHub Manager API - codebase analysis, testing, code generation"
+scope = "LOCAL"  # Only available in VHM24 project
+
+# ============================================================================
+# Recommended MCPs for VHM24 Development
+# ============================================================================
+
+[mcps.github]
+command = "npx"
+args = ["-y", "@modelcontextprotocol/server-github"]
+env = { GITHUB_PERSONAL_ACCESS_TOKEN = "${GITHUB_TOKEN}" }
+description = "GitHub integration for issues and PRs"
+
+[mcps.memory]
+command = "npx"
+args = ["-y", "@modelcontextprotocol/server-memory"]
+description = "Persistent memory across sessions"
+
+[mcps.sequential-thinking]
+command = "npx"
+args = ["-y", "@modelcontextprotocol/server-sequential-thinking"]
+description = "Enhanced reasoning for complex tasks"
+
+[mcps.filesystem]
+command = "npx"
+args = ["-y", "@modelcontextprotocol/server-filesystem", "--allowed-directories", "."]
+description = "File system access"
+
+# ============================================================================
+# MCP Pool Configuration (for running many sessions)
+# ============================================================================
+
+[mcp_pool]
+enabled = true
+pool_all = false
+include_mcps = ["memory", "vendhub"]  # Share these across sessions
+socket_dir = "/tmp/agent-deck-pool"
+
+# ============================================================================
+# Session Profiles for VHM24
+# ============================================================================
+
+[profiles.vhm-backend]
+mcps = ["vendhub", "github", "memory"]
+working_dir = "backend"
+description = "Backend NestJS development"
+
+[profiles.vhm-frontend]
+mcps = ["vendhub", "github", "filesystem"]
+working_dir = "frontend"
+description = "Frontend Next.js development"
+
+[profiles.vhm-mobile]
+mcps = ["vendhub", "github"]
+working_dir = "mobile"
+description = "Mobile React Native development"
+
+[profiles.vhm-full]
+mcps = ["vendhub", "github", "memory", "sequential-thinking"]
+description = "Full project access with enhanced reasoning"
+
+# ============================================================================
+# Custom Commands
+# ============================================================================
+
+[commands]
+# Quick test runner
+test = "npm run test"
+# Type checking
+types = "npm run type-check"
+# Start dev servers
+dev = "docker-compose up -d && npm run start:dev"
