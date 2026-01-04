@@ -31,6 +31,9 @@ import {
   Timer,
   KeyRound,
   Coffee,
+  Bot,
+  Terminal,
+  Sparkles,
   LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -132,6 +135,16 @@ const NAVIGATION_GROUPS: NavGroup[] = [
       { href: '/dashboard/locations', label: 'Локации', icon: MapPin },
       { href: '/dashboard/security', label: 'Безопасность', icon: Shield },
       { href: '/dashboard/settings', label: 'Система', icon: Settings },
+    ]
+  },
+  {
+    id: 'ai-tools',
+    label: 'AI Инструменты',
+    icon: Sparkles,
+    items: [
+      { href: '/dashboard/ai-assistant', label: 'AI Ассистент', icon: Bot },
+      { href: '/dashboard/agents', label: 'Агенты', icon: Terminal },
+      { href: '/dashboard/settings/ai-providers', label: 'AI Провайдеры', icon: Sparkles },
     ]
   }
 ]
