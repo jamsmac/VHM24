@@ -36,6 +36,6 @@ import { Container } from './entities/container.entity';
   imports: [TypeOrmModule.forFeature([Container])],
   controllers: [ContainersController],
   providers: [ContainersService],
-  exports: [ContainersService],
+  exports: [ContainersService, TypeOrmModule],
 })
 export class ContainersModule {}
