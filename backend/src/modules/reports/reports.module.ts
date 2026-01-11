@@ -5,6 +5,7 @@ import { RedisCacheModule } from '@/common/cache/redis-cache.module';
 import { ReportsService } from './reports.service';
 import { ReportsController } from './reports.controller';
 import { PdfGeneratorService } from './pdf-generator.service';
+import { PrincePdfService } from './prince-pdf.service';
 import { ReportsCacheInterceptor } from './interceptors/cache.interceptor';
 import { NetworkSummaryService } from './services/network-summary.service';
 import { ProfitLossService } from './services/profit-loss.service';
@@ -67,6 +68,7 @@ import { InventoryBatch } from '../warehouse/entities/inventory-batch.entity';
   providers: [
     ReportsService,
     PdfGeneratorService,
+    PrincePdfService,
     NetworkSummaryService,
     ProfitLossService,
     CashFlowService,
@@ -91,6 +93,7 @@ import { InventoryBatch } from '../warehouse/entities/inventory-batch.entity';
   exports: [
     ReportsService,
     PdfGeneratorService,
+    PrincePdfService,
     NetworkSummaryService,
     ProfitLossService,
     CashFlowService,
