@@ -51,6 +51,10 @@ updates:
     labels:
       - "dependencies"
       - "frontend"
+    ignore:
+      # Tailwind CSS v4 requires full migration, stay on v3.x
+      - dependency-name: "tailwindcss"
+        update-types: ["version-update:semver-major"]
     groups:
       production-dependencies:
         patterns:
