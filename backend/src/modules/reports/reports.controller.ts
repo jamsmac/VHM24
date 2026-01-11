@@ -8,6 +8,8 @@ import {
 } from './interceptors/cache.interceptor';
 import { ReportsService } from './reports.service';
 import { PdfGeneratorService } from './pdf-generator.service';
+import { PrincePdfService } from './prince-pdf.service';
+import { generateDashboardReportHtml } from './templates/report-template';
 import { NetworkSummaryService } from './services/network-summary.service';
 import { ProfitLossService } from './services/profit-loss.service';
 import { CashFlowService } from './services/cash-flow.service';
@@ -36,6 +38,7 @@ export class ReportsController {
   constructor(
     private readonly reportsService: ReportsService,
     private readonly pdfGeneratorService: PdfGeneratorService,
+    private readonly princePdfService: PrincePdfService,
     private readonly networkSummaryService: NetworkSummaryService,
     private readonly profitLossService: ProfitLossService,
     private readonly cashFlowService: CashFlowService,
@@ -115,6 +118,34 @@ export class ReportsController {
   async downloadDashboardPDF(@Query() filters: ReportFiltersDto, @Res() res: Response) {
     const data = await this.reportsService.getDashboard(filters);
     await this.pdfGeneratorService.generateDashboardReport(data, res);
+  }
+
+  @Get('dashboard/pdf-html')
+  @ApiOperation({ summary: 'Скачать дашборд как PDF (HTML/CSS через Prince XML)' })
+  @ApiResponse({
+    status: 200,
+    description: 'PDF файл дашборда, сгенерированный из HTML/CSS',
+    content: {
+      'application/pdf': {
+        schema: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
+  async downloadDashboardPDFHtml(@Query() filters: ReportFiltersDto, @Res() res: Response) {
+    const data = await this.reportsService.getDashboard(filters);
+    const html = generateDashboardReportHtml(data);
+    const filename = `dashboard-report-${new Date().toISOString().split('T')[0]}.pdf`;
+    
+    await this.princePdfService.generateFromHtml(html, res, filename, {
+      pageSize: 'A4',
+      media: 'print',
+      title: 'VendHub Manager - Dashboard Report',
+      author: 'VendHub Manager',
+      subject: 'Dashboard Report',
+    });
   }
 
   @Get('machine/:machineId/pdf')
