@@ -4,6 +4,7 @@ import { HttpStatus } from '@nestjs/common';
 import { ReportsController } from './reports.controller';
 import { ReportsService } from './reports.service';
 import { PdfGeneratorService } from './pdf-generator.service';
+import { PrincePdfService } from './prince-pdf.service';
 import { NetworkSummaryService } from './services/network-summary.service';
 import { ProfitLossService } from './services/profit-loss.service';
 import { CashFlowService } from './services/cash-flow.service';
@@ -28,6 +29,7 @@ describe('ReportsController', () => {
   let controller: ReportsController;
   let mockReportsService: jest.Mocked<ReportsService>;
   let mockPdfGeneratorService: jest.Mocked<PdfGeneratorService>;
+  let mockPrincePdfService: jest.Mocked<PrincePdfService>;
   let mockNetworkSummaryService: jest.Mocked<NetworkSummaryService>;
   let mockProfitLossService: jest.Mocked<ProfitLossService>;
   let mockCashFlowService: jest.Mocked<CashFlowService>;
@@ -67,6 +69,10 @@ describe('ReportsController', () => {
     mockPdfGeneratorService = {
       generateDashboardReport: jest.fn(),
       generateMachineReport: jest.fn(),
+    } as any;
+
+    mockPrincePdfService = {
+      generateFromHtml: jest.fn(),
     } as any;
 
     mockNetworkSummaryService = {
@@ -155,6 +161,7 @@ describe('ReportsController', () => {
       providers: [
         { provide: ReportsService, useValue: mockReportsService },
         { provide: PdfGeneratorService, useValue: mockPdfGeneratorService },
+        { provide: PrincePdfService, useValue: mockPrincePdfService },
         { provide: NetworkSummaryService, useValue: mockNetworkSummaryService },
         { provide: ProfitLossService, useValue: mockProfitLossService },
         { provide: CashFlowService, useValue: mockCashFlowService },
