@@ -417,6 +417,11 @@ export class CreateDirectoriesV2Tables1751200000000 implements MigrationInterfac
             default: 'now()',
           },
           {
+            name: 'deleted_at',
+            type: 'timestamp with time zone',
+            isNullable: true,
+          },
+          {
             name: 'created_by_id',
             type: 'uuid',
             isNullable: true,
@@ -592,7 +597,17 @@ export class CreateDirectoriesV2Tables1751200000000 implements MigrationInterfac
             default: 'now()',
           },
           {
+            name: 'deleted_at',
+            type: 'timestamp with time zone',
+            isNullable: true,
+          },
+          {
             name: 'created_by_id',
+            type: 'uuid',
+            isNullable: true,
+          },
+          {
+            name: 'updated_by_id',
             type: 'uuid',
             isNullable: true,
           },
