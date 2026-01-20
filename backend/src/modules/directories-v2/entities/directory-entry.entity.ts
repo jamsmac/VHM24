@@ -61,6 +61,7 @@ export enum ApprovalStatus {
 @Index(['status'])
 @Index(['origin'])
 @Index(['approval_status'])
+@Index(['parent_id'])
 export class DirectoryEntry extends BaseEntity {
   /**
    * Parent directory
@@ -73,6 +74,16 @@ export class DirectoryEntry extends BaseEntity {
   })
   @JoinColumn({ name: 'directory_id' })
   directory: Directory;
+
+  /**
+   * Parent entry for hierarchical directories
+   */
+  @Column({ type: 'uuid', nullable: true })
+  parent_id: string | null;
+
+  @ManyToOne(() => DirectoryEntry, { onDelete: 'SET NULL', nullable: true })
+  @JoinColumn({ name: 'parent_id' })
+  parent: DirectoryEntry | null;
 
   /**
    * Unique code within the directory (e.g., 'VM-001', 'IKPU-123')
@@ -91,6 +102,13 @@ export class DirectoryEntry extends BaseEntity {
    */
   @Column({ type: 'varchar', length: 500, nullable: true })
   name_en: string | null;
+
+  /**
+   * Normalized name for search (lowercase, trimmed, no accents)
+   * Auto-populated by database trigger
+   */
+  @Column({ type: 'text', nullable: true })
+  normalized_name: string | null;
 
   /**
    * Entry origin - official (from source) or local (manual)
@@ -190,6 +208,46 @@ export class DirectoryEntry extends BaseEntity {
    */
   @Column({ type: 'varchar', length: 64, nullable: true })
   source_data_hash: string | null;
+
+  /**
+   * Version for optimistic locking (auto-incremented on update)
+   */
+  @Column({ type: 'integer', default: 1 })
+  version: number;
+
+  /**
+   * Entry validity start date
+   */
+  @Column({ type: 'timestamp with time zone', nullable: true })
+  valid_from: Date | null;
+
+  /**
+   * Entry validity end date
+   */
+  @Column({ type: 'timestamp with time zone', nullable: true })
+  valid_to: Date | null;
+
+  /**
+   * When entry was deprecated (for OFFICIAL entries from external sources)
+   */
+  @Column({ type: 'timestamp with time zone', nullable: true })
+  deprecated_at: Date | null;
+
+  /**
+   * Recommended replacement entry for deprecated entries
+   */
+  @Column({ type: 'uuid', nullable: true })
+  replacement_entry_id: string | null;
+
+  @ManyToOne(() => DirectoryEntry, { onDelete: 'SET NULL', nullable: true })
+  @JoinColumn({ name: 'replacement_entry_id' })
+  replacement_entry: DirectoryEntry | null;
+
+  /**
+   * Tags for filtering and categorization
+   */
+  @Column({ type: 'text', array: true, nullable: true })
+  tags: string[] | null;
 
   /**
    * File attachments for this entry

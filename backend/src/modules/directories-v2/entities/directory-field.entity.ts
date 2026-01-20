@@ -197,6 +197,18 @@ export class DirectoryField extends BaseEntity {
   is_unique: boolean;
 
   /**
+   * Field must be unique within organization (for org-scoped directories)
+   */
+  @Column({ type: 'boolean', default: false })
+  is_unique_per_org: boolean;
+
+  /**
+   * Allow free text input for SELECT type fields
+   */
+  @Column({ type: 'boolean', default: false })
+  allow_free_text: boolean;
+
+  /**
    * Include in full-text search
    */
   @Column({ type: 'boolean', default: false })
@@ -249,4 +261,11 @@ export class DirectoryField extends BaseEntity {
    */
   @Column({ type: 'varchar', length: 20, nullable: true })
   table_width: string | null;
+
+  /**
+   * Translations for field display name
+   * Format: { "ru": "...", "uz": "...", "en": "..." }
+   */
+  @Column({ type: 'jsonb', nullable: true })
+  translations: Record<string, string> | null;
 }

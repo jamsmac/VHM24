@@ -184,6 +184,12 @@ export class Directory extends BaseEntity {
   sort_order: number;
 
   /**
+   * Whether directory supports hierarchical entries (parent-child)
+   */
+  @Column({ type: 'boolean', default: false })
+  is_hierarchical: boolean;
+
+  /**
    * Field definitions for this directory
    */
   @OneToMany(() => DirectoryField, (field) => field.directory, {
