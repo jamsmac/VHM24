@@ -35,6 +35,7 @@ import {
   Bot,
   Terminal,
   Sparkles,
+  Database,
   type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -130,6 +131,7 @@ const NAVIGATION_GROUPS: NavGroup[] = [
     items: [
       { name: 'Пользователи', href: '/dashboard/users', icon: Users },
       { name: 'Локации', href: '/dashboard/locations', icon: MapPin },
+      { name: 'Справочники', href: '/dashboard/directories', icon: Database },
       { name: 'Telegram', href: '/dashboard/telegram', icon: Send },
       { name: 'Аудит', href: '/dashboard/audit', icon: ScrollText },
       { name: 'Безопасность', href: '/dashboard/security', icon: Shield },
