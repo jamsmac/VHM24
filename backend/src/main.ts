@@ -1,4 +1,4 @@
-import { NestFactory } from '@nestjs/core';
+import { HttpAdapterHost, NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import helmet from 'helmet';
@@ -6,14 +6,27 @@ import * as cookieParser from 'cookie-parser';
 import * as compression from 'compression';
 import { useContainer } from 'class-validator';
 import { Request, Response, NextFunction } from 'express';
+import * as Sentry from '@sentry/node';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+import { SentryExceptionFilter } from './common/filters/sentry-exception.filter';
+import { createWinstonLogger } from './common/logger/winston.config';
 import { CorsOptions } from '@nestjs/common/interfaces/external/cors-options.interface';
 
-const logger = new Logger('Bootstrap');
-
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  // Initialize Sentry
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    environment: process.env.NODE_ENV || 'development',
+    tracesSampleRate: 1.0,
+  });
+
+  // Create app with Winston logger
+  const app = await NestFactory.create(AppModule, {
+    logger: createWinstonLogger(),
+  });
+
+  const logger = new Logger('Bootstrap');
 
   // Enable class-validator to use NestJS DI container
   // This is required for custom validators like IsDictionaryCodeConstraint
@@ -141,6 +154,10 @@ async function bootstrap() {
   logger.log(`Security headers configured for ${isProduction ? 'production' : 'development'} environment`);
 
   // Global exception filter
+  // Register SentryExceptionFilter first to capture all exceptions
+  // Then HttpExceptionFilter to format responses
+  const { httpAdapter } = app.get(HttpAdapterHost);
+  app.useGlobalFilters(new SentryExceptionFilter(httpAdapter));
   app.useGlobalFilters(new HttpExceptionFilter());
 
   // CORS configuration
@@ -151,8 +168,8 @@ async function bootstrap() {
   if (isProduction && !frontendUrl) {
     logger.warn(
       'FRONTEND_URL is not set in production environment. ' +
-        'CORS will be configured with restrictive defaults. ' +
-        'To enable specific origins, please set FRONTEND_URL in your .env file.',
+      'CORS will be configured with restrictive defaults. ' +
+      'To enable specific origins, please set FRONTEND_URL in your .env file.',
     );
   }
 
@@ -165,7 +182,7 @@ async function bootstrap() {
       origin: frontendUrl,
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'sentry-trace', 'baggage'],
     };
   } else if (isProduction) {
     // Production without FRONTEND_URL: use restrictive CORS
@@ -173,7 +190,7 @@ async function bootstrap() {
       origin: false, // Disable CORS (only same-origin requests allowed)
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'sentry-trace', 'baggage'],
     };
     logger.log('CORS is disabled. Only same-origin requests are allowed.');
   } else {
@@ -182,7 +199,7 @@ async function bootstrap() {
       origin: 'http://localhost:3001',
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'sentry-trace', 'baggage'],
     };
   }
 

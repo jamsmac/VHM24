@@ -70,7 +70,7 @@ export default function DashboardLayout({
           >
             Перейти к основному содержимому
           </a>
-          <div className="flex h-screen bg-background relative">
+          <div className="flex h-screen bg-gradient-to-br from-stone-50 via-orange-50/30 to-amber-50/20 relative">
             {/* Subtle LiquidEther background effect */}
             {enabled && (
               <div className="fixed inset-0 z-0 opacity-20 pointer-events-none">

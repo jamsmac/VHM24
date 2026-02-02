@@ -230,7 +230,7 @@ export function CollapsibleSidebar({ className }: CollapsibleSidebarProps) {
   return (
     <aside
       className={cn(
-        'hidden md:flex flex-col w-64 bg-card/50 backdrop-blur-xl border-r border-white/10 h-screen overflow-hidden',
+        'hidden md:flex flex-col w-64 bg-stone-900 border-r border-stone-800 h-screen overflow-hidden',
         className
       )}
       role="navigation"
@@ -238,14 +238,14 @@ export function CollapsibleSidebar({ className }: CollapsibleSidebarProps) {
       data-tour="sidebar"
     >
       {/* Logo */}
-      <div className="p-4 border-b border-white/10">
+      <div className="p-4 border-b border-stone-800">
         <Link href="/dashboard" className="flex items-center gap-3 group">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg shadow-purple-500/20 group-hover:shadow-purple-500/40 transition-all">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg shadow-amber-500/20 group-hover:shadow-amber-500/40 transition-all">
             <Coffee className="w-5 h-5 text-white" />
           </div>
           <div>
-            <div className="font-bold text-foreground">VendHub</div>
-            <div className="text-xs text-muted-foreground">Manager</div>
+            <div className="font-bold text-stone-100">VendHub</div>
+            <div className="text-xs text-stone-400">Manager</div>
           </div>
         </Link>
       </div>
@@ -266,8 +266,8 @@ export function CollapsibleSidebar({ className }: CollapsibleSidebarProps) {
                   className={cn(
                     'w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-all',
                     isActive
-                      ? 'bg-primary/20 text-primary'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
+                      ? 'bg-amber-500/20 text-amber-400'
+                      : 'text-stone-400 hover:text-stone-100 hover:bg-stone-800'
                   )}
                   aria-expanded={isExpanded}
                 >
@@ -289,7 +289,7 @@ export function CollapsibleSidebar({ className }: CollapsibleSidebarProps) {
                     isExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
                   )}
                 >
-                  <li className="ml-4 mt-1 space-y-0.5 border-l border-white/10 pl-3">
+                  <li className="ml-4 mt-1 space-y-0.5 border-l border-stone-700 pl-3">
                     {group.items.map((item) => {
                       const ItemIcon = item.icon
                       const isItemActive = isActiveItem(item.href)
@@ -301,8 +301,8 @@ export function CollapsibleSidebar({ className }: CollapsibleSidebarProps) {
                           className={cn(
                             'flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all',
                             isItemActive
-                              ? 'bg-primary/20 text-primary font-medium'
-                              : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
+                              ? 'bg-amber-500/20 text-amber-400 font-medium'
+                              : 'text-stone-400 hover:text-stone-100 hover:bg-stone-800'
                           )}
                           aria-current={isItemActive ? 'page' : undefined}
                           {...(item.dataTour && { 'data-tour': item.dataTour })}
@@ -322,14 +322,14 @@ export function CollapsibleSidebar({ className }: CollapsibleSidebarProps) {
       </nav>
 
       {/* Footer - User Section */}
-      <div className="p-4 border-t border-white/10" data-tour="user-menu">
+      <div className="p-4 border-t border-stone-800" data-tour="user-menu">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-medium text-sm shadow-lg shadow-purple-500/20">
+          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white font-medium text-sm shadow-lg shadow-amber-500/20">
             VH
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-sm font-medium text-foreground truncate">VendHub</div>
-            <div className="text-xs text-muted-foreground truncate">v1.0.0</div>
+            <div className="text-sm font-medium text-stone-100 truncate">VendHub</div>
+            <div className="text-xs text-stone-400 truncate">v1.0.0</div>
           </div>
         </div>
       </div>

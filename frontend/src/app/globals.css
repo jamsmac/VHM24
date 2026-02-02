@@ -3,91 +3,114 @@
 @tailwind utilities;
 
 @layer base {
-  /* VendHub Dark Theme as default */
-  :root {
-    /* Slate-950 based dark theme */
-    --background: 222 47% 4%;
-    --foreground: 210 40% 98%;
+  /* ========================================
+     VendHub "Warm Brew" Design System
+     Primary: Amber (#f59e0b)
+     Accent: Orange (#f97316)
+     Neutral: Stone palette
+     ======================================== */
 
-    /* Card with glass-morphism support */
-    --card: 222 47% 7%;
-    --card-foreground: 210 40% 98%;
+  /* Light theme (Warm Brew) - Default for Admin */
+  :root {
+    /* Background: Warm white with subtle warmth */
+    --background: 30 20% 99%;
+    --foreground: 24 10% 10%;
+
+    /* Card: Pure white with warm tint */
+    --card: 0 0% 100%;
+    --card-foreground: 24 10% 10%;
 
     /* Popover/dropdown */
-    --popover: 222 47% 8%;
-    --popover-foreground: 210 40% 98%;
-
-    /* Primary: Purple-Blue gradient accent */
-    --primary: 250 89% 65%;
-    --primary-foreground: 210 40% 98%;
-
-    /* Secondary: Slate-800 */
-    --secondary: 217 33% 17%;
-    --secondary-foreground: 210 40% 98%;
-
-    /* Muted: Slate-700/800 */
-    --muted: 217 33% 17%;
-    --muted-foreground: 215 20% 65%;
-
-    /* Accent: Purple tint */
-    --accent: 250 30% 20%;
-    --accent-foreground: 210 40% 98%;
-
-    /* Destructive */
-    --destructive: 0 63% 50%;
-    --destructive-foreground: 210 40% 98%;
-
-    /* Borders: Subtle white */
-    --border: 217 33% 20%;
-    --input: 217 33% 17%;
-    --ring: 250 89% 65%;
-    --radius: 0.75rem;
-  }
-
-  /* Light theme override (for backward compatibility) */
-  .light {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 250 89% 65%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 250 89% 65%;
+    --popover-foreground: 24 10% 10%;
+
+    /* Primary: Amber-500 (#f59e0b) */
+    --primary: 38 92% 50%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary: Stone-100 */
+    --secondary: 30 6% 94%;
+    --secondary-foreground: 24 10% 10%;
+
+    /* Muted: Stone-200/500 */
+    --muted: 24 6% 90%;
+    --muted-foreground: 24 6% 45%;
+
+    /* Accent: Orange-500 (#f97316) */
+    --accent: 25 95% 53%;
+    --accent-foreground: 0 0% 100%;
+
+    /* Destructive: Red-500 */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Borders: Stone-200 */
+    --border: 24 6% 90%;
+    --input: 24 6% 90%;
+    --ring: 38 92% 50%;
+    --radius: 0.75rem;
+
+    /* Warm Brew custom variables */
+    --warm-gradient-start: 30 20% 98%;
+    --warm-gradient-via: 33 100% 96%;
+    --warm-gradient-end: 48 96% 89%;
+    --sidebar-bg: 24 10% 10%;
+    --sidebar-foreground: 30 6% 94%;
+
+    /* Status colors */
+    --status-success: 142 76% 36%;
+    --status-warning: 38 92% 50%;
+    --status-error: 0 84% 60%;
+    --status-info: 199 89% 48%;
   }
 
-  /* Keep .dark for compatibility with existing code */
+  /* Light theme class (alias for compatibility) */
+  .light {
+    --background: 30 20% 99%;
+    --foreground: 24 10% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 24 10% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 24 10% 10%;
+    --primary: 38 92% 50%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 30 6% 94%;
+    --secondary-foreground: 24 10% 10%;
+    --muted: 24 6% 90%;
+    --muted-foreground: 24 6% 45%;
+    --accent: 25 95% 53%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 24 6% 90%;
+    --input: 24 6% 90%;
+    --ring: 38 92% 50%;
+  }
+
+  /* Dark theme (Stone-900 based) - For night mode */
   .dark {
-    --background: 222 47% 4%;
-    --foreground: 210 40% 98%;
-    --card: 222 47% 7%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222 47% 8%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 250 89% 65%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 217 33% 17%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217 33% 17%;
-    --muted-foreground: 215 20% 65%;
-    --accent: 250 30% 20%;
-    --accent-foreground: 210 40% 98%;
+    --background: 24 10% 6%;
+    --foreground: 30 6% 94%;
+    --card: 24 10% 8%;
+    --card-foreground: 30 6% 94%;
+    --popover: 24 10% 10%;
+    --popover-foreground: 30 6% 94%;
+    --primary: 38 92% 50%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 24 6% 15%;
+    --secondary-foreground: 30 6% 94%;
+    --muted: 24 6% 15%;
+    --muted-foreground: 24 6% 60%;
+    --accent: 25 95% 53%;
+    --accent-foreground: 0 0% 100%;
     --destructive: 0 63% 50%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217 33% 20%;
-    --input: 217 33% 17%;
-    --ring: 250 89% 65%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 24 6% 20%;
+    --input: 24 6% 15%;
+    --ring: 38 92% 50%;
+
+    --sidebar-bg: 24 10% 4%;
+    --sidebar-foreground: 30 6% 94%;
   }
 }
 
@@ -126,12 +149,12 @@
   /* High contrast mode support */
   @media (prefers-contrast: more) {
     :root {
-      --muted-foreground: 215 20% 30%;
-      --border: 214 31% 70%;
+      --muted-foreground: 24 6% 30%;
+      --border: 24 6% 70%;
     }
     .dark {
-      --muted-foreground: 215 20% 80%;
-      --border: 217 32% 40%;
+      --muted-foreground: 24 6% 80%;
+      --border: 24 6% 40%;
     }
   }
 }

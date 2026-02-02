@@ -439,7 +439,7 @@ export default function DashboardPage() {
                     value={`${stats?.total_revenue_today?.toLocaleString('ru-RU') || 0} сўм`}
                     change={stats?.revenue_vs_yesterday}
                     icon={DollarSign}
-                    color="green"
+                    color="emerald"
                   />
                   <StatCard
                     title={t('dashboard.stats.activeTasks')}
@@ -460,7 +460,7 @@ export default function DashboardPage() {
                     value={stats?.total_machines_active || 0}
                     change={stats?.machines_vs_yesterday}
                     icon={Package}
-                    color="purple"
+                    color="amber"
                   />
                 </>
               )}

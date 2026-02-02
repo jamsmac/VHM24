@@ -41,6 +41,24 @@ export interface Machine {
   description?: string
   created_at: string
   updated_at: string
+
+  // Dashboard/Analytics fields (computed or from API)
+  /** Today's sales amount in UZS */
+  today_sales?: number
+  /** Number of brews today */
+  today_brews?: number
+  /** Average check amount in UZS */
+  avg_check?: number
+  /** Is machine in favorites */
+  is_favorite?: boolean
+  /** Overall inventory level percentage (0-100) */
+  inventory_level?: number
+  /** Sales trend percentage (positive or negative) */
+  sales_trend?: number
+  /** Has active alerts */
+  has_alerts?: boolean
+  /** Number of active alerts */
+  alert_count?: number
 }
 
 export interface MachineStats {

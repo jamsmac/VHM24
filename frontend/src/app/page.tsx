@@ -6,21 +6,12 @@ export default function Home() {
         <p className="text-xl text-gray-600 mb-8">
           Система управления сетью вендинговых автоматов
         </p>
-        <div className="flex gap-4 justify-center">
-          <a
-            href="/login"
-            className="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition"
-          >
-            Войти
-          </a>
-          <a
-            href="/api/docs"
-            target="_blank"
-            className="px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
-          >
-            API Документация
-          </a>
-        </div>
+        <a
+          href="/login"
+          className="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition"
+        >
+          Войти
+        </a>
       </div>
     </main>
   )

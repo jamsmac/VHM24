@@ -1,6 +1,6 @@
 'use client'
 
-import { Search, User, LogOut, Settings, Command } from 'lucide-react'
+import { Search, User, LogOut, Settings, Command, FileCode } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useState } from 'react'
 import Link from 'next/link'
@@ -20,7 +20,7 @@ export function Header() {
   const isMac = typeof navigator !== 'undefined' && navigator.platform.toUpperCase().indexOf('MAC') >= 0
 
   return (
-    <header className="bg-card border-b border-border h-16" role="banner">
+    <header className="bg-white border-b border-stone-200 h-16" role="banner">
       <div className="h-full px-6 flex items-center justify-between">
         {/* Left side: Breadcrumbs + Search */}
         <div className="flex items-center gap-4 flex-1">
@@ -37,13 +37,13 @@ export function Header() {
           <div className="flex-1 max-w-lg" data-tour="header-search">
           <button
             onClick={openCommandPalette}
-            className="w-full flex items-center gap-3 px-3 py-2 text-left border border-input rounded-md bg-background hover:bg-accent/50 transition-colors group"
+            className="w-full flex items-center gap-3 px-4 py-2 text-left rounded-xl bg-stone-100 hover:bg-stone-200 transition-colors group"
           >
-            <Search className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-            <span className="flex-1 text-sm text-muted-foreground">
+            <Search className="h-4 w-4 text-stone-500" aria-hidden="true" />
+            <span className="flex-1 text-sm text-stone-500">
               {t('common.search')}...
             </span>
-            <kbd className="hidden md:inline-flex items-center gap-0.5 px-2 py-0.5 text-xs font-medium text-muted-foreground bg-muted rounded border border-border">
+            <kbd className="hidden md:inline-flex items-center gap-0.5 px-2 py-1 text-xs font-medium text-stone-500 bg-white rounded-lg border border-stone-200">
               {isMac ? <Command className="h-3 w-3" /> : 'Ctrl'}
               <span>K</span>
             </kbd>
@@ -73,7 +73,7 @@ export function Header() {
               aria-haspopup="menu"
               aria-label="User menu"
             >
-              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground">
+              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-sm">
                 <User className="h-5 w-5" aria-hidden="true" />
               </div>
               <div className="hidden md:block text-left">
@@ -84,7 +84,7 @@ export function Header() {
 
             {showUserMenu && (
               <div
-                className="absolute right-0 mt-2 w-48 bg-popover rounded-md shadow-lg py-1 z-50 border border-border"
+                className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg py-2 z-50 border border-stone-200"
                 role="menu"
                 aria-label="User menu options"
               >
@@ -106,6 +106,19 @@ export function Header() {
                   <Settings className="mr-3 h-4 w-4" aria-hidden="true" />
                   Настройки
                 </Link>
+                {(user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') && (
+                  <a
+                    href="/api/docs"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => setShowUserMenu(false)}
+                    className="flex items-center w-full px-4 py-2 text-sm text-popover-foreground hover:bg-accent hover:text-accent-foreground"
+                    role="menuitem"
+                  >
+                    <FileCode className="mr-3 h-4 w-4" aria-hidden="true" />
+                    API Документация
+                  </a>
+                )}
                 <hr className="my-1 border-border" />
                 <button
                   onClick={logout}

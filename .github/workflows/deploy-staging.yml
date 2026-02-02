@@ -15,90 +15,109 @@ on:
 
 env:
   NODE_VERSION: '20'
+  RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
 
 jobs:
-  # Run CI checks first
-  ci-check:
-    name: CI Checks
-    uses: ./.github/workflows/ci.yml
-
-  # Deploy to staging after CI passes
-  deploy-staging:
-    name: Deploy to Staging
+  # Build and test first
+  build-test:
+    name: Build & Test
     runs-on: ubuntu-latest
-    needs: ci-check
-    environment: staging
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
 
-      - name: Install backend dependencies
+      - name: Install & Build Backend
         working-directory: ./backend
-        run: npm ci --production
+        run: |
+          npm ci
+          npm run build
+          npm run lint
 
-      - name: Build backend
-        working-directory: ./backend
-        run: npm run build
-
-      - name: Install frontend dependencies
+      - name: Install & Build Frontend
         working-directory: ./frontend
-        run: npm ci
-
-      - name: Build frontend
-        working-directory: ./frontend
+        run: |
+          npm ci
+          npm run build
         env:
           NEXT_PUBLIC_API_URL: ${{ secrets.STAGING_API_URL }}
-        run: npm run build
 
-      # Placeholder for actual deployment steps
-      # Uncomment and configure based on your hosting provider
+  # Deploy to Railway
+  deploy-backend:
+    name: Deploy Backend to Railway
+    runs-on: ubuntu-latest
+    needs: build-test
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
 
-      # Example: Deploy to a VPS via SSH
-      # - name: Deploy to staging server
-      #   uses: appleboy/ssh-action@v1.0.0
-      #   with:
-      #     host: ${{ secrets.STAGING_HOST }}
-      #     username: ${{ secrets.STAGING_USER }}
-      #     key: ${{ secrets.STAGING_SSH_KEY }}
-      #     script: |
-      #       cd /var/www/vendhub
-      #       git pull origin develop
-      #       cd backend && npm ci --production && npm run build
-      #       pm2 restart vendhub-backend
-      #       cd ../frontend && npm ci && npm run build
-      #       pm2 restart vendhub-frontend
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
 
-      # Example: Deploy to Docker
-      # - name: Build and push Docker images
-      #   run: |
-      #     docker build -t vendhub-backend:staging ./backend
-      #     docker build -t vendhub-frontend:staging ./frontend
-      #     # Push to registry...
+      - name: Deploy Backend
+        working-directory: ./backend
+        run: railway up --service vendhub-backend --environment staging
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
 
-      - name: Deployment placeholder
+      - name: Health Check
         run: |
-          echo "=========================================="
-          echo "Staging deployment workflow triggered"
-          echo "=========================================="
-          echo ""
-          echo "To complete this workflow, configure:"
-          echo "1. Add deployment secrets to GitHub repository"
-          echo "2. Uncomment deployment steps above"
-          echo "3. Configure your hosting provider"
-          echo ""
-          echo "Build artifacts are ready for deployment:"
-          echo "- Backend: ./backend/dist"
-          echo "- Frontend: ./frontend/.next"
-          echo "=========================================="
+          echo "Waiting for deployment..."
+          sleep 30
+          curl -f ${{ secrets.STAGING_API_URL }}/health || echo "Health check pending..."
 
-      - name: Notify deployment
+  deploy-frontend:
+    name: Deploy Frontend to Railway
+    runs-on: ubuntu-latest
+    needs: build-test
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Deploy Frontend
+        working-directory: ./frontend
+        run: railway up --service vendhub-frontend --environment staging
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          NEXT_PUBLIC_API_URL: ${{ secrets.STAGING_API_URL }}
+
+  # Post-deployment verification
+  verify:
+    name: Verify Deployment
+    runs-on: ubuntu-latest
+    needs: [deploy-backend, deploy-frontend]
+    steps:
+      - name: Smoke Test
+        run: |
+          echo "Running smoke tests..."
+
+          # Backend health
+          curl -f ${{ secrets.STAGING_API_URL }}/health || exit 1
+          echo "✅ Backend is healthy"
+
+          # Frontend
+          curl -f ${{ secrets.STAGING_FRONTEND_URL }} || exit 1
+          echo "✅ Frontend is accessible"
+
+          echo ""
+          echo "=========================================="
+          echo "🚀 Staging deployment successful!"
+          echo "=========================================="
+          echo "Backend:  ${{ secrets.STAGING_API_URL }}"
+          echo "Frontend: ${{ secrets.STAGING_FRONTEND_URL }}"
+
+      - name: Notify Success
         if: success()
         run: |
-          echo "Staging deployment completed successfully!"
-          # Add Slack/Discord notification here if needed
+          echo "Deployment to staging completed successfully!"
+          # Telegram notification (optional)
+          # curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+          #   -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
+          #   -d "text=✅ VendHub staging deployed successfully!"

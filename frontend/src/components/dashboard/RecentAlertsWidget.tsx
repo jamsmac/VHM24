@@ -45,17 +45,17 @@ function AlertItem({ alert, onAcknowledge, onResolve }: {
   const Icon = severity.icon
 
   return (
-    <div className={`flex items-start gap-3 p-3 rounded-lg ${severity.bg} ${severity.border} border`}>
-      <div className={`p-1.5 rounded-full ${severity.bg}`}>
+    <div className={`flex items-start gap-3 p-3 rounded-xl ${severity.bg} ${severity.border} border`}>
+      <div className={`p-2 rounded-lg ${severity.bg}`}>
         <Icon className={`h-4 w-4 ${severity.color}`} />
       </div>
       <div className="flex-1 min-w-0">
-        <Link href={`/dashboard/alerts/${alert.id}`} className="hover:underline">
-          <h4 className="font-medium text-gray-900 text-sm truncate">{alert.title}</h4>
+        <Link href={`/dashboard/alerts/${alert.id}`} className="hover:text-amber-600 transition-colors">
+          <h4 className="font-medium text-stone-800 text-sm truncate">{alert.title}</h4>
         </Link>
-        <p className="text-xs text-gray-600 mt-0.5 line-clamp-2">{alert.message}</p>
-        <div className="flex items-center gap-2 mt-1">
-          <span className="text-xs text-gray-500 flex items-center gap-1">
+        <p className="text-xs text-stone-600 mt-0.5 line-clamp-2">{alert.message}</p>
+        <div className="flex items-center gap-2 mt-1.5">
+          <span className="text-xs text-stone-500 flex items-center gap-1">
             <Clock className="h-3 w-3" />
             {formatDistanceToNow(new Date(alert.triggered_at), {
               addSuffix: true,
@@ -129,12 +129,12 @@ export function RecentAlertsWidget() {
 
   if (isLoading) {
     return (
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
+      <div className="bg-white rounded-2xl border border-stone-200 p-6">
         <div className="animate-pulse">
-          <div className="h-6 w-40 bg-gray-200 rounded mb-4" />
+          <div className="h-6 w-40 bg-stone-200 rounded mb-4" />
           <div className="space-y-3">
             {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="h-16 bg-gray-100 rounded-lg" />
+              <div key={i} className="h-16 bg-stone-100 rounded-xl" />
             ))}
           </div>
         </div>
@@ -145,15 +145,15 @@ export function RecentAlertsWidget() {
   const activeAlerts = alerts || []
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-6">
+    <div className="bg-white rounded-2xl border border-stone-200 p-6">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <BellRing className="h-5 w-5 text-red-500" />
-          <h2 className="text-lg font-semibold text-gray-900">Активные оповещения</h2>
+          <h2 className="text-lg font-semibold text-stone-800">Активные оповещения</h2>
         </div>
         <Link
           href="/dashboard/alerts?status=active"
-          className="text-sm text-indigo-600 hover:text-indigo-800 font-medium"
+          className="text-sm text-amber-600 hover:text-amber-700 font-medium"
         >
           Все активные →
         </Link>
@@ -161,8 +161,8 @@ export function RecentAlertsWidget() {
 
       {activeAlerts.length === 0 ? (
         <div className="text-center py-8">
-          <CheckCircle2 className="h-10 w-10 text-green-500 mx-auto mb-2" />
-          <p className="text-gray-500">Нет активных оповещений</p>
+          <CheckCircle2 className="h-10 w-10 text-emerald-500 mx-auto mb-2" />
+          <p className="text-stone-500">Нет активных оповещений</p>
         </div>
       ) : (
         <div className="space-y-3">

@@ -38,6 +38,18 @@ export { Progress } from './progress'
 
 export { Separator } from './separator'
 
+export { Checkbox } from './checkbox'
+export type { CheckboxProps } from './checkbox'
+
+export { LevelBar } from './level-bar'
+export type { LevelBarProps } from './level-bar'
+
+export { TrendBadge } from './trend-badge'
+export type { TrendBadgeProps } from './trend-badge'
+
+export { WarmCard } from './warm-card'
+export type { WarmCardProps } from './warm-card'
+
 // ============================================================================
 // Tables
 // ============================================================================
@@ -120,6 +132,18 @@ export {
 } from './dialog'
 
 export { Modal } from './Modal'
+
+export {
+  Sheet,
+  SheetTrigger,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetFooter,
+  SheetClose,
+} from './sheet'
+export type { SheetProps, SheetContentProps, SheetTriggerProps } from './sheet'
 
 export {
   ConfirmDialog,
