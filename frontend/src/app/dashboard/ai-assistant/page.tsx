@@ -18,7 +18,6 @@ import {
   aiAssistantApi,
   IntegrationProposal,
   IntegrationProposalStatus,
-  IntegrationProposalType,
   AiChatResponse,
   PROPOSAL_TYPE_LABELS,
   PROPOSAL_STATUS_LABELS,

@@ -30,8 +30,6 @@ import {
   Settings,
   RefreshCw,
   Edit,
-  QrCode,
-  Map,
 } from 'lucide-react'
 import Link from 'next/link'
 

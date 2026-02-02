@@ -1,6 +1,6 @@
 'use client'
 
-import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid, Legend, Area, AreaChart } from 'recharts'
+import { ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid, Legend, Area, AreaChart } from 'recharts'
 
 interface RevenueChartProps {
   data: Array<{ date: string; revenue: number; expenses: number }>

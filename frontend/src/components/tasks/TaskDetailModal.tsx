@@ -20,7 +20,6 @@ import {
   CheckCircle2,
   XCircle,
   Play,
-  Pause,
   Camera,
   MessageSquare,
   ExternalLink,

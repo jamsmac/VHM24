@@ -15,14 +15,6 @@ interface StatCardProps {
  * Part of VendHub "Warm Brew" design system
  */
 export const StatCard = memo(function StatCard({ title, value, change, icon: Icon, color = 'amber' }: StatCardProps) {
-  const colorClasses = {
-    amber: 'from-amber-500 to-orange-500',
-    emerald: 'from-emerald-500 to-teal-500',
-    orange: 'from-orange-500 to-red-500',
-    red: 'from-red-500 to-rose-500',
-    blue: 'from-blue-500 to-cyan-500',
-  }
-
   const iconBgClasses = {
     amber: 'bg-amber-100',
     emerald: 'bg-emerald-100',

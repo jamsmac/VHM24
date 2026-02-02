@@ -29,11 +29,6 @@ export const MachineCard = memo(function MachineCard({ machine }: MachineCardPro
     [machine.current_cash_amount, machine.cash_capacity]
   )
 
-  const inventoryPercentage = useMemo(
-    () => (machine.current_product_count / machine.max_product_slots) * 100,
-    [machine.current_product_count, machine.max_product_slots]
-  )
-
   const status = statusConfig[machine.status] || statusConfig[MachineStatus.OFFLINE]
   const StatusIcon = status.icon
 

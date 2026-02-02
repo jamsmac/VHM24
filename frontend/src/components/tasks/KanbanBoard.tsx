@@ -4,7 +4,6 @@ import { useState, useMemo } from 'react'
 import { cn } from '@/lib/utils'
 import { Task, TaskStatus, TaskType, TaskPriority } from '@/types/tasks'
 import { WarmCard } from '@/components/ui/warm-card'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   Coffee,
@@ -18,7 +17,6 @@ import {
   MapPin,
   GripVertical,
   Plus,
-  MoreHorizontal,
 } from 'lucide-react'
 
 export type KanbanColumn = 'pending' | 'in_progress' | 'completed'
