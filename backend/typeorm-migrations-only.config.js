@@ -34,5 +34,5 @@ module.exports = new DataSource({
   entities: [], // No entities needed for migrations
   migrations: ['dist/database/migrations/*.js'],
   synchronize: false,
-  logging: process.env.NODE_ENV === 'development' || process.env.MIGRATION_LOGGING === 'true',
+  logging: process.env.MIGRATION_LOGGING === 'true' ? true : (process.env.NODE_ENV === 'development' ? true : ['error']),
 });

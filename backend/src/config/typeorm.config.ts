@@ -34,5 +34,5 @@ export default new DataSource({
   entities: ['dist/**/*.entity.js'],
   migrations: ['dist/database/migrations/*.js'],
   synchronize: false,
-  logging: process.env.NODE_ENV === 'development' || process.env.MIGRATION_LOGGING === 'true',
+  logging: process.env.MIGRATION_LOGGING === 'true' ? true : (process.env.NODE_ENV === 'development' ? true : ['error']),
 } as DataSourceOptions);
