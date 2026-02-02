@@ -24,6 +24,7 @@ import { TelegramInfrastructureModule } from '../infrastructure/telegram-infrast
 import { TelegramMediaModule } from '../media/telegram-media.module';
 import { TelegramManagersModule } from '../managers/telegram-managers.module';
 import { TelegramUiModule } from '../ui/telegram-ui.module';
+import { TelegramCommerceModule } from '../commerce/telegram-commerce.module';
 
 // External modules
 import { TasksModule } from '../../tasks/tasks.module';
@@ -65,6 +66,9 @@ import { AuditLogModule } from '../../audit-logs/audit-log.module';
     TelegramMediaModule,
     TelegramManagersModule,
     TelegramUiModule,
+    // Commerce module provides TelegramSalesService needed by TelegramBotService
+    // forwardRef needed: TelegramCommerceModule → TelegramNotificationsModule → TelegramCoreModule
+    forwardRef(() => TelegramCommerceModule),
     // External modules with forwardRef for circular dependencies
     forwardRef(() => TasksModule),
     FilesModule,

@@ -23,19 +23,12 @@ import { TelegramI18nModule } from './i18n/telegram-i18n.module';
 import { TelegramTasksModule } from './tasks/telegram-tasks.module';
 import { TelegramManagersModule } from './managers/telegram-managers.module';
 import { TelegramQuickActionsModule } from './quick-actions/telegram-quick-actions.module';
-
-// Service imports for providers (only services directly provided in this module)
-import { TelegramNotificationsService } from './notifications/services/telegram-notifications.service';
-
-// Commerce (uses forwardRef due to circular dependency)
-import { CartStorageService } from './commerce/services/cart-storage.service';
-import { CartHandler } from './commerce/handlers/cart.handler';
-import { CatalogHandler } from './commerce/handlers/catalog.handler';
+import { TelegramNotificationsModule } from './notifications/telegram-notifications.module';
+import { TelegramCommerceModule } from './commerce/telegram-commerce.module';
 
 // Controllers (from users submodule, re-exported)
 import { TelegramUsersController } from './users/controllers/telegram-users.controller';
 import { TelegramSettingsController } from './users/controllers/telegram-settings.controller';
-import { TelegramNotificationsController } from './notifications/controllers/telegram-notifications.controller';
 
 // External modules
 import { TasksModule } from '../tasks/tasks.module';
@@ -94,6 +87,9 @@ import { RequestsModule } from '../requests/requests.module';
     TelegramTasksModule,
     TelegramManagersModule,
     TelegramQuickActionsModule,
+    // Notifications and Commerce as proper module imports (not manual providers)
+    TelegramNotificationsModule,
+    TelegramCommerceModule,
     // External modules
     forwardRef(() => TasksModule),
     FilesModule,
@@ -108,15 +104,10 @@ import { RequestsModule } from '../requests/requests.module';
   controllers: [
     TelegramUsersController,
     TelegramSettingsController,
-    TelegramNotificationsController,
+    // TelegramNotificationsController is registered in TelegramNotificationsModule
   ],
   providers: [
-    // Notifications service (from notifications submodule, provided here for TelegramBotService dependency)
-    TelegramNotificationsService,
-    // Commerce handlers
-    CartStorageService,
-    CartHandler,
-    CatalogHandler,
+    // All services come from proper submodule imports
   ],
   exports: [
     // Re-export submodules (makes their exported services available)
@@ -130,9 +121,8 @@ import { RequestsModule } from '../requests/requests.module';
     TelegramTasksModule,
     TelegramManagersModule,
     TelegramQuickActionsModule,
-    // Direct exports from this module's providers
-    TelegramNotificationsService,
-    CartStorageService,
+    TelegramNotificationsModule,
+    TelegramCommerceModule,
   ],
 })
 export class TelegramModule {}
