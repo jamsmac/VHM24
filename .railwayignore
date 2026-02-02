@@ -1,0 +1,29 @@
+# Railway Ignore Rules
+
+# Ignore massive directories not needed for backend build
+frontend/
+mobile/
+docs/
+agent-deck/
+skills/
+
+# Dependencies
+**/node_modules
+**/node_modules/
+
+# Build artifacts
+**/dist
+**/build
+**/coverage
+**/.next
+**/.turbo
+
+# System files
+.git/
+.DS_Store
+*.log
+*.swp
+
+# Env files
+.env*
+!*.example

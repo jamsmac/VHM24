@@ -6,6 +6,11 @@
 
 # Node modules (will be installed in container)
 **/node_modules
+**/node_modules/
+
+# Mobile app (HUGE - 1.2GB)
+mobile/
+mobile
 
 # Build artifacts
 **/.next
@@ -14,7 +19,7 @@
 **/coverage
 **/.turbo
 
-# Local env files (but NOT .env.production)
+# Local env files
 **/.env
 **/.env*.local
 
@@ -23,31 +28,23 @@
 .vscode
 **/*.swp
 **/*.swo
+**/.DS_Store
 
 # Logs
 **/*.log
 **/npm-debug.log*
-
-# Testing (not needed for production)
-**/__tests__
-**/*.test.ts
-**/*.test.tsx
-**/*.spec.ts
-**/*.spec.tsx
-
-# Storybook
-**/storybook-static
 
 # Documentation
 docs/
 *.md
 !README.md
 
-# Backend (not needed for frontend build)
-backend/node_modules
-backend/dist
-backend/.env
-backend/.env*.local
-
-# Telegram bot (deprecated)
-telegram-bot/
+# Other irrelevant folders
+agent-deck/
+skills/
+.github/
+.husky/
+.claude/
+nginx/
+examples/
+scripts/
