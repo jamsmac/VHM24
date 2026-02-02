@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { CartStorageService } from './services/cart-storage.service';
@@ -34,8 +34,10 @@ import { TransactionsModule } from '../../transactions/transactions.module';
     TelegramI18nModule,
     UsersModule,
     RequestsModule,
-    MachinesModule,
-    TransactionsModule,
+    // forwardRef needed: these modules are in the circular chain
+    // AppModule → MachinesModule → ... → TelegramModule → TelegramCoreModule → TelegramCommerceModule
+    forwardRef(() => MachinesModule),
+    forwardRef(() => TransactionsModule),
   ],
   providers: [CartStorageService, TelegramSalesService, CatalogHandler, CartHandler],
   exports: [CartStorageService, TelegramSalesService, CatalogHandler, CartHandler],
