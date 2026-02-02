@@ -3,6 +3,7 @@ import * as winston from 'winston';
 
 export const createWinstonLogger = () => {
   const isDevelopment = process.env.NODE_ENV !== 'production';
+    const logDir = process.env.RAILWAY_ENVIRONMENT_NAME ? '/tmp/logs' : 'logs';
 
   return WinstonModule.createLogger({
     transports: [
@@ -21,12 +22,12 @@ export const createWinstonLogger = () => {
         ? []
         : [
             new winston.transports.File({
-              filename: 'logs/error.log',
+              filename: `${logDir}/error.log`,
               level: 'error',
               format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
             }),
             new winston.transports.File({
-              filename: 'logs/combined.log',
+              filename: `${logDir}/combined.log`,
               format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
             }),
           ]),
