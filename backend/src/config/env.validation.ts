@@ -154,7 +154,7 @@ class EnvironmentVariables {
   // Monitoring
   @IsString()
   @IsOptional()
-  LOG_LEVEL?: string = 'info';
+  LOG_LEVEL?: string;
 
   @IsString()
   @IsOptional()
